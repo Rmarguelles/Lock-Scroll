@@ -5489,8 +5489,8 @@ function editLishiTool(toolName) {
     editingLishiTool = toolName;
     const data = lishiInventory[toolName] || MASTER_LISHI_TOOLS[toolName] || {};
 
-    document.getElementById('lishiToolModalTitle').textContent = 'Edit: ' + toolName;
-    document.getElementById('lishiToolNameGroup').style.display = 'none';
+    document.getElementById('lishiToolModalTitle').textContent = 'Edit Lishi Tool';
+    document.getElementById('lishiToolNameGroup').style.display = '';
     document.getElementById('lishiToolName').value = toolName;
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown(data.keyways || []);
@@ -5522,13 +5522,19 @@ function saveLishiTool() {
         toast('Please enter a tool name');
         return;
     }
-    
-    // Check if tool exists when adding new
-    if (!editingLishiTool && lishiInventory[toolName]) {
+
+    const isRenaming = editingLishiTool && editingLishiTool !== toolName;
+
+    // Check if tool exists when adding new or renaming
+    if (!editingLishiTool && (lishiInventory[toolName] || MASTER_LISHI_TOOLS[toolName])) {
         toast('Tool already exists');
         return;
     }
-    
+    if (isRenaming && (lishiInventory[toolName] || MASTER_LISHI_TOOLS[toolName])) {
+        toast('A tool with that name already exists');
+        return;
+    }
+
     const keyways = document.getElementById('lishiToolKeyways').value
         .split(',')
         .map(k => k.trim())
@@ -5540,16 +5546,18 @@ function saveLishiTool() {
         .filter(c => c);
 
     const worksOn = document.getElementById('lishiToolWorksOn').value;
-    
+
     // Convert worksOn select to individual booleans
     let door = true, ignition = true, trunk = true;
     if (worksOn === 'door-trunk') { ignition = false; }
     else if (worksOn === 'door-only') { ignition = false; trunk = false; }
     else if (worksOn === 'ignition-only') { door = false; trunk = false; }
-    
-    // Get existing data from master if editing
-    const existingData = MASTER_LISHI_TOOLS[toolName] || {};
-    
+
+    // Get existing data from the old name or master
+    const existingData = editingLishiTool
+        ? (lishiInventory[editingLishiTool] || MASTER_LISHI_TOOLS[editingLishiTool] || {})
+        : (MASTER_LISHI_TOOLS[toolName] || {});
+
     lishiInventory[toolName] = {
         ...existingData,
         keyways: keyways,
@@ -5564,7 +5572,26 @@ function saveLishiTool() {
         inStock: document.getElementById('lishiToolInStock').value === 'yes',
         notes: document.getElementById('lishiToolNotes').value.trim()
     };
-    
+
+    // Handle renaming
+    if (isRenaming) {
+        // Delete old name from inventory
+        delete lishiInventory[editingLishiTool];
+
+        // Update lishiData entries that reference the old tool name
+        Object.keys(lishiData).forEach(kw => {
+            if (lishiData[kw].tool === editingLishiTool) {
+                lishiData[kw].tool = toolName;
+            }
+        });
+
+        // If old name was a master tool, add it to deleted list so it doesn't reappear
+        if (MASTER_LISHI_TOOLS[editingLishiTool] && !deletedLishiTools.includes(editingLishiTool)) {
+            deletedLishiTools.push(editingLishiTool);
+            saveDeletedLishiTools();
+        }
+    }
+
     // Also update lishiData for each keyway
     keyways.forEach(kw => {
         if (!lishiData[kw]) {
