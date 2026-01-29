@@ -2392,6 +2392,23 @@
             color: var(--dim);
         }
 
+        .keyway-option.add-new-keyway {
+            background: rgba(74, 144, 217, 0.15);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .keyway-option.add-new-keyway:hover {
+            background: rgba(74, 144, 217, 0.25);
+        }
+
+        .keyway-option.add-new-keyway .keyway-option-checkbox {
+            background: #4a90d9;
+            border-color: #4a90d9;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
         textarea.modal-input {
             resize: vertical;
             min-height: 80px;
@@ -3575,6 +3592,7 @@ let lishiData = {}; // Keyway-based: { keyway: { tool, direction } }
 let lishiVehicleData = {}; // Vehicle group-based: { "Make|Model|StartYear|EndYear": { direction, confirmCount, lastConfirmed, notes } }
 let lishiInventory = {}; // Tool inventory: { toolName: { keyways: [], worksOn, cutStart, cutEnd, cutTotal, inStock, notes } }
 let deletedLishiTools = []; // Array of tool names that user has deleted (including master tools)
+let customKeyways = []; // Array of user-added keyways that persist even without keys
 
 // Master list of known Lishi tools (pre-populated)
 const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_family": "GM B / GM37", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "B111": {"keyways": ["GM Z"], "keyway_family": "GM Z", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BAOJUN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BQSB": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BW9MH": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01R": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CHAANGAN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24": {"keyways": ["Chrysler CY24", "Y157", "Y159", "Y164"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24-CV": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24 TRUCK": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DAT12R": {"keyways": ["Datsun DAT12"], "keyway_family": "Datsun DAT12", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DW04R V.2": {"keyways": ["Peugeot/Citroen DW04"], "keyway_family": "Peugeot/Citroen DW04", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FO38": {"keyways": ["Ford FO38", "H75"], "keyway_family": "Ford FO38", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FORD 2017": {"keyways": ["Ford HU101 variant"], "keyway_family": "Ford HU101 variant", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM39": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM45": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HAIMA": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON58R": {"keyways": ["Honda HON58"], "keyway_family": "Honda HON58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON66": {"keyways": ["Honda HON66"], "keyway_family": "Honda HON66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU39": {"keyways": ["Mercedes HU39"], "keyway_family": "Mercedes HU39", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU43": {"keyways": ["Mercedes HU43"], "keyway_family": "Mercedes HU43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU46": {"keyways": ["Mercedes HU46"], "keyway_family": "Mercedes HU46", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU49": {"keyways": ["Mercedes HU49"], "keyway_family": "Mercedes HU49", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58TL": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU64 V.2": {"keyways": ["Mercedes HU64"], "keyway_family": "Mercedes HU64", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 Generation 1 & 2": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 V.3": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU71": {"keyways": ["Mercedes HU71"], "keyway_family": "Mercedes HU71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU92": {"keyways": ["BMW HU92"], "keyway_family": "BMW HU92", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100V3(10 Cut)": {"keyways": ["GM HU100", "B119", "B120"], "keyway_family": "GM HU100", "door": true, "ignition": false, "trunk": true, "cutStart": 3, "cutEnd": 10, "cutTotal": 10, "inStock": false, "notes": "Does NOT work on ignition. Reads cuts 3-10 only."}, "HU100V3(8 Cut)": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100R V.3": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU101 V.3": {"keyways": ["Ford HU101"], "keyway_family": "Ford HU101", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162 (VAG2015)": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC9": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC10 V.3": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY16": {"keyways": ["Hyundai HY16"], "keyway_family": "Hyundai HY16", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY17(HYN15)": {"keyways": ["Hyundai HY17"], "keyway_family": "Hyundai HY17", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY20": {"keyways": ["Hyundai HY20"], "keyway_family": "Hyundai HY20", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY22": {"keyways": ["Hyundai HY22"], "keyway_family": "Hyundai HY22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14(HY15)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14R(HY16)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN22": {"keyways": ["Hyundai HYN22"], "keyway_family": "Hyundai HYN22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN7R": {"keyways": ["Hyundai HYN7"], "keyway_family": "Hyundai HYN7", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ICF03": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "K5 V.3": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MAZ24R V.2": {"keyways": ["Mazda MAZ24"], "keyway_family": "Mazda MAZ24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT11R": {"keyways": ["Mitsubishi MIT11"], "keyway_family": "Mitsubishi MIT11", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT8": {"keyways": ["Mitsubishi MIT8"], "keyway_family": "Mitsubishi MIT8", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT9/MIT6": {"keyways": ["Mitsubishi MIT9 / MIT6"], "keyway_family": "Mitsubishi MIT9 / MIT6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE38 V.2 Boot": {"keyways": ["Nissan NE38"], "keyway_family": "Nissan NE38", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Boot/Trunk only - does not work on ignition"}, "NE66": {"keyways": ["Nissan NE66"], "keyway_family": "Nissan NE66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE71R V.2": {"keyways": ["Nissan NE71"], "keyway_family": "Nissan NE71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE72": {"keyways": ["Nissan NE72"], "keyway_family": "Nissan NE72", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE78": {"keyways": ["Nissan NE78"], "keyway_family": "Nissan NE78", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NSN14": {"keyways": ["Nissan NSN14", "DA34"], "keyway_family": "Nissan NSN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "QIRUI": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SIP22": {"keyways": ["Fiat SIP22"], "keyway_family": "Fiat SIP22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SRT2018": {"keyways": ["Dodge SRT"], "keyway_family": "Dodge SRT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SX9": {"keyways": ["Citroen SX9"], "keyway_family": "Citroen SX9", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY2": {"keyways": ["Toyota TOY2"], "keyway_family": "Toyota TOY2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43": {"keyways": ["Toyota TOY43", "TR47"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT Dr/Bt": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Door/Boot only - does not work on ignition"}, "TOY43AT Ignition": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": false, "ignition": true, "trunk": false, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Ignition only"}, "TOY43R": {"keyways": ["Toyota TOY43"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY48": {"keyways": ["Toyota TOY48"], "keyway_family": "Toyota TOY48", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA2": {"keyways": ["Peugeot/Citroen VA2"], "keyway_family": "Peugeot/Citroen VA2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA6": {"keyways": ["Peugeot/Citroen VA6"], "keyway_family": "Peugeot/Citroen VA6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VAC102": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "YM23": {"keyways": ["Yamaha YM23 (auto use)"], "keyway_family": "Yamaha YM23 (auto use)", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ZD30": {"keyways": ["Isuzu ZD30"], "keyway_family": "Isuzu ZD30", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}};
@@ -3739,6 +3757,9 @@ async function loadLocalData() {
             const savedDeletedLishiTools = await loadFromIndexedDB('deletedLishiTools');
             if (savedDeletedLishiTools) deletedLishiTools = savedDeletedLishiTools;
 
+            const savedCustomKeyways = await loadFromIndexedDB('customKeyways');
+            if (savedCustomKeyways) customKeyways = savedCustomKeyways;
+
             const savedVendorPrices = await loadFromIndexedDB('vendorPrices');
             if (savedVendorPrices) vendorPrices = savedVendorPrices;
             
@@ -3844,6 +3865,11 @@ function saveLishiInventory() {
 
 function saveDeletedLishiTools() {
     saveToIndexedDB('deletedLishiTools', deletedLishiTools);
+    triggerAutoSync();
+}
+
+function saveCustomKeyways() {
+    saveToIndexedDB('customKeyways', customKeyways);
     triggerAutoSync();
 }
 
@@ -5328,13 +5354,15 @@ function filterLishiInventory() {
 let selectedKeyways = [];
 
 function getAllKeyways() {
-    // Get all unique keyways from the database
+    // Get all unique keyways from the database and custom keyways
     const keyways = new Set();
     DB.forEach(key => {
         if (key.keyway) {
             keyways.add(key.keyway);
         }
     });
+    // Include custom keyways added by user
+    customKeyways.forEach(kw => keyways.add(kw));
     return Array.from(keyways).sort();
 }
 
@@ -5344,22 +5372,23 @@ function getKeywayKeyCount(keyway) {
 
 function initKeywayDropdown(preselected = []) {
     selectedKeyways = [...preselected];
-    const dbKeyways = getAllKeyways();
+    const allKeyways = getAllKeyways();
 
-    // Combine DB keyways with any preselected keyways that aren't in DB
-    const allKeywaysSet = new Set(dbKeyways);
+    // Combine all keyways with any preselected keyways that aren't in the list
+    const allKeywaysSet = new Set(allKeyways);
     preselected.forEach(k => allKeywaysSet.add(k));
-    const allKeyways = Array.from(allKeywaysSet).sort();
+    const sortedKeyways = Array.from(allKeywaysSet).sort();
 
     const dropdown = document.getElementById('keywayDropdown');
-    dropdown.innerHTML = allKeyways.map(keyway => {
+    dropdown.innerHTML = sortedKeyways.map(keyway => {
         const count = getKeywayKeyCount(keyway);
         const isSelected = selectedKeyways.includes(keyway);
-        const isFromDB = dbKeyways.includes(keyway);
+        // A keyway is "custom" if it has no keys in DB (either from customKeyways or preselected)
+        const isCustom = count === 0;
         return `
             <div class="keyway-option ${isSelected ? 'selected' : ''}" data-keyway="${keyway}" onclick="toggleKeywaySelection('${keyway.replace(/'/g, "\\'")}')">
                 <div class="keyway-option-checkbox"></div>
-                <span class="keyway-option-label">${keyway}${!isFromDB ? ' (custom)' : ''}</span>
+                <span class="keyway-option-label">${keyway}${isCustom ? ' (custom)' : ''}</span>
                 <span class="keyway-option-count">${count > 0 ? count + ' keys' : 'manual'}</span>
             </div>
         `;
@@ -5432,15 +5461,61 @@ function updateKeywayHiddenInput() {
 }
 
 function filterKeywayOptions() {
-    const search = document.getElementById('keywaySearchInput').value.toLowerCase();
-    const options = document.querySelectorAll('.keyway-option');
+    const searchInput = document.getElementById('keywaySearchInput');
+    const search = searchInput.value.toLowerCase().trim();
+    const searchUpper = searchInput.value.trim().toUpperCase();
+    const dropdown = document.getElementById('keywayDropdown');
+    const options = dropdown.querySelectorAll('.keyway-option:not(.add-new-keyway)');
+
+    // Remove any existing "add new" option
+    const existingAddNew = dropdown.querySelector('.add-new-keyway');
+    if (existingAddNew) existingAddNew.remove();
+
+    let hasExactMatch = false;
+    let visibleCount = 0;
 
     options.forEach(option => {
         const keyway = option.dataset.keyway.toLowerCase();
-        option.style.display = keyway.includes(search) ? '' : 'none';
+        const isVisible = keyway.includes(search);
+        option.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+        if (keyway === search) hasExactMatch = true;
     });
 
+    // If search has text and no exact match, show "Add new keyway" option
+    if (search && !hasExactMatch) {
+        const addNewOption = document.createElement('div');
+        addNewOption.className = 'keyway-option add-new-keyway';
+        addNewOption.innerHTML = `
+            <div class="keyway-option-checkbox" style="background: #4a90d9; border-color: #4a90d9;">+</div>
+            <span class="keyway-option-label">Add "${searchUpper}" as new keyway</span>
+            <span class="keyway-option-count">custom</span>
+        `;
+        addNewOption.onclick = () => addNewKeyway(searchUpper);
+        dropdown.insertBefore(addNewOption, dropdown.firstChild);
+    }
+
     showKeywayDropdown();
+}
+
+function addNewKeyway(keyway) {
+    if (!keyway) return;
+
+    // Add to custom keyways if not already there
+    if (!customKeyways.includes(keyway)) {
+        customKeyways.push(keyway);
+        saveCustomKeyways();
+    }
+
+    // Add to selection
+    if (!selectedKeyways.includes(keyway)) {
+        selectedKeyways.push(keyway);
+    }
+
+    // Clear search and reinitialize dropdown
+    document.getElementById('keywaySearchInput').value = '';
+    initKeywayDropdown(selectedKeyways);
+    toast('Keyway "' + keyway + '" added');
 }
 
 // Close dropdown when clicking outside
@@ -6733,17 +6808,22 @@ function openAddCustomKey() {
 function populateCustomKeyDropdown(selectId, field, placeholder) {
     const select = document.getElementById(selectId);
     const values = new Set();
-    
+
     // Gather values from DB
     DB.forEach(key => {
         if (key[field]) {
             values.add(key[field]);
         }
     });
-    
+
+    // For keyway field, also include custom keyways
+    if (field === 'keyway') {
+        customKeyways.forEach(kw => values.add(kw));
+    }
+
     // Sort alphabetically
     const sortedValues = Array.from(values).sort((a, b) => a.localeCompare(b));
-    
+
     // Build options
     select.innerHTML = '<option value="">' + placeholder + '</option>';
     sortedValues.forEach(val => {
@@ -6752,7 +6832,7 @@ function populateCustomKeyDropdown(selectId, field, placeholder) {
         opt.textContent = val;
         select.appendChild(opt);
     });
-    
+
     // Add "Other" option at the end
     const otherOpt = document.createElement('option');
     otherOpt.value = '__other__';
