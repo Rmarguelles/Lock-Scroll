@@ -3474,7 +3474,7 @@ function renderCloudSyncUI() {
             <div class="last-sync-text">Last synced: <span>${lastSyncStr}</span></div>
             <div class="sync-items-list">
                 <div class="sync-item-row"><span>Custom Keys</span><span class="count">${customKeys.length}</span></div>
-                <div class="sync-item-row"><span>Stock Entries</span><span class="count">${Object.keys(stockData).length}</span></div>
+                <div class="sync-item-row"><span>Stock Counts <span style="font-size:10px;color:var(--dim);">(personal)</span></span><span class="count">${Object.keys(stockData).length}</span></div>
                 <div class="sync-item-row"><span>Lishi Tools</span><span class="count">${Object.keys(lishiInventory).length}</span></div>
                 <div class="sync-item-row"><span>FID Assignments</span><span class="count">${Object.keys(fidAssignments).length}</span></div>
                 <div class="sync-item-row"><span>Purchase History</span><span class="count">${purchaseHistory.length}</span></div>
@@ -3746,6 +3746,14 @@ async function syncNow() {
 async function uploadToCloud() {
     if (!currentUser || !firebaseDb) return;
 
+    // Always save personal data (stock counts) to user's own location
+    const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
+    const personalData = {
+        stockData: stockData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await personalDocRef.set(personalData, { merge: true });
+
     // Check if user is authorized for shared mode
     if (sharedModeEnabled) {
         const isAuthorized = authorizedUsers.includes(currentUser.email);
@@ -3753,37 +3761,61 @@ async function uploadToCloud() {
             console.log('User not authorized for shared database');
             return;
         }
+
+        // Save shared data to shared location (excludes stockData)
+        const sharedDocRef = firebaseDb.collection('shared').doc('data');
+        const sharedData = {
+            customKeys: customKeys,
+            lishiInventory: lishiInventory,
+            lishiVehicleData: lishiVehicleData,
+            lishiData: lishiData,
+            deletedLishiTools: deletedLishiTools,
+            customKeyways: customKeyways,
+            vendorPrices: vendorPrices,
+            customVendors: customVendors,
+            fidAssignments: fidAssignments,
+            fidMerges: fidMerges,
+            fidPrefixes: fidPrefixes,
+            purchaseHistory: purchaseHistory,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastUpdatedBy: currentUser.email
+        };
+        await sharedDocRef.set(sharedData, { merge: true });
+    } else {
+        // Not in shared mode - save everything to personal location
+        const allData = {
+            customKeys: customKeys,
+            lishiInventory: lishiInventory,
+            lishiVehicleData: lishiVehicleData,
+            lishiData: lishiData,
+            deletedLishiTools: deletedLishiTools,
+            customKeyways: customKeyways,
+            vendorPrices: vendorPrices,
+            customVendors: customVendors,
+            fidAssignments: fidAssignments,
+            fidMerges: fidMerges,
+            fidPrefixes: fidPrefixes,
+            purchaseHistory: purchaseHistory,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await personalDocRef.set(allData, { merge: true });
     }
-
-    // Use shared location if enabled, otherwise user's personal location
-    const docRef = sharedModeEnabled
-        ? firebaseDb.collection('shared').doc('data')
-        : firebaseDb.collection('users').doc(currentUser.uid);
-
-    const data = {
-        stockData: stockData,
-        customKeys: customKeys,
-        lishiInventory: lishiInventory,
-        lishiVehicleData: lishiVehicleData,
-        lishiData: lishiData,
-        deletedLishiTools: deletedLishiTools,
-        customKeyways: customKeyways,
-        vendorPrices: vendorPrices,
-        customVendors: customVendors,
-        fidAssignments: fidAssignments,
-        fidMerges: fidMerges,
-        fidPrefixes: fidPrefixes,
-        purchaseHistory: purchaseHistory,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastUpdatedBy: currentUser.email
-    };
-
-    await docRef.set(data, { merge: true });
 }
 
 async function downloadFromCloud() {
     if (!currentUser || !firebaseDb) return;
 
+    // Always load personal data (stock counts) from user's own location
+    const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
+    const personalDoc = await personalDocRef.get();
+    if (personalDoc.exists) {
+        const personalData = personalDoc.data();
+        if (personalData.stockData) {
+            stockData = { ...stockData, ...personalData.stockData };
+            saveStock();
+        }
+    }
+
     // Check if user is authorized for shared mode
     if (sharedModeEnabled) {
         const isAuthorized = authorizedUsers.includes(currentUser.email);
@@ -3793,21 +3825,17 @@ async function downloadFromCloud() {
         }
     }
 
-    // Use shared location if enabled, otherwise user's personal location
+    // Use shared location if enabled, otherwise user's personal location for other data
     const docRef = sharedModeEnabled
         ? firebaseDb.collection('shared').doc('data')
         : firebaseDb.collection('users').doc(currentUser.uid);
 
-    const userDoc = await docRef.get();
-    
-    if (userDoc.exists) {
-        const data = userDoc.data();
-        
-        // Merge cloud data with local data (cloud wins for conflicts)
-        if (data.stockData) {
-            stockData = { ...stockData, ...data.stockData };
-            saveStock();
-        }
+    const dataDoc = await docRef.get();
+
+    if (dataDoc.exists) {
+        const data = dataDoc.data();
+
+        // Note: stockData is loaded separately from personal location above
         if (data.customKeys && data.customKeys.length > 0) {
             // Merge custom keys by part number
             const existingPNs = new Set(customKeys.map(k => k.pn));
