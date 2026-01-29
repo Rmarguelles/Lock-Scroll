@@ -5644,23 +5644,35 @@ function openEditLishiToolFromDetail() {
 
 function deleteLishiToolFromDetail() {
     if (!currentDetailTool) return;
-    
+
     const toolName = currentDetailTool;
-    
+
+    // Check if it's a master tool (can't be fully deleted, only reset)
+    const isMasterTool = MASTER_LISHI_TOOLS.hasOwnProperty(toolName);
+
+    const message = isMasterTool
+        ? `Reset "${toolName}" to default settings? (Master tools cannot be fully deleted)`
+        : `Delete "${toolName}"? This cannot be undone.`;
+
+    if (!confirm(message)) {
+        return;
+    }
+
     // Remove from inventory
     delete lishiInventory[toolName];
-    
+
     // Remove tool from lishiData entries that use it
     Object.entries(lishiData).forEach(([keyway, data]) => {
         if (data.tool === toolName) {
             delete lishiData[keyway];
         }
     });
-    
+
     saveLishiInventory();
     saveLishi();
     closeLishiDetail();
-    toast('Tool deleted');
+    renderLishiInventory();
+    toast(isMasterTool ? 'Tool reset to defaults' : 'Tool deleted');
 }
 
 function setLishiDetailStock(toolName, inStock) {
