@@ -5636,8 +5636,9 @@ function closeLishiDetail() {
 
 function openEditLishiToolFromDetail() {
     if (currentDetailTool) {
+        const toolName = currentDetailTool;  // Save before closing clears it
         closeLishiDetail();
-        editLishiTool(currentDetailTool);
+        editLishiTool(toolName);
     }
 }
 
