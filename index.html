@@ -2216,20 +2216,19 @@
 
         .keyway-dropdown {
             display: none;
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 100%;
-            background: var(--card);
+            background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 6px;
             max-height: 200px;
             overflow-y: auto;
-            z-index: 1000;
-            margin-top: 4px;
+            margin-top: 8px;
         }
 
         .keyway-dropdown.show {
+            display: block;
+        }
+
+        .keyway-select-container.open .keyway-dropdown {
             display: block;
         }
 
@@ -2292,7 +2291,15 @@
             min-height: 80px;
             font-family: inherit;
         }
-        
+
+        .modal-input:disabled {
+            background: var(--card);
+            color: var(--accent);
+            font-weight: 600;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+
         .modal-btns {
             display: flex;
             gap: 8px;
@@ -5233,14 +5240,18 @@ function initKeywayDropdown(preselected = []) {
 
     updateKeywayTags();
     updateKeywayHiddenInput();
+    // Show dropdown by default when initialized
+    showKeywayDropdown();
 }
 
 function showKeywayDropdown() {
     document.getElementById('keywayDropdown').classList.add('show');
+    document.getElementById('keywaySelectContainer').classList.add('open');
 }
 
 function hideKeywayDropdown() {
     document.getElementById('keywayDropdown').classList.remove('show');
+    document.getElementById('keywaySelectContainer').classList.remove('open');
 }
 
 function toggleKeywaySelection(keyway) {
@@ -5625,8 +5636,9 @@ function closeLishiDetail() {
 
 function openEditLishiToolFromDetail() {
     if (currentDetailTool) {
+        const toolName = currentDetailTool;  // Save before closing clears it
         closeLishiDetail();
-        editLishiTool(currentDetailTool);
+        editLishiTool(toolName);
     }
 }
 
