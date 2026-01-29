@@ -2156,7 +2156,137 @@
             outline: none;
             border-color: var(--accent);
         }
-        
+
+        /* Keyway Multi-Select Styles */
+        .keyway-select-container {
+            position: relative;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            min-height: 44px;
+        }
+
+        .keyway-select-container:focus-within {
+            border-color: var(--accent);
+        }
+
+        .keyway-selected-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .keyway-selected-tags:empty {
+            margin-bottom: 0;
+        }
+
+        .keyway-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .keyway-tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .keyway-tag-remove:hover {
+            opacity: 1;
+        }
+
+        .keyway-search-input {
+            width: 100%;
+            padding: 6px 8px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .keyway-dropdown {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+
+        .keyway-dropdown.show {
+            display: block;
+        }
+
+        .keyway-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .keyway-option:last-child {
+            border-bottom: none;
+        }
+
+        .keyway-option:hover {
+            background: var(--bg);
+        }
+
+        .keyway-option.selected {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .keyway-option-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .keyway-option.selected .keyway-option-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .keyway-option.selected .keyway-option-checkbox::after {
+            content: '✓';
+            color: var(--bg);
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .keyway-option-label {
+            flex: 1;
+        }
+
+        .keyway-option-count {
+            font-size: 11px;
+            color: var(--dim);
+        }
+
         textarea.modal-input {
             resize: vertical;
             min-height: 80px;
@@ -2606,7 +2736,12 @@
         </div>
         <div class="modal-input-group">
             <label>Associated Keyway(s)</label>
-            <input type="text" class="modal-input" id="lishiToolKeyways" placeholder="e.g., HU66, Y164 (comma separated)">
+            <div class="keyway-select-container" id="keywaySelectContainer">
+                <div class="keyway-selected-tags" id="keywaySelectedTags"></div>
+                <input type="text" class="keyway-search-input" id="keywaySearchInput" placeholder="Search keyways..." oninput="filterKeywayOptions()" onfocus="showKeywayDropdown()">
+                <div class="keyway-dropdown" id="keywayDropdown"></div>
+            </div>
+            <input type="hidden" id="lishiToolKeyways">
         </div>
         <div class="modal-input-group">
             <label>Works On</label>
@@ -5031,11 +5166,15 @@ function renderLishiInventory() {
                     ${worksOnParts.map(w => `<span class="lishi-inv-detail warning">${w}</span>`).join('')}
                     ${cutText ? `<span class="lishi-inv-detail ${data.cutStart > 1 ? 'warning' : ''}">${cutText}</span>` : ''}
                 </div>
-                ${data.keyway_family ? `
+                ${(data.keyways && data.keyways.length > 0) ? `
                     <div class="lishi-inv-keyways">
-                        <span>${data.keyway_family}</span>
+                        ${data.keyways.map(k => `<span class="lishi-keyway-badge">${k}</span>`).join('')}
                     </div>
-                ` : ''}
+                ` : (data.keyway_family ? `
+                    <div class="lishi-inv-keyways">
+                        <span class="lishi-keyway-badge">${data.keyway_family}</span>
+                    </div>
+                ` : '')}
             </div>
         `;
     }).join('');
@@ -5044,19 +5183,135 @@ function renderLishiInventory() {
 function filterLishiInventory() {
     const search = document.getElementById('lishiInventorySearch').value.toLowerCase();
     const items = document.querySelectorAll('#lishiInventoryList .lishi-inventory-item');
-    
+
     items.forEach(item => {
         const text = item.textContent.toLowerCase();
         item.style.display = text.includes(search) ? '' : 'none';
     });
 }
 
+// ===================== KEYWAY SELECTION =====================
+let selectedKeyways = [];
+
+function getAllKeyways() {
+    // Get all unique keyways from the database
+    const keyways = new Set();
+    DB.forEach(key => {
+        if (key.keyway) {
+            keyways.add(key.keyway);
+        }
+    });
+    return Array.from(keyways).sort();
+}
+
+function getKeywayKeyCount(keyway) {
+    return DB.filter(key => key.keyway === keyway).length;
+}
+
+function initKeywayDropdown(preselected = []) {
+    selectedKeyways = [...preselected];
+    const allKeyways = getAllKeyways();
+
+    const dropdown = document.getElementById('keywayDropdown');
+    dropdown.innerHTML = allKeyways.map(keyway => {
+        const count = getKeywayKeyCount(keyway);
+        const isSelected = selectedKeyways.includes(keyway);
+        return `
+            <div class="keyway-option ${isSelected ? 'selected' : ''}" data-keyway="${keyway}" onclick="toggleKeywaySelection('${keyway}')">
+                <div class="keyway-option-checkbox"></div>
+                <span class="keyway-option-label">${keyway}</span>
+                <span class="keyway-option-count">${count} keys</span>
+            </div>
+        `;
+    }).join('');
+
+    updateKeywayTags();
+    updateKeywayHiddenInput();
+}
+
+function showKeywayDropdown() {
+    document.getElementById('keywayDropdown').classList.add('show');
+}
+
+function hideKeywayDropdown() {
+    document.getElementById('keywayDropdown').classList.remove('show');
+}
+
+function toggleKeywaySelection(keyway) {
+    const index = selectedKeyways.indexOf(keyway);
+    if (index > -1) {
+        selectedKeyways.splice(index, 1);
+    } else {
+        selectedKeyways.push(keyway);
+    }
+
+    // Update the option's selected state
+    const option = document.querySelector(`.keyway-option[data-keyway="${keyway}"]`);
+    if (option) {
+        option.classList.toggle('selected', selectedKeyways.includes(keyway));
+    }
+
+    updateKeywayTags();
+    updateKeywayHiddenInput();
+}
+
+function removeKeyway(keyway) {
+    const index = selectedKeyways.indexOf(keyway);
+    if (index > -1) {
+        selectedKeyways.splice(index, 1);
+    }
+
+    // Update the option's selected state
+    const option = document.querySelector(`.keyway-option[data-keyway="${keyway}"]`);
+    if (option) {
+        option.classList.remove('selected');
+    }
+
+    updateKeywayTags();
+    updateKeywayHiddenInput();
+}
+
+function updateKeywayTags() {
+    const tagsContainer = document.getElementById('keywaySelectedTags');
+    tagsContainer.innerHTML = selectedKeyways.map(keyway => `
+        <span class="keyway-tag">
+            ${keyway}
+            <span class="keyway-tag-remove" onclick="event.stopPropagation(); removeKeyway('${keyway}')">×</span>
+        </span>
+    `).join('');
+}
+
+function updateKeywayHiddenInput() {
+    document.getElementById('lishiToolKeyways').value = selectedKeyways.join(', ');
+}
+
+function filterKeywayOptions() {
+    const search = document.getElementById('keywaySearchInput').value.toLowerCase();
+    const options = document.querySelectorAll('.keyway-option');
+
+    options.forEach(option => {
+        const keyway = option.dataset.keyway.toLowerCase();
+        option.style.display = keyway.includes(search) ? '' : 'none';
+    });
+
+    showKeywayDropdown();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('keywaySelectContainer');
+    if (container && !container.contains(e.target)) {
+        hideKeywayDropdown();
+    }
+});
+
 function openAddLishiToolModal() {
     editingLishiTool = null;
     document.getElementById('lishiToolModalTitle').textContent = 'Add Lishi Tool';
     document.getElementById('lishiToolName').value = '';
     document.getElementById('lishiToolName').disabled = false;
-    document.getElementById('lishiToolKeyways').value = '';
+    document.getElementById('keywaySearchInput').value = '';
+    initKeywayDropdown([]);
     document.getElementById('lishiToolWorksOn').value = 'all';
     document.getElementById('lishiToolCutStart').value = '1';
     document.getElementById('lishiToolCutEnd').value = '';
@@ -5071,7 +5326,8 @@ function openAddLishiToolModalWithKeyway(keyway) {
     document.getElementById('lishiToolModalTitle').textContent = 'Add Lishi Tool';
     document.getElementById('lishiToolName').value = '';
     document.getElementById('lishiToolName').disabled = false;
-    document.getElementById('lishiToolKeyways').value = keyway || '';
+    document.getElementById('keywaySearchInput').value = '';
+    initKeywayDropdown(keyway ? [keyway] : []);
     document.getElementById('lishiToolWorksOn').value = 'all';
     document.getElementById('lishiToolCutStart').value = '1';
     document.getElementById('lishiToolCutEnd').value = '';
@@ -5084,11 +5340,12 @@ function openAddLishiToolModalWithKeyway(keyway) {
 function editLishiTool(toolName) {
     editingLishiTool = toolName;
     const data = lishiInventory[toolName] || MASTER_LISHI_TOOLS[toolName] || {};
-    
+
     document.getElementById('lishiToolModalTitle').textContent = 'Edit Lishi Tool';
     document.getElementById('lishiToolName').value = toolName;
     document.getElementById('lishiToolName').disabled = true;
-    document.getElementById('lishiToolKeyways').value = (data.keyways || []).join(', ');
+    document.getElementById('keywaySearchInput').value = '';
+    initKeywayDropdown(data.keyways || []);
     
     // Convert door/ignition/trunk booleans to worksOn select
     let worksOn = 'all';
@@ -5233,6 +5490,10 @@ function openLishiDetail(toolName) {
     `;
     
     // Specifications Section
+    const keywaysDisplay = (tool.keyways && tool.keyways.length > 0)
+        ? tool.keyways.map(k => `<span class="lishi-keyway-badge">${k}</span>`).join(' ')
+        : (tool.keyway_family ? `<span class="lishi-keyway-badge">${tool.keyway_family}</span>` : '<span style="color:var(--dim)">Not specified</span>');
+
     html += `
         <div class="lishi-detail-section">
             <h3>📋 Specifications</h3>
@@ -5241,8 +5502,8 @@ function openLishiDetail(toolName) {
                 <span class="lishi-spec-value mono">${toolName}</span>
             </div>
             <div class="lishi-spec-row">
-                <span class="lishi-spec-label">Keyway Family</span>
-                <span class="lishi-spec-value">${tool.keyway_family || 'Not specified'}</span>
+                <span class="lishi-spec-label">Associated Keyways</span>
+                <span class="lishi-spec-value">${keywaysDisplay}</span>
             </div>
     `;
     
