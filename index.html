@@ -5210,17 +5210,23 @@ function getKeywayKeyCount(keyway) {
 
 function initKeywayDropdown(preselected = []) {
     selectedKeyways = [...preselected];
-    const allKeyways = getAllKeyways();
+    const dbKeyways = getAllKeyways();
+
+    // Combine DB keyways with any preselected keyways that aren't in DB
+    const allKeywaysSet = new Set(dbKeyways);
+    preselected.forEach(k => allKeywaysSet.add(k));
+    const allKeyways = Array.from(allKeywaysSet).sort();
 
     const dropdown = document.getElementById('keywayDropdown');
     dropdown.innerHTML = allKeyways.map(keyway => {
         const count = getKeywayKeyCount(keyway);
         const isSelected = selectedKeyways.includes(keyway);
+        const isFromDB = dbKeyways.includes(keyway);
         return `
-            <div class="keyway-option ${isSelected ? 'selected' : ''}" data-keyway="${keyway}" onclick="toggleKeywaySelection('${keyway}')">
+            <div class="keyway-option ${isSelected ? 'selected' : ''}" data-keyway="${keyway}" onclick="toggleKeywaySelection('${keyway.replace(/'/g, "\\'")}')">
                 <div class="keyway-option-checkbox"></div>
-                <span class="keyway-option-label">${keyway}</span>
-                <span class="keyway-option-count">${count} keys</span>
+                <span class="keyway-option-label">${keyway}${!isFromDB ? ' (custom)' : ''}</span>
+                <span class="keyway-option-count">${count > 0 ? count + ' keys' : 'manual'}</span>
             </div>
         `;
     }).join('');
@@ -5273,12 +5279,14 @@ function removeKeyway(keyway) {
 
 function updateKeywayTags() {
     const tagsContainer = document.getElementById('keywaySelectedTags');
-    tagsContainer.innerHTML = selectedKeyways.map(keyway => `
+    tagsContainer.innerHTML = selectedKeyways.map(keyway => {
+        const escapedKeyway = keyway.replace(/'/g, "\\'");
+        return `
         <span class="keyway-tag">
             ${keyway}
-            <span class="keyway-tag-remove" onclick="event.stopPropagation(); removeKeyway('${keyway}')">×</span>
+            <span class="keyway-tag-remove" onclick="event.stopPropagation(); removeKeyway('${escapedKeyway}')">×</span>
         </span>
-    `).join('');
+    `}).join('');
 }
 
 function updateKeywayHiddenInput() {
