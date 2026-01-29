@@ -332,8 +332,35 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        
+
+        .lishi-lookup-header > div {
+            flex: 1;
+        }
+
+        .my-lishi-btn {
+            padding: 8px 12px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .my-lishi-btn:hover {
+            opacity: 0.9;
+        }
+
+        .my-lishi-btn.active {
+            background: var(--accent2);
+        }
+
         .lishi-lookup-title {
             font-size: 20px;
             color: var(--accent);
@@ -357,7 +384,77 @@
         .lishi-lookup-results {
             padding: 16px;
         }
-        
+
+        .my-lishi-section {
+            margin-bottom: 24px;
+        }
+
+        .my-lishi-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .my-lishi-section-title.owned {
+            background: rgba(0, 200, 83, 0.15);
+            color: var(--success);
+        }
+
+        .my-lishi-section-title.not-owned {
+            background: rgba(107, 107, 141, 0.15);
+            color: var(--dim);
+        }
+
+        .my-lishi-empty {
+            text-align: center;
+            color: var(--dim);
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .my-lishi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .my-lishi-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .my-lishi-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .my-lishi-card.owned {
+            border-color: var(--success);
+            background: rgba(0, 200, 83, 0.05);
+        }
+
+        .my-lishi-card-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 4px;
+        }
+
+        .my-lishi-card-keyways {
+            font-size: 11px;
+            color: var(--dim);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .lishi-vehicle-group {
             background: var(--card);
             border-radius: 12px;
@@ -2684,10 +2781,13 @@
 <div class="lishi-lookup-panel" id="lishiLookupPanel">
     <div class="lishi-lookup-header">
         <button class="back-btn" onclick="closeLishiLookup()">←</button>
-        <div class="lishi-lookup-title">🔧 Lishi Lookup</div>
-        <div style="color:var(--dim);font-size:12px;">Find Lishi tools by vehicle</div>
+        <div>
+            <div class="lishi-lookup-title">🔧 Lishi Lookup</div>
+            <div style="color:var(--dim);font-size:12px;">Find Lishi tools by vehicle</div>
+        </div>
+        <button class="my-lishi-btn" onclick="showMyLishiTools()">📋 My Tools</button>
     </div>
-    <div class="lishi-lookup-filters">
+    <div class="lishi-lookup-filters" id="lishiLookupFilters">
         <div class="sel">
             <label>Year</label>
             <select id="lishiYear" onchange="filterLishiLookup()"><option value="">Select Year</option></select>
@@ -5738,6 +5838,15 @@ function findVehiclesForTool(toolName) {
 }
 
 function openLishiLookup() {
+    // Reset to vehicle lookup view
+    showingMyTools = false;
+    const btn = document.querySelector('.my-lishi-btn');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.textContent = '📋 My Tools';
+    }
+    document.getElementById('lishiLookupFilters').style.display = '';
+
     buildLishiFilters();
     document.getElementById('lishiLookupResults').innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">Select a vehicle to see Lishi information</div>';
     document.getElementById('lishiLookupPanel').classList.add('on');
@@ -5747,6 +5856,95 @@ function closeLishiLookup() {
     document.getElementById('lishiLookupPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
+}
+
+let showingMyTools = false;
+
+function showMyLishiTools() {
+    showingMyTools = !showingMyTools;
+    const btn = document.querySelector('.my-lishi-btn');
+    const filters = document.getElementById('lishiLookupFilters');
+
+    if (showingMyTools) {
+        btn.classList.add('active');
+        btn.textContent = '🔍 Vehicle Lookup';
+        filters.style.display = 'none';
+        renderMyLishiTools();
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = '📋 My Tools';
+        filters.style.display = '';
+        document.getElementById('lishiLookupResults').innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">Select a vehicle to see Lishi information</div>';
+    }
+}
+
+function renderMyLishiTools() {
+    // Get all tools (merged master + inventory)
+    const allTools = { ...MASTER_LISHI_TOOLS };
+    Object.entries(lishiInventory).forEach(([name, data]) => {
+        allTools[name] = { ...allTools[name], ...data };
+    });
+
+    // Filter out deleted tools
+    deletedLishiTools.forEach(toolName => {
+        delete allTools[toolName];
+    });
+
+    // Separate into owned and not owned
+    const owned = [];
+    const notOwned = [];
+
+    Object.entries(allTools).forEach(([toolName, data]) => {
+        const isOwned = lishiInventory[toolName]?.inStock || data.inStock || false;
+        if (isOwned) {
+            owned.push({ name: toolName, ...data });
+        } else {
+            notOwned.push({ name: toolName, ...data });
+        }
+    });
+
+    // Sort alphabetically
+    owned.sort((a, b) => a.name.localeCompare(b.name));
+    notOwned.sort((a, b) => a.name.localeCompare(b.name));
+
+    let html = '';
+
+    // Owned section
+    html += `
+        <div class="my-lishi-section">
+            <h3 class="my-lishi-section-title owned">✓ Tools I Own (${owned.length})</h3>
+            ${owned.length === 0 ? '<div class="my-lishi-empty">No tools marked as owned yet</div>' : ''}
+            <div class="my-lishi-grid">
+                ${owned.map(tool => renderMyLishiCard(tool, true)).join('')}
+            </div>
+        </div>
+    `;
+
+    // Not owned section
+    html += `
+        <div class="my-lishi-section">
+            <h3 class="my-lishi-section-title not-owned">✗ Tools I Don't Own (${notOwned.length})</h3>
+            <div class="my-lishi-grid">
+                ${notOwned.map(tool => renderMyLishiCard(tool, false)).join('')}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('lishiLookupResults').innerHTML = html;
+}
+
+function renderMyLishiCard(tool, isOwned) {
+    const escapedName = tool.name.replace(/'/g, "\\'");
+    const keyways = tool.keyways && tool.keyways.length > 0
+        ? tool.keyways.slice(0, 3).join(', ')
+        : (tool.keyway_family || 'No keyways');
+
+    return `
+        <div class="my-lishi-card ${isOwned ? 'owned' : ''}" onclick="openLishiDetail('${escapedName}')">
+            <div class="my-lishi-card-name">${tool.name}</div>
+            <div class="my-lishi-card-keyways">${keyways}</div>
+        </div>
+    `;
 }
 
 function buildLishiFilters() {
