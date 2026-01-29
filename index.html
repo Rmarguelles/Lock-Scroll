@@ -2948,23 +2948,23 @@
 
 <!-- Bottom Navigation -->
 <div class="bottom-nav">
-    <button class="nav-btn active" onclick="showTab('keys')">
+    <button class="nav-btn active" onclick="showTab('keys', event)">
         <span class="icon">🔑</span>
         <span>Keys</span>
     </button>
-    <button class="nav-btn" onclick="showTab('add')">
+    <button class="nav-btn" onclick="showTab('add', event)">
         <span class="icon">➕</span>
         <span>Add</span>
     </button>
-    <button class="nav-btn" onclick="showTab('lishi')">
+    <button class="nav-btn" onclick="showTab('lishi', event)">
         <span class="icon">🔧</span>
         <span>Lishi</span>
     </button>
-    <button class="nav-btn" onclick="showTab('fid')">
+    <button class="nav-btn" onclick="showTab('fid', event)">
         <span class="icon">📋</span>
         <span>FID</span>
     </button>
-    <button class="nav-btn" onclick="showTab('settings')">
+    <button class="nav-btn" onclick="showTab('settings', event)">
         <span class="icon">⚙️</span>
         <span>Settings</span>
     </button>
@@ -4783,12 +4783,26 @@ function deletePrefix(code) {
 }
 
 // ===================== SETTINGS =====================
-function showTab(tab) {
+function showTab(tab, event) {
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.nav-btn').classList.add('active');
-    
+    if (event && event.target) {
+        event.target.closest('.nav-btn').classList.add('active');
+    } else {
+        // Fallback: activate the correct nav button based on tab name
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const tabIndex = {'keys': 0, 'add': 1, 'lishi': 2, 'fid': 3, 'settings': 4};
+        if (navBtns[tabIndex[tab]]) {
+            navBtns[tabIndex[tab]].classList.add('active');
+        }
+    }
+
     if (tab === 'keys') {
-        // Already on main screen
+        // Close all panels to return to main key list
+        document.getElementById('settingsPanel').classList.remove('on');
+        document.getElementById('lishiLookupPanel').classList.remove('on');
+        document.getElementById('fidPanel').classList.remove('on');
+        document.getElementById('addInventoryPanel').classList.remove('on');
+        document.getElementById('detailPanel').classList.remove('on');
     } else if (tab === 'add') {
         openAddInventory();
     } else if (tab === 'lishi') {
