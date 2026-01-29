@@ -455,6 +455,15 @@
             white-space: nowrap;
         }
 
+        .my-lishi-card-codeseries {
+            font-size: 10px;
+            color: var(--accent2);
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .lishi-vehicle-group {
             background: var(--card);
             border-radius: 12px;
@@ -2849,6 +2858,10 @@
                 <div class="keyway-dropdown" id="keywayDropdown"></div>
             </div>
             <input type="hidden" id="lishiToolKeyways">
+        </div>
+        <div class="modal-input-group">
+            <label>Code Series (comma separated for multiple)</label>
+            <input type="text" class="modal-input" id="lishiToolCodeSeries" placeholder="e.g., A001-A500, B001-B250">
         </div>
         <div class="modal-input-group">
             <label>Works On</label>
@@ -5445,6 +5458,7 @@ function openAddLishiToolModal() {
     document.getElementById('lishiToolName').value = '';
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown([]);
+    document.getElementById('lishiToolCodeSeries').value = '';
     document.getElementById('lishiToolWorksOn').value = 'all';
     document.getElementById('lishiToolCutStart').value = '1';
     document.getElementById('lishiToolCutEnd').value = '';
@@ -5461,6 +5475,7 @@ function openAddLishiToolModalWithKeyway(keyway) {
     document.getElementById('lishiToolName').value = '';
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown(keyway ? [keyway] : []);
+    document.getElementById('lishiToolCodeSeries').value = '';
     document.getElementById('lishiToolWorksOn').value = 'all';
     document.getElementById('lishiToolCutStart').value = '1';
     document.getElementById('lishiToolCutEnd').value = '';
@@ -5479,14 +5494,15 @@ function editLishiTool(toolName) {
     document.getElementById('lishiToolName').value = toolName;
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown(data.keyways || []);
-    
+    document.getElementById('lishiToolCodeSeries').value = (data.codeSeries || []).join(', ');
+
     // Convert door/ignition/trunk booleans to worksOn select
     let worksOn = 'all';
     if (!data.ignition && data.door && data.trunk) worksOn = 'door-trunk';
     else if (data.door && !data.ignition && !data.trunk) worksOn = 'door-only';
     else if (!data.door && data.ignition && !data.trunk) worksOn = 'ignition-only';
     document.getElementById('lishiToolWorksOn').value = worksOn;
-    
+
     document.getElementById('lishiToolCutStart').value = data.cutStart || '1';
     document.getElementById('lishiToolCutEnd').value = data.cutEnd || '';
     document.getElementById('lishiToolCutTotal').value = data.cutTotal || '';
@@ -5517,7 +5533,12 @@ function saveLishiTool() {
         .split(',')
         .map(k => k.trim())
         .filter(k => k);
-    
+
+    const codeSeries = document.getElementById('lishiToolCodeSeries').value
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c);
+
     const worksOn = document.getElementById('lishiToolWorksOn').value;
     
     // Convert worksOn select to individual booleans
@@ -5533,6 +5554,7 @@ function saveLishiTool() {
         ...existingData,
         keyways: keyways,
         keyway_family: keyways[0] || existingData.keyway_family || '',
+        codeSeries: codeSeries,
         door: door,
         ignition: ignition,
         trunk: trunk,
@@ -5586,7 +5608,12 @@ function deleteLishiTool(toolName) {
 }
 
 function getLishiToolInfo(toolName) {
-    return lishiInventory[toolName] || null;
+    const masterData = MASTER_LISHI_TOOLS[toolName] || {};
+    const inventoryData = lishiInventory[toolName] || {};
+    if (Object.keys(masterData).length === 0 && Object.keys(inventoryData).length === 0) {
+        return null;
+    }
+    return { ...masterData, ...inventoryData };
 }
 
 // ===================== LISHI TOOL DETAIL PAGE =====================
@@ -5638,8 +5665,12 @@ function openLishiDetail(toolName) {
                 <span class="lishi-spec-label">Associated Keyways</span>
                 <span class="lishi-spec-value">${keywaysDisplay}</span>
             </div>
+            <div class="lishi-spec-row">
+                <span class="lishi-spec-label">Code Series</span>
+                <span class="lishi-spec-value">${(tool.codeSeries && tool.codeSeries.length > 0) ? tool.codeSeries.join(', ') : '<span style="color:var(--dim)">Not specified</span>'}</span>
+            </div>
     `;
-    
+
     // Cut Range
     if (tool.cutEnd && tool.cutTotal) {
         const isPartial = tool.cutStart > 1 || tool.cutEnd < tool.cutTotal;
@@ -5938,11 +5969,15 @@ function renderMyLishiCard(tool, isOwned) {
     const keyways = tool.keyways && tool.keyways.length > 0
         ? tool.keyways.slice(0, 3).join(', ')
         : (tool.keyway_family || 'No keyways');
+    const codeSeries = tool.codeSeries && tool.codeSeries.length > 0
+        ? tool.codeSeries.slice(0, 2).join(', ')
+        : '';
 
     return `
         <div class="my-lishi-card ${isOwned ? 'owned' : ''}" onclick="openLishiDetail('${escapedName}')">
             <div class="my-lishi-card-name">${tool.name}</div>
             <div class="my-lishi-card-keyways">${keyways}</div>
+            ${codeSeries ? `<div class="my-lishi-card-codeseries">${codeSeries}</div>` : ''}
         </div>
     `;
 }
@@ -6117,30 +6152,36 @@ function filterLishiLookup() {
                     // In stock indicator
                     let stockHtml = '';
                     if (toolInfo) {
-                        stockHtml = toolInfo.inStock 
+                        stockHtml = toolInfo.inStock
                             ? '<span class="lishi-inv-detail" style="margin-left:8px;background:rgba(76,175,80,0.2);color:#4CAF50;">✓ Owned</span>'
                             : '<span class="lishi-inv-detail" style="margin-left:8px;background:rgba(255,68,68,0.2);color:#ff4444;">✗ Not Owned</span>';
                     }
-                    
+
+                    // Code series display
+                    let codeSeriesHtml = '';
+                    if (toolInfo && toolInfo.codeSeries && toolInfo.codeSeries.length > 0) {
+                        codeSeriesHtml = `<span class="lishi-inv-detail" style="margin-left:8px;background:rgba(255,107,53,0.2);color:var(--accent2);">📋 ${toolInfo.codeSeries.join(', ')}</span>`;
+                    }
+
                     return `
                         <div class="lishi-tool-row" style="flex-wrap:wrap;">
-                            ${lishi.tool 
+                            ${lishi.tool
                                 ? `<span class="lishi-tool-name-large" style="cursor:pointer;" onclick="event.stopPropagation(); openLishiDetail('${lishi.tool.replace(/'/g, "\\'")}')">${lishi.tool}</span>${stockHtml}`
                                 : `<span class="lishi-tool-missing">No Lishi set for ${kw}</span>`
                             }
                             ${lishi.tool ? `
                                 <div class="lishi-direction-btns" style="margin-left:auto;">
-                                    <button class="lishi-dir-btn cw ${vehicleData.direction === 'CW' ? 'active' : ''}" 
+                                    <button class="lishi-dir-btn cw ${vehicleData.direction === 'CW' ? 'active' : ''}"
                                             onclick="setVehicleDirection('${groupKey}', 'CW')">↻ CW</button>
-                                    <button class="lishi-dir-btn ccw ${vehicleData.direction === 'CCW' ? 'active' : ''}" 
+                                    <button class="lishi-dir-btn ccw ${vehicleData.direction === 'CCW' ? 'active' : ''}"
                                             onclick="setVehicleDirection('${groupKey}', 'CCW')">↺ CCW</button>
                                 </div>
                             ` : `
                                 <button class="lishi-action-btn" onclick="addLishiFromLookup('${kw}')">+ Add Lishi Tool</button>
                             `}
-                            ${(worksOnHtml || cutHtml) ? `
+                            ${(worksOnHtml || cutHtml || codeSeriesHtml) ? `
                                 <div style="width:100%;margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
-                                    ${worksOnHtml}${cutHtml}
+                                    ${worksOnHtml}${cutHtml}${codeSeriesHtml}
                                 </div>
                             ` : ''}
                         </div>
