@@ -3431,6 +3431,9 @@ async function uploadToCloud() {
         customKeys: customKeys,
         lishiInventory: lishiInventory,
         lishiVehicleData: lishiVehicleData,
+        lishiData: lishiData,
+        deletedLishiTools: deletedLishiTools,
+        customKeyways: customKeyways,
         vendorPrices: vendorPrices,
         customVendors: customVendors,
         fidAssignments: fidAssignments,
@@ -3480,6 +3483,28 @@ async function downloadFromCloud() {
             lishiVehicleData = { ...lishiVehicleData, ...data.lishiVehicleData };
             saveLishiVehicle();
         }
+        if (data.lishiData) {
+            lishiData = { ...lishiData, ...data.lishiData };
+            saveLishi();
+        }
+        if (data.deletedLishiTools && data.deletedLishiTools.length > 0) {
+            // Merge deleted tools lists
+            data.deletedLishiTools.forEach(tool => {
+                if (!deletedLishiTools.includes(tool)) {
+                    deletedLishiTools.push(tool);
+                }
+            });
+            saveDeletedLishiTools();
+        }
+        if (data.customKeyways && data.customKeyways.length > 0) {
+            // Merge custom keyways lists
+            data.customKeyways.forEach(kw => {
+                if (!customKeyways.includes(kw)) {
+                    customKeyways.push(kw);
+                }
+            });
+            saveCustomKeyways();
+        }
         if (data.vendorPrices) {
             vendorPrices = { ...vendorPrices, ...data.vendorPrices };
             saveVendorPrices();
@@ -3519,6 +3544,9 @@ async function downloadFromCloud() {
         // Refresh UI
         buildFilters();
         applyFilters();
+        if (typeof renderLishiInventory === 'function') {
+            renderLishiInventory();
+        }
     }
 }
 
