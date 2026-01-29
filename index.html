@@ -2737,7 +2737,7 @@
 <div class="modal" id="lishiToolModal">
     <div class="modal-content">
         <div class="modal-title" id="lishiToolModalTitle">Add Lishi Tool</div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="lishiToolNameGroup">
             <label>Tool Name</label>
             <input type="text" class="modal-input" id="lishiToolName" placeholder="e.g., HU66, TOY43, GM37" style="text-transform:uppercase;">
         </div>
@@ -5327,8 +5327,8 @@ document.addEventListener('click', function(e) {
 function openAddLishiToolModal() {
     editingLishiTool = null;
     document.getElementById('lishiToolModalTitle').textContent = 'Add Lishi Tool';
+    document.getElementById('lishiToolNameGroup').style.display = '';
     document.getElementById('lishiToolName').value = '';
-    document.getElementById('lishiToolName').disabled = false;
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown([]);
     document.getElementById('lishiToolWorksOn').value = 'all';
@@ -5343,8 +5343,8 @@ function openAddLishiToolModal() {
 function openAddLishiToolModalWithKeyway(keyway) {
     editingLishiTool = null;
     document.getElementById('lishiToolModalTitle').textContent = 'Add Lishi Tool';
+    document.getElementById('lishiToolNameGroup').style.display = '';
     document.getElementById('lishiToolName').value = '';
-    document.getElementById('lishiToolName').disabled = false;
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown(keyway ? [keyway] : []);
     document.getElementById('lishiToolWorksOn').value = 'all';
@@ -5360,9 +5360,9 @@ function editLishiTool(toolName) {
     editingLishiTool = toolName;
     const data = lishiInventory[toolName] || MASTER_LISHI_TOOLS[toolName] || {};
 
-    document.getElementById('lishiToolModalTitle').textContent = 'Edit Lishi Tool';
+    document.getElementById('lishiToolModalTitle').textContent = 'Edit: ' + toolName;
+    document.getElementById('lishiToolNameGroup').style.display = 'none';
     document.getElementById('lishiToolName').value = toolName;
-    document.getElementById('lishiToolName').disabled = true;
     document.getElementById('keywaySearchInput').value = '';
     initKeywayDropdown(data.keyways || []);
     
