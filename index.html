@@ -1709,6 +1709,10 @@
             gap: 8px;
             grid-column: span 2;
         }
+
+        .custom-vehicle-fields input[id*="ModelOther"] {
+            grid-column: span 2;
+        }
         
         .custom-vehicle-years input {
             flex: 1;
@@ -6909,7 +6913,10 @@ function addCustomKeyVehicle() {
                 makesOptions +
                 '<option value="__other__">+ Other</option>' +
             '</select>' +
-            '<input type="text" id="customVehicleModel' + customKeyVehicleCount + '" placeholder="Model">' +
+            '<select id="customVehicleModel' + customKeyVehicleCount + '" onchange="handleCustomModelChange(' + customKeyVehicleCount + ')">' +
+                '<option value="">Model (select make first)</option>' +
+            '</select>' +
+            '<input type="text" id="customVehicleModelOther' + customKeyVehicleCount + '" placeholder="Enter model name" style="display:none;">' +
             '<div class="custom-vehicle-years">' +
                 '<input type="number" id="customVehicleStart' + customKeyVehicleCount + '" placeholder="Start Year" value="' + currentYear + '">' +
                 '<input type="number" id="customVehicleEnd' + customKeyVehicleCount + '" placeholder="End Year" value="' + currentYear + '">' +
@@ -6927,8 +6934,14 @@ function removeCustomKeyVehicle(num) {
 
 function updateCustomVehicleModels(num) {
     const makeSelect = document.getElementById('customVehicleMake' + num);
+    const modelSelect = document.getElementById('customVehicleModel' + num);
+    const modelOther = document.getElementById('customVehicleModelOther' + num);
     const make = makeSelect.value;
-    
+
+    // Hide the other input by default
+    modelOther.style.display = 'none';
+    modelOther.value = '';
+
     if (make === '__other__') {
         const newMake = prompt('Enter make name:');
         if (newMake) {
@@ -6938,9 +6951,55 @@ function updateCustomVehicleModels(num) {
             opt.textContent = newMake;
             makeSelect.insertBefore(opt, makeSelect.lastElementChild);
             makeSelect.value = newMake;
+            // Populate models for this new make (will be empty, so just show Other option)
+            populateModelDropdown(modelSelect, newMake);
         } else {
             makeSelect.value = '';
+            modelSelect.innerHTML = '<option value="">Model (select make first)</option>';
         }
+    } else if (make) {
+        // Populate models dropdown for the selected make
+        populateModelDropdown(modelSelect, make);
+    } else {
+        modelSelect.innerHTML = '<option value="">Model (select make first)</option>';
+    }
+}
+
+function populateModelDropdown(modelSelect, make) {
+    // Get all models for this make from DB
+    const models = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model) {
+                models.add(v.model);
+            }
+        });
+    });
+
+    const sortedModels = Array.from(models).sort();
+
+    // Build options
+    let html = '<option value="">Select model...</option>';
+    sortedModels.forEach(model => {
+        html += '<option value="' + model.replace(/"/g, '&quot;') + '">' + model + '</option>';
+    });
+    html += '<option value="__other__">+ Other (new model)</option>';
+
+    modelSelect.innerHTML = html;
+}
+
+function handleCustomModelChange(num) {
+    const modelSelect = document.getElementById('customVehicleModel' + num);
+    const modelOther = document.getElementById('customVehicleModelOther' + num);
+
+    if (modelSelect.value === '__other__') {
+        // Show the text input for custom model
+        modelOther.style.display = '';
+        modelOther.focus();
+    } else {
+        // Hide the text input
+        modelOther.style.display = 'none';
+        modelOther.value = '';
     }
 }
 
@@ -6973,10 +7032,13 @@ function saveCustomKey() {
         if (!num || isNaN(num)) return;
         
         const make = document.getElementById('customVehicleMake' + num)?.value;
-        const model = document.getElementById('customVehicleModel' + num)?.value?.trim();
+        const modelSelect = document.getElementById('customVehicleModel' + num)?.value;
+        const modelOther = document.getElementById('customVehicleModelOther' + num)?.value?.trim();
+        // Use the "Other" text input if selected, otherwise use dropdown value
+        const model = (modelSelect === '__other__' ? modelOther : modelSelect)?.trim();
         const startYear = parseInt(document.getElementById('customVehicleStart' + num)?.value) || new Date().getFullYear();
         const endYear = parseInt(document.getElementById('customVehicleEnd' + num)?.value) || startYear;
-        
+
         if (make && make !== '__other__') {
             vehicles.push({
                 make: make,
