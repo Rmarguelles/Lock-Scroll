@@ -6062,7 +6062,9 @@ function saveLishiTool() {
         cutEnd: parseInt(document.getElementById('lishiToolCutEnd').value) || null,
         cutTotal: parseInt(document.getElementById('lishiToolCutTotal').value) || null,
         inStock: document.getElementById('lishiToolInStock').value === 'yes',
-        notes: document.getElementById('lishiToolNotes').value.trim()
+        notes: document.getElementById('lishiToolNotes').value.trim(),
+        lastEdited: new Date().toISOString(),
+        lastEditedBy: currentUser?.displayName || currentUser?.email || 'Unknown'
     };
 
     // Handle renaming
@@ -6289,6 +6291,16 @@ function openLishiDetail(toolName) {
         </div>
     `;
     
+    // Last Edited Info
+    if (tool.lastEditedBy) {
+        const editDate = tool.lastEdited ? new Date(tool.lastEdited).toLocaleDateString() : '';
+        html += `
+            <div style="margin-top:12px;padding:8px 12px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--dim);">
+                Last edited by ${tool.lastEditedBy}${editDate ? ' on ' + editDate : ''}
+            </div>
+        `;
+    }
+
     document.getElementById('lishiDetailContent').innerHTML = html;
     document.getElementById('lishiDetailPanel').classList.add('on');
 }
@@ -6630,8 +6642,12 @@ function filterLishiLookup() {
         const confirmText = isConfirmed 
             ? `✓ Confirmed ${vehicleData.confirmCount}x` 
             : '⚠ Unconfirmed';
+        const confirmedByText = vehicleData.lastConfirmedBy ? ` by ${vehicleData.lastConfirmedBy}` : '';
         const lastConfirmedText = vehicleData.lastConfirmed 
-            ? `Last: ${new Date(vehicleData.lastConfirmed).toLocaleDateString()}`
+            ? `Last: ${new Date(vehicleData.lastConfirmed).toLocaleDateString()}${confirmedByText}`
+            : '';
+        const editedByText = vehicleData.lastEditedBy 
+            ? `Edited by ${vehicleData.lastEditedBy}` 
             : '';
         
         return `
@@ -6711,6 +6727,7 @@ function filterLishiLookup() {
                     <div class="lishi-confirm-status ${confirmClass}">
                         <span class="lishi-confirm-badge ${confirmClass}">${confirmText}</span>
                         ${lastConfirmedText ? `<span style="font-size:11px;color:var(--dim);">${lastConfirmedText}</span>` : ''}
+                        ${editedByText && !lastConfirmedText ? `<span style="font-size:11px;color:var(--dim);">${editedByText}</span>` : ''}
                     </div>
                     <button class="lishi-confirm-btn" onclick="confirmVehicleDirection('${groupKey}')" 
                             ${!vehicleData.direction ? 'disabled title="Set a direction first"' : ''}>
@@ -6737,10 +6754,12 @@ function filterLishiLookup() {
 
 function setVehicleDirection(groupKey, direction) {
     if (!lishiVehicleData[groupKey]) {
-        lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, notes: '' };
+        lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '', lastEditedBy: null };
     }
     
     lishiVehicleData[groupKey].direction = direction;
+    lishiVehicleData[groupKey].lastEdited = new Date().toISOString();
+    lishiVehicleData[groupKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
     saveLishiVehicle();
     filterLishiLookup();
     toast(`Direction set to ${direction}`);
@@ -6748,7 +6767,7 @@ function setVehicleDirection(groupKey, direction) {
 
 function confirmVehicleDirection(groupKey) {
     if (!lishiVehicleData[groupKey]) {
-        lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, notes: '' };
+        lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '' };
     }
     
     if (!lishiVehicleData[groupKey].direction) {
@@ -6758,6 +6777,7 @@ function confirmVehicleDirection(groupKey) {
     
     lishiVehicleData[groupKey].confirmCount = (lishiVehicleData[groupKey].confirmCount || 0) + 1;
     lishiVehicleData[groupKey].lastConfirmed = new Date().toISOString();
+    lishiVehicleData[groupKey].lastConfirmedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
     saveLishiVehicle();
     filterLishiLookup();
     toast('Direction confirmed!');
@@ -6783,10 +6803,12 @@ function saveLishiNotes() {
     if (!currentLishiNotesKey) return;
     
     if (!lishiVehicleData[currentLishiNotesKey]) {
-        lishiVehicleData[currentLishiNotesKey] = { direction: null, confirmCount: 0, lastConfirmed: null, notes: '' };
+        lishiVehicleData[currentLishiNotesKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '', lastEditedBy: null };
     }
     
     lishiVehicleData[currentLishiNotesKey].notes = document.getElementById('lishiNotesText').value.trim();
+    lishiVehicleData[currentLishiNotesKey].lastEdited = new Date().toISOString();
+    lishiVehicleData[currentLishiNotesKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
     saveLishiVehicle();
     closeLishiNotesModal();
     filterLishiLookup();
