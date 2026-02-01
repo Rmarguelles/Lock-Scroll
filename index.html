@@ -6006,6 +6006,15 @@ function closeVehicleDetail() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
 }
 
+function openKeyFromVehicle(idx) {
+    if (idx < 0) return;
+    // Close vehicle panels
+    document.getElementById('vehicleDetailPanel').classList.remove('on');
+    document.getElementById('vehiclePanel').classList.remove('on');
+    // Open the key detail
+    openKey(idx);
+}
+
 function populateVehicleFilters() {
     const makes = new Set();
 
@@ -6262,8 +6271,18 @@ function openVehicleDetail(vehicleKey) {
 
     const fidDisplay = fids.size > 0 ? Array.from(fids).join(', ') : 'Not assigned';
 
+    // Calculate total stock for this vehicle
+    const totalVehicleStock = vehicle.keys.reduce((sum, key) => sum + (stockData[key.pn] || 0), 0);
+    const hasStock = totalVehicleStock > 0;
+
     // Build content
     let html = `
+        <!-- Big Stock Indicator -->
+        <div style="text-align:center;padding:24px;background:${hasStock ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)'};border-bottom:1px solid var(--border);">
+            <div style="font-size:48px;font-weight:700;color:${hasStock ? 'var(--success)' : '#ff4444'};">${totalVehicleStock}</div>
+            <div style="font-size:14px;color:${hasStock ? 'var(--success)' : '#ff4444'};font-weight:600;">${hasStock ? 'IN STOCK' : 'OUT OF STOCK'}</div>
+        </div>
+
         <!-- Vehicle Info Grid -->
         <div class="vehicle-info-grid">
             <div class="vehicle-info-item">
@@ -6340,8 +6359,9 @@ function openVehicleDetail(vehicleKey) {
             ${sortedKeys.map(key => {
                 const stock = stockData[key.pn] || 0;
                 const inStock = stock > 0;
+                const keyIdx = DB.findIndex(k => k.pn === key.pn);
                 return `
-                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}">
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
                         <div class="vehicle-key-info">
                             <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
