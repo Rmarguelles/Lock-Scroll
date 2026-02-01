@@ -1222,7 +1222,282 @@
             border-color: #ff4444;
             color: #ff4444;
         }
-        
+
+        /* Vehicle Panel */
+        .vehicle-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 200;
+            overflow-y: auto;
+        }
+
+        .vehicle-panel.on { display: block; }
+
+        .vehicle-header {
+            background: linear-gradient(135deg, #2a4a5a 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .vehicle-title {
+            font-size: 20px;
+            color: #4da6ff;
+            margin-bottom: 8px;
+        }
+
+        .vehicle-search {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        .vehicle-filters {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .vehicle-filter-select {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .vehicle-list { padding: 16px; }
+
+        .vehicle-card {
+            background: var(--card);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .vehicle-card:hover {
+            border-color: #4da6ff;
+            transform: translateX(4px);
+        }
+
+        .vehicle-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .vehicle-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .vehicle-card-years {
+            font-size: 12px;
+            color: #4da6ff;
+            background: rgba(77, 166, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .vehicle-card-info {
+            font-size: 12px;
+            color: var(--dim);
+        }
+
+        .vehicle-stock-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .vehicle-stock-badge.in-stock {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--success);
+        }
+
+        .vehicle-stock-badge.out-of-stock {
+            background: rgba(255, 68, 68, 0.15);
+            color: #ff4444;
+        }
+
+        /* Vehicle Detail View */
+        .vehicle-detail-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 210;
+            overflow-y: auto;
+        }
+
+        .vehicle-detail-panel.on { display: block; }
+
+        .vehicle-detail-header {
+            background: linear-gradient(135deg, #2a4a5a 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vehicle-detail-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .vehicle-detail-subtitle {
+            font-size: 14px;
+            color: #4da6ff;
+        }
+
+        .vehicle-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px;
+            background: var(--card);
+            margin: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .vehicle-info-item {
+            padding: 8px;
+        }
+
+        .vehicle-info-label {
+            font-size: 11px;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .vehicle-info-value {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .vehicle-info-value.highlight {
+            color: #4da6ff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .vehicle-section {
+            margin: 16px;
+        }
+
+        .vehicle-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vehicle-key-card {
+            background: var(--card);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .vehicle-key-card.in-stock {
+            border-color: var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .vehicle-key-info h4 {
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .vehicle-key-info p {
+            font-size: 12px;
+            color: var(--dim);
+        }
+
+        .vehicle-key-stock {
+            text-align: right;
+        }
+
+        .vehicle-key-stock .count {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .vehicle-key-stock .label {
+            font-size: 10px;
+            color: var(--dim);
+        }
+
+        .vehicle-tools-section {
+            background: var(--card);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .vehicle-tool-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vehicle-tool-item:last-child {
+            border-bottom: none;
+        }
+
+        .vehicle-tool-name {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .vehicle-tool-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .vehicle-tool-status.owned {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--success);
+        }
+
+        .vehicle-tool-status.needed {
+            background: rgba(255, 170, 0, 0.15);
+            color: #ffaa00;
+        }
+
         /* Add Inventory Panel */
         .add-inventory-panel, .purchase-history-panel {
             display: none;
@@ -2651,6 +2926,34 @@
     <div class="fcc-keys-list" id="fccKeysList"></div>
 </div>
 
+<!-- Vehicle Lookup Panel -->
+<div class="vehicle-panel" id="vehiclePanel">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeVehiclePanel()">←</button>
+        <div class="vehicle-title">🚗 Vehicle Lookup</div>
+        <input type="text" class="vehicle-search" id="vehicleSearch" placeholder="Search by year, make, or model..." oninput="filterVehicles()">
+        <div class="vehicle-filters">
+            <select class="vehicle-filter-select" id="vehicleMakeFilter" onchange="filterVehicles()">
+                <option value="">All Makes</option>
+            </select>
+            <select class="vehicle-filter-select" id="vehicleYearFilter" onchange="filterVehicles()">
+                <option value="">All Years</option>
+            </select>
+        </div>
+    </div>
+    <div class="vehicle-list" id="vehicleList"></div>
+</div>
+
+<!-- Vehicle Detail Panel -->
+<div class="vehicle-detail-panel" id="vehicleDetailPanel">
+    <div class="vehicle-detail-header">
+        <button class="back-btn" onclick="closeVehicleDetail()">←</button>
+        <div class="vehicle-detail-title" id="vehicleDetailTitle">Vehicle Name</div>
+        <div class="vehicle-detail-subtitle" id="vehicleDetailSubtitle">Year Range</div>
+    </div>
+    <div id="vehicleDetailContent"></div>
+</div>
+
 <!-- FID Manager Panel -->
 <div class="fid-panel" id="fidPanel">
     <div class="fid-header">
@@ -3358,6 +3661,10 @@
     <button class="nav-btn" onclick="showTab('add', event)">
         <span class="icon">➕</span>
         <span>Add</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('vehicle', event)">
+        <span class="icon">🚗</span>
+        <span>Vehicle</span>
     </button>
     <button class="nav-btn" onclick="showTab('lishi', event)">
         <span class="icon">🔧</span>
@@ -5505,7 +5812,7 @@ function showTab(tab, event) {
     } else {
         // Fallback: activate the correct nav button based on tab name
         const navBtns = document.querySelectorAll('.nav-btn');
-        const tabIndex = {'keys': 0, 'add': 1, 'lishi': 2, 'fid': 3, 'settings': 4};
+        const tabIndex = {'keys': 0, 'add': 1, 'vehicle': 2, 'lishi': 3, 'fid': 4, 'settings': 5};
         if (navBtns[tabIndex[tab]]) {
             navBtns[tabIndex[tab]].classList.add('active');
         }
@@ -5517,9 +5824,13 @@ function showTab(tab, event) {
         document.getElementById('lishiLookupPanel').classList.remove('on');
         document.getElementById('fidPanel').classList.remove('on');
         document.getElementById('addInventoryPanel').classList.remove('on');
+        document.getElementById('vehiclePanel').classList.remove('on');
+        document.getElementById('vehicleDetailPanel').classList.remove('on');
         document.getElementById('detailPanel').classList.remove('on');
     } else if (tab === 'add') {
         openAddInventory();
+    } else if (tab === 'vehicle') {
+        openVehiclePanel();
     } else if (tab === 'lishi') {
         openLishiLookup();
     } else if (tab === 'fid') {
@@ -5672,6 +5983,307 @@ function clearStock() {
     saveStock();
     applyFilters();
     toast('Stock reset');
+}
+
+// ===================== VEHICLE LOOKUP =====================
+let vehicleToolsData = {}; // Future: { "IM508": { adapters: [...], cables: [...] }, ... }
+
+function openVehiclePanel() {
+    populateVehicleFilters();
+    filterVehicles();
+    document.getElementById('vehiclePanel').classList.add('on');
+}
+
+function closeVehiclePanel() {
+    document.getElementById('vehiclePanel').classList.remove('on');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.nav-btn').classList.add('active');
+}
+
+function closeVehicleDetail() {
+    document.getElementById('vehicleDetailPanel').classList.remove('on');
+}
+
+function populateVehicleFilters() {
+    const makes = new Set();
+    const years = new Set();
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make) makes.add(v.make);
+            if (v.startYear) {
+                for (let y = v.startYear; y <= (v.endYear || v.startYear); y++) {
+                    years.add(y);
+                }
+            }
+        });
+    });
+
+    const makeSelect = document.getElementById('vehicleMakeFilter');
+    makeSelect.innerHTML = '<option value="">All Makes</option>' +
+        Array.from(makes).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    const yearSelect = document.getElementById('vehicleYearFilter');
+    yearSelect.innerHTML = '<option value="">All Years</option>' +
+        Array.from(years).sort((a,b) => b - a).map(y => `<option value="${y}">${y}</option>`).join('');
+}
+
+function getUniqueVehicles() {
+    // Build a map of unique vehicles with all their compatible keys
+    const vehicleMap = {};
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            // Create a unique key for each vehicle grouping
+            const vehicleKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear || v.startYear}`;
+
+            if (!vehicleMap[vehicleKey]) {
+                vehicleMap[vehicleKey] = {
+                    make: v.make,
+                    model: v.model,
+                    startYear: v.startYear,
+                    endYear: v.endYear || v.startYear,
+                    keys: [],
+                    keyways: new Set(),
+                    fccids: new Set(),
+                    chips: new Set(),
+                    frequencies: new Set()
+                };
+            }
+
+            vehicleMap[vehicleKey].keys.push(key);
+            if (key.keyway) vehicleMap[vehicleKey].keyways.add(key.keyway);
+            if (key.fccid) vehicleMap[vehicleKey].fccids.add(key.fccid);
+            if (key.chip) vehicleMap[vehicleKey].chips.add(key.chip);
+            if (key.frequency) vehicleMap[vehicleKey].frequencies.add(key.frequency);
+        });
+    });
+
+    return Object.values(vehicleMap);
+}
+
+function filterVehicles() {
+    const search = document.getElementById('vehicleSearch').value.toLowerCase().trim();
+    const makeFilter = document.getElementById('vehicleMakeFilter').value;
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+
+    let vehicles = getUniqueVehicles();
+
+    // Apply filters
+    if (makeFilter) {
+        vehicles = vehicles.filter(v => v.make === makeFilter);
+    }
+
+    if (yearFilter) {
+        const year = parseInt(yearFilter);
+        vehicles = vehicles.filter(v => year >= v.startYear && year <= v.endYear);
+    }
+
+    if (search) {
+        vehicles = vehicles.filter(v => {
+            const searchStr = `${v.make} ${v.model} ${v.startYear} ${v.endYear}`.toLowerCase();
+            return searchStr.includes(search);
+        });
+    }
+
+    // Sort by make, then model, then year
+    vehicles.sort((a, b) => {
+        if (a.make !== b.make) return a.make.localeCompare(b.make);
+        if (a.model !== b.model) return a.model.localeCompare(b.model);
+        return b.startYear - a.startYear;
+    });
+
+    renderVehicleList(vehicles);
+}
+
+function renderVehicleList(vehicles) {
+    const container = document.getElementById('vehicleList');
+
+    if (vehicles.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No vehicles found</div>';
+        return;
+    }
+
+    container.innerHTML = vehicles.map(v => {
+        // Check if any compatible key is in stock
+        const inStockKeys = v.keys.filter(k => (stockData[k.pn] || 0) > 0);
+        const hasStock = inStockKeys.length > 0;
+        const totalStock = inStockKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+
+        const yearDisplay = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
+        const vehicleKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear}`;
+
+        return `
+            <div class="vehicle-card" onclick="openVehicleDetail('${vehicleKey.replace(/'/g, "\\'")}')">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${v.make} ${v.model}</div>
+                    <div class="vehicle-card-years">${yearDisplay}</div>
+                </div>
+                <div class="vehicle-card-info">
+                    <span class="vehicle-stock-badge ${hasStock ? 'in-stock' : 'out-of-stock'}">
+                        ${hasStock ? `${totalStock} in stock` : 'Out of stock'}
+                    </span>
+                    <span style="margin-left:8px;">${v.keys.length} compatible key${v.keys.length !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openVehicleDetail(vehicleKey) {
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    const vehicles = getUniqueVehicles();
+    const vehicle = vehicles.find(v =>
+        v.make === make &&
+        v.model === model &&
+        v.startYear === parseInt(startYear) &&
+        v.endYear === parseInt(endYear)
+    );
+
+    if (!vehicle) {
+        toast('Vehicle not found');
+        return;
+    }
+
+    // Set header
+    const yearDisplay = vehicle.startYear === vehicle.endYear ? vehicle.startYear : `${vehicle.startYear}-${vehicle.endYear}`;
+    document.getElementById('vehicleDetailTitle').textContent = `${vehicle.make} ${vehicle.model}`;
+    document.getElementById('vehicleDetailSubtitle').textContent = yearDisplay;
+
+    // Get Lishi tool info for this vehicle's keyways
+    const lishiTools = [];
+    const keyways = Array.from(vehicle.keyways);
+    keyways.forEach(keyway => {
+        // Check MASTER_LISHI_TOOLS for matching keyway
+        Object.entries(MASTER_LISHI_TOOLS).forEach(([toolName, toolData]) => {
+            if (toolData.keyways && toolData.keyways.some(kw =>
+                kw.toLowerCase().includes(keyway.toLowerCase()) ||
+                keyway.toLowerCase().includes(kw.toLowerCase())
+            )) {
+                const inventoryData = lishiInventory[toolName] || toolData;
+                lishiTools.push({
+                    name: toolName,
+                    inStock: inventoryData.inStock || false
+                });
+            }
+        });
+    });
+
+    // Get code series (from keyway typically)
+    const codeSeries = keyways.length > 0 ? keyways[0] : 'N/A';
+
+    // Get year grouping from lishiVehicleData
+    const groupKey = `${make}|${model}|${startYear}|${endYear}`;
+    const vehicleData = lishiVehicleData[groupKey] || {};
+
+    // Build content
+    let html = `
+        <!-- Vehicle Info Grid -->
+        <div class="vehicle-info-grid">
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Year Range</div>
+                <div class="vehicle-info-value">${yearDisplay}</div>
+            </div>
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Code Series</div>
+                <div class="vehicle-info-value highlight">${codeSeries}</div>
+            </div>
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Keyway${keyways.length > 1 ? 's' : ''}</div>
+                <div class="vehicle-info-value highlight">${keyways.join(', ') || 'N/A'}</div>
+            </div>
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">FCC ID${vehicle.fccids.size > 1 ? 's' : ''}</div>
+                <div class="vehicle-info-value highlight">${Array.from(vehicle.fccids).join(', ') || 'N/A'}</div>
+            </div>
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Chip Type${vehicle.chips.size > 1 ? 's' : ''}</div>
+                <div class="vehicle-info-value">${Array.from(vehicle.chips).join(', ') || 'N/A'}</div>
+            </div>
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Frequency</div>
+                <div class="vehicle-info-value">${Array.from(vehicle.frequencies).join(', ') || 'N/A'}</div>
+            </div>
+        </div>
+
+        ${vehicleData.direction ? `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">Pick Direction</div>
+            <div style="background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--border);">
+                <div style="font-size:18px;font-weight:600;color:${vehicleData.direction === 'CW' ? 'var(--success)' : '#ff9500'};">
+                    ${vehicleData.direction === 'CW' ? '↻ Clockwise (CW)' : '↺ Counter-Clockwise (CCW)'}
+                </div>
+                ${vehicleData.confirmCount ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">Confirmed ${vehicleData.confirmCount}x</div>` : ''}
+            </div>
+        </div>
+        ` : ''}
+    `;
+
+    // Compatible Keys Section - sorted by stock
+    const sortedKeys = [...vehicle.keys].sort((a, b) => {
+        const stockA = stockData[a.pn] || 0;
+        const stockB = stockData[b.pn] || 0;
+        return stockB - stockA; // In-stock first
+    });
+
+    html += `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">Compatible Keys (${sortedKeys.length})</div>
+            ${sortedKeys.map(key => {
+                const stock = stockData[key.pn] || 0;
+                const inStock = stock > 0;
+                return `
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}">
+                        <div class="vehicle-key-info">
+                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
+                            <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
+                        </div>
+                        <div class="vehicle-key-stock">
+                            <div class="count" style="color:${inStock ? 'var(--success)' : 'var(--dim)'}">${stock}</div>
+                            <div class="label">in stock</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    // Lishi Tools Section
+    if (lishiTools.length > 0) {
+        // Remove duplicates
+        const uniqueTools = [...new Map(lishiTools.map(t => [t.name, t])).values()];
+
+        html += `
+            <div class="vehicle-section">
+                <div class="vehicle-section-title">Lishi Tools</div>
+                <div class="vehicle-tools-section">
+                    ${uniqueTools.map(tool => `
+                        <div class="vehicle-tool-item">
+                            <div class="vehicle-tool-name">${tool.name}</div>
+                            <div class="vehicle-tool-status ${tool.inStock ? 'owned' : 'needed'}">
+                                ${tool.inStock ? 'Owned' : 'Needed'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Tools & Adapters Section (placeholder for future expansion)
+    html += `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">Programming Tools & Adapters</div>
+            <div class="vehicle-tools-section">
+                <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px;">
+                    Tool and adapter requirements coming soon
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('vehicleDetailContent').innerHTML = html;
+    document.getElementById('vehicleDetailPanel').classList.add('on');
 }
 
 // ===================== LISHI LOOKUP =====================
