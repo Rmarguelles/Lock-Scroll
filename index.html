@@ -2931,13 +2931,15 @@
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehiclePanel()">←</button>
         <div class="vehicle-title">🚗 Vehicle Lookup</div>
-        <input type="text" class="vehicle-search" id="vehicleSearch" placeholder="Search by year, make, or model..." oninput="filterVehicles()">
         <div class="vehicle-filters">
-            <select class="vehicle-filter-select" id="vehicleMakeFilter" onchange="filterVehicles()">
-                <option value="">All Makes</option>
+            <select class="vehicle-filter-select" id="vehicleMakeFilter" onchange="onMakeFilterChange()">
+                <option value="">Select Make</option>
+            </select>
+            <select class="vehicle-filter-select" id="vehicleModelFilter" onchange="onModelFilterChange()">
+                <option value="">Select Model</option>
             </select>
             <select class="vehicle-filter-select" id="vehicleYearFilter" onchange="filterVehicles()">
-                <option value="">All Years</option>
+                <option value="">Select Year</option>
             </select>
         </div>
     </div>
@@ -6006,24 +6008,82 @@ function closeVehicleDetail() {
 
 function populateVehicleFilters() {
     const makes = new Set();
-    const years = new Set();
 
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
             if (v.make) makes.add(v.make);
-            if (v.startYear) {
-                for (let y = v.startYear; y <= (v.endYear || v.startYear); y++) {
-                    years.add(y);
+        });
+    });
+
+    const makeSelect = document.getElementById('vehicleMakeFilter');
+    makeSelect.innerHTML = '<option value="">Select Make</option>' +
+        Array.from(makes).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    // Reset model and year dropdowns
+    document.getElementById('vehicleModelFilter').innerHTML = '<option value="">Select Model</option>';
+    document.getElementById('vehicleYearFilter').innerHTML = '<option value="">Select Year</option>';
+}
+
+function onMakeFilterChange() {
+    const selectedMake = document.getElementById('vehicleMakeFilter').value;
+    const modelSelect = document.getElementById('vehicleModelFilter');
+    const yearSelect = document.getElementById('vehicleYearFilter');
+
+    if (!selectedMake) {
+        modelSelect.innerHTML = '<option value="">Select Model</option>';
+        yearSelect.innerHTML = '<option value="">Select Year</option>';
+        filterVehicles();
+        return;
+    }
+
+    // Get models for selected make
+    const models = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === selectedMake && v.model) {
+                models.add(v.model);
+            }
+        });
+    });
+
+    modelSelect.innerHTML = '<option value="">All Models</option>' +
+        Array.from(models).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    // Update years for all models of this make
+    updateYearFilter();
+    filterVehicles();
+}
+
+function onModelFilterChange() {
+    updateYearFilter();
+    filterVehicles();
+}
+
+function updateYearFilter() {
+    const selectedMake = document.getElementById('vehicleMakeFilter').value;
+    const selectedModel = document.getElementById('vehicleModelFilter').value;
+    const yearSelect = document.getElementById('vehicleYearFilter');
+
+    if (!selectedMake) {
+        yearSelect.innerHTML = '<option value="">Select Year</option>';
+        return;
+    }
+
+    const years = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === selectedMake) {
+                if (!selectedModel || v.model === selectedModel) {
+                    if (v.startYear) {
+                        for (let y = v.startYear; y <= (v.endYear || v.startYear); y++) {
+                            years.add(y);
+                        }
+                    }
                 }
             }
         });
     });
 
-    const makeSelect = document.getElementById('vehicleMakeFilter');
-    makeSelect.innerHTML = '<option value="">All Makes</option>' +
-        Array.from(makes).sort().map(m => `<option value="${m}">${m}</option>`).join('');
-
-    const yearSelect = document.getElementById('vehicleYearFilter');
     yearSelect.innerHTML = '<option value="">All Years</option>' +
         Array.from(years).sort((a,b) => b - a).map(y => `<option value="${y}">${y}</option>`).join('');
 }
@@ -6063,8 +6123,8 @@ function getUniqueVehicles() {
 }
 
 function filterVehicles() {
-    const search = document.getElementById('vehicleSearch').value.toLowerCase().trim();
     const makeFilter = document.getElementById('vehicleMakeFilter').value;
+    const modelFilter = document.getElementById('vehicleModelFilter').value;
     const yearFilter = document.getElementById('vehicleYearFilter').value;
 
     let vehicles = getUniqueVehicles();
@@ -6074,16 +6134,13 @@ function filterVehicles() {
         vehicles = vehicles.filter(v => v.make === makeFilter);
     }
 
+    if (modelFilter) {
+        vehicles = vehicles.filter(v => v.model === modelFilter);
+    }
+
     if (yearFilter) {
         const year = parseInt(yearFilter);
         vehicles = vehicles.filter(v => year >= v.startYear && year <= v.endYear);
-    }
-
-    if (search) {
-        vehicles = vehicles.filter(v => {
-            const searchStr = `${v.make} ${v.model} ${v.startYear} ${v.endYear}`.toLowerCase();
-            return searchStr.includes(search);
-        });
     }
 
     // Sort by make, then model, then year
