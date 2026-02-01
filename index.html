@@ -6233,6 +6233,35 @@ function openVehicleDetail(vehicleKey) {
     const groupKey = `${make}|${model}|${startYear}|${endYear}`;
     const vehicleData = lishiVehicleData[groupKey] || {};
 
+    // Get FIDs for this vehicle's FCC IDs
+    const fccids = Array.from(vehicle.fccids);
+    const fids = new Set();
+    const fidInfo = []; // Array of { fid, fccid, otherKeysInStock }
+
+    fccids.forEach(fccid => {
+        const fid = fidAssignments[fccid];
+        if (fid) {
+            fids.add(fid);
+
+            // Find other keys with the same FID that are in stock
+            const otherKeysWithSameFid = DB.filter(key => {
+                if (!key.fccid || key.fccid === fccid) return false;
+                const keyFid = fidAssignments[key.fccid];
+                return keyFid === fid && (stockData[key.pn] || 0) > 0;
+            });
+
+            if (otherKeysWithSameFid.length > 0) {
+                fidInfo.push({
+                    fid: fid,
+                    fccid: fccid,
+                    otherKeys: otherKeysWithSameFid
+                });
+            }
+        }
+    });
+
+    const fidDisplay = fids.size > 0 ? Array.from(fids).join(', ') : 'Not assigned';
+
     // Build content
     let html = `
         <!-- Vehicle Info Grid -->
@@ -6254,6 +6283,10 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-value highlight">${Array.from(vehicle.fccids).join(', ') || 'N/A'}</div>
             </div>
             <div class="vehicle-info-item">
+                <div class="vehicle-info-label">FID${fids.size > 1 ? 's' : ''}</div>
+                <div class="vehicle-info-value highlight">${fidDisplay}</div>
+            </div>
+            <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Chip Type${vehicle.chips.size > 1 ? 's' : ''}</div>
                 <div class="vehicle-info-value">${Array.from(vehicle.chips).join(', ') || 'N/A'}</div>
             </div>
@@ -6262,6 +6295,24 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-value">${Array.from(vehicle.frequencies).join(', ') || 'N/A'}</div>
             </div>
         </div>
+
+        ${fidInfo.length > 0 ? `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">Alternative Keys with Same FID</div>
+            <div style="background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--success);">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">These keys share the same FID and are in stock:</div>
+                ${fidInfo.map(info => info.otherKeys.map(key => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(0,255,136,0.1);border-radius:6px;margin-bottom:6px;">
+                        <div>
+                            <div style="font-weight:600;color:var(--text);">${key.pn}</div>
+                            <div style="font-size:11px;color:var(--dim);">FID: ${info.fid} • ${key.fccid}</div>
+                        </div>
+                        <div style="color:var(--success);font-weight:600;">${stockData[key.pn]} in stock</div>
+                    </div>
+                `).join('')).join('')}
+            </div>
+        </div>
+        ` : ''}
 
         ${vehicleData.direction ? `
         <div class="vehicle-section">
