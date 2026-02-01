@@ -1253,6 +1253,11 @@
             color: var(--success);
         }
         
+        .add-inv-header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
         .history-btn {
             padding: 8px 12px;
             background: var(--bg);
@@ -3045,7 +3050,10 @@
     <div class="add-inv-header">
         <button class="back-btn" onclick="closeAddInventory()">←</button>
         <div class="add-inv-title">➕ Add Inventory</div>
-        <button class="history-btn" onclick="openPurchaseHistory()">📜 History</button>
+        <div class="add-inv-header-buttons">
+            <button class="history-btn" onclick="closeAddInventory()">📦 Inventory</button>
+            <button class="history-btn" onclick="openPurchaseHistory()">📜 History</button>
+        </div>
     </div>
     
     <div class="add-inv-content">
