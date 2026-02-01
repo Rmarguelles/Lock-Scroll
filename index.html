@@ -2930,7 +2930,18 @@
 <div class="vehicle-panel" id="vehiclePanel">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehiclePanel()">←</button>
-        <div class="vehicle-title">🚗 Select Make</div>
+        <div class="vehicle-title">🚗 Vehicle Lookup</div>
+        <div class="vehicle-filters">
+            <select class="vehicle-filter-select" id="vehicleYearFilter" onchange="onYearFilterChange()">
+                <option value="">Year</option>
+            </select>
+            <select class="vehicle-filter-select" id="vehicleMakeFilter" onchange="onMakeFilterChange()">
+                <option value="">Make</option>
+            </select>
+            <select class="vehicle-filter-select" id="vehicleModelFilter" onchange="onModelFilterChange()">
+                <option value="">Model</option>
+            </select>
+        </div>
     </div>
     <div class="vehicle-list" id="vehicleMakeList"></div>
 </div>
@@ -2942,6 +2953,15 @@
         <div class="vehicle-title" id="vehicleModelsPanelTitle">🚗 Select Model</div>
     </div>
     <div class="vehicle-list" id="vehicleModelsList"></div>
+</div>
+
+<!-- Vehicle Years Panel - After selecting model -->
+<div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:206;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeVehicleYearsPanel()">←</button>
+        <div class="vehicle-title" id="vehicleYearsPanelTitle">🚗 Select Year</div>
+    </div>
+    <div class="vehicle-list" id="vehicleYearsList"></div>
 </div>
 
 <!-- Vehicle Detail Panel -->
@@ -5988,8 +6008,10 @@ function clearStock() {
 // ===================== VEHICLE LOOKUP =====================
 let vehicleToolsData = {}; // Future: { "IM508": { adapters: [...], cables: [...] }, ... }
 let selectedVehicleMake = null;
+let selectedVehicleModel = null;
 
 function openVehiclePanel() {
+    populateVehicleDropdowns();
     renderVehicleMakeList();
     document.getElementById('vehiclePanel').classList.add('on');
 }
@@ -5997,12 +6019,17 @@ function openVehiclePanel() {
 function closeVehiclePanel() {
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
 }
 
 function closeVehicleModelsPanel() {
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+}
+
+function closeVehicleYearsPanel() {
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
 }
 
 function closeVehicleDetail() {
@@ -6013,33 +6040,124 @@ function openKeyFromVehicle(idx) {
     if (idx < 0) return;
     // Close vehicle panels
     document.getElementById('vehicleDetailPanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     // Open the key detail
     openKey(idx);
 }
 
-function renderVehicleMakeList() {
+// Dropdown functions
+function populateVehicleDropdowns() {
     const makes = new Set();
-    const makeVehicleCounts = {};
+    const years = new Set();
 
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
-            if (v.make) {
-                makes.add(v.make);
-                makeVehicleCounts[v.make] = (makeVehicleCounts[v.make] || 0) + 1;
+            if (v.make) makes.add(v.make);
+            if (v.startYear) {
+                for (let y = v.startYear; y <= (v.endYear || v.startYear); y++) {
+                    years.add(y);
+                }
             }
         });
     });
 
-    const sortedMakes = Array.from(makes).sort();
+    document.getElementById('vehicleYearFilter').innerHTML = '<option value="">Year</option>' +
+        Array.from(years).sort((a,b) => b - a).map(y => `<option value="${y}">${y}</option>`).join('');
+
+    document.getElementById('vehicleMakeFilter').innerHTML = '<option value="">Make</option>' +
+        Array.from(makes).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    document.getElementById('vehicleModelFilter').innerHTML = '<option value="">Model</option>';
+}
+
+function onYearFilterChange() {
+    // Update make list based on year if selected
+    renderVehicleMakeList();
+}
+
+function onMakeFilterChange() {
+    const selectedMake = document.getElementById('vehicleMakeFilter').value;
+    const modelSelect = document.getElementById('vehicleModelFilter');
+
+    if (!selectedMake) {
+        modelSelect.innerHTML = '<option value="">Model</option>';
+        renderVehicleMakeList();
+        return;
+    }
+
+    // Populate models for selected make
+    const models = new Set();
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === selectedMake && v.model) {
+                if (!yearFilter || (parseInt(yearFilter) >= v.startYear && parseInt(yearFilter) <= (v.endYear || v.startYear))) {
+                    models.add(v.model);
+                }
+            }
+        });
+    });
+
+    modelSelect.innerHTML = '<option value="">Model</option>' +
+        Array.from(models).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    renderVehicleMakeList();
+}
+
+function onModelFilterChange() {
+    const selectedMake = document.getElementById('vehicleMakeFilter').value;
+    const selectedModel = document.getElementById('vehicleModelFilter').value;
+    const selectedYear = document.getElementById('vehicleYearFilter').value;
+
+    if (selectedMake && selectedModel) {
+        // If all three are selected, go directly to year groups for that make/model
+        selectVehicleMake(selectedMake);
+        selectVehicleModel(selectedModel);
+    } else {
+        renderVehicleMakeList();
+    }
+}
+
+// Make list rendering
+function renderVehicleMakeList() {
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+    const makeFilter = document.getElementById('vehicleMakeFilter').value;
+
+    const makes = new Set();
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make) {
+                // Apply year filter if set
+                if (yearFilter) {
+                    const year = parseInt(yearFilter);
+                    if (year >= v.startYear && year <= (v.endYear || v.startYear)) {
+                        makes.add(v.make);
+                    }
+                } else {
+                    makes.add(v.make);
+                }
+            }
+        });
+    });
+
+    // If make filter is set, only show that make
+    const filteredMakes = makeFilter ? [makeFilter].filter(m => makes.has(m)) : Array.from(makes).sort();
+
     const container = document.getElementById('vehicleMakeList');
 
-    container.innerHTML = sortedMakes.map(make => {
+    container.innerHTML = filteredMakes.map(make => {
         // Count how many keys for this make are in stock
         let inStockCount = 0;
         DB.forEach(key => {
-            if ((key.vehicles || []).some(v => v.make === make) && (stockData[key.pn] || 0) > 0) {
+            const matchesYear = !yearFilter || (key.vehicles || []).some(v => {
+                const year = parseInt(yearFilter);
+                return v.make === make && year >= v.startYear && year <= (v.endYear || v.startYear);
+            });
+            if ((key.vehicles || []).some(v => v.make === make) && matchesYear && (stockData[key.pn] || 0) > 0) {
                 inStockCount++;
             }
         });
@@ -6055,8 +6173,13 @@ function renderVehicleMakeList() {
             </div>
         `;
     }).join('');
+
+    if (filteredMakes.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No makes found</div>';
+    }
 }
 
+// Make selection -> Show models
 function selectVehicleMake(make) {
     selectedVehicleMake = make;
     document.getElementById('vehicleModelsPanelTitle').textContent = `🚗 ${make}`;
@@ -6065,22 +6188,86 @@ function selectVehicleMake(make) {
 }
 
 function renderVehicleModelsForMake(make) {
-    const vehicles = getUniqueVehicles().filter(v => v.make === make);
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
 
-    // Sort by model, then by year descending
-    vehicles.sort((a, b) => {
-        if (a.model !== b.model) return a.model.localeCompare(b.model);
-        return b.startYear - a.startYear;
+    // Get unique models for this make
+    const modelMap = {};
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model) {
+                // Apply year filter if set
+                if (yearFilter) {
+                    const year = parseInt(yearFilter);
+                    if (!(year >= v.startYear && year <= (v.endYear || v.startYear))) {
+                        return;
+                    }
+                }
+
+                if (!modelMap[v.model]) {
+                    modelMap[v.model] = { model: v.model, keys: new Set(), inStock: 0 };
+                }
+                modelMap[v.model].keys.add(key.pn);
+                if ((stockData[key.pn] || 0) > 0) {
+                    modelMap[v.model].inStock++;
+                }
+            }
+        });
     });
 
+    const models = Object.values(modelMap).sort((a, b) => a.model.localeCompare(b.model));
     const container = document.getElementById('vehicleModelsList');
 
-    if (vehicles.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No vehicles found</div>';
+    if (models.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No models found</div>';
         return;
     }
 
-    container.innerHTML = vehicles.map(v => {
+    container.innerHTML = models.map(m => `
+        <div class="vehicle-card" onclick="selectVehicleModel('${m.model.replace(/'/g, "\\'")}')">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title">${m.model}</div>
+                <span class="vehicle-stock-badge ${m.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
+                    ${m.inStock > 0 ? `${m.inStock} in stock` : 'None in stock'}
+                </span>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">${m.keys.size} key${m.keys.size !== 1 ? 's' : ''}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Model selection -> Show year groups
+function selectVehicleModel(model) {
+    selectedVehicleModel = model;
+    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${selectedVehicleMake} ${model}`;
+    renderVehicleYearsForModel(selectedVehicleMake, model);
+    document.getElementById('vehicleYearsPanel').classList.add('on');
+}
+
+function renderVehicleYearsForModel(make, model) {
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+    const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
+
+    // Apply year filter if set
+    let filteredVehicles = vehicles;
+    if (yearFilter) {
+        const year = parseInt(yearFilter);
+        filteredVehicles = vehicles.filter(v => year >= v.startYear && year <= v.endYear);
+    }
+
+    // Sort by year descending
+    filteredVehicles.sort((a, b) => b.startYear - a.startYear);
+
+    const container = document.getElementById('vehicleYearsList');
+
+    if (filteredVehicles.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No year groups found</div>';
+        return;
+    }
+
+    container.innerHTML = filteredVehicles.map(v => {
         const inStockKeys = v.keys.filter(k => (stockData[k.pn] || 0) > 0);
         const hasStock = inStockKeys.length > 0;
         const totalStock = inStockKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
@@ -6091,14 +6278,13 @@ function renderVehicleModelsForMake(make) {
         return `
             <div class="vehicle-card" onclick="openVehicleDetail('${vehicleKey.replace(/'/g, "\\'")}')">
                 <div class="vehicle-card-header">
-                    <div class="vehicle-card-title">${v.model}</div>
-                    <div class="vehicle-card-years">${yearDisplay}</div>
-                </div>
-                <div class="vehicle-card-info">
+                    <div class="vehicle-card-title">${yearDisplay}</div>
                     <span class="vehicle-stock-badge ${hasStock ? 'in-stock' : 'out-of-stock'}">
                         ${hasStock ? `${totalStock} in stock` : 'Out of stock'}
                     </span>
-                    <span style="margin-left:8px;">${v.keys.length} key${v.keys.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="vehicle-card-info">
+                    <span style="color:var(--dim);">${v.keys.length} key${v.keys.length !== 1 ? 's' : ''}</span>
                 </div>
             </div>
         `;
