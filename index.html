@@ -5087,11 +5087,18 @@ function toggleLishiDirection(keyway) {
 
 function closeDetail() {
     document.getElementById('detailPanel').classList.remove('on');
-    
+
+    if (cameFromVehicle) {
+        // Return to vehicle detail page
+        openVehicleDetail(cameFromVehicle);
+        cameFromVehicle = null;
+        return;
+    }
+
     if (cameFromFcc && currentFccId) {
         openFccPage(currentFccId, cameFromFid);
     }
-    
+
     cameFromFcc = false;
     currentKeyIdx = null;
 }
@@ -6009,6 +6016,7 @@ function clearStock() {
 let vehicleToolsData = {}; // Future: { "IM508": { adapters: [...], cables: [...] }, ... }
 let selectedVehicleMake = null;
 let selectedVehicleModel = null;
+let cameFromVehicle = null; // Stores the vehicle key if we came from vehicle detail
 
 function openVehiclePanel() {
     populateVehicleDropdowns();
@@ -6036,14 +6044,11 @@ function closeVehicleDetail() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
 }
 
-function openKeyFromVehicle(idx) {
+function openKeyFromVehicle(idx, vehicleKey) {
     if (idx < 0) return;
-    // Close vehicle panels
-    document.getElementById('vehicleDetailPanel').classList.remove('on');
-    document.getElementById('vehicleYearsPanel').classList.remove('on');
-    document.getElementById('vehicleModelsPanel').classList.remove('on');
-    document.getElementById('vehiclePanel').classList.remove('on');
-    // Open the key detail
+    // Track where we came from
+    cameFromVehicle = vehicleKey || null;
+    // Open the key detail (vehicle panels stay open behind it)
     openKey(idx);
 }
 
@@ -6483,6 +6488,8 @@ function openVehicleDetail(vehicleKey) {
         return stockB - stockA; // In-stock first
     });
 
+    const currentVehicleKey = `${vehicle.make}|${vehicle.model}|${vehicle.startYear}|${vehicle.endYear}`;
+
     html += `
         <div class="vehicle-section">
             <div class="vehicle-section-title">Compatible Keys (${sortedKeys.length})</div>
@@ -6491,7 +6498,7 @@ function openVehicleDetail(vehicleKey) {
                 const inStock = stock > 0;
                 const keyIdx = DB.findIndex(k => k.pn === key.pn);
                 return `
-                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${currentVehicleKey.replace(/'/g, "\\'")}')" style="cursor:pointer;">
                         <div class="vehicle-key-info">
                             <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
