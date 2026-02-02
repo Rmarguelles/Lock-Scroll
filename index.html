@@ -6067,10 +6067,10 @@ function closeVehicleDetail() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
 }
 
-function openKeyFromVehicle(idx, vehicleKey) {
+function openKeyFromVehicle(idx, encodedVehicleKey) {
     if (idx < 0) return;
-    // Track where we came from
-    cameFromVehicle = vehicleKey || null;
+    // Track where we came from (decode the URL-encoded key)
+    cameFromVehicle = encodedVehicleKey ? decodeURIComponent(encodedVehicleKey) : null;
     // Open the key detail (vehicle panels stay open behind it)
     openKey(idx);
 }
@@ -6251,9 +6251,13 @@ function renderVehicleModelsForMake(make) {
         return;
     }
 
-    container.innerHTML = models.map(m => `
+    const encodedMake = encodeURIComponent(selectedVehicleMake);
+
+    container.innerHTML = models.map(m => {
+        const encodedModel = encodeURIComponent(m.model);
+        return `
         <div class="vehicle-card" style="position:relative;">
-            <div onclick="selectVehicleModel('${m.model.replace(/'/g, "\\'")}')" style="flex:1;">
+            <div onclick="selectVehicleModel(decodeURIComponent('${encodedModel}'))" style="flex:1;">
                 <div class="vehicle-card-header">
                     <div class="vehicle-card-title">${m.model}</div>
                     <span class="vehicle-stock-badge ${m.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
@@ -6264,9 +6268,9 @@ function renderVehicleModelsForMake(make) {
                     <span style="color:var(--dim);">${m.keys.size} key${m.keys.size !== 1 ? 's' : ''}</span>
                 </div>
             </div>
-            <button onclick="event.stopPropagation(); openRenameModelModal('${selectedVehicleMake.replace(/'/g, "\\'")}', '${m.model.replace(/'/g, "\\'")}')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️ Edit</button>
+            <button onclick="event.stopPropagation(); openRenameModelModal(decodeURIComponent('${encodedMake}'), decodeURIComponent('${encodedModel}'))" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️ Edit</button>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 // Rename Model functions
@@ -6622,7 +6626,7 @@ function openVehicleDetail(vehicleKey) {
     });
 
     const currentVehicleKey = vehicle.make + '|' + vehicle.model + '|' + vehicle.startYear + '|' + vehicle.endYear;
-    const escapedVehicleKey = currentVehicleKey.replace(/'/g, "\\'");
+    const encodedVehicleKey = encodeURIComponent(currentVehicleKey);
 
     html += `
         <div class="vehicle-section">
@@ -6632,7 +6636,7 @@ function openVehicleDetail(vehicleKey) {
                 const inStock = stock > 0;
                 const keyIdx = DB.findIndex(k => k.pn === key.pn);
                 return `
-                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${escapedVehicleKey}')" style="cursor:pointer;">
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${encodedVehicleKey}')" style="cursor:pointer;">
                         <div class="vehicle-key-info">
                             <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
