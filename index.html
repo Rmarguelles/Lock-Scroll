@@ -6488,7 +6488,8 @@ function openVehicleDetail(vehicleKey) {
         return stockB - stockA; // In-stock first
     });
 
-    const currentVehicleKey = `${vehicle.make}|${vehicle.model}|${vehicle.startYear}|${vehicle.endYear}`;
+    const currentVehicleKey = vehicle.make + '|' + vehicle.model + '|' + vehicle.startYear + '|' + vehicle.endYear;
+    const escapedVehicleKey = currentVehicleKey.replace(/'/g, "\\'");
 
     html += `
         <div class="vehicle-section">
@@ -6498,7 +6499,7 @@ function openVehicleDetail(vehicleKey) {
                 const inStock = stock > 0;
                 const keyIdx = DB.findIndex(k => k.pn === key.pn);
                 return `
-                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${currentVehicleKey.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${escapedVehicleKey}')" style="cursor:pointer;">
                         <div class="vehicle-key-info">
                             <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
