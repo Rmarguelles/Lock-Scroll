@@ -2894,6 +2894,10 @@
         </div>
         <div class="sel" style="flex:0;min-width:auto;">
             <label>&nbsp;</label>
+            <button onclick="openAddInventory()" style="padding:10px 14px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:14px;font-weight:600;cursor:pointer;">+ Add Key</button>
+        </div>
+        <div class="sel" style="flex:0;min-width:auto;">
+            <label>&nbsp;</label>
             <button onclick="resetFilters()" style="padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:14px;cursor:pointer;">↺ Reset</button>
         </div>
     </div>
@@ -3677,10 +3681,6 @@
     <button class="nav-btn active" onclick="showTab('keys', event)">
         <span class="icon">🔑</span>
         <span>Keys</span>
-    </button>
-    <button class="nav-btn" onclick="showTab('add', event)">
-        <span class="icon">➕</span>
-        <span>Add</span>
     </button>
     <button class="nav-btn" onclick="showTab('vehicle', event)">
         <span class="icon">🚗</span>
@@ -5839,7 +5839,7 @@ function showTab(tab, event) {
     } else {
         // Fallback: activate the correct nav button based on tab name
         const navBtns = document.querySelectorAll('.nav-btn');
-        const tabIndex = {'keys': 0, 'add': 1, 'vehicle': 2, 'lishi': 3, 'fid': 4, 'settings': 5};
+        const tabIndex = {'keys': 0, 'vehicle': 1, 'lishi': 2, 'fid': 3, 'settings': 4};
         if (navBtns[tabIndex[tab]]) {
             navBtns[tabIndex[tab]].classList.add('active');
         }
@@ -5854,8 +5854,6 @@ function showTab(tab, event) {
         document.getElementById('vehiclePanel').classList.remove('on');
         document.getElementById('vehicleDetailPanel').classList.remove('on');
         document.getElementById('detailPanel').classList.remove('on');
-    } else if (tab === 'add') {
-        openAddInventory();
     } else if (tab === 'vehicle') {
         openVehiclePanel();
     } else if (tab === 'lishi') {
