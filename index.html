@@ -3372,6 +3372,31 @@
     </div>
 </div>
 
+<!-- Rename Model Modal -->
+<div class="modal" id="renameModelModal">
+    <div class="modal-content">
+        <div class="modal-title">✏️ Rename Model</div>
+        <input type="hidden" id="renameModelMake">
+        <input type="hidden" id="renameModelOldName">
+        <div class="modal-input-group">
+            <label>Current Name</label>
+            <div id="renameModelCurrentName" style="padding:10px;background:var(--bg);border-radius:6px;color:var(--dim);"></div>
+        </div>
+        <div class="modal-input-group">
+            <label>New Name (or select existing to merge)</label>
+            <input type="text" class="modal-input" id="renameModelNewName" placeholder="Enter new model name">
+            <select class="modal-input" id="renameModelExisting" style="margin-top:8px;" onchange="document.getElementById('renameModelNewName').value = this.value;">
+                <option value="">-- Or select existing model to merge --</option>
+            </select>
+        </div>
+        <div id="renameModelPreview" style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--dim);"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeRenameModelModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="renameVehicleModel()">Rename & Merge</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add Inventory Panel -->
 <div class="add-inventory-panel" id="addInventoryPanel">
     <div class="add-inv-header">
@@ -6227,18 +6252,128 @@ function renderVehicleModelsForMake(make) {
     }
 
     container.innerHTML = models.map(m => `
-        <div class="vehicle-card" onclick="selectVehicleModel('${m.model.replace(/'/g, "\\'")}')">
-            <div class="vehicle-card-header">
-                <div class="vehicle-card-title">${m.model}</div>
-                <span class="vehicle-stock-badge ${m.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
-                    ${m.inStock > 0 ? `${m.inStock} in stock` : 'None in stock'}
-                </span>
+        <div class="vehicle-card" style="position:relative;">
+            <div onclick="selectVehicleModel('${m.model.replace(/'/g, "\\'")}')" style="flex:1;">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${m.model}</div>
+                    <span class="vehicle-stock-badge ${m.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
+                        ${m.inStock > 0 ? `${m.inStock} in stock` : 'None in stock'}
+                    </span>
+                </div>
+                <div class="vehicle-card-info">
+                    <span style="color:var(--dim);">${m.keys.size} key${m.keys.size !== 1 ? 's' : ''}</span>
+                </div>
             </div>
-            <div class="vehicle-card-info">
-                <span style="color:var(--dim);">${m.keys.size} key${m.keys.size !== 1 ? 's' : ''}</span>
-            </div>
+            <button onclick="event.stopPropagation(); openRenameModelModal('${selectedVehicleMake.replace(/'/g, "\\'")}', '${m.model.replace(/'/g, "\\'")}')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️ Edit</button>
         </div>
     `).join('');
+}
+
+// Rename Model functions
+function openRenameModelModal(make, oldName) {
+    document.getElementById('renameModelMake').value = make;
+    document.getElementById('renameModelOldName').value = oldName;
+    document.getElementById('renameModelCurrentName').textContent = `${make} ${oldName}`;
+    document.getElementById('renameModelNewName').value = '';
+
+    // Populate existing models dropdown for merging
+    const existingModels = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model && v.model !== oldName) {
+                existingModels.add(v.model);
+            }
+        });
+    });
+
+    const select = document.getElementById('renameModelExisting');
+    select.innerHTML = '<option value="">-- Or select existing model to merge --</option>' +
+        Array.from(existingModels).sort().map(m => `<option value="${m}">${m}</option>`).join('');
+
+    updateRenamePreview();
+    document.getElementById('renameModelModal').classList.add('on');
+
+    // Add input listener for preview
+    document.getElementById('renameModelNewName').oninput = updateRenamePreview;
+}
+
+function closeRenameModelModal() {
+    document.getElementById('renameModelModal').classList.remove('on');
+}
+
+function updateRenamePreview() {
+    const make = document.getElementById('renameModelMake').value;
+    const oldName = document.getElementById('renameModelOldName').value;
+    const newName = document.getElementById('renameModelNewName').value.trim();
+
+    const preview = document.getElementById('renameModelPreview');
+
+    if (!newName) {
+        preview.innerHTML = 'Enter a new name to see preview';
+        return;
+    }
+
+    // Count keys that will be affected
+    let keysToRename = 0;
+    let keysAlreadyExist = 0;
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === oldName) {
+                keysToRename++;
+            }
+            if (v.make === make && v.model === newName) {
+                keysAlreadyExist++;
+            }
+        });
+    });
+
+    if (newName === oldName) {
+        preview.innerHTML = '<span style="color:var(--dim);">No changes - same name</span>';
+    } else if (keysAlreadyExist > 0) {
+        preview.innerHTML = `<span style="color:var(--accent);">Will merge ${keysToRename} vehicle entries into existing "${newName}" (${keysAlreadyExist} entries)</span>`;
+    } else {
+        preview.innerHTML = `<span style="color:var(--success);">Will rename ${keysToRename} vehicle entries to "${newName}"</span>`;
+    }
+}
+
+function renameVehicleModel() {
+    const make = document.getElementById('renameModelMake').value;
+    const oldName = document.getElementById('renameModelOldName').value;
+    const newName = document.getElementById('renameModelNewName').value.trim();
+
+    if (!newName) {
+        toast('Please enter a new model name');
+        return;
+    }
+
+    if (newName === oldName) {
+        toast('New name is the same as current name');
+        return;
+    }
+
+    // Update all keys with this make/model
+    let updatedCount = 0;
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === oldName) {
+                v.model = newName;
+                updatedCount++;
+            }
+        });
+    });
+
+    // Save to IndexedDB
+    saveToIndexedDB('database', DB);
+
+    // Sync to cloud if enabled
+    if (syncEnabled) {
+        uploadToCloud();
+    }
+
+    closeRenameModelModal();
+    renderVehicleModelsForMake(make);
+    toast(`Renamed ${updatedCount} entries to "${newName}"`);
 }
 
 // Model selection -> Show year groups
