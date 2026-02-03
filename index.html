@@ -4080,6 +4080,146 @@
     </div>
 </div>
 
+<!-- Quick Add Vehicle Modal -->
+<div class="modal" id="quickAddVehicleModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">🚗 Quick Add Vehicle</div>
+        <div class="modal-input-group">
+            <label>Make *</label>
+            <select class="modal-input" id="quickVehicleMake" onchange="onQuickVehicleMakeChange()">
+                <option value="">Select Make...</option>
+            </select>
+            <input type="text" class="modal-input" id="quickVehicleNewMake" placeholder="Enter new make..." style="display:none;margin-top:8px;">
+        </div>
+        <div class="modal-input-group">
+            <label>Model *</label>
+            <select class="modal-input" id="quickVehicleModel" onchange="onQuickVehicleModelChange()">
+                <option value="">Select Model...</option>
+            </select>
+            <input type="text" class="modal-input" id="quickVehicleNewModel" placeholder="Enter new model..." style="display:none;margin-top:8px;">
+        </div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Year Start *</label>
+                <input type="number" class="modal-input" id="quickVehicleYear" placeholder="2024" onchange="checkForSimilarVehicles()">
+            </div>
+            <div style="flex:1;">
+                <label>Year End</label>
+                <input type="number" class="modal-input" id="quickVehicleYearEnd" placeholder="2024">
+            </div>
+        </div>
+        <div id="quickVehicleSimilarSuggestion" style="display:none;margin-bottom:12px;"></div>
+        <button class="modal-btn secondary" id="quickVehicleOptionalToggle" onclick="toggleQuickVehicleOptionalFields()" style="width:100%;margin-bottom:12px;">
+            + Show Optional Fields
+        </button>
+        <div id="quickVehicleOptionalFields" style="display:none;">
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <input type="text" class="modal-input" id="quickVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+            </div>
+            <div class="modal-input-group">
+                <label>Chip</label>
+                <input type="text" class="modal-input" id="quickVehicleChip" placeholder="e.g., Hitag Pro">
+            </div>
+            <div class="modal-input-group">
+                <label>Buttons</label>
+                <input type="text" class="modal-input" id="quickVehicleButtons" placeholder="e.g., 4 Button">
+            </div>
+            <div class="modal-input-group">
+                <label>FCC ID</label>
+                <input type="text" class="modal-input" id="quickVehicleFccid" placeholder="e.g., KR5TXN7">
+            </div>
+            <div class="modal-input-group">
+                <label>Frequency</label>
+                <input type="text" class="modal-input" id="quickVehicleFrequency" placeholder="e.g., 433.92 MHz">
+            </div>
+            <div class="modal-input-group">
+                <label>Keyway</label>
+                <input type="text" class="modal-input" id="quickVehicleKeyway" placeholder="e.g., DA34">
+            </div>
+            <div class="modal-input-group">
+                <label>Notes</label>
+                <textarea class="modal-input" id="quickVehicleNotes" rows="2" placeholder="Additional notes..."></textarea>
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeQuickAddVehicleModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveQuickAddVehicle()">Add Vehicle</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Custom Vehicle Modal -->
+<div class="modal" id="editCustomVehicleModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">✏️ Edit Vehicle</div>
+        <input type="hidden" id="editCustomVehicleId">
+        <div id="editCustomVehicleSimilarSuggestion" style="display:none;"></div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Make</label>
+                <input type="text" class="modal-input" id="editCustomVehicleMake">
+            </div>
+            <div style="flex:1;">
+                <label>Model</label>
+                <input type="text" class="modal-input" id="editCustomVehicleModel">
+            </div>
+        </div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Year Start</label>
+                <input type="number" class="modal-input" id="editCustomVehicleYearStart">
+            </div>
+            <div style="flex:1;">
+                <label>Year End</label>
+                <input type="number" class="modal-input" id="editCustomVehicleYearEnd">
+            </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Key Type</label>
+            <input type="text" class="modal-input" id="editCustomVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+        </div>
+        <div class="modal-input-group">
+            <label>Chip</label>
+            <input type="text" class="modal-input" id="editCustomVehicleChip" placeholder="e.g., Hitag Pro">
+        </div>
+        <div class="modal-input-group">
+            <label>Buttons</label>
+            <input type="text" class="modal-input" id="editCustomVehicleButtons" placeholder="e.g., 4 Button">
+        </div>
+        <div class="modal-input-group">
+            <label>FCC ID</label>
+            <input type="text" class="modal-input" id="editCustomVehicleFccid" placeholder="e.g., KR5TXN7">
+        </div>
+        <div class="modal-input-group">
+            <label>Frequency</label>
+            <input type="text" class="modal-input" id="editCustomVehicleFrequency" placeholder="e.g., 433.92 MHz">
+        </div>
+        <div class="modal-input-group">
+            <label>Keyway</label>
+            <input type="text" class="modal-input" id="editCustomVehicleKeyway" placeholder="e.g., DA34">
+        </div>
+        <div class="modal-input-group">
+            <label>Notes</label>
+            <textarea class="modal-input" id="editCustomVehicleNotes" rows="2" placeholder="Additional notes..."></textarea>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn danger" onclick="deleteCustomVehicle()" style="margin-right:auto;">Delete</button>
+            <button class="modal-btn secondary" onclick="closeEditCustomVehicleModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveEditCustomVehicle()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Incomplete Vehicles Panel -->
+<div class="panel" id="incompleteVehiclesPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeIncompleteVehiclesPanel()">←</button>
+        <h2>Incomplete Vehicles</h2>
+    </div>
+    <div id="incompleteVehiclesContent"></div>
+</div>
+
 <!-- Add/Edit Lishi Tool Modal -->
 <div class="modal" id="lishiToolModal">
     <div class="modal-content">
@@ -4476,6 +4616,24 @@
                 <div>
                     <div class="tools-section-title">Programmers & Equipment</div>
                     <div class="tools-section-desc">Cables, adapters, EEPROM clamps & pin readers</div>
+                </div>
+            </div>
+        </div>
+        <div class="tools-section-card" onclick="openQuickAddVehicleModal()">
+            <div class="tools-section-card-header">
+                <span class="tools-section-icon">🚗</span>
+                <div>
+                    <div class="tools-section-title">Quick Add Vehicle</div>
+                    <div class="tools-section-desc">Create vehicles for tool linking</div>
+                </div>
+            </div>
+        </div>
+        <div class="tools-section-card" onclick="openIncompleteVehiclesView()" id="incompleteVehiclesCard">
+            <div class="tools-section-card-header">
+                <span class="tools-section-icon">📋</span>
+                <div>
+                    <div class="tools-section-title">Incomplete Vehicles <span id="incompleteVehiclesBadge" style="background:#ff9500;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;display:none;">0</span></div>
+                    <div class="tools-section-desc">Complete partial vehicle records</div>
                 </div>
             </div>
         </div>
@@ -5135,6 +5293,7 @@ async function uploadToCloud() {
         const sharedDocRef = firebaseDb.collection('shared').doc('data');
         const sharedData = {
             customKeys: customKeys,
+            customVehicles: customVehicles,
             lishiInventory: lishiInventory,
             lishiVehicleData: lishiVehicleData,
             lishiData: lishiData,
@@ -5155,6 +5314,7 @@ async function uploadToCloud() {
         // Not in shared mode - save everything to personal location
         const allData = {
             customKeys: customKeys,
+            customVehicles: customVehicles,
             lishiInventory: lishiInventory,
             lishiVehicleData: lishiVehicleData,
             lishiData: lishiData,
@@ -5222,6 +5382,20 @@ async function downloadFromCloud() {
             saveCustomKeys();
             // Rebuild DB with custom keys
             loadCustomKeysIntoDB();
+        }
+        if (data.customVehicles && data.customVehicles.length > 0) {
+            // Merge custom vehicles by ID
+            const existingIds = new Set(customVehicles.map(v => v.id));
+            data.customVehicles.forEach(vehicle => {
+                if (!existingIds.has(vehicle.id)) {
+                    customVehicles.push(vehicle);
+                } else {
+                    // Update existing
+                    const idx = customVehicles.findIndex(v => v.id === vehicle.id);
+                    if (idx >= 0) customVehicles[idx] = vehicle;
+                }
+            });
+            saveCustomVehicles();
         }
         if (data.lishiInventory) {
             lishiInventory = { ...lishiInventory, ...data.lishiInventory };
@@ -5391,6 +5565,7 @@ let lishiVehicleData = {}; // Vehicle group-based: { "Make|Model|StartYear|EndYe
 let lishiInventory = {}; // Tool inventory: { toolName: { keyways: [], worksOn, cutStart, cutEnd, cutTotal, inStock, notes } }
 let deletedLishiTools = []; // Array of tool names that user has deleted (including master tools)
 let customKeyways = []; // Array of user-added keyways that persist even without keys
+let customVehicles = []; // Array of user-created vehicles independent of keys: { id, make, model, startYear, endYear, dataStatus, keyType, chip, buttons, fccid, frequency, keyway, notes, createdAt }
 
 // Master list of known Lishi tools (pre-populated)
 const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_family": "GM B / GM37", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "B111": {"keyways": ["GM Z"], "keyway_family": "GM Z", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BAOJUN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BQSB": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BW9MH": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01R": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CHAANGAN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24": {"keyways": ["Chrysler CY24", "Y157", "Y159", "Y164"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24-CV": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24 TRUCK": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DAT12R": {"keyways": ["Datsun DAT12"], "keyway_family": "Datsun DAT12", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DW04R V.2": {"keyways": ["Peugeot/Citroen DW04"], "keyway_family": "Peugeot/Citroen DW04", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FO38": {"keyways": ["Ford FO38", "H75"], "keyway_family": "Ford FO38", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FORD 2017": {"keyways": ["Ford HU101 variant"], "keyway_family": "Ford HU101 variant", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM39": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM45": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HAIMA": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON58R": {"keyways": ["Honda HON58"], "keyway_family": "Honda HON58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON66": {"keyways": ["Honda HON66"], "keyway_family": "Honda HON66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU39": {"keyways": ["Mercedes HU39"], "keyway_family": "Mercedes HU39", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU43": {"keyways": ["Mercedes HU43"], "keyway_family": "Mercedes HU43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU46": {"keyways": ["Mercedes HU46"], "keyway_family": "Mercedes HU46", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU49": {"keyways": ["Mercedes HU49"], "keyway_family": "Mercedes HU49", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58TL": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU64 V.2": {"keyways": ["Mercedes HU64"], "keyway_family": "Mercedes HU64", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 Generation 1 & 2": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 V.3": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU71": {"keyways": ["Mercedes HU71"], "keyway_family": "Mercedes HU71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU92": {"keyways": ["BMW HU92"], "keyway_family": "BMW HU92", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100V3(10 Cut)": {"keyways": ["GM HU100", "B119", "B120"], "keyway_family": "GM HU100", "door": true, "ignition": false, "trunk": true, "cutStart": 3, "cutEnd": 10, "cutTotal": 10, "inStock": false, "notes": "Does NOT work on ignition. Reads cuts 3-10 only."}, "HU100V3(8 Cut)": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100R V.3": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU101 V.3": {"keyways": ["Ford HU101"], "keyway_family": "Ford HU101", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162 (VAG2015)": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC9": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC10 V.3": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY16": {"keyways": ["Hyundai HY16"], "keyway_family": "Hyundai HY16", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY17(HYN15)": {"keyways": ["Hyundai HY17"], "keyway_family": "Hyundai HY17", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY20": {"keyways": ["Hyundai HY20"], "keyway_family": "Hyundai HY20", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY22": {"keyways": ["Hyundai HY22"], "keyway_family": "Hyundai HY22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14(HY15)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14R(HY16)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN22": {"keyways": ["Hyundai HYN22"], "keyway_family": "Hyundai HYN22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN7R": {"keyways": ["Hyundai HYN7"], "keyway_family": "Hyundai HYN7", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ICF03": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "K5 V.3": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MAZ24R V.2": {"keyways": ["Mazda MAZ24"], "keyway_family": "Mazda MAZ24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT11R": {"keyways": ["Mitsubishi MIT11"], "keyway_family": "Mitsubishi MIT11", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT8": {"keyways": ["Mitsubishi MIT8"], "keyway_family": "Mitsubishi MIT8", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT9/MIT6": {"keyways": ["Mitsubishi MIT9 / MIT6"], "keyway_family": "Mitsubishi MIT9 / MIT6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE38 V.2 Boot": {"keyways": ["Nissan NE38"], "keyway_family": "Nissan NE38", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Boot/Trunk only - does not work on ignition"}, "NE66": {"keyways": ["Nissan NE66"], "keyway_family": "Nissan NE66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE71R V.2": {"keyways": ["Nissan NE71"], "keyway_family": "Nissan NE71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE72": {"keyways": ["Nissan NE72"], "keyway_family": "Nissan NE72", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE78": {"keyways": ["Nissan NE78"], "keyway_family": "Nissan NE78", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NSN14": {"keyways": ["Nissan NSN14", "DA34"], "keyway_family": "Nissan NSN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "QIRUI": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SIP22": {"keyways": ["Fiat SIP22"], "keyway_family": "Fiat SIP22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SRT2018": {"keyways": ["Dodge SRT"], "keyway_family": "Dodge SRT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SX9": {"keyways": ["Citroen SX9"], "keyway_family": "Citroen SX9", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY2": {"keyways": ["Toyota TOY2"], "keyway_family": "Toyota TOY2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43": {"keyways": ["Toyota TOY43", "TR47"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT Dr/Bt": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Door/Boot only - does not work on ignition"}, "TOY43AT Ignition": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": false, "ignition": true, "trunk": false, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Ignition only"}, "TOY43R": {"keyways": ["Toyota TOY43"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY48": {"keyways": ["Toyota TOY48"], "keyway_family": "Toyota TOY48", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA2": {"keyways": ["Peugeot/Citroen VA2"], "keyway_family": "Peugeot/Citroen VA2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA6": {"keyways": ["Peugeot/Citroen VA6"], "keyway_family": "Peugeot/Citroen VA6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VAC102": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "YM23": {"keyways": ["Yamaha YM23 (auto use)"], "keyway_family": "Yamaha YM23 (auto use)", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ZD30": {"keyways": ["Isuzu ZD30"], "keyway_family": "Isuzu ZD30", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}};
@@ -5432,6 +5607,7 @@ async function init() {
     
     await loadLocalData();
     await loadCustomKeys();
+    await loadCustomVehicles();
     initializeVendorPricesFromDB();
     buildFilters();
     applyFilters();
@@ -7001,6 +7177,7 @@ async function loadToolsDatabase() {
 
 // Open Tools Panel
 function openToolsPanel() {
+    updateIncompleteVehiclesBadge();
     document.getElementById('toolsPanel').classList.add('on');
 }
 
@@ -7954,6 +8131,7 @@ function exportData() {
         fidPrefixes: fidPrefixes,
         purchaseHistory: purchaseHistory,
         customKeys: customKeys,
+        customVehicles: customVehicles,
         toolsDatabase: toolsDatabase
     };
     
@@ -8037,6 +8215,11 @@ function importData(event) {
                         DB.push(key);
                     }
                 });
+            }
+
+            if (data.customVehicles) {
+                customVehicles = data.customVehicles;
+                saveCustomVehicles();
             }
 
             if (data.toolsDatabase) {
@@ -10875,6 +11058,554 @@ async function loadCustomKeys() {
         }
     } catch (e) {
         console.error('Error loading custom keys:', e);
+    }
+}
+
+// ===================== CUSTOM VEHICLES =====================
+async function loadCustomVehicles() {
+    try {
+        const saved = await loadFromIndexedDB('customVehicles');
+        if (saved && Array.isArray(saved)) {
+            customVehicles = saved;
+        }
+    } catch (e) {
+        console.error('Error loading custom vehicles:', e);
+    }
+}
+
+function saveCustomVehicles() {
+    saveToIndexedDB('customVehicles', customVehicles);
+    if (currentUser) {
+        syncToCloud();
+    }
+}
+
+function getIncompleteVehicleCount() {
+    return customVehicles.filter(v => v.dataStatus === 'partial').length;
+}
+
+function updateIncompleteVehiclesBadge() {
+    const count = getIncompleteVehicleCount();
+    const badge = document.getElementById('incompleteVehiclesBadge');
+    if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline' : 'none';
+    }
+}
+
+function findSimilarVehicles(make, model, year) {
+    // Find vehicles with same make/model but different years
+    const similar = [];
+
+    // Check in DB (key-based vehicles)
+    const vehicleMap = {};
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model) {
+                const vKey = `${v.startYear}-${v.endYear}`;
+                if (!vehicleMap[vKey]) {
+                    vehicleMap[vKey] = {
+                        make: v.make,
+                        model: v.model,
+                        startYear: v.startYear,
+                        endYear: v.endYear || v.startYear,
+                        source: 'db',
+                        keyData: key // Reference to a key with this vehicle's data
+                    };
+                }
+            }
+        });
+    });
+
+    // Check in custom vehicles
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model === model && v.dataStatus === 'complete') {
+            const vKey = `${v.startYear}-${v.endYear}`;
+            if (!vehicleMap[vKey]) {
+                vehicleMap[vKey] = {
+                    ...v,
+                    source: 'custom'
+                };
+            }
+        }
+    });
+
+    // Filter to find different years
+    Object.values(vehicleMap).forEach(v => {
+        if (v.startYear !== year && v.endYear !== year) {
+            similar.push(v);
+        }
+    });
+
+    // Sort by year proximity
+    similar.sort((a, b) => {
+        const distA = Math.min(Math.abs(a.startYear - year), Math.abs(a.endYear - year));
+        const distB = Math.min(Math.abs(b.startYear - year), Math.abs(b.endYear - year));
+        return distA - distB;
+    });
+
+    return similar;
+}
+
+function checkVehicleExists(make, model, startYear, endYear) {
+    // Check in DB
+    let exists = false;
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model &&
+                v.startYear === startYear && (v.endYear || v.startYear) === endYear) {
+                exists = true;
+            }
+        });
+    });
+
+    // Check in custom vehicles
+    if (!exists) {
+        exists = customVehicles.some(v =>
+            v.make === make && v.model === model &&
+            v.startYear === startYear && v.endYear === endYear
+        );
+    }
+
+    return exists;
+}
+
+function createQuickVehicle(make, model, startYear, endYear, copyFrom = null) {
+    const vehicle = {
+        id: 'vehicle-' + Date.now(),
+        make: make,
+        model: model,
+        startYear: parseInt(startYear),
+        endYear: parseInt(endYear) || parseInt(startYear),
+        dataStatus: 'partial',
+        keyType: '',
+        chip: '',
+        buttons: '',
+        fccid: '',
+        frequency: '',
+        keyway: '',
+        notes: '',
+        createdAt: new Date().toISOString()
+    };
+
+    if (copyFrom) {
+        // Copy data from similar vehicle
+        if (copyFrom.source === 'db' && copyFrom.keyData) {
+            vehicle.keyType = copyFrom.keyData.keyType || '';
+            vehicle.chip = copyFrom.keyData.chip || '';
+            vehicle.buttons = copyFrom.keyData.buttons || '';
+            vehicle.fccid = copyFrom.keyData.fccid || '';
+            vehicle.frequency = copyFrom.keyData.frequency || '';
+            vehicle.keyway = copyFrom.keyData.keyway || '';
+            vehicle.dataStatus = 'complete';
+        } else if (copyFrom.source === 'custom') {
+            vehicle.keyType = copyFrom.keyType || '';
+            vehicle.chip = copyFrom.chip || '';
+            vehicle.buttons = copyFrom.buttons || '';
+            vehicle.fccid = copyFrom.fccid || '';
+            vehicle.frequency = copyFrom.frequency || '';
+            vehicle.keyway = copyFrom.keyway || '';
+            vehicle.dataStatus = 'complete';
+        }
+    }
+
+    customVehicles.push(vehicle);
+    saveCustomVehicles();
+    return vehicle;
+}
+
+function openQuickAddVehicleModal(prefillMake = '', prefillModel = '', prefillYear = '') {
+    // Populate make dropdown
+    const makes = [...new Set(DB.flatMap(k => k.vehicles?.map(v => v.make) || []))].sort();
+    const makeSelect = document.getElementById('quickVehicleMake');
+    makeSelect.innerHTML = '<option value="">Select Make...</option>' +
+        makes.map(m => `<option value="${m}" ${m === prefillMake ? 'selected' : ''}>${m}</option>`).join('') +
+        '<option value="__other__">+ Add New Make</option>';
+
+    document.getElementById('quickVehicleNewMake').style.display = prefillMake && !makes.includes(prefillMake) ? 'block' : 'none';
+    document.getElementById('quickVehicleNewMake').value = prefillMake && !makes.includes(prefillMake) ? prefillMake : '';
+
+    // Populate model dropdown based on make
+    updateQuickVehicleModels(prefillMake, prefillModel);
+
+    // Set year
+    document.getElementById('quickVehicleYear').value = prefillYear || new Date().getFullYear();
+    document.getElementById('quickVehicleYearEnd').value = prefillYear || new Date().getFullYear();
+
+    // Clear optional fields
+    document.getElementById('quickVehicleKeyType').value = '';
+    document.getElementById('quickVehicleChip').value = '';
+    document.getElementById('quickVehicleButtons').value = '';
+    document.getElementById('quickVehicleFccid').value = '';
+    document.getElementById('quickVehicleFrequency').value = '';
+    document.getElementById('quickVehicleKeyway').value = '';
+    document.getElementById('quickVehicleNotes').value = '';
+
+    // Collapse optional fields by default
+    document.getElementById('quickVehicleOptionalFields').style.display = 'none';
+    document.getElementById('quickVehicleOptionalToggle').textContent = '+ Show Optional Fields';
+
+    // Clear similar vehicle suggestion
+    document.getElementById('quickVehicleSimilarSuggestion').innerHTML = '';
+    document.getElementById('quickVehicleSimilarSuggestion').style.display = 'none';
+
+    document.getElementById('quickAddVehicleModal').classList.add('on');
+}
+
+function closeQuickAddVehicleModal() {
+    document.getElementById('quickAddVehicleModal').classList.remove('on');
+}
+
+function updateQuickVehicleModels(make, selectedModel = '') {
+    const modelSelect = document.getElementById('quickVehicleModel');
+
+    if (!make || make === '__other__') {
+        modelSelect.innerHTML = '<option value="">Select Model...</option><option value="__other__">+ Add New Model</option>';
+        return;
+    }
+
+    const models = [...new Set(DB.flatMap(k =>
+        (k.vehicles || []).filter(v => v.make === make).map(v => v.model)
+    ))].sort();
+
+    modelSelect.innerHTML = '<option value="">Select Model...</option>' +
+        models.map(m => `<option value="${m}" ${m === selectedModel ? 'selected' : ''}>${m}</option>`).join('') +
+        '<option value="__other__">+ Add New Model</option>';
+
+    document.getElementById('quickVehicleNewModel').style.display = selectedModel && !models.includes(selectedModel) ? 'block' : 'none';
+}
+
+function onQuickVehicleMakeChange() {
+    const make = document.getElementById('quickVehicleMake').value;
+    document.getElementById('quickVehicleNewMake').style.display = make === '__other__' ? 'block' : 'none';
+    updateQuickVehicleModels(make === '__other__' ? '' : make);
+    checkForSimilarVehicles();
+}
+
+function onQuickVehicleModelChange() {
+    const model = document.getElementById('quickVehicleModel').value;
+    document.getElementById('quickVehicleNewModel').style.display = model === '__other__' ? 'block' : 'none';
+    checkForSimilarVehicles();
+}
+
+function checkForSimilarVehicles() {
+    let make = document.getElementById('quickVehicleMake').value;
+    if (make === '__other__') make = document.getElementById('quickVehicleNewMake').value.trim();
+
+    let model = document.getElementById('quickVehicleModel').value;
+    if (model === '__other__') model = document.getElementById('quickVehicleNewModel').value.trim();
+
+    const year = parseInt(document.getElementById('quickVehicleYear').value);
+
+    const suggestionDiv = document.getElementById('quickVehicleSimilarSuggestion');
+
+    if (!make || !model || !year) {
+        suggestionDiv.style.display = 'none';
+        return;
+    }
+
+    // Check if exact vehicle exists
+    const yearEnd = parseInt(document.getElementById('quickVehicleYearEnd').value) || year;
+    if (checkVehicleExists(make, model, year, yearEnd)) {
+        suggestionDiv.innerHTML = `<div style="color:#ff9500;padding:8px;background:rgba(255,149,0,0.1);border-radius:6px;">⚠️ This exact vehicle already exists</div>`;
+        suggestionDiv.style.display = 'block';
+        return;
+    }
+
+    // Find similar vehicles
+    const similar = findSimilarVehicles(make, model, year);
+
+    if (similar.length > 0) {
+        const closest = similar[0];
+        const yearRange = closest.startYear === closest.endYear ? closest.startYear : `${closest.startYear}-${closest.endYear}`;
+        suggestionDiv.innerHTML = `
+            <div style="padding:12px;background:rgba(0,255,136,0.1);border-radius:8px;border:1px solid var(--success);">
+                <div style="font-size:13px;color:var(--text);margin-bottom:8px;">
+                    📋 Similar vehicle found: <strong>${yearRange} ${make} ${model}</strong>
+                </div>
+                <button class="modal-btn primary" style="width:100%;" onclick="copyFromSimilarVehicle()">
+                    Copy Key Data
+                </button>
+            </div>
+        `;
+        suggestionDiv.style.display = 'block';
+        suggestionDiv.dataset.similarData = JSON.stringify(closest);
+    } else {
+        suggestionDiv.style.display = 'none';
+    }
+}
+
+function copyFromSimilarVehicle() {
+    const suggestionDiv = document.getElementById('quickVehicleSimilarSuggestion');
+    const similarData = JSON.parse(suggestionDiv.dataset.similarData || '{}');
+
+    if (similarData.source === 'db' && similarData.keyData) {
+        document.getElementById('quickVehicleKeyType').value = similarData.keyData.keyType || '';
+        document.getElementById('quickVehicleChip').value = similarData.keyData.chip || '';
+        document.getElementById('quickVehicleButtons').value = similarData.keyData.buttons || '';
+        document.getElementById('quickVehicleFccid').value = similarData.keyData.fccid || '';
+        document.getElementById('quickVehicleFrequency').value = similarData.keyData.frequency || '';
+        document.getElementById('quickVehicleKeyway').value = similarData.keyData.keyway || '';
+    } else if (similarData.source === 'custom') {
+        document.getElementById('quickVehicleKeyType').value = similarData.keyType || '';
+        document.getElementById('quickVehicleChip').value = similarData.chip || '';
+        document.getElementById('quickVehicleButtons').value = similarData.buttons || '';
+        document.getElementById('quickVehicleFccid').value = similarData.fccid || '';
+        document.getElementById('quickVehicleFrequency').value = similarData.frequency || '';
+        document.getElementById('quickVehicleKeyway').value = similarData.keyway || '';
+    }
+
+    // Show optional fields since we just populated them
+    document.getElementById('quickVehicleOptionalFields').style.display = 'block';
+    document.getElementById('quickVehicleOptionalToggle').textContent = '- Hide Optional Fields';
+
+    toast('Key data copied from similar vehicle');
+    suggestionDiv.innerHTML = '<div style="color:var(--success);padding:8px;">✓ Data copied - vehicle will be saved as complete</div>';
+}
+
+function toggleQuickVehicleOptionalFields() {
+    const fields = document.getElementById('quickVehicleOptionalFields');
+    const toggle = document.getElementById('quickVehicleOptionalToggle');
+    if (fields.style.display === 'none') {
+        fields.style.display = 'block';
+        toggle.textContent = '- Hide Optional Fields';
+    } else {
+        fields.style.display = 'none';
+        toggle.textContent = '+ Show Optional Fields';
+    }
+}
+
+function saveQuickAddVehicle() {
+    let make = document.getElementById('quickVehicleMake').value;
+    if (make === '__other__') make = document.getElementById('quickVehicleNewMake').value.trim();
+
+    let model = document.getElementById('quickVehicleModel').value;
+    if (model === '__other__') model = document.getElementById('quickVehicleNewModel').value.trim();
+
+    const startYear = parseInt(document.getElementById('quickVehicleYear').value);
+    const endYear = parseInt(document.getElementById('quickVehicleYearEnd').value) || startYear;
+
+    if (!make || !model || !startYear) {
+        toast('Please fill in Make, Model, and Year');
+        return;
+    }
+
+    if (checkVehicleExists(make, model, startYear, endYear)) {
+        toast('This vehicle already exists');
+        return;
+    }
+
+    // Check if optional fields are filled
+    const keyType = document.getElementById('quickVehicleKeyType').value.trim();
+    const chip = document.getElementById('quickVehicleChip').value.trim();
+    const buttons = document.getElementById('quickVehicleButtons').value.trim();
+    const fccid = document.getElementById('quickVehicleFccid').value.trim();
+    const frequency = document.getElementById('quickVehicleFrequency').value.trim();
+    const keyway = document.getElementById('quickVehicleKeyway').value.trim();
+    const notes = document.getElementById('quickVehicleNotes').value.trim();
+
+    const hasOptionalData = keyType || chip || buttons || fccid || frequency || keyway;
+
+    const vehicle = {
+        id: 'vehicle-' + Date.now(),
+        make: make,
+        model: model,
+        startYear: startYear,
+        endYear: endYear,
+        dataStatus: hasOptionalData ? 'complete' : 'partial',
+        keyType: keyType,
+        chip: chip,
+        buttons: buttons,
+        fccid: fccid,
+        frequency: frequency,
+        keyway: keyway,
+        notes: notes,
+        createdAt: new Date().toISOString()
+    };
+
+    customVehicles.push(vehicle);
+    saveCustomVehicles();
+    closeQuickAddVehicleModal();
+    toast(`Vehicle added${vehicle.dataStatus === 'partial' ? ' (incomplete)' : ''}`);
+
+    // Refresh any open views
+    if (document.getElementById('vehicleBrowsePanel').classList.contains('on')) {
+        renderVehicleMakeList();
+    }
+}
+
+function openIncompleteVehiclesView() {
+    const incomplete = customVehicles.filter(v => v.dataStatus === 'partial');
+
+    let html = `
+        <div style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;color:var(--text);">Incomplete Vehicles (${incomplete.length})</h3>
+                <button class="modal-btn primary" onclick="openQuickAddVehicleModal()">+ Add Vehicle</button>
+            </div>
+    `;
+
+    if (incomplete.length === 0) {
+        html += `<div style="text-align:center;color:var(--dim);padding:40px;">No incomplete vehicles</div>`;
+    } else {
+        html += incomplete.map(v => {
+            const yearRange = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
+            return `
+                <div class="vehicle-key-card" style="cursor:pointer;" onclick="openEditCustomVehicle('${v.id}')">
+                    <div class="vehicle-key-info">
+                        <h4>${v.make} ${v.model}</h4>
+                        <p>${yearRange}</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="background:#ff9500;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">Incomplete</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    html += '</div>';
+
+    document.getElementById('incompleteVehiclesContent').innerHTML = html;
+    document.getElementById('incompleteVehiclesPanel').classList.add('on');
+}
+
+function closeIncompleteVehiclesPanel() {
+    document.getElementById('incompleteVehiclesPanel').classList.remove('on');
+}
+
+function openEditCustomVehicle(vehicleId) {
+    const vehicle = customVehicles.find(v => v.id === vehicleId);
+    if (!vehicle) {
+        toast('Vehicle not found');
+        return;
+    }
+
+    // Populate form
+    document.getElementById('editCustomVehicleId').value = vehicleId;
+    document.getElementById('editCustomVehicleMake').value = vehicle.make;
+    document.getElementById('editCustomVehicleModel').value = vehicle.model;
+    document.getElementById('editCustomVehicleYearStart').value = vehicle.startYear;
+    document.getElementById('editCustomVehicleYearEnd').value = vehicle.endYear;
+    document.getElementById('editCustomVehicleKeyType').value = vehicle.keyType || '';
+    document.getElementById('editCustomVehicleChip').value = vehicle.chip || '';
+    document.getElementById('editCustomVehicleButtons').value = vehicle.buttons || '';
+    document.getElementById('editCustomVehicleFccid').value = vehicle.fccid || '';
+    document.getElementById('editCustomVehicleFrequency').value = vehicle.frequency || '';
+    document.getElementById('editCustomVehicleKeyway').value = vehicle.keyway || '';
+    document.getElementById('editCustomVehicleNotes').value = vehicle.notes || '';
+
+    // Check for similar vehicles to copy from
+    const similar = findSimilarVehicles(vehicle.make, vehicle.model, vehicle.startYear);
+    const suggestionDiv = document.getElementById('editCustomVehicleSimilarSuggestion');
+
+    if (similar.length > 0 && vehicle.dataStatus === 'partial') {
+        const closest = similar[0];
+        const yearRange = closest.startYear === closest.endYear ? closest.startYear : `${closest.startYear}-${closest.endYear}`;
+        suggestionDiv.innerHTML = `
+            <div style="padding:12px;background:rgba(0,255,136,0.1);border-radius:8px;border:1px solid var(--success);margin-bottom:12px;">
+                <div style="font-size:13px;color:var(--text);margin-bottom:8px;">
+                    📋 Copy data from: <strong>${yearRange} ${closest.make} ${closest.model}</strong>
+                </div>
+                <button class="modal-btn primary" style="width:100%;" onclick="copyFromSimilarToEdit()">
+                    Copy Key Data
+                </button>
+            </div>
+        `;
+        suggestionDiv.style.display = 'block';
+        suggestionDiv.dataset.similarData = JSON.stringify(closest);
+    } else {
+        suggestionDiv.style.display = 'none';
+    }
+
+    document.getElementById('editCustomVehicleModal').classList.add('on');
+}
+
+function closeEditCustomVehicleModal() {
+    document.getElementById('editCustomVehicleModal').classList.remove('on');
+}
+
+function copyFromSimilarToEdit() {
+    const suggestionDiv = document.getElementById('editCustomVehicleSimilarSuggestion');
+    const similarData = JSON.parse(suggestionDiv.dataset.similarData || '{}');
+
+    if (similarData.source === 'db' && similarData.keyData) {
+        document.getElementById('editCustomVehicleKeyType').value = similarData.keyData.keyType || '';
+        document.getElementById('editCustomVehicleChip').value = similarData.keyData.chip || '';
+        document.getElementById('editCustomVehicleButtons').value = similarData.keyData.buttons || '';
+        document.getElementById('editCustomVehicleFccid').value = similarData.keyData.fccid || '';
+        document.getElementById('editCustomVehicleFrequency').value = similarData.keyData.frequency || '';
+        document.getElementById('editCustomVehicleKeyway').value = similarData.keyData.keyway || '';
+    } else if (similarData.source === 'custom') {
+        document.getElementById('editCustomVehicleKeyType').value = similarData.keyType || '';
+        document.getElementById('editCustomVehicleChip').value = similarData.chip || '';
+        document.getElementById('editCustomVehicleButtons').value = similarData.buttons || '';
+        document.getElementById('editCustomVehicleFccid').value = similarData.fccid || '';
+        document.getElementById('editCustomVehicleFrequency').value = similarData.frequency || '';
+        document.getElementById('editCustomVehicleKeyway').value = similarData.keyway || '';
+    }
+
+    toast('Key data copied');
+    suggestionDiv.innerHTML = '<div style="color:var(--success);padding:8px;">✓ Data copied</div>';
+}
+
+function saveEditCustomVehicle() {
+    const vehicleId = document.getElementById('editCustomVehicleId').value;
+    const idx = customVehicles.findIndex(v => v.id === vehicleId);
+    if (idx === -1) {
+        toast('Vehicle not found');
+        return;
+    }
+
+    const keyType = document.getElementById('editCustomVehicleKeyType').value.trim();
+    const chip = document.getElementById('editCustomVehicleChip').value.trim();
+    const buttons = document.getElementById('editCustomVehicleButtons').value.trim();
+    const fccid = document.getElementById('editCustomVehicleFccid').value.trim();
+    const frequency = document.getElementById('editCustomVehicleFrequency').value.trim();
+    const keyway = document.getElementById('editCustomVehicleKeyway').value.trim();
+    const notes = document.getElementById('editCustomVehicleNotes').value.trim();
+
+    const hasData = keyType || chip || buttons || fccid || frequency || keyway;
+
+    customVehicles[idx] = {
+        ...customVehicles[idx],
+        make: document.getElementById('editCustomVehicleMake').value.trim(),
+        model: document.getElementById('editCustomVehicleModel').value.trim(),
+        startYear: parseInt(document.getElementById('editCustomVehicleYearStart').value),
+        endYear: parseInt(document.getElementById('editCustomVehicleYearEnd').value),
+        keyType: keyType,
+        chip: chip,
+        buttons: buttons,
+        fccid: fccid,
+        frequency: frequency,
+        keyway: keyway,
+        notes: notes,
+        dataStatus: hasData ? 'complete' : 'partial',
+        lastEdited: new Date().toISOString()
+    };
+
+    saveCustomVehicles();
+    closeEditCustomVehicleModal();
+    toast('Vehicle updated');
+
+    // Refresh incomplete view if open
+    if (document.getElementById('incompleteVehiclesPanel').classList.contains('on')) {
+        openIncompleteVehiclesView();
+    }
+}
+
+function deleteCustomVehicle() {
+    const vehicleId = document.getElementById('editCustomVehicleId').value;
+    if (!confirm('Delete this vehicle?')) return;
+
+    customVehicles = customVehicles.filter(v => v.id !== vehicleId);
+    saveCustomVehicles();
+    closeEditCustomVehicleModal();
+    toast('Vehicle deleted');
+
+    // Refresh incomplete view if open
+    if (document.getElementById('incompleteVehiclesPanel').classList.contains('on')) {
+        openIncompleteVehiclesView();
     }
 }
 
