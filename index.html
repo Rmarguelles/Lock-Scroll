@@ -3842,6 +3842,129 @@
     </div>
 </div>
 
+<!-- FID Manager Panel -->
+<div class="settings-panel" id="fidManagerPanel">
+    <div class="settings-header">
+        <button class="back-btn" onclick="closeFidManager()">←</button>
+        <h2>🏷️ FID Manager</h2>
+    </div>
+    <div class="settings-content">
+        <!-- Stats Overview -->
+        <div class="settings-section">
+            <h3>📊 Overview</h3>
+            <div id="fidManagerStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:16px;"></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="settings-section">
+            <h3>⚡ Quick Actions</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="settings-btn" onclick="fidManagerAutoAssignAll()" style="background:var(--accent);color:var(--bg);">
+                    ⚡ Auto-Assign All Unassigned FIDs
+                </button>
+                <button class="settings-btn" onclick="fidManagerReassignAll()" style="background:var(--accent2);color:var(--bg);">
+                    🔄 Reassign All FIDs (Fresh Start)
+                </button>
+                <button class="settings-btn danger" onclick="fidManagerClearAll()">
+                    🗑️ Remove All FID Assignments
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="settings-section">
+            <h3>📦 Bulk Actions</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Select multiple FIDs below, then apply bulk actions.</p>
+            <div id="fidBulkActions" style="display:none;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <span id="fidSelectedCount" style="font-weight:600;color:var(--accent);">0 selected</span>
+                    <button onclick="fidManagerSelectAll()" style="padding:4px 8px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer;">Select All</button>
+                    <button onclick="fidManagerDeselectAll()" style="padding:4px 8px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer;">Deselect All</button>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <button onclick="fidManagerBulkChangePrefix()" class="settings-btn" style="flex:1;min-width:140px;">🏷️ Change Prefix</button>
+                    <button onclick="fidManagerBulkShift()" class="settings-btn" style="flex:1;min-width:140px;">⬆️⬇️ Shift Numbers</button>
+                    <button onclick="fidManagerBulkRemove()" class="settings-btn danger" style="flex:1;min-width:140px;">🗑️ Remove Selected</button>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <input type="text" id="fidManagerSearch" class="settings-search" placeholder="Search FCC ID or FID..." oninput="filterFidManagerList()" style="flex:1;">
+                <select id="fidManagerPrefixFilter" class="modal-input" style="width:100px;" onchange="filterFidManagerList()">
+                    <option value="">All</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- FID List -->
+        <div class="settings-section">
+            <h3>📋 All FID Assignments <span id="fidManagerListCount" style="font-size:12px;color:var(--dim);font-weight:normal;"></span></h3>
+            <div id="fidManagerList" style="max-height:400px;overflow-y:auto;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- FID Bulk Change Prefix Modal -->
+<div class="modal" id="fidBulkPrefixModal">
+    <div class="modal-content">
+        <div class="modal-title">Change Prefix for Selected FIDs</div>
+        <div class="modal-input-group">
+            <label>New Prefix</label>
+            <select class="modal-input" id="fidBulkNewPrefix"></select>
+        </div>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:16px;">Selected FIDs will be reassigned new numbers under the chosen prefix.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeFidBulkPrefixModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="executeBulkChangePrefix()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- FID Bulk Shift Modal -->
+<div class="modal" id="fidBulkShiftModal">
+    <div class="modal-content">
+        <div class="modal-title">Shift FID Numbers</div>
+        <div class="modal-input-group">
+            <label>Shift Amount</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button onclick="document.getElementById('fidShiftAmount').value = Math.max(-100, parseInt(document.getElementById('fidShiftAmount').value || 0) - 1)" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:4px;cursor:pointer;">-</button>
+                <input type="number" class="modal-input" id="fidShiftAmount" value="0" style="text-align:center;width:80px;">
+                <button onclick="document.getElementById('fidShiftAmount').value = Math.min(100, parseInt(document.getElementById('fidShiftAmount').value || 0) + 1)" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:4px;cursor:pointer;">+</button>
+            </div>
+        </div>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:16px;">Positive numbers shift up (e.g., N-001 → N-002), negative shift down.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeFidBulkShiftModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="executeBulkShift()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- FID Confirm Clear All Modal -->
+<div class="modal" id="fidClearAllModal">
+    <div class="modal-content">
+        <div class="modal-title">⚠️ Remove All FID Assignments</div>
+        <p style="margin-bottom:16px;color:var(--dim);">Are you sure you want to remove <strong>ALL</strong> FID assignments?</p>
+        <p style="font-size:12px;color:#ff4444;margin-bottom:16px;">This action cannot be undone. All FCC IDs will become unassigned.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeFidClearAllModal()">Cancel</button>
+            <button class="modal-btn" style="background:#ff4444;color:white;" onclick="executeClearAllFids()">Yes, Remove All</button>
+        </div>
+    </div>
+</div>
+
+<!-- FID Confirm Reassign All Modal -->
+<div class="modal" id="fidReassignAllModal">
+    <div class="modal-content">
+        <div class="modal-title">🔄 Reassign All FIDs</div>
+        <p style="margin-bottom:16px;color:var(--dim);">This will clear all existing assignments and auto-assign fresh FID numbers to all FCC IDs.</p>
+        <p style="font-size:12px;color:var(--accent);margin-bottom:16px;">FIDs will be assigned in order: Non-chip/Chip keys first, then Remote Head/Flip keys, then Proximity keys.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeFidReassignAllModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="executeReassignAllFids()">Reassign All</button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Panel -->
 <div class="settings-panel" id="settingsPanel">
     <div class="settings-header">
@@ -3887,6 +4010,13 @@
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage programming platforms and manufacturers.</p>
             <div id="settingsPlatformList" style="max-height:300px;overflow-y:auto;"></div>
             <button class="add-vendor-btn" onclick="openAddPlatformModal()" style="margin-top:12px;">+ Add Platform</button>
+        </div>
+        <div class="settings-section">
+            <h3>🏷️ FID Manager</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Complete control over FID (Fob ID) assignments. Bulk edit, reassign, or clear all FIDs.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="settings-btn" onclick="openFidManager()" style="flex:1;">📋 Open FID Manager</button>
+            </div>
         </div>
         <div class="settings-section">
             <h3>Data Management</h3>
@@ -7195,6 +7325,399 @@ function unmergeFid(fccId) {
     closeEditFidModal();
     renderFidList();
     toast('FCC ID unmerged');
+}
+
+// ===================== FID MANAGER =====================
+let fidManagerSelectedFccs = new Set();
+
+function openFidManager() {
+    fidManagerSelectedFccs.clear();
+    renderFidManagerStats();
+    renderFidManagerList();
+    populateFidManagerPrefixFilter();
+    document.getElementById('fidManagerSearch').value = '';
+    document.getElementById('fidManagerPrefixFilter').value = '';
+    document.getElementById('fidBulkActions').style.display = 'none';
+    document.getElementById('fidManagerPanel').classList.add('on');
+}
+
+function closeFidManager() {
+    document.getElementById('fidManagerPanel').classList.remove('on');
+}
+
+function renderFidManagerStats() {
+    const totalFccs = new Set();
+    DB.forEach(key => {
+        if (key.fccid) totalFccs.add(key.fccid);
+    });
+
+    const assignedCount = Object.keys(fidAssignments).length;
+    const unassignedCount = totalFccs.size - assignedCount;
+
+    // Count by prefix
+    const prefixCounts = {};
+    Object.values(fidAssignments).forEach(fid => {
+        if (fid) {
+            const prefix = fid.split('-')[0];
+            prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+        }
+    });
+
+    let statsHtml = `
+        <div style="padding:12px;background:var(--accent);color:var(--bg);border-radius:8px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;">${assignedCount}</div>
+            <div style="font-size:11px;opacity:0.8;">Assigned</div>
+        </div>
+        <div style="padding:12px;background:var(--accent2);color:var(--bg);border-radius:8px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;">${unassignedCount}</div>
+            <div style="font-size:11px;opacity:0.8;">Unassigned</div>
+        </div>
+        <div style="padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;">${totalFccs.size}</div>
+            <div style="font-size:11px;color:var(--dim);">Total FCCs</div>
+        </div>
+    `;
+
+    document.getElementById('fidManagerStats').innerHTML = statsHtml;
+}
+
+function populateFidManagerPrefixFilter() {
+    const select = document.getElementById('fidManagerPrefixFilter');
+    select.innerHTML = '<option value="">All Prefixes</option>';
+    Object.keys(fidPrefixes).sort().forEach(prefix => {
+        select.innerHTML += `<option value="${prefix}">${prefix}-</option>`;
+    });
+}
+
+function renderFidManagerList() {
+    const container = document.getElementById('fidManagerList');
+    const search = (document.getElementById('fidManagerSearch').value || '').toLowerCase();
+    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
+
+    // Get all FCC IDs with their assignments
+    const allFccs = [];
+    const seenFcc = new Set();
+
+    DB.forEach(key => {
+        if (key.fccid && !seenFcc.has(key.fccid)) {
+            seenFcc.add(key.fccid);
+            const fid = fidAssignments[key.fccid] || null;
+            const makes = new Set();
+            DB.forEach(k => {
+                if (k.fccid === key.fccid) {
+                    (k.vehicles || []).forEach(v => {
+                        if (v.make) makes.add(v.make);
+                    });
+                }
+            });
+            allFccs.push({
+                fccid: key.fccid,
+                fid: fid,
+                makes: Array.from(makes).join(', '),
+                keyType: key.keyType || ''
+            });
+        }
+    });
+
+    // Sort: assigned first by FID, then unassigned
+    allFccs.sort((a, b) => {
+        if (a.fid && !b.fid) return -1;
+        if (!a.fid && b.fid) return 1;
+        if (a.fid && b.fid) {
+            const prefixA = a.fid.split('-')[0];
+            const prefixB = b.fid.split('-')[0];
+            if (prefixA !== prefixB) return prefixA.localeCompare(prefixB);
+            const numA = parseInt(a.fid.split('-')[1]) || 0;
+            const numB = parseInt(b.fid.split('-')[1]) || 0;
+            return numA - numB;
+        }
+        return a.fccid.localeCompare(b.fccid);
+    });
+
+    // Filter
+    const filtered = allFccs.filter(item => {
+        if (search && !item.fccid.toLowerCase().includes(search) && !(item.fid || '').toLowerCase().includes(search)) {
+            return false;
+        }
+        if (prefixFilter && (!item.fid || !item.fid.startsWith(prefixFilter + '-'))) {
+            return false;
+        }
+        return true;
+    });
+
+    document.getElementById('fidManagerListCount').textContent = `(${filtered.length} of ${allFccs.length})`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">No FCC IDs found</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+        const isSelected = fidManagerSelectedFccs.has(item.fccid);
+        return `
+            <div class="fid-manager-item" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${item.fccid}')">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFidManagerSelection('${item.fccid}')" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${item.fccid}</div>
+                    <div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.makes || 'Unknown'} ${item.keyType ? '• ' + item.keyType : ''}</div>
+                </div>
+                <div style="text-align:right;">
+                    ${item.fid
+                        ? `<span style="font-family:monospace;font-weight:600;color:var(--accent);background:rgba(0,212,255,0.1);padding:4px 8px;border-radius:4px;">${item.fid}</span>`
+                        : `<span style="font-size:12px;color:var(--dim);font-style:italic;">Unassigned</span>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterFidManagerList() {
+    renderFidManagerList();
+}
+
+function toggleFidManagerSelection(fccId) {
+    if (fidManagerSelectedFccs.has(fccId)) {
+        fidManagerSelectedFccs.delete(fccId);
+    } else {
+        fidManagerSelectedFccs.add(fccId);
+    }
+    updateFidManagerBulkUI();
+    renderFidManagerList();
+}
+
+function updateFidManagerBulkUI() {
+    const count = fidManagerSelectedFccs.size;
+    document.getElementById('fidSelectedCount').textContent = count + ' selected';
+    document.getElementById('fidBulkActions').style.display = count > 0 ? 'block' : 'none';
+}
+
+function fidManagerSelectAll() {
+    const items = document.querySelectorAll('#fidManagerList .fid-manager-item');
+    items.forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            const fccId = item.querySelector('div[style*="monospace"]').textContent;
+            fidManagerSelectedFccs.add(fccId);
+        }
+    });
+    updateFidManagerBulkUI();
+    renderFidManagerList();
+}
+
+function fidManagerDeselectAll() {
+    fidManagerSelectedFccs.clear();
+    updateFidManagerBulkUI();
+    renderFidManagerList();
+}
+
+function fidManagerAutoAssignAll() {
+    autoAssignAllFids();
+    renderFidManagerStats();
+    renderFidManagerList();
+}
+
+function fidManagerReassignAll() {
+    document.getElementById('fidReassignAllModal').classList.add('on');
+}
+
+function closeFidReassignAllModal() {
+    document.getElementById('fidReassignAllModal').classList.remove('on');
+}
+
+function executeReassignAllFids() {
+    // Clear all existing assignments
+    Object.keys(fidAssignments).forEach(key => delete fidAssignments[key]);
+
+    // Now auto-assign all with priority sorting
+    const fccToAssign = [];
+    const seenFcc = new Set();
+
+    DB.forEach(key => {
+        if (key.fccid && !seenFcc.has(key.fccid)) {
+            seenFcc.add(key.fccid);
+            const makes = new Set();
+            let keyType = key.keyType || '';
+            DB.forEach(k => {
+                if (k.fccid === key.fccid) {
+                    (k.vehicles || []).forEach(v => {
+                        if (v.make) makes.add(v.make);
+                    });
+                    if (!keyType && k.keyType) keyType = k.keyType;
+                }
+            });
+            fccToAssign.push({
+                fccid: key.fccid,
+                makes: Array.from(makes),
+                keyType: keyType,
+                priority: getKeyTypePriority(keyType)
+            });
+        }
+    });
+
+    // Sort by priority
+    fccToAssign.sort((a, b) => a.priority - b.priority);
+
+    // Track counters per prefix
+    const prefixCounters = {};
+
+    fccToAssign.forEach(item => {
+        const prefix = getPrefixForMakes(item.makes);
+        if (prefixCounters[prefix] === undefined) {
+            prefixCounters[prefix] = 0;
+        }
+        prefixCounters[prefix]++;
+        fidAssignments[item.fccid] = prefix + '-' + formatFidNumber(prefixCounters[prefix]);
+    });
+
+    saveFidAssignments();
+    closeFidReassignAllModal();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Reassigned ' + fccToAssign.length + ' FIDs');
+}
+
+function fidManagerClearAll() {
+    document.getElementById('fidClearAllModal').classList.add('on');
+}
+
+function closeFidClearAllModal() {
+    document.getElementById('fidClearAllModal').classList.remove('on');
+}
+
+function executeClearAllFids() {
+    const count = Object.keys(fidAssignments).length;
+    Object.keys(fidAssignments).forEach(key => delete fidAssignments[key]);
+    saveFidAssignments();
+    closeFidClearAllModal();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Removed ' + count + ' FID assignments');
+}
+
+function fidManagerBulkChangePrefix() {
+    if (fidManagerSelectedFccs.size === 0) {
+        toast('No FIDs selected');
+        return;
+    }
+
+    // Populate prefix dropdown
+    const select = document.getElementById('fidBulkNewPrefix');
+    select.innerHTML = '';
+    Object.keys(fidPrefixes).sort().forEach(prefix => {
+        select.innerHTML += `<option value="${prefix}">${prefix}- (${fidPrefixes[prefix].name})</option>`;
+    });
+
+    document.getElementById('fidBulkPrefixModal').classList.add('on');
+}
+
+function closeFidBulkPrefixModal() {
+    document.getElementById('fidBulkPrefixModal').classList.remove('on');
+}
+
+function executeBulkChangePrefix() {
+    const newPrefix = document.getElementById('fidBulkNewPrefix').value;
+    if (!newPrefix) {
+        toast('Select a prefix');
+        return;
+    }
+
+    // Get next available number for this prefix
+    let maxNum = 0;
+    Object.values(fidAssignments).forEach(fid => {
+        if (fid && fid.startsWith(newPrefix + '-')) {
+            const num = parseInt(fid.split('-')[1]) || 0;
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    // Assign new FIDs to selected
+    let changed = 0;
+    fidManagerSelectedFccs.forEach(fccId => {
+        maxNum++;
+        fidAssignments[fccId] = newPrefix + '-' + formatFidNumber(maxNum);
+        changed++;
+    });
+
+    saveFidAssignments();
+    closeFidBulkPrefixModal();
+    fidManagerSelectedFccs.clear();
+    updateFidManagerBulkUI();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Changed prefix for ' + changed + ' FIDs');
+}
+
+function fidManagerBulkShift() {
+    if (fidManagerSelectedFccs.size === 0) {
+        toast('No FIDs selected');
+        return;
+    }
+
+    document.getElementById('fidShiftAmount').value = '0';
+    document.getElementById('fidBulkShiftModal').classList.add('on');
+}
+
+function closeFidBulkShiftModal() {
+    document.getElementById('fidBulkShiftModal').classList.remove('on');
+}
+
+function executeBulkShift() {
+    const shiftAmount = parseInt(document.getElementById('fidShiftAmount').value) || 0;
+    if (shiftAmount === 0) {
+        toast('Enter a shift amount');
+        return;
+    }
+
+    let shifted = 0;
+    fidManagerSelectedFccs.forEach(fccId => {
+        const currentFid = fidAssignments[fccId];
+        if (currentFid) {
+            const [prefix, numStr] = currentFid.split('-');
+            const newNum = Math.max(1, parseInt(numStr) + shiftAmount);
+            fidAssignments[fccId] = prefix + '-' + formatFidNumber(newNum);
+            shifted++;
+        }
+    });
+
+    saveFidAssignments();
+    closeFidBulkShiftModal();
+    fidManagerSelectedFccs.clear();
+    updateFidManagerBulkUI();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Shifted ' + shifted + ' FIDs by ' + shiftAmount);
+}
+
+function fidManagerBulkRemove() {
+    if (fidManagerSelectedFccs.size === 0) {
+        toast('No FIDs selected');
+        return;
+    }
+
+    if (!confirm('Remove FID assignments for ' + fidManagerSelectedFccs.size + ' selected items?')) {
+        return;
+    }
+
+    let removed = 0;
+    fidManagerSelectedFccs.forEach(fccId => {
+        if (fidAssignments[fccId]) {
+            delete fidAssignments[fccId];
+            removed++;
+        }
+    });
+
+    saveFidAssignments();
+    fidManagerSelectedFccs.clear();
+    updateFidManagerBulkUI();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Removed ' + removed + ' FID assignments');
 }
 
 // Prefix Management Functions
