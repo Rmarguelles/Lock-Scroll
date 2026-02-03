@@ -3769,21 +3769,44 @@
 
 <!-- Edit FID Modal -->
 <div class="modal" id="editFidModal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
         <div class="modal-title">Edit FID Assignment</div>
         <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:16px;">
             <div style="font-size:11px;color:var(--dim);text-transform:uppercase;">FCC ID</div>
             <div id="editFidFccId" style="font-size:18px;color:var(--accent2);font-family:monospace;font-weight:700;"></div>
+            <div id="editFidCurrentFid" style="font-size:12px;color:var(--dim);margin-top:4px;"></div>
         </div>
+
+        <!-- FID Number Section -->
         <div class="modal-input-group">
             <label>FID Number</label>
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;align-items:center;">
                 <select class="modal-input" id="editFidPrefix" style="width:100px;"></select>
                 <input type="text" class="modal-input" id="editFidNumber" placeholder="001" style="flex:1;font-family:monospace;">
+                <button type="button" onclick="autoAssignNextFid()" style="padding:8px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;" title="Auto-assign next available number">⚡ Next</button>
             </div>
         </div>
         <div id="editFidWarning" style="display:none;padding:10px;background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:6px;color:#ff4444;font-size:12px;margin-bottom:12px;"></div>
-        
+
+        <!-- Move To Section -->
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+            <div style="font-size:12px;color:var(--accent2);text-transform:uppercase;margin-bottom:8px;">📍 Move to Position</div>
+            <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Move this FID to a specific number. If occupied, choose how to handle the displaced FID.</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select class="modal-input" id="moveFidPrefix" style="width:100px;"></select>
+                <input type="text" class="modal-input" id="moveFidNumber" placeholder="001" style="width:80px;font-family:monospace;">
+                <button type="button" onclick="showMoveOptions()" style="padding:8px 12px;background:var(--accent2);color:var(--bg);border:none;border-radius:6px;font-size:12px;cursor:pointer;">Move</button>
+            </div>
+            <div id="moveOptionsPanel" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;">
+                <div id="moveConflictInfo" style="font-size:12px;margin-bottom:12px;"></div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <button type="button" onclick="executeMoveSwap()" class="modal-btn" style="background:var(--accent2);color:var(--bg);">🔄 Swap positions</button>
+                    <button type="button" onclick="executeMoveShift()" class="modal-btn" style="background:var(--accent);color:var(--bg);">⬇️ Shift others down</button>
+                    <button type="button" onclick="hideMoveOptions()" class="modal-btn secondary">Cancel move</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Merge Section -->
         <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
             <div style="font-size:12px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">🔗 Merge with Another FCC ID</div>
@@ -3796,12 +3819,25 @@
             </div>
             <div id="mergeInfo" style="display:none;padding:10px;background:rgba(0,212,255,0.1);border:1px solid var(--accent);border-radius:6px;font-size:12px;margin-bottom:12px;"></div>
         </div>
-        
-        <div class="modal-btns">
+
+        <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
             <button class="modal-btn secondary" onclick="closeEditFidModal()">Cancel</button>
-            <button class="modal-btn" style="background:#ff4444;color:white;" onclick="removeFidAssignment()">Remove FID</button>
+            <button class="modal-btn" style="background:#ff4444;color:white;" onclick="confirmRemoveFid()">Remove FID</button>
             <button class="modal-btn" id="mergeBtn" style="background:var(--accent);color:var(--bg);display:none;" onclick="mergeFids()">🔗 Merge</button>
             <button class="modal-btn primary" onclick="saveFidEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Remove FID Confirmation Modal -->
+<div class="modal" id="removeFidConfirmModal">
+    <div class="modal-content">
+        <div class="modal-title">⚠️ Remove FID Assignment</div>
+        <p style="margin-bottom:16px;color:var(--dim);">Are you sure you want to remove the FID assignment for <strong id="removeFidFccId"></strong>?</p>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:16px;">This will leave the position empty without rearranging other FIDs.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeRemoveFidConfirm()">Cancel</button>
+            <button class="modal-btn" style="background:#ff4444;color:white;" onclick="removeFidAssignment()">Yes, Remove</button>
         </div>
     </div>
 </div>
@@ -6711,35 +6747,59 @@ function formatFidNumber(num) {
     return String(num).padStart(3, '0');
 }
 
+function getKeyTypePriority(keyType) {
+    // Priority: 1 = Non-chip/Chip keys, 2 = Remote head/Flip keys, 3 = Prox keys
+    const kt = (keyType || '').toLowerCase();
+    if (kt.includes('proximity') || kt.includes('smart') || kt.includes('prox')) {
+        return 3; // Prox keys last
+    }
+    if (kt.includes('remote head') || kt.includes('flip') || kt.includes('fobik') || kt.includes('peps')) {
+        return 2; // Remote head and flip keys middle
+    }
+    // Non-chip, chip, transponder, VATS, etc. - first
+    return 1;
+}
+
 function autoAssignAllFids() {
     try {
         // Get all unique FCC IDs that don't have assignments
         const fccToAssign = [];
         const seenFcc = new Set();
-        
+
         DB.forEach(key => {
             if (key.fccid && !seenFcc.has(key.fccid) && !fidAssignments[key.fccid]) {
                 seenFcc.add(key.fccid);
                 const makes = new Set();
+                let keyType = key.keyType || '';
                 DB.forEach(k => {
                     if (k.fccid === key.fccid) {
                         (k.vehicles || []).forEach(v => {
                             if (v.make) makes.add(v.make);
                         });
+                        // Use the first non-empty key type found
+                        if (!keyType && k.keyType) keyType = k.keyType;
                     }
                 });
-                fccToAssign.push({ fccid: key.fccid, makes: Array.from(makes) });
+                fccToAssign.push({
+                    fccid: key.fccid,
+                    makes: Array.from(makes),
+                    keyType: keyType,
+                    priority: getKeyTypePriority(keyType)
+                });
             }
         });
-        
+
         if (fccToAssign.length === 0) {
             toast('All FCC IDs already have FID assignments');
             return;
         }
-        
+
+        // Sort by priority: Non-chip/chip first (1), then remote head/flip (2), then prox (3)
+        fccToAssign.sort((a, b) => a.priority - b.priority);
+
         // Track the next number for each prefix during assignment
         const prefixCounters = {};
-        
+
         // Initialize counters with existing max numbers
         Object.keys(fidPrefixes).forEach(prefix => {
             let maxNum = 0;
@@ -6751,23 +6811,23 @@ function autoAssignAllFids() {
             });
             prefixCounters[prefix] = maxNum;
         });
-        
+
         // Assign FIDs
         let assigned = 0;
         fccToAssign.forEach(item => {
             const prefix = getPrefixForMakes(item.makes);
-            
+
             // Initialize counter if not exists
             if (prefixCounters[prefix] === undefined) {
                 prefixCounters[prefix] = 0;
             }
-            
+
             // Increment and use
             prefixCounters[prefix]++;
             fidAssignments[item.fccid] = prefix + '-' + formatFidNumber(prefixCounters[prefix]);
             assigned++;
         });
-        
+
         saveFidAssignments();
         renderFidList();
         toast('Assigned ' + assigned + ' FID numbers');
@@ -6826,25 +6886,30 @@ function autoAssignFidForNewKey() {
 
 function openEditFidModal(fccId) {
     editingFccId = fccId;
-    
+
     document.getElementById('editFidFccId').textContent = fccId;
-    
-    // Populate prefix dropdown
+
+    // Populate prefix dropdowns (both edit and move)
     const prefixSelect = document.getElementById('editFidPrefix');
+    const movePrefixSelect = document.getElementById('moveFidPrefix');
     prefixSelect.innerHTML = '';
+    movePrefixSelect.innerHTML = '';
     Object.entries(fidPrefixes).sort((a, b) => a[0].localeCompare(b[0])).forEach(([code, data]) => {
         const opt = document.createElement('option');
         opt.value = code;
         opt.textContent = code + '-';
         prefixSelect.appendChild(opt);
+        movePrefixSelect.appendChild(opt.cloneNode(true));
     });
-    
+
     // Set current values
     const currentFid = fidAssignments[fccId];
     if (currentFid) {
         const [prefix, num] = currentFid.split('-');
         prefixSelect.value = prefix;
+        movePrefixSelect.value = prefix;
         document.getElementById('editFidNumber').value = num;
+        document.getElementById('editFidCurrentFid').textContent = 'Current: ' + currentFid;
     } else {
         // Suggest prefix based on makes
         const makes = [];
@@ -6857,9 +6922,15 @@ function openEditFidModal(fccId) {
         });
         const suggestedPrefix = getPrefixForMakes(makes);
         prefixSelect.value = suggestedPrefix;
+        movePrefixSelect.value = suggestedPrefix;
         document.getElementById('editFidNumber').value = formatFidNumber(getNextFidNumber(suggestedPrefix));
+        document.getElementById('editFidCurrentFid').textContent = 'No FID assigned yet';
     }
-    
+
+    // Reset move section
+    document.getElementById('moveFidNumber').value = '';
+    document.getElementById('moveOptionsPanel').style.display = 'none';
+
     // Populate merge target dropdown
     const mergeSelect = document.getElementById('mergeTargetFid');
     mergeSelect.innerHTML = '<option value="">Select a FID to merge into...</option>';
@@ -6964,12 +7035,130 @@ function saveFidEdit() {
 
 function removeFidAssignment() {
     if (!editingFccId) return;
-    
+
     delete fidAssignments[editingFccId];
+    saveFidAssignments();
+    closeRemoveFidConfirm();
+    closeEditFidModal();
+    renderFidList();
+    toast('FID removed (position left empty)');
+}
+
+function confirmRemoveFid() {
+    if (!editingFccId) return;
+    document.getElementById('removeFidFccId').textContent = editingFccId;
+    document.getElementById('removeFidConfirmModal').classList.add('on');
+}
+
+function closeRemoveFidConfirm() {
+    document.getElementById('removeFidConfirmModal').classList.remove('on');
+}
+
+function autoAssignNextFid() {
+    const prefix = document.getElementById('editFidPrefix').value;
+    const nextNum = getNextFidNumber(prefix);
+    document.getElementById('editFidNumber').value = formatFidNumber(nextNum);
+}
+
+let pendingMoveTarget = null;
+let pendingMoveConflictFcc = null;
+
+function showMoveOptions() {
+    const prefix = document.getElementById('moveFidPrefix').value;
+    const numStr = document.getElementById('moveFidNumber').value.trim();
+
+    if (!numStr) {
+        toast('Enter a position number');
+        return;
+    }
+
+    const num = parseInt(numStr);
+    if (isNaN(num) || num < 1) {
+        toast('Enter a valid position number');
+        return;
+    }
+
+    const targetFid = `${prefix}-${formatFidNumber(num)}`;
+    pendingMoveTarget = targetFid;
+
+    // Check if this position is occupied
+    const conflictEntry = Object.entries(fidAssignments).find(([fcc, fid]) => fid === targetFid && fcc !== editingFccId);
+
+    if (conflictEntry) {
+        pendingMoveConflictFcc = conflictEntry[0];
+        document.getElementById('moveConflictInfo').innerHTML = `<strong>${targetFid}</strong> is currently assigned to <strong>${conflictEntry[0]}</strong>.<br>Choose how to handle this:`;
+        document.getElementById('moveOptionsPanel').style.display = 'block';
+    } else {
+        // Position is free, just move directly
+        fidAssignments[editingFccId] = targetFid;
+        saveFidAssignments();
+        closeEditFidModal();
+        renderFidList();
+        toast(`Moved to ${targetFid}`);
+    }
+}
+
+function hideMoveOptions() {
+    document.getElementById('moveOptionsPanel').style.display = 'none';
+    pendingMoveTarget = null;
+    pendingMoveConflictFcc = null;
+}
+
+function executeMoveSwap() {
+    if (!editingFccId || !pendingMoveTarget || !pendingMoveConflictFcc) return;
+
+    // Get current FID of the one we're editing
+    const currentFid = fidAssignments[editingFccId];
+
+    // Swap: give the conflict FCC our old position
+    if (currentFid) {
+        fidAssignments[pendingMoveConflictFcc] = currentFid;
+    } else {
+        // If we didn't have an FID, remove the conflict's assignment
+        delete fidAssignments[pendingMoveConflictFcc];
+    }
+
+    // Move to the new position
+    fidAssignments[editingFccId] = pendingMoveTarget;
+
     saveFidAssignments();
     closeEditFidModal();
     renderFidList();
-    toast('FID removed');
+    toast(`Swapped positions`);
+}
+
+function executeMoveShift() {
+    if (!editingFccId || !pendingMoveTarget) return;
+
+    const [targetPrefix, targetNumStr] = pendingMoveTarget.split('-');
+    const targetNum = parseInt(targetNumStr);
+
+    // Get all FIDs with this prefix that need to shift
+    const toShift = [];
+    Object.entries(fidAssignments).forEach(([fcc, fid]) => {
+        if (fcc !== editingFccId && fid && fid.startsWith(targetPrefix + '-')) {
+            const num = parseInt(fid.split('-')[1]);
+            if (num >= targetNum) {
+                toShift.push({ fcc, num });
+            }
+        }
+    });
+
+    // Sort by number descending so we shift from the end
+    toShift.sort((a, b) => b.num - a.num);
+
+    // Shift each one down by 1
+    toShift.forEach(item => {
+        fidAssignments[item.fcc] = `${targetPrefix}-${formatFidNumber(item.num + 1)}`;
+    });
+
+    // Assign the target position to our FCC
+    fidAssignments[editingFccId] = pendingMoveTarget;
+
+    saveFidAssignments();
+    closeEditFidModal();
+    renderFidList();
+    toast(`Moved to ${pendingMoveTarget}, shifted ${toShift.length} others down`);
 }
 
 function mergeFids() {
