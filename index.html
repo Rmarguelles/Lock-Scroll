@@ -1024,7 +1024,7 @@
             position: fixed;
             inset: 0;
             background: var(--bg);
-            z-index: 200;
+            z-index: 230;
             overflow-y: auto;
         }
         
@@ -6521,15 +6521,32 @@ function openKey(idx, fromFcc = false, fromFid = false) {
     currentKeyIdx = idx;
     cameFromFcc = fromFcc;
     cameFromFid = fromFid;
-    
+
     const key = DB[idx];
     const stock = stockData[key.pn] || 0;
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
-    
+    const assignedFid = key.fccid ? fidAssignments[key.fccid] : null;
+
     document.getElementById('detailTitle').textContent = `Part #${key.pn}`;
-    
+
+    // Build FID display if assigned
+    const fidHtml = assignedFid ? `
+        <div style="text-align:center;margin-bottom:16px;">
+            <span onclick="openFid()" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">
+                FID: ${assignedFid} →
+            </span>
+        </div>
+    ` : (key.fccid ? `
+        <div style="text-align:center;margin-bottom:16px;">
+            <span onclick="openFid()" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">
+                No FID assigned - Click to assign →
+            </span>
+        </div>
+    ` : '');
+
     let html = `
+        ${fidHtml}
         <!-- Stock Section -->
         <div class="detail-section">
             <h3>Stock Management</h3>
