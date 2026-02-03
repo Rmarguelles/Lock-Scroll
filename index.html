@@ -3612,7 +3612,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v40</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v41</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -6425,6 +6425,11 @@ function applyFilters() {
     const advButtons = document.getElementById('advButtonsFilter')?.value || '';
     const advFcc = (document.getElementById('advFccFilter')?.value || '').toUpperCase().trim();
 
+    // Debug logging
+    if (advFrequency) {
+        console.log('Frequency filter active:', advFrequency);
+    }
+
     filteredKeys = DB.filter((key, idx) => {
         if (search) {
             const searchStr = [
@@ -6465,6 +6470,11 @@ function applyFilters() {
 
         return true;
     });
+
+    // Debug: log filtered count
+    if (advFrequency) {
+        console.log('Keys matching frequency filter:', filteredKeys.length);
+    }
 
     updateAdvancedFilterCount();
     renderKeys();
