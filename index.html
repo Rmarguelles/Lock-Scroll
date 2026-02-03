@@ -319,7 +319,7 @@
             position: fixed;
             inset: 0;
             background: var(--bg);
-            z-index: 200;
+            z-index: 210;
             overflow-y: auto;
         }
         
@@ -4636,12 +4636,8 @@
     <div class="add-platform-modal-content">
         <h3 id="addPlatformModalTitle">Add Platform</h3>
         <div class="tool-form-row">
-            <label>Platform Name *</label>
-            <input type="text" id="platformFormName" placeholder="e.g., OBDstar X300 G3">
-        </div>
-        <div class="tool-form-row">
-            <label>Manufacturer *</label>
-            <input type="text" id="platformFormManufacturer" placeholder="e.g., OBDstar">
+            <label>Platform/Manufacturer *</label>
+            <input type="text" id="platformFormName" placeholder="e.g., OBDstar, Autel, Xhorse">
         </div>
         <div class="add-platform-modal-actions">
             <button class="tool-form-cancel" onclick="closeAddPlatformModal()">Cancel</button>
@@ -7022,11 +7018,9 @@ function openAddPlatformModal(platformId = null) {
         const platform = toolsDatabase.platforms[platformId];
         document.getElementById('addPlatformModalTitle').textContent = 'Edit Platform';
         document.getElementById('platformFormName').value = platform.name;
-        document.getElementById('platformFormManufacturer').value = platform.manufacturer;
     } else {
         document.getElementById('addPlatformModalTitle').textContent = 'Add Platform';
         document.getElementById('platformFormName').value = '';
-        document.getElementById('platformFormManufacturer').value = '';
     }
     document.getElementById('addPlatformModal').classList.add('on');
 }
@@ -7038,10 +7032,9 @@ function closeAddPlatformModal() {
 
 function savePlatformForm() {
     const name = document.getElementById('platformFormName').value.trim();
-    const manufacturer = document.getElementById('platformFormManufacturer').value.trim();
 
-    if (!name || !manufacturer) {
-        toast('Please fill in all required fields');
+    if (!name) {
+        toast('Please enter a platform name');
         return;
     }
 
@@ -7049,7 +7042,7 @@ function savePlatformForm() {
 
     toolsDatabase.platforms[platformId] = {
         name: name,
-        manufacturer: manufacturer,
+        manufacturer: name, // For backwards compatibility
         tools: toolsDatabase.platforms[platformId]?.tools || []
     };
 
@@ -7100,7 +7093,6 @@ function renderPlatformList() {
             <div class="platform-card">
                 <div class="platform-card-info">
                     <div class="platform-card-name">${platform.name}</div>
-                    <div class="platform-card-mfr">${platform.manufacturer}</div>
                     <div class="platform-card-count">${toolCount} tool${toolCount !== 1 ? 's' : ''}</div>
                 </div>
                 <div class="platform-card-actions">
@@ -7255,7 +7247,6 @@ function renderSettingsPlatformList() {
             <div class="platform-card">
                 <div class="platform-card-info">
                     <div class="platform-card-name">${platform.name}</div>
-                    <div class="platform-card-mfr">${platform.manufacturer}</div>
                     <div class="platform-card-count">${toolCount} tool${toolCount !== 1 ? 's' : ''}</div>
                 </div>
                 <div class="platform-card-actions">
@@ -7655,7 +7646,7 @@ function populatePlatformSelects() {
     singleSelect.innerHTML = '<option value="">Select platform...</option>';
     platformIds.forEach(id => {
         const platform = toolsDatabase.platforms[id];
-        singleSelect.innerHTML += `<option value="${id}">${platform.name} (${platform.manufacturer})</option>`;
+        singleSelect.innerHTML += `<option value="${id}">${platform.name}</option>`;
     });
 
     // Multiple platform checkboxes
@@ -7665,7 +7656,7 @@ function populatePlatformSelects() {
         return `
             <label class="platform-checkbox-item">
                 <input type="checkbox" value="${id}">
-                <span>${platform.name} (${platform.manufacturer})</span>
+                <span>${platform.name}</span>
             </label>
         `;
     }).join('') || '<span style="color:var(--dim);">No platforms available. Add platforms first.</span>';
@@ -8644,17 +8635,28 @@ function openVehicleDetail(vehicleKey) {
         </div>
         ` : ''}
 
-        ${vehicleData.direction ? `
         <div class="vehicle-section">
-            <div class="vehicle-section-title">Pick Direction</div>
+            <div class="vehicle-section-title">Pick Direction (Lishi)</div>
             <div style="background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--border);">
-                <div style="font-size:18px;font-weight:600;color:${vehicleData.direction === 'CW' ? 'var(--success)' : '#ff9500'};">
-                    ${vehicleData.direction === 'CW' ? '↻ Clockwise (CW)' : '↺ Counter-Clockwise (CCW)'}
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <button class="lishi-dir-btn cw ${vehicleData.direction === 'CW' ? 'active' : ''}"
+                            onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CW')">↻ CW</button>
+                    <button class="lishi-dir-btn ccw ${vehicleData.direction === 'CCW' ? 'active' : ''}"
+                            onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CCW')">↺ CCW</button>
+                    <button class="lishi-confirm-btn" style="margin-left:auto;"
+                            onclick="confirmVehicleDirectionFromVehiclePage('${groupKey}')"
+                            ${!vehicleData.direction ? 'disabled title="Set a direction first"' : ''}>
+                        ✓ Confirm
+                    </button>
                 </div>
+                ${vehicleData.direction ? `
+                    <div style="font-size:14px;color:${vehicleData.direction === 'CW' ? 'var(--success)' : '#ff9500'};font-weight:600;">
+                        ${vehicleData.direction === 'CW' ? '↻ Clockwise (CW)' : '↺ Counter-Clockwise (CCW)'}
+                    </div>
+                ` : `<div style="font-size:13px;color:var(--dim);">No direction set yet</div>`}
                 ${vehicleData.confirmCount ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">Confirmed ${vehicleData.confirmCount}x</div>` : ''}
             </div>
         </div>
-        ` : ''}
     `;
 
     // Compatible Keys Section - sorted by stock
@@ -9866,13 +9868,39 @@ function setVehicleDirection(groupKey, direction) {
     if (!lishiVehicleData[groupKey]) {
         lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '', lastEditedBy: null };
     }
-    
+
     lishiVehicleData[groupKey].direction = direction;
     lishiVehicleData[groupKey].lastEdited = new Date().toISOString();
     lishiVehicleData[groupKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
     saveLishiVehicle();
     filterLishiLookup();
     toast(`Direction set to ${direction}`);
+}
+
+function setVehicleDirectionFromVehiclePage(groupKey, direction) {
+    setVehicleDirection(groupKey, direction);
+    // Refresh the vehicle detail page to show updated direction
+    if (currentViewingVehicleKey) {
+        openVehicleDetail(currentViewingVehicleKey);
+    }
+}
+
+function confirmVehicleDirectionFromVehiclePage(groupKey) {
+    if (!lishiVehicleData[groupKey] || !lishiVehicleData[groupKey].direction) {
+        toast('Set a direction first');
+        return;
+    }
+
+    lishiVehicleData[groupKey].confirmCount = (lishiVehicleData[groupKey].confirmCount || 0) + 1;
+    lishiVehicleData[groupKey].lastConfirmed = new Date().toISOString();
+    lishiVehicleData[groupKey].lastConfirmedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    saveLishiVehicle();
+    toast('Direction confirmed!');
+
+    // Refresh the vehicle detail page to show updated confirm count
+    if (currentViewingVehicleKey) {
+        openVehicleDetail(currentViewingVehicleKey);
+    }
 }
 
 function confirmVehicleDirection(groupKey) {
