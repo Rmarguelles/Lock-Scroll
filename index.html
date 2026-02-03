@@ -6163,13 +6163,13 @@ function populateAdvancedFilters() {
     const buttonCounts = new Set();
 
     DB.forEach(key => {
-        if (key.keyway) keyways.add(key.keyway);
-        if (key.chip) chips.add(key.chip);
-        if (key.keyType) keyTypes.add(key.keyType);
-        if (key.frequency) frequencies.add(key.frequency);
+        if (key.keyway) keyways.add(String(key.keyway));
+        if (key.chip) chips.add(String(key.chip));
+        if (key.keyType) keyTypes.add(String(key.keyType));
+        if (key.frequency) frequencies.add(String(key.frequency));
         if (key.buttons) {
             // Extract button count (e.g., "3 Button" from "3 Button: L, U, P")
-            const match = key.buttons.match(/^(\d+)\s*Button/i);
+            const match = String(key.buttons).match(/^(\d+)\s*Button/i);
             if (match) buttonCounts.add(match[1] + ' Button');
         }
     });
@@ -6461,12 +6461,12 @@ function applyFilters() {
         }
 
         // Advanced filters
-        if (advKeyway && (key.keyway || '').toLowerCase().trim() !== advKeyway.toLowerCase().trim()) return false;
-        if (advChip && !(key.chip || '').toLowerCase().includes(advChip.toLowerCase())) return false;
-        if (advKeyType && (key.keyType || '').toLowerCase().trim() !== advKeyType.toLowerCase().trim()) return false;
-        if (advFrequency && (key.frequency || '').toLowerCase().trim() !== advFrequency.toLowerCase().trim()) return false;
-        if (advButtons && !(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
-        if (advFcc && !(key.fccid || '').toUpperCase().includes(advFcc)) return false;
+        if (advKeyway && String(key.keyway || '').toLowerCase().trim() !== advKeyway.toLowerCase().trim()) return false;
+        if (advChip && !String(key.chip || '').toLowerCase().includes(advChip.toLowerCase())) return false;
+        if (advKeyType && String(key.keyType || '').toLowerCase().trim() !== advKeyType.toLowerCase().trim()) return false;
+        if (advFrequency && String(key.frequency || '').toLowerCase().trim() !== advFrequency.toLowerCase().trim()) return false;
+        if (advButtons && !String(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
+        if (advFcc && !String(key.fccid || '').toUpperCase().includes(advFcc)) return false;
 
         return true;
     });
