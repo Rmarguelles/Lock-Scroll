@@ -3841,6 +3841,18 @@
             <button class="add-vendor-btn" onclick="openAddCustomKey(); closeSettings();" style="margin-top:12px;">+ Add Custom Key</button>
         </div>
         <div class="settings-section">
+            <h3>🏷️ Tool Categories</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage equipment categories for organizing your tools.</p>
+            <div id="categoryList" style="max-height:300px;overflow-y:auto;"></div>
+            <button class="add-vendor-btn" onclick="openAddCategoryModal()" style="margin-top:12px;">+ Add Category</button>
+        </div>
+        <div class="settings-section">
+            <h3>💻 Tool Platforms</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage programming platforms and manufacturers.</p>
+            <div id="settingsPlatformList" style="max-height:300px;overflow-y:auto;"></div>
+            <button class="add-vendor-btn" onclick="openAddPlatformModal()" style="margin-top:12px;">+ Add Platform</button>
+        </div>
+        <div class="settings-section">
             <h3>Data Management</h3>
             <button class="settings-btn" onclick="exportData()">📤 Export All Data</button>
             <button class="settings-btn" onclick="document.getElementById('importInput').click()">📥 Import Data</button>
@@ -3853,7 +3865,7 @@
         </div>
         <div class="settings-section">
             <h3>About</h3>
-            <p style="color:var(--dim);font-size:12px;">Lock & Scroll v40<br>Keys: <span id="aboutTotal">0</span><br>Keyways: <span id="aboutKeyways">0</span><br>Vendors: <span id="aboutVendors">0</span><br>Lishi Tools: <span id="aboutLishi">0</span></p>
+            <p style="color:var(--dim);font-size:12px;">Lock & Scroll v40<br>Keys: <span id="aboutTotal">0</span><br>Keyways: <span id="aboutKeyways">0</span><br>Vendors: <span id="aboutVendors">0</span><br>Lishi Tools: <span id="aboutLishi">0</span><br>Programmer Tools: <span id="aboutTools">0</span><br>Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -4461,13 +4473,8 @@
         <div class="platform-tabs" id="platformTabs">
             <button class="platform-tab active" data-platform="all" onclick="selectPlatformFilter('all')">All Platforms</button>
         </div>
-        <div class="programmers-filters">
-            <button class="filter-chip active" data-category="all" onclick="selectCategoryFilter('all')">All</button>
-            <button class="filter-chip" data-category="Programmers" onclick="selectCategoryFilter('Programmers')">Programmers</button>
-            <button class="filter-chip" data-category="Cables" onclick="selectCategoryFilter('Cables')">Cables</button>
-            <button class="filter-chip" data-category="Adapters" onclick="selectCategoryFilter('Adapters')">Adapters</button>
-            <button class="filter-chip" data-category="EEPROM Clamps" onclick="selectCategoryFilter('EEPROM Clamps')">EEPROM Clamps</button>
-            <button class="filter-chip" data-category="Pin Readers" onclick="selectCategoryFilter('Pin Readers')">Pin Readers</button>
+        <div class="programmers-filters" id="categoryFilters">
+            <!-- Dynamically populated by renderCategoryFilters() -->
         </div>
         <div class="programmers-filters" style="margin-top:8px;">
             <button class="filter-chip active" data-status="all" onclick="selectStatusFilter('all')">All Status</button>
@@ -4532,12 +4539,7 @@
             <div class="tool-form-row">
                 <label>Category *</label>
                 <select id="toolFormCategory">
-                    <option value="">Select category...</option>
-                    <option value="Programmers">Programmers</option>
-                    <option value="Cables">Cables</option>
-                    <option value="Adapters">Adapters</option>
-                    <option value="EEPROM Clamps">EEPROM Clamps</option>
-                    <option value="Pin Readers">Pin Readers</option>
+                    <!-- Dynamically populated by populateCategorySelect() -->
                 </select>
             </div>
         </div>
@@ -4644,6 +4646,21 @@
         <div class="add-platform-modal-actions">
             <button class="tool-form-cancel" onclick="closeAddPlatformModal()">Cancel</button>
             <button class="tool-form-save" onclick="savePlatformForm()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="add-platform-modal" id="addCategoryModal">
+    <div class="add-platform-modal-content">
+        <h3 id="addCategoryModalTitle">Add Category</h3>
+        <div class="tool-form-row">
+            <label>Category Name *</label>
+            <input type="text" id="categoryFormName" placeholder="e.g., Transponder Tools">
+        </div>
+        <div class="add-platform-modal-actions">
+            <button class="tool-form-cancel" onclick="closeAddCategoryModal()">Cancel</button>
+            <button class="tool-form-save" onclick="saveCategoryForm()">Save</button>
         </div>
     </div>
 </div>
@@ -6880,6 +6897,11 @@ function showTab(tab, event) {
         renderVendorList();
         renderLishiInventory();
         renderCustomKeysList();
+        renderCategoryList();
+        renderSettingsPlatformList();
+        // Update tool stats
+        document.getElementById('aboutTools').textContent = Object.keys(toolsDatabase.tools).length;
+        document.getElementById('aboutPlatforms').textContent = Object.keys(toolsDatabase.platforms).length;
         document.getElementById('settingsPanel').classList.add('on');
     }
 }
@@ -6903,6 +6925,7 @@ function goHome() {
     document.getElementById('toolDetailPanel').classList.remove('on');
     document.getElementById('addToolPanel').classList.remove('on');
     document.getElementById('addPlatformModal').classList.remove('on');
+    document.getElementById('addCategoryModal').classList.remove('on');
     document.getElementById('wishlistPanel').classList.remove('on');
 
     // Reset vehicle state
@@ -6974,6 +6997,7 @@ function closeToolsPanel() {
 // Open Programmers Panel
 function openProgrammersPanel() {
     renderPlatformTabs();
+    renderCategoryFilters();
     renderToolsList();
     document.getElementById('programmersPanel').classList.add('on');
 }
@@ -7032,6 +7056,7 @@ function savePlatformForm() {
     saveToolsDatabase();
     closeAddPlatformModal();
     renderPlatformList();
+    renderSettingsPlatformList();
     renderPlatformTabs();
     toast(editingPlatformId ? 'Platform updated' : 'Platform added');
 }
@@ -7051,6 +7076,7 @@ function deletePlatform(platformId) {
     delete toolsDatabase.platforms[platformId];
     saveToolsDatabase();
     renderPlatformList();
+    renderSettingsPlatformList();
     renderPlatformTabs();
     toast('Platform deleted');
 }
@@ -7098,6 +7124,177 @@ function renderPlatformTabs() {
     });
 
     container.innerHTML = html;
+}
+
+// Category Management
+let editingCategoryIndex = null;
+
+function openAddCategoryModal(categoryIndex = null) {
+    editingCategoryIndex = categoryIndex;
+    if (categoryIndex !== null && toolsDatabase.categories[categoryIndex]) {
+        document.getElementById('addCategoryModalTitle').textContent = 'Edit Category';
+        document.getElementById('categoryFormName').value = toolsDatabase.categories[categoryIndex];
+    } else {
+        document.getElementById('addCategoryModalTitle').textContent = 'Add Category';
+        document.getElementById('categoryFormName').value = '';
+    }
+    document.getElementById('addCategoryModal').classList.add('on');
+}
+
+function closeAddCategoryModal() {
+    document.getElementById('addCategoryModal').classList.remove('on');
+    editingCategoryIndex = null;
+}
+
+function saveCategoryForm() {
+    const name = document.getElementById('categoryFormName').value.trim();
+
+    if (!name) {
+        toast('Please enter a category name');
+        return;
+    }
+
+    // Check for duplicates
+    const existingIndex = toolsDatabase.categories.findIndex(c => c.toLowerCase() === name.toLowerCase());
+    if (existingIndex !== -1 && existingIndex !== editingCategoryIndex) {
+        toast('Category already exists');
+        return;
+    }
+
+    if (editingCategoryIndex !== null) {
+        // Update existing category name in tools
+        const oldCategory = toolsDatabase.categories[editingCategoryIndex];
+        Object.values(toolsDatabase.tools).forEach(tool => {
+            if (tool.category === oldCategory) {
+                tool.category = name;
+            }
+        });
+        toolsDatabase.categories[editingCategoryIndex] = name;
+        toast('Category updated');
+    } else {
+        toolsDatabase.categories.push(name);
+        toast('Category added');
+    }
+
+    saveToolsDatabase();
+    closeAddCategoryModal();
+    renderCategoryList();
+    renderCategoryFilters();
+    populateCategorySelect();
+}
+
+function deleteCategory(categoryIndex) {
+    const category = toolsDatabase.categories[categoryIndex];
+    const toolCount = Object.values(toolsDatabase.tools).filter(t => t.category === category).length;
+
+    if (toolCount > 0) {
+        if (!confirm(`Delete "${category}"? ${toolCount} tool(s) use this category and will need to be recategorized.`)) return;
+    } else {
+        if (!confirm(`Delete "${category}"?`)) return;
+    }
+
+    // Remove category from tools (set to empty)
+    Object.values(toolsDatabase.tools).forEach(tool => {
+        if (tool.category === category) {
+            tool.category = '';
+        }
+    });
+
+    toolsDatabase.categories.splice(categoryIndex, 1);
+    saveToolsDatabase();
+    renderCategoryList();
+    renderCategoryFilters();
+    populateCategorySelect();
+    toast('Category deleted');
+}
+
+function renderCategoryList() {
+    const container = document.getElementById('categoryList');
+    if (!container) return;
+
+    if (toolsDatabase.categories.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">No categories yet.</div>';
+        return;
+    }
+
+    container.innerHTML = toolsDatabase.categories.map((category, idx) => {
+        const toolCount = Object.values(toolsDatabase.tools).filter(t => t.category === category).length;
+        return `
+            <div class="platform-card">
+                <div class="platform-card-info">
+                    <div class="platform-card-name">${category}</div>
+                    <div class="platform-card-count">${toolCount} tool${toolCount !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="platform-card-actions">
+                    <button class="platform-action-btn" onclick="openAddCategoryModal(${idx})">Edit</button>
+                    <button class="platform-action-btn delete" onclick="deleteCategory(${idx})">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSettingsPlatformList() {
+    const container = document.getElementById('settingsPlatformList');
+    if (!container) return;
+
+    const platformIds = Object.keys(toolsDatabase.platforms);
+
+    if (platformIds.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">No platforms yet.</div>';
+        return;
+    }
+
+    container.innerHTML = platformIds.map(id => {
+        const platform = toolsDatabase.platforms[id];
+        const toolCount = Object.values(toolsDatabase.tools).filter(t =>
+            t.compatiblePlatforms.includes(id)
+        ).length;
+
+        return `
+            <div class="platform-card">
+                <div class="platform-card-info">
+                    <div class="platform-card-name">${platform.name}</div>
+                    <div class="platform-card-mfr">${platform.manufacturer}</div>
+                    <div class="platform-card-count">${toolCount} tool${toolCount !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="platform-card-actions">
+                    <button class="platform-action-btn" onclick="openAddPlatformModal('${id}')">Edit</button>
+                    <button class="platform-action-btn delete" onclick="deletePlatform('${id}')">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderCategoryFilters() {
+    const container = document.getElementById('categoryFilters');
+    if (!container) return;
+
+    let html = `<button class="filter-chip ${currentCategoryFilter === 'all' ? 'active' : ''}" data-category="all" onclick="selectCategoryFilter('all')">All</button>`;
+
+    toolsDatabase.categories.forEach(category => {
+        html += `<button class="filter-chip ${currentCategoryFilter === category ? 'active' : ''}" data-category="${category}" onclick="selectCategoryFilter('${category}')">${category}</button>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function populateCategorySelect() {
+    const select = document.getElementById('toolFormCategory');
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Select category...</option>';
+
+    toolsDatabase.categories.forEach(category => {
+        select.innerHTML += `<option value="${category}">${category}</option>`;
+    });
+
+    // Restore previous selection if it still exists
+    if (currentValue && toolsDatabase.categories.includes(currentValue)) {
+        select.value = currentValue;
+    }
 }
 
 // Filter Functions
@@ -7380,8 +7577,9 @@ function openAddToolPanel(toolId = null) {
     editingToolId = toolId;
     toolVehicleAppCount = 0;
 
-    // Populate platform dropdowns
+    // Populate platform and category dropdowns
     populatePlatformSelects();
+    populateCategorySelect();
 
     if (toolId && toolsDatabase.tools[toolId]) {
         const tool = toolsDatabase.tools[toolId];
