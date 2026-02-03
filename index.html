@@ -4060,6 +4060,26 @@
     </div>
 </div>
 
+<!-- Vehicle Data Edit Modal -->
+<div class="modal" id="vehicleDataEditModal">
+    <div class="modal-content">
+        <div class="modal-title">✏️ Edit Vehicle Data</div>
+        <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>Code Series</label>
+            <input type="text" class="modal-input" id="vehicleDataCodeSeries" placeholder="e.g., HPC1, FC1, B107">
+        </div>
+        <div class="modal-input-group">
+            <label>Notes</label>
+            <textarea class="modal-input" id="vehicleDataNotes" rows="3" placeholder="Additional notes about this vehicle..."></textarea>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeVehicleDataEditModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveVehicleDataEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add/Edit Lishi Tool Modal -->
 <div class="modal" id="lishiToolModal">
     <div class="modal-content">
@@ -8537,12 +8557,13 @@ function openVehicleDetail(vehicleKey) {
         });
     });
 
-    // Get code series (from keyway typically)
-    const codeSeries = keyways.length > 0 ? keyways[0] : 'N/A';
-
     // Get year grouping from lishiVehicleData
     const groupKey = `${make}|${model}|${startYear}|${endYear}`;
     const vehicleData = lishiVehicleData[groupKey] || {};
+
+    // Get code series - use override if available, otherwise use keyway as placeholder
+    const codeSeries = vehicleData.codeSeries || (keyways.length > 0 ? keyways[0] : 'N/A');
+    const isCodeSeriesOverride = !!vehicleData.codeSeries;
 
     // Get FIDs for this vehicle's FCC IDs
     const fccids = Array.from(vehicle.fccids);
@@ -8586,13 +8607,18 @@ function openVehicleDetail(vehicleKey) {
         </div>
 
         <!-- Vehicle Info Grid -->
+        <div style="display:flex;justify-content:flex-end;padding:8px 16px 0;">
+            <button class="lishi-action-btn" onclick="openVehicleDataEditModal('${groupKey}', '${make}', '${model}', '${startYear}', '${endYear}')">
+                ✏️ Edit Data
+            </button>
+        </div>
         <div class="vehicle-info-grid">
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Year Range</div>
                 <div class="vehicle-info-value">${yearDisplay}</div>
             </div>
             <div class="vehicle-info-item">
-                <div class="vehicle-info-label">Code Series</div>
+                <div class="vehicle-info-label">Code Series ${!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : ''}</div>
                 <div class="vehicle-info-value highlight">${codeSeries}</div>
             </div>
             <div class="vehicle-info-item">
@@ -8635,28 +8661,6 @@ function openVehicleDetail(vehicleKey) {
         </div>
         ` : ''}
 
-        <div class="vehicle-section">
-            <div class="vehicle-section-title">Pick Direction (Lishi)</div>
-            <div style="background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--border);">
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <button class="lishi-dir-btn cw ${vehicleData.direction === 'CW' ? 'active' : ''}"
-                            onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CW')">↻ CW</button>
-                    <button class="lishi-dir-btn ccw ${vehicleData.direction === 'CCW' ? 'active' : ''}"
-                            onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CCW')">↺ CCW</button>
-                    <button class="lishi-confirm-btn" style="margin-left:auto;"
-                            onclick="confirmVehicleDirectionFromVehiclePage('${groupKey}')"
-                            ${!vehicleData.direction ? 'disabled title="Set a direction first"' : ''}>
-                        ✓ Confirm
-                    </button>
-                </div>
-                ${vehicleData.direction ? `
-                    <div style="font-size:14px;color:${vehicleData.direction === 'CW' ? 'var(--success)' : '#ff9500'};font-weight:600;">
-                        ${vehicleData.direction === 'CW' ? '↻ Clockwise (CW)' : '↺ Counter-Clockwise (CCW)'}
-                    </div>
-                ` : `<div style="font-size:13px;color:var(--dim);">No direction set yet</div>`}
-                ${vehicleData.confirmCount ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">Confirmed ${vehicleData.confirmCount}x</div>` : ''}
-            </div>
-        </div>
     `;
 
     // Compatible Keys Section - sorted by stock
@@ -8689,27 +8693,60 @@ function openVehicleDetail(vehicleKey) {
         </div>
     `;
 
-    // Lishi Tools Section
-    if (lishiTools.length > 0) {
-        // Remove duplicates
-        const uniqueTools = [...new Map(lishiTools.map(t => [t.name, t])).values()];
+    // Lishi Tools & Pick Direction Section (combined)
+    const uniqueTools = lishiTools.length > 0
+        ? [...new Map(lishiTools.map(t => [t.name, t])).values()]
+        : [];
 
-        html += `
-            <div class="vehicle-section">
-                <div class="vehicle-section-title">Lishi Tools</div>
-                <div class="vehicle-tools-section">
-                    ${uniqueTools.map(tool => `
-                        <div class="vehicle-tool-item">
-                            <div class="vehicle-tool-name">${tool.name}</div>
-                            <div class="vehicle-tool-status ${tool.inStock ? 'owned' : 'needed'}">
-                                ${tool.inStock ? 'Owned' : 'Needed'}
-                            </div>
+    html += `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">Lishi Tools & Pick Direction</div>
+            <div style="background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--border);">
+                <!-- Pick Direction -->
+                <div style="margin-bottom:${uniqueTools.length > 0 ? '16px' : '0'};">
+                    <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">Pick Direction to Unlock</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button class="lishi-dir-btn cw ${vehicleData.direction === 'CW' ? 'active' : ''}"
+                                onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CW')">↻ CW</button>
+                        <button class="lishi-dir-btn ccw ${vehicleData.direction === 'CCW' ? 'active' : ''}"
+                                onclick="setVehicleDirectionFromVehiclePage('${groupKey}', 'CCW')">↺ CCW</button>
+                        <button class="lishi-confirm-btn" style="margin-left:auto;"
+                                onclick="confirmVehicleDirectionFromVehiclePage('${groupKey}')"
+                                ${!vehicleData.direction ? 'disabled title="Set a direction first"' : ''}>
+                            ✓ Confirm
+                        </button>
+                    </div>
+                    ${vehicleData.direction ? `
+                        <div style="font-size:14px;color:${vehicleData.direction === 'CW' ? 'var(--success)' : '#ff9500'};font-weight:600;margin-top:8px;">
+                            ${vehicleData.direction === 'CW' ? '↻ Clockwise (CW)' : '↺ Counter-Clockwise (CCW)'}
+                            ${vehicleData.confirmCount ? `<span style="font-size:12px;color:var(--dim);font-weight:400;margin-left:8px;">Confirmed ${vehicleData.confirmCount}x</span>` : ''}
                         </div>
-                    `).join('')}
+                    ` : `<div style="font-size:13px;color:var(--dim);margin-top:8px;">No direction set yet</div>`}
                 </div>
+
+                ${uniqueTools.length > 0 ? `
+                    <!-- Compatible Lishi Tools -->
+                    <div style="border-top:1px solid var(--border);padding-top:12px;">
+                        <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">Compatible Tools</div>
+                        <div class="vehicle-tools-section" style="margin:0;">
+                            ${uniqueTools.map(tool => `
+                                <div class="vehicle-tool-item">
+                                    <div class="vehicle-tool-name">${tool.name}</div>
+                                    <div class="vehicle-tool-status ${tool.inStock ? 'owned' : 'needed'}">
+                                        ${tool.inStock ? 'Owned' : 'Needed'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : `
+                    <div style="border-top:1px solid var(--border);padding-top:12px;">
+                        <div style="font-size:12px;color:var(--dim);">No Lishi tools mapped for this vehicle</div>
+                    </div>
+                `}
             </div>
-        `;
-    }
+        </div>
+    `;
 
     // Programming Tools & Adapters Section - find matching tools from toolsDatabase
     const matchingTools = findToolsForVehicle(make, model, vehicle.startYear, vehicle.endYear);
@@ -9951,6 +9988,58 @@ function saveLishiNotes() {
     closeLishiNotesModal();
     filterLishiLookup();
     toast('Notes saved');
+}
+
+// Vehicle Data Edit Modal
+let currentVehicleDataEditKey = null;
+
+function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
+    currentVehicleDataEditKey = groupKey;
+    const vehicleData = lishiVehicleData[groupKey] || {};
+
+    document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${startYear}-${endYear})`;
+    document.getElementById('vehicleDataCodeSeries').value = vehicleData.codeSeries || '';
+    document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
+    document.getElementById('vehicleDataEditModal').classList.add('on');
+}
+
+function closeVehicleDataEditModal() {
+    document.getElementById('vehicleDataEditModal').classList.remove('on');
+    currentVehicleDataEditKey = null;
+}
+
+function saveVehicleDataEdit() {
+    if (!currentVehicleDataEditKey) return;
+
+    if (!lishiVehicleData[currentVehicleDataEditKey]) {
+        lishiVehicleData[currentVehicleDataEditKey] = {
+            direction: null,
+            confirmCount: 0,
+            lastConfirmed: null,
+            lastConfirmedBy: null,
+            notes: '',
+            lastEditedBy: null,
+            codeSeries: ''
+        };
+    }
+
+    const codeSeries = document.getElementById('vehicleDataCodeSeries').value.trim();
+    const notes = document.getElementById('vehicleDataNotes').value.trim();
+
+    lishiVehicleData[currentVehicleDataEditKey].codeSeries = codeSeries;
+    lishiVehicleData[currentVehicleDataEditKey].notes = notes;
+    lishiVehicleData[currentVehicleDataEditKey].lastEdited = new Date().toISOString();
+    lishiVehicleData[currentVehicleDataEditKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+
+    saveLishiVehicle();
+    closeVehicleDataEditModal();
+
+    // Refresh the vehicle detail page to show updated data
+    if (currentViewingVehicleKey) {
+        openVehicleDetail(currentViewingVehicleKey);
+    }
+
+    toast('Vehicle data saved');
 }
 
 // ===================== ADD INVENTORY =====================
