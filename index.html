@@ -2281,6 +2281,715 @@
             margin-top: 8px;
         }
 
+        /* Tools Panel */
+        .tools-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 200;
+            overflow-y: auto;
+        }
+
+        .tools-panel.on { display: block; }
+
+        .tools-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tools-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .tools-content {
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .tools-section-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .tools-section-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tools-section-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .tools-section-icon {
+            font-size: 32px;
+        }
+
+        .tools-section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .tools-section-desc {
+            color: var(--dim);
+            font-size: 14px;
+        }
+
+        /* Programmers Panel */
+        .programmers-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 205;
+            overflow-y: auto;
+        }
+
+        .programmers-panel.on { display: block; }
+
+        .programmers-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .programmers-header-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .programmers-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .platform-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .platform-tab {
+            padding: 8px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--dim);
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .platform-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        .programmers-filters {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 6px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--dim);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .filter-chip.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        .programmers-content {
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .tools-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tool-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+        }
+
+        .tool-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .tool-card-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tool-card-pn {
+            color: var(--dim);
+            font-size: 12px;
+        }
+
+        .tool-status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .tool-status-badge.owned {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+
+        .tool-status-badge.wishlist {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .tool-status-badge.not-owned {
+            background: rgba(158, 158, 158, 0.2);
+            color: #9e9e9e;
+        }
+
+        .tool-card-platforms {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 8px 0;
+        }
+
+        .platform-badge {
+            padding: 2px 8px;
+            background: rgba(76, 139, 245, 0.2);
+            border-radius: 10px;
+            color: var(--accent);
+            font-size: 11px;
+        }
+
+        .tool-card-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--dim);
+            font-size: 12px;
+        }
+
+        /* Platform Management */
+        .platform-mgmt-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 210;
+            overflow-y: auto;
+        }
+
+        .platform-mgmt-panel.on { display: block; }
+
+        .platform-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .platform-card-info {
+            flex: 1;
+        }
+
+        .platform-card-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .platform-card-mfr {
+            color: var(--dim);
+            font-size: 12px;
+        }
+
+        .platform-card-count {
+            color: var(--accent);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .platform-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .platform-action-btn {
+            padding: 8px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--dim);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .platform-action-btn.delete {
+            color: #ff5252;
+            border-color: #ff5252;
+        }
+
+        /* Tool Detail Panel */
+        .tool-detail-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 215;
+            overflow-y: auto;
+        }
+
+        .tool-detail-panel.on { display: block; }
+
+        .tool-detail-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tool-detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .tool-detail-content {
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .tool-detail-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .tool-detail-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .tool-status-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-status-toggle-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--dim);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .tool-status-toggle-btn.active {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .tool-status-toggle-btn.wishlist.active {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #ffc107;
+        }
+
+        .tool-status-toggle-btn.not-owned.active {
+            background: rgba(158, 158, 158, 0.2);
+            border-color: #9e9e9e;
+            color: #9e9e9e;
+        }
+
+        .tool-platforms-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tool-platform-item {
+            padding: 8px 12px;
+            background: rgba(76, 139, 245, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            color: var(--accent);
+            font-size: 13px;
+        }
+
+        .tool-vehicle-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-vehicle-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .tool-job-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .job-type-badge {
+            padding: 4px 10px;
+            background: rgba(156, 39, 176, 0.2);
+            border-radius: 12px;
+            color: #ce93d8;
+            font-size: 12px;
+        }
+
+        .tool-notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-note-item {
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .tool-note-item.cross-ref {
+            border-left: 3px solid var(--accent);
+        }
+
+        .add-note-btn {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            color: var(--dim);
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        /* Add/Edit Tool Form */
+        .add-tool-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 220;
+            overflow-y: auto;
+        }
+
+        .add-tool-panel.on { display: block; }
+
+        .tool-form-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .tool-form-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .tool-form-row {
+            margin-bottom: 12px;
+        }
+
+        .tool-form-row label {
+            display: block;
+            font-size: 12px;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+
+        .tool-form-row input,
+        .tool-form-row select,
+        .tool-form-row textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--fg);
+            font-size: 14px;
+        }
+
+        .tool-form-row textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .platform-checkbox-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .platform-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .platform-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .status-radio-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .status-radio-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .status-radio-item.selected {
+            border-color: var(--accent);
+            background: rgba(76, 139, 245, 0.1);
+        }
+
+        .status-radio-item input[type="radio"] {
+            display: none;
+        }
+
+        .job-type-checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .job-type-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .vehicle-app-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .vehicle-app-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .vehicle-app-item input,
+        .vehicle-app-item select {
+            flex: 1;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--fg);
+            font-size: 13px;
+        }
+
+        .vehicle-app-item input[type="number"] {
+            width: 70px;
+            flex: none;
+        }
+
+        .remove-vehicle-app-btn {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid #ff5252;
+            border-radius: 4px;
+            color: #ff5252;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .add-vehicle-app-btn {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            color: var(--dim);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .tool-form-actions {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            position: sticky;
+            bottom: 0;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+        }
+
+        .tool-form-actions button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .tool-form-cancel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--dim);
+        }
+
+        .tool-form-save {
+            background: var(--accent);
+            border: none;
+            color: var(--bg);
+        }
+
+        /* Add Platform Modal */
+        .add-platform-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 230;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .add-platform-modal.on {
+            display: flex;
+        }
+
+        .add-platform-modal-content {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .add-platform-modal h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .add-platform-modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .add-platform-modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Wishlist Panel */
+        .wishlist-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 208;
+            overflow-y: auto;
+        }
+
+        .wishlist-panel.on { display: block; }
+
         /* Fixed Home Button */
         .home-btn-fixed {
             position: fixed;
@@ -3713,6 +4422,245 @@
     </div>
 </div>
 
+<!-- Tools Main Panel -->
+<div class="tools-panel" id="toolsPanel">
+    <div class="tools-header">
+        <button class="back-btn" onclick="closeToolsPanel()">←</button>
+        <div class="tools-title">🔧 Tools & Equipment</div>
+    </div>
+    <div class="tools-content">
+        <div class="tools-section-card" onclick="openLishiLookup()">
+            <div class="tools-section-card-header">
+                <span class="tools-section-icon">🔓</span>
+                <div>
+                    <div class="tools-section-title">Lishi Tools</div>
+                    <div class="tools-section-desc">Picking & decoding tools for locks</div>
+                </div>
+            </div>
+        </div>
+        <div class="tools-section-card" onclick="openProgrammersPanel()">
+            <div class="tools-section-card-header">
+                <span class="tools-section-icon">💻</span>
+                <div>
+                    <div class="tools-section-title">Programmers & Equipment</div>
+                    <div class="tools-section-desc">Cables, adapters, EEPROM clamps & pin readers</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Programmers & Equipment Panel -->
+<div class="programmers-panel" id="programmersPanel">
+    <div class="programmers-header">
+        <div class="programmers-header-top">
+            <button class="back-btn" onclick="closeProgrammersPanel()">←</button>
+            <div class="programmers-title">💻 Programmers & Equipment</div>
+            <button class="back-btn" onclick="openPlatformMgmt()" title="Manage Platforms">⚙️</button>
+        </div>
+        <div class="platform-tabs" id="platformTabs">
+            <button class="platform-tab active" data-platform="all" onclick="selectPlatformFilter('all')">All Platforms</button>
+        </div>
+        <div class="programmers-filters">
+            <button class="filter-chip active" data-category="all" onclick="selectCategoryFilter('all')">All</button>
+            <button class="filter-chip" data-category="Programmers" onclick="selectCategoryFilter('Programmers')">Programmers</button>
+            <button class="filter-chip" data-category="Cables" onclick="selectCategoryFilter('Cables')">Cables</button>
+            <button class="filter-chip" data-category="Adapters" onclick="selectCategoryFilter('Adapters')">Adapters</button>
+            <button class="filter-chip" data-category="EEPROM Clamps" onclick="selectCategoryFilter('EEPROM Clamps')">EEPROM Clamps</button>
+            <button class="filter-chip" data-category="Pin Readers" onclick="selectCategoryFilter('Pin Readers')">Pin Readers</button>
+        </div>
+        <div class="programmers-filters" style="margin-top:8px;">
+            <button class="filter-chip active" data-status="all" onclick="selectStatusFilter('all')">All Status</button>
+            <button class="filter-chip" data-status="owned" onclick="selectStatusFilter('owned')">✓ Owned</button>
+            <button class="filter-chip" data-status="wishlist" onclick="selectStatusFilter('wishlist')">⭐ Wishlist</button>
+            <button class="filter-chip" data-status="not-owned" onclick="selectStatusFilter('not-owned')">Not Owned</button>
+        </div>
+    </div>
+    <div class="programmers-content">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="back-btn" style="flex:1;padding:12px;border-radius:8px;font-size:14px;" onclick="openAddToolPanel()">+ Add Tool</button>
+            <button class="back-btn" style="padding:12px;border-radius:8px;font-size:14px;" onclick="openWishlistPanel()">⭐ Wishlist</button>
+        </div>
+        <div class="tools-list" id="toolsList">
+            <div style="text-align:center;color:var(--dim);padding:40px;">No tools yet. Add your first tool!</div>
+        </div>
+    </div>
+</div>
+
+<!-- Platform Management Panel -->
+<div class="platform-mgmt-panel" id="platformMgmtPanel">
+    <div class="tools-header">
+        <button class="back-btn" onclick="closePlatformMgmt()">←</button>
+        <div class="tools-title">⚙️ Manage Platforms</div>
+    </div>
+    <div class="tools-content">
+        <button class="back-btn" style="width:100%;padding:12px;margin-bottom:16px;border-radius:8px;font-size:14px;" onclick="openAddPlatformModal()">+ Add Platform</button>
+        <div id="platformList">
+            <div style="text-align:center;color:var(--dim);padding:40px;">No platforms yet. Add your first platform!</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tool Detail Panel -->
+<div class="tool-detail-panel" id="toolDetailPanel">
+    <div class="tool-detail-header">
+        <button class="back-btn" onclick="closeToolDetail()">←</button>
+        <div class="tool-detail-title" id="toolDetailTitle">Tool Details</div>
+        <button class="back-btn" onclick="editCurrentTool()">✏️</button>
+    </div>
+    <div class="tool-detail-content" id="toolDetailContent">
+    </div>
+</div>
+
+<!-- Add/Edit Tool Panel -->
+<div class="add-tool-panel" id="addToolPanel">
+    <div class="tools-header">
+        <button class="back-btn" onclick="closeAddToolPanel()">←</button>
+        <div class="tools-title" id="addToolPanelTitle">➕ Add Tool</div>
+    </div>
+    <div class="tools-content" style="padding-bottom:100px;">
+        <div class="tool-form-section">
+            <h3>Basic Information</h3>
+            <div class="tool-form-row">
+                <label>Tool Name *</label>
+                <input type="text" id="toolFormName" placeholder="e.g., BA Smart Cable">
+            </div>
+            <div class="tool-form-row">
+                <label>Part Number</label>
+                <input type="text" id="toolFormPartNumber" placeholder="e.g., XD8ABA9EN">
+            </div>
+            <div class="tool-form-row">
+                <label>Category *</label>
+                <select id="toolFormCategory">
+                    <option value="">Select category...</option>
+                    <option value="Programmers">Programmers</option>
+                    <option value="Cables">Cables</option>
+                    <option value="Adapters">Adapters</option>
+                    <option value="EEPROM Clamps">EEPROM Clamps</option>
+                    <option value="Pin Readers">Pin Readers</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Platform Compatibility</h3>
+            <div class="tool-form-row">
+                <label>Compatibility Type *</label>
+                <select id="toolFormCompatType" onchange="handleCompatTypeChange()">
+                    <option value="single">Single Platform</option>
+                    <option value="multiple">Multiple Platforms</option>
+                </select>
+            </div>
+            <div class="tool-form-row" id="singlePlatformSelect">
+                <label>Select Platform *</label>
+                <select id="toolFormSinglePlatform">
+                    <option value="">Select platform...</option>
+                </select>
+            </div>
+            <div class="tool-form-row" id="multiplePlatformSelect" style="display:none;">
+                <label>Select Platforms *</label>
+                <div class="platform-checkbox-list" id="toolFormPlatformCheckboxes">
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Job Types</h3>
+            <div class="job-type-checkbox-group">
+                <label class="job-type-checkbox-item">
+                    <input type="checkbox" value="AKL" id="jobTypeAKL">
+                    <span>AKL</span>
+                </label>
+                <label class="job-type-checkbox-item">
+                    <input type="checkbox" value="Add Key" id="jobTypeAddKey">
+                    <span>Add Key</span>
+                </label>
+                <label class="job-type-checkbox-item">
+                    <input type="checkbox" value="Remote Programming" id="jobTypeRemote">
+                    <span>Remote Programming</span>
+                </label>
+                <label class="job-type-checkbox-item">
+                    <input type="checkbox" value="Parameter Reset" id="jobTypeParamReset">
+                    <span>Parameter Reset</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Status</h3>
+            <div class="status-radio-group" id="toolFormStatusGroup">
+                <label class="status-radio-item selected" onclick="selectToolStatus('owned')">
+                    <input type="radio" name="toolStatus" value="owned" checked>
+                    <span>✓ Owned</span>
+                </label>
+                <label class="status-radio-item" onclick="selectToolStatus('wishlist')">
+                    <input type="radio" name="toolStatus" value="wishlist">
+                    <span>⭐ Wishlist</span>
+                </label>
+                <label class="status-radio-item" onclick="selectToolStatus('not-owned')">
+                    <input type="radio" name="toolStatus" value="not-owned">
+                    <span>✗ Not Owned</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Vehicle Applications</h3>
+            <div class="vehicle-app-list" id="toolFormVehicleApps">
+            </div>
+            <button class="add-vehicle-app-btn" onclick="addToolVehicleApp()">+ Add Vehicle Application</button>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Notes</h3>
+            <div class="tool-form-row">
+                <label>Tool Notes (always visible on this tool)</label>
+                <textarea id="toolFormNotes" placeholder="General notes about this tool..."></textarea>
+            </div>
+            <div class="tool-form-row">
+                <label>Cross-Reference Notes (shown on tool AND related vehicles)</label>
+                <textarea id="toolFormCrossRefNotes" placeholder="Notes that will appear on vehicle pages..."></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="tool-form-actions">
+        <button class="tool-form-cancel" onclick="closeAddToolPanel()">Cancel</button>
+        <button class="tool-form-save" onclick="saveToolForm()">Save Tool</button>
+    </div>
+</div>
+
+<!-- Add Platform Modal -->
+<div class="add-platform-modal" id="addPlatformModal">
+    <div class="add-platform-modal-content">
+        <h3 id="addPlatformModalTitle">Add Platform</h3>
+        <div class="tool-form-row">
+            <label>Platform Name *</label>
+            <input type="text" id="platformFormName" placeholder="e.g., OBDstar X300 G3">
+        </div>
+        <div class="tool-form-row">
+            <label>Manufacturer *</label>
+            <input type="text" id="platformFormManufacturer" placeholder="e.g., OBDstar">
+        </div>
+        <div class="add-platform-modal-actions">
+            <button class="tool-form-cancel" onclick="closeAddPlatformModal()">Cancel</button>
+            <button class="tool-form-save" onclick="savePlatformForm()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Wishlist Panel -->
+<div class="wishlist-panel" id="wishlistPanel">
+    <div class="tools-header">
+        <button class="back-btn" onclick="closeWishlistPanel()">←</button>
+        <div class="tools-title">⭐ Tool Wishlist</div>
+    </div>
+    <div class="tools-content">
+        <div class="tools-list" id="wishlistToolsList">
+            <div style="text-align:center;color:var(--dim);padding:40px;">No items in wishlist</div>
+        </div>
+    </div>
+</div>
+
 <!-- PWA Install Banner -->
 <div class="pwa-install-banner" id="pwaInstallBanner">
     <button class="pwa-install-close" onclick="dismissInstallBanner()">×</button>
@@ -3736,9 +4684,9 @@
         <span class="icon">🚗</span>
         <span>Vehicle</span>
     </button>
-    <button class="nav-btn" onclick="showTab('lishi', event)">
+    <button class="nav-btn" onclick="showTab('tools', event)">
         <span class="icon">🔧</span>
-        <span>Lishi</span>
+        <span>Tools</span>
     </button>
     <button class="nav-btn" onclick="showTab('fid', event)">
         <span class="icon">📋</span>
@@ -4165,6 +5113,7 @@ async function uploadToCloud() {
             fidMerges: fidMerges,
             fidPrefixes: fidPrefixes,
             purchaseHistory: purchaseHistory,
+            toolsDatabase: toolsDatabase,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastUpdatedBy: currentUser.email
         };
@@ -4184,6 +5133,7 @@ async function uploadToCloud() {
             fidMerges: fidMerges,
             fidPrefixes: fidPrefixes,
             purchaseHistory: purchaseHistory,
+            toolsDatabase: toolsDatabase,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await personalDocRef.set(allData, { merge: true });
@@ -4305,7 +5255,17 @@ async function downloadFromCloud() {
             });
             savePurchaseHistory();
         }
-        
+        if (data.toolsDatabase) {
+            // Merge tools database
+            if (data.toolsDatabase.platforms) {
+                toolsDatabase.platforms = { ...toolsDatabase.platforms, ...data.toolsDatabase.platforms };
+            }
+            if (data.toolsDatabase.tools) {
+                toolsDatabase.tools = { ...toolsDatabase.tools, ...data.toolsDatabase.tools };
+            }
+            saveToolsDatabase();
+        }
+
         // Refresh UI
         buildFilters();
         applyFilters();
@@ -4582,8 +5542,11 @@ async function loadLocalData() {
             
             const savedFidPrefixes = await loadFromIndexedDB('fidPrefixes');
             if (savedFidPrefixes) fidPrefixes = { ...fidPrefixes, ...savedFidPrefixes };
+
+            // Load tools database
+            await loadToolsDatabase();
         }
-        
+
         // Fallback to localStorage for migration
         if (Object.keys(stockData).length === 0) {
             const lsStock = localStorage.getItem('lockscroll_stock');
@@ -5892,7 +6855,7 @@ function showTab(tab, event) {
     } else {
         // Fallback: activate the correct nav button based on tab name
         const navBtns = document.querySelectorAll('.nav-btn');
-        const tabIndex = {'keys': 0, 'vehicle': 1, 'lishi': 2, 'fid': 3, 'settings': 4};
+        const tabIndex = {'keys': 0, 'vehicle': 1, 'tools': 2, 'fid': 3, 'settings': 4};
         if (navBtns[tabIndex[tab]]) {
             navBtns[tabIndex[tab]].classList.add('active');
         }
@@ -5909,8 +6872,8 @@ function showTab(tab, event) {
         document.getElementById('detailPanel').classList.remove('on');
     } else if (tab === 'vehicle') {
         openVehiclePanel();
-    } else if (tab === 'lishi') {
-        openLishiLookup();
+    } else if (tab === 'tools') {
+        openToolsPanel();
     } else if (tab === 'fid') {
         openFid();
     } else if (tab === 'settings') {
@@ -5933,6 +6896,14 @@ function goHome() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
     document.getElementById('detailPanel').classList.remove('on');
     document.getElementById('renameModelModal').classList.remove('on');
+    // Close tools panels
+    document.getElementById('toolsPanel').classList.remove('on');
+    document.getElementById('programmersPanel').classList.remove('on');
+    document.getElementById('platformMgmtPanel').classList.remove('on');
+    document.getElementById('toolDetailPanel').classList.remove('on');
+    document.getElementById('addToolPanel').classList.remove('on');
+    document.getElementById('addPlatformModal').classList.remove('on');
+    document.getElementById('wishlistPanel').classList.remove('on');
 
     // Reset vehicle state
     selectedVehicleMake = null;
@@ -5948,6 +6919,804 @@ function goHome() {
     }
 }
 
+// ===================== TOOLS & EQUIPMENT MODULE =====================
+
+// Tools Database Structure
+let toolsDatabase = {
+    categories: ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"],
+    platforms: {},  // { "platform-id": { name, manufacturer, tools: [] } }
+    tools: {}       // { "tool-id": { name, partNumber, category, platformCompatibility, compatiblePlatforms, vehicleApplications, jobTypes, status, toolNotes, crossReferenceNotes } }
+};
+
+// Tools State Variables
+let currentPlatformFilter = 'all';
+let currentCategoryFilter = 'all';
+let currentStatusFilter = 'all';
+let editingToolId = null;
+let editingPlatformId = null;
+let currentViewingToolId = null;
+let toolVehicleAppCount = 0;
+
+// Save Tools to IndexedDB
+function saveToolsDatabase() {
+    saveToIndexedDB('toolsDatabase', toolsDatabase);
+}
+
+// Load Tools from IndexedDB (called in loadLocalData)
+async function loadToolsDatabase() {
+    try {
+        const saved = await loadFromIndexedDB('toolsDatabase');
+        if (saved) {
+            toolsDatabase = saved;
+            // Ensure structure integrity
+            if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
+            if (!toolsDatabase.tools) toolsDatabase.tools = {};
+            if (!toolsDatabase.categories) {
+                toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
+            }
+        }
+    } catch (e) {
+        console.error('Error loading tools database:', e);
+    }
+}
+
+// Open Tools Panel
+function openToolsPanel() {
+    document.getElementById('toolsPanel').classList.add('on');
+}
+
+function closeToolsPanel() {
+    document.getElementById('toolsPanel').classList.remove('on');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.nav-btn').classList.add('active');
+}
+
+// Open Programmers Panel
+function openProgrammersPanel() {
+    renderPlatformTabs();
+    renderToolsList();
+    document.getElementById('programmersPanel').classList.add('on');
+}
+
+function closeProgrammersPanel() {
+    document.getElementById('programmersPanel').classList.remove('on');
+}
+
+// Platform Management
+function openPlatformMgmt() {
+    renderPlatformList();
+    document.getElementById('platformMgmtPanel').classList.add('on');
+}
+
+function closePlatformMgmt() {
+    document.getElementById('platformMgmtPanel').classList.remove('on');
+}
+
+function openAddPlatformModal(platformId = null) {
+    editingPlatformId = platformId;
+    if (platformId && toolsDatabase.platforms[platformId]) {
+        const platform = toolsDatabase.platforms[platformId];
+        document.getElementById('addPlatformModalTitle').textContent = 'Edit Platform';
+        document.getElementById('platformFormName').value = platform.name;
+        document.getElementById('platformFormManufacturer').value = platform.manufacturer;
+    } else {
+        document.getElementById('addPlatformModalTitle').textContent = 'Add Platform';
+        document.getElementById('platformFormName').value = '';
+        document.getElementById('platformFormManufacturer').value = '';
+    }
+    document.getElementById('addPlatformModal').classList.add('on');
+}
+
+function closeAddPlatformModal() {
+    document.getElementById('addPlatformModal').classList.remove('on');
+    editingPlatformId = null;
+}
+
+function savePlatformForm() {
+    const name = document.getElementById('platformFormName').value.trim();
+    const manufacturer = document.getElementById('platformFormManufacturer').value.trim();
+
+    if (!name || !manufacturer) {
+        toast('Please fill in all required fields');
+        return;
+    }
+
+    const platformId = editingPlatformId || 'platform-' + Date.now();
+
+    toolsDatabase.platforms[platformId] = {
+        name: name,
+        manufacturer: manufacturer,
+        tools: toolsDatabase.platforms[platformId]?.tools || []
+    };
+
+    saveToolsDatabase();
+    closeAddPlatformModal();
+    renderPlatformList();
+    renderPlatformTabs();
+    toast(editingPlatformId ? 'Platform updated' : 'Platform added');
+}
+
+function deletePlatform(platformId) {
+    if (!confirm('Delete this platform? Tools will remain but lose this platform association.')) return;
+
+    // Remove platform from tools' compatiblePlatforms
+    Object.keys(toolsDatabase.tools).forEach(toolId => {
+        const tool = toolsDatabase.tools[toolId];
+        const idx = tool.compatiblePlatforms.indexOf(platformId);
+        if (idx > -1) {
+            tool.compatiblePlatforms.splice(idx, 1);
+        }
+    });
+
+    delete toolsDatabase.platforms[platformId];
+    saveToolsDatabase();
+    renderPlatformList();
+    renderPlatformTabs();
+    toast('Platform deleted');
+}
+
+function renderPlatformList() {
+    const container = document.getElementById('platformList');
+    const platformIds = Object.keys(toolsDatabase.platforms);
+
+    if (platformIds.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No platforms yet. Add your first platform!</div>';
+        return;
+    }
+
+    container.innerHTML = platformIds.map(id => {
+        const platform = toolsDatabase.platforms[id];
+        const toolCount = Object.values(toolsDatabase.tools).filter(t =>
+            t.compatiblePlatforms.includes(id)
+        ).length;
+
+        return `
+            <div class="platform-card">
+                <div class="platform-card-info">
+                    <div class="platform-card-name">${platform.name}</div>
+                    <div class="platform-card-mfr">${platform.manufacturer}</div>
+                    <div class="platform-card-count">${toolCount} tool${toolCount !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="platform-card-actions">
+                    <button class="platform-action-btn" onclick="openAddPlatformModal('${id}')">Edit</button>
+                    <button class="platform-action-btn delete" onclick="deletePlatform('${id}')">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPlatformTabs() {
+    const container = document.getElementById('platformTabs');
+    const platformIds = Object.keys(toolsDatabase.platforms);
+
+    let html = `<button class="platform-tab ${currentPlatformFilter === 'all' ? 'active' : ''}" data-platform="all" onclick="selectPlatformFilter('all')">All Platforms</button>`;
+
+    platformIds.forEach(id => {
+        const platform = toolsDatabase.platforms[id];
+        html += `<button class="platform-tab ${currentPlatformFilter === id ? 'active' : ''}" data-platform="${id}" onclick="selectPlatformFilter('${id}')">${platform.name}</button>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// Filter Functions
+function selectPlatformFilter(platformId) {
+    currentPlatformFilter = platformId;
+    document.querySelectorAll('.platform-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.platform === platformId);
+    });
+    renderToolsList();
+}
+
+function selectCategoryFilter(category) {
+    currentCategoryFilter = category;
+    document.querySelectorAll('.filter-chip[data-category]').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.category === category);
+    });
+    renderToolsList();
+}
+
+function selectStatusFilter(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.filter-chip[data-status]').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.status === status);
+    });
+    renderToolsList();
+}
+
+// Render Tools List
+function renderToolsList() {
+    const container = document.getElementById('toolsList');
+    const toolIds = Object.keys(toolsDatabase.tools);
+
+    // Filter tools
+    const filteredTools = toolIds.filter(id => {
+        const tool = toolsDatabase.tools[id];
+
+        // Platform filter
+        if (currentPlatformFilter !== 'all') {
+            if (!tool.compatiblePlatforms.includes(currentPlatformFilter)) return false;
+        }
+
+        // Category filter
+        if (currentCategoryFilter !== 'all') {
+            if (tool.category !== currentCategoryFilter) return false;
+        }
+
+        // Status filter
+        if (currentStatusFilter !== 'all') {
+            if (tool.status !== currentStatusFilter) return false;
+        }
+
+        return true;
+    });
+
+    if (filteredTools.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No tools match your filters</div>';
+        return;
+    }
+
+    container.innerHTML = filteredTools.map(id => {
+        const tool = toolsDatabase.tools[id];
+        const statusClass = tool.status === 'owned' ? 'owned' : (tool.status === 'wishlist' ? 'wishlist' : 'not-owned');
+        const statusText = tool.status === 'owned' ? '✓ Owned' : (tool.status === 'wishlist' ? '⭐ Wishlist' : '✗ Not Owned');
+
+        const platformBadges = tool.compatiblePlatforms.map(pid => {
+            const platform = toolsDatabase.platforms[pid];
+            return platform ? `<span class="platform-badge">${platform.name}</span>` : '';
+        }).join('');
+
+        const vehicleCount = tool.vehicleApplications ? tool.vehicleApplications.length : 0;
+
+        return `
+            <div class="tool-card" onclick="openToolDetail('${id}')">
+                <div class="tool-card-header">
+                    <div>
+                        <div class="tool-card-name">${tool.name}</div>
+                        ${tool.partNumber ? `<div class="tool-card-pn">#${tool.partNumber}</div>` : ''}
+                    </div>
+                    <span class="tool-status-badge ${statusClass}">${statusText}</span>
+                </div>
+                <div class="tool-card-platforms">${platformBadges || '<span style="color:var(--dim);font-size:11px;">No platform assigned</span>'}</div>
+                <div class="tool-card-meta">
+                    <span>${tool.category}</span>
+                    <span>${vehicleCount} vehicle${vehicleCount !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Tool Detail Panel
+function openToolDetail(toolId) {
+    currentViewingToolId = toolId;
+    const tool = toolsDatabase.tools[toolId];
+    if (!tool) return;
+
+    document.getElementById('toolDetailTitle').textContent = tool.name;
+
+    const statusClass = tool.status === 'owned' ? 'owned' : (tool.status === 'wishlist' ? 'wishlist' : 'not-owned');
+
+    let html = '';
+
+    // Status Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>📦 Status</h3>
+            <div class="tool-status-toggle">
+                <button class="tool-status-toggle-btn ${tool.status === 'owned' ? 'active' : ''}" onclick="setToolStatus('${toolId}', 'owned')">✓ Owned</button>
+                <button class="tool-status-toggle-btn wishlist ${tool.status === 'wishlist' ? 'active' : ''}" onclick="setToolStatus('${toolId}', 'wishlist')">⭐ Wishlist</button>
+                <button class="tool-status-toggle-btn not-owned ${tool.status === 'not-owned' ? 'active' : ''}" onclick="setToolStatus('${toolId}', 'not-owned')">✗ Not Owned</button>
+            </div>
+        </div>
+    `;
+
+    // Basic Info Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>📋 Basic Information</h3>
+            ${tool.partNumber ? `<div style="margin-bottom:8px;"><span style="color:var(--dim);">Part Number:</span> ${tool.partNumber}</div>` : ''}
+            <div style="margin-bottom:8px;"><span style="color:var(--dim);">Category:</span> ${tool.category}</div>
+            <div><span style="color:var(--dim);">Compatibility:</span> ${tool.platformCompatibility === 'multiple' ? 'Cross-compatible' : 'Single platform'}</div>
+        </div>
+    `;
+
+    // Platforms Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>💻 Compatible Platforms</h3>
+            <div class="tool-platforms-list">
+                ${tool.compatiblePlatforms.map(pid => {
+                    const platform = toolsDatabase.platforms[pid];
+                    return platform ? `<div class="tool-platform-item">${platform.name}<br><span style="font-size:11px;color:var(--dim);">${platform.manufacturer}</span></div>` : '';
+                }).join('') || '<span style="color:var(--dim);">No platforms assigned</span>'}
+            </div>
+        </div>
+    `;
+
+    // Job Types Section
+    if (tool.jobTypes && tool.jobTypes.length > 0) {
+        html += `
+            <div class="tool-detail-section">
+                <h3>🔧 Job Types</h3>
+                <div class="tool-job-types">
+                    ${tool.jobTypes.map(jt => `<span class="job-type-badge">${jt}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Vehicle Applications Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>🚗 Vehicle Applications</h3>
+            <div class="tool-vehicle-list">
+                ${tool.vehicleApplications && tool.vehicleApplications.length > 0 ?
+                    tool.vehicleApplications.map(v => `
+                        <div class="tool-vehicle-item">
+                            <span>${v.make} ${v.model}</span>
+                            <span style="color:var(--dim);">${v.yearStart}${v.yearEnd && v.yearEnd !== v.yearStart ? '-' + v.yearEnd : ''}</span>
+                        </div>
+                    `).join('') :
+                    '<div style="color:var(--dim);text-align:center;padding:12px;">No vehicle applications added</div>'
+                }
+            </div>
+        </div>
+    `;
+
+    // Tool Notes Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>📝 Tool Notes</h3>
+            <div class="tool-notes-list">
+                ${tool.toolNotes && tool.toolNotes.length > 0 ?
+                    tool.toolNotes.map((note, idx) => `
+                        <div class="tool-note-item">
+                            ${note}
+                            <button onclick="deleteToolNote('${toolId}', ${idx})" style="float:right;background:none;border:none;color:#ff5252;cursor:pointer;">×</button>
+                        </div>
+                    `).join('') :
+                    '<div style="color:var(--dim);text-align:center;padding:12px;">No notes</div>'
+                }
+            </div>
+            <button class="add-note-btn" onclick="addToolNote('${toolId}')">+ Add Note</button>
+        </div>
+    `;
+
+    // Cross-Reference Notes Section
+    html += `
+        <div class="tool-detail-section">
+            <h3>🔗 Cross-Reference Notes</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">These notes appear on this tool AND on related vehicle pages.</p>
+            <div class="tool-notes-list">
+                ${tool.crossReferenceNotes && tool.crossReferenceNotes.length > 0 ?
+                    tool.crossReferenceNotes.map((note, idx) => `
+                        <div class="tool-note-item cross-ref">
+                            ${note}
+                            <button onclick="deleteCrossRefNote('${toolId}', ${idx})" style="float:right;background:none;border:none;color:#ff5252;cursor:pointer;">×</button>
+                        </div>
+                    `).join('') :
+                    '<div style="color:var(--dim);text-align:center;padding:12px;">No cross-reference notes</div>'
+                }
+            </div>
+            <button class="add-note-btn" onclick="addCrossRefNote('${toolId}')">+ Add Cross-Reference Note</button>
+        </div>
+    `;
+
+    // Delete button
+    html += `
+        <div style="margin-top:24px;">
+            <button onclick="deleteTool('${toolId}')" style="width:100%;padding:14px;background:transparent;border:1px solid #ff5252;border-radius:8px;color:#ff5252;font-size:14px;cursor:pointer;">🗑️ Delete Tool</button>
+        </div>
+    `;
+
+    document.getElementById('toolDetailContent').innerHTML = html;
+    document.getElementById('toolDetailPanel').classList.add('on');
+}
+
+function closeToolDetail() {
+    document.getElementById('toolDetailPanel').classList.remove('on');
+    currentViewingToolId = null;
+}
+
+function setToolStatus(toolId, status) {
+    if (!toolsDatabase.tools[toolId]) return;
+    toolsDatabase.tools[toolId].status = status;
+    saveToolsDatabase();
+    openToolDetail(toolId); // Refresh
+    renderToolsList();
+    toast('Status updated');
+}
+
+function addToolNote(toolId) {
+    const note = prompt('Enter note:');
+    if (!note || !note.trim()) return;
+    if (!toolsDatabase.tools[toolId].toolNotes) {
+        toolsDatabase.tools[toolId].toolNotes = [];
+    }
+    toolsDatabase.tools[toolId].toolNotes.push(note.trim());
+    saveToolsDatabase();
+    openToolDetail(toolId);
+    toast('Note added');
+}
+
+function deleteToolNote(toolId, idx) {
+    if (!confirm('Delete this note?')) return;
+    toolsDatabase.tools[toolId].toolNotes.splice(idx, 1);
+    saveToolsDatabase();
+    openToolDetail(toolId);
+    toast('Note deleted');
+}
+
+function addCrossRefNote(toolId) {
+    const note = prompt('Enter cross-reference note (will appear on related vehicles):');
+    if (!note || !note.trim()) return;
+    if (!toolsDatabase.tools[toolId].crossReferenceNotes) {
+        toolsDatabase.tools[toolId].crossReferenceNotes = [];
+    }
+    toolsDatabase.tools[toolId].crossReferenceNotes.push(note.trim());
+    saveToolsDatabase();
+    openToolDetail(toolId);
+    toast('Cross-reference note added');
+}
+
+function deleteCrossRefNote(toolId, idx) {
+    if (!confirm('Delete this cross-reference note?')) return;
+    toolsDatabase.tools[toolId].crossReferenceNotes.splice(idx, 1);
+    saveToolsDatabase();
+    openToolDetail(toolId);
+    toast('Note deleted');
+}
+
+function editCurrentTool() {
+    if (currentViewingToolId) {
+        openAddToolPanel(currentViewingToolId);
+    }
+}
+
+// Add/Edit Tool Panel
+function openAddToolPanel(toolId = null) {
+    editingToolId = toolId;
+    toolVehicleAppCount = 0;
+
+    // Populate platform dropdowns
+    populatePlatformSelects();
+
+    if (toolId && toolsDatabase.tools[toolId]) {
+        const tool = toolsDatabase.tools[toolId];
+        document.getElementById('addToolPanelTitle').textContent = '✏️ Edit Tool';
+        document.getElementById('toolFormName').value = tool.name;
+        document.getElementById('toolFormPartNumber').value = tool.partNumber || '';
+        document.getElementById('toolFormCategory').value = tool.category;
+        document.getElementById('toolFormCompatType').value = tool.platformCompatibility;
+        handleCompatTypeChange();
+
+        // Set platform selections
+        if (tool.platformCompatibility === 'single' && tool.compatiblePlatforms.length > 0) {
+            document.getElementById('toolFormSinglePlatform').value = tool.compatiblePlatforms[0];
+        } else if (tool.platformCompatibility === 'multiple') {
+            tool.compatiblePlatforms.forEach(pid => {
+                const checkbox = document.querySelector(`#toolFormPlatformCheckboxes input[value="${pid}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+
+        // Set job types
+        document.getElementById('jobTypeAKL').checked = tool.jobTypes?.includes('AKL');
+        document.getElementById('jobTypeAddKey').checked = tool.jobTypes?.includes('Add Key');
+        document.getElementById('jobTypeRemote').checked = tool.jobTypes?.includes('Remote Programming');
+        document.getElementById('jobTypeParamReset').checked = tool.jobTypes?.includes('Parameter Reset');
+
+        // Set status
+        selectToolStatus(tool.status);
+
+        // Set notes
+        document.getElementById('toolFormNotes').value = tool.toolNotes?.join('\n') || '';
+        document.getElementById('toolFormCrossRefNotes').value = tool.crossReferenceNotes?.join('\n') || '';
+
+        // Set vehicle applications
+        const vehicleAppsContainer = document.getElementById('toolFormVehicleApps');
+        vehicleAppsContainer.innerHTML = '';
+        if (tool.vehicleApplications && tool.vehicleApplications.length > 0) {
+            tool.vehicleApplications.forEach(app => {
+                addToolVehicleApp(app.make, app.model, app.yearStart, app.yearEnd);
+            });
+        }
+    } else {
+        document.getElementById('addToolPanelTitle').textContent = '➕ Add Tool';
+        document.getElementById('toolFormName').value = '';
+        document.getElementById('toolFormPartNumber').value = '';
+        document.getElementById('toolFormCategory').value = '';
+        document.getElementById('toolFormCompatType').value = 'single';
+        handleCompatTypeChange();
+        document.getElementById('toolFormSinglePlatform').value = '';
+        document.getElementById('jobTypeAKL').checked = false;
+        document.getElementById('jobTypeAddKey').checked = false;
+        document.getElementById('jobTypeRemote').checked = false;
+        document.getElementById('jobTypeParamReset').checked = false;
+        selectToolStatus('owned');
+        document.getElementById('toolFormNotes').value = '';
+        document.getElementById('toolFormCrossRefNotes').value = '';
+        document.getElementById('toolFormVehicleApps').innerHTML = '';
+    }
+
+    document.getElementById('addToolPanel').classList.add('on');
+}
+
+function closeAddToolPanel() {
+    document.getElementById('addToolPanel').classList.remove('on');
+    editingToolId = null;
+}
+
+function populatePlatformSelects() {
+    const platformIds = Object.keys(toolsDatabase.platforms);
+
+    // Single platform dropdown
+    const singleSelect = document.getElementById('toolFormSinglePlatform');
+    singleSelect.innerHTML = '<option value="">Select platform...</option>';
+    platformIds.forEach(id => {
+        const platform = toolsDatabase.platforms[id];
+        singleSelect.innerHTML += `<option value="${id}">${platform.name} (${platform.manufacturer})</option>`;
+    });
+
+    // Multiple platform checkboxes
+    const checkboxContainer = document.getElementById('toolFormPlatformCheckboxes');
+    checkboxContainer.innerHTML = platformIds.map(id => {
+        const platform = toolsDatabase.platforms[id];
+        return `
+            <label class="platform-checkbox-item">
+                <input type="checkbox" value="${id}">
+                <span>${platform.name} (${platform.manufacturer})</span>
+            </label>
+        `;
+    }).join('') || '<span style="color:var(--dim);">No platforms available. Add platforms first.</span>';
+}
+
+function handleCompatTypeChange() {
+    const compatType = document.getElementById('toolFormCompatType').value;
+    document.getElementById('singlePlatformSelect').style.display = compatType === 'single' ? '' : 'none';
+    document.getElementById('multiplePlatformSelect').style.display = compatType === 'multiple' ? '' : 'none';
+}
+
+function selectToolStatus(status) {
+    document.querySelectorAll('.status-radio-item').forEach(item => {
+        const radio = item.querySelector('input');
+        item.classList.toggle('selected', radio.value === status);
+        radio.checked = radio.value === status;
+    });
+}
+
+function addToolVehicleApp(make = '', model = '', yearStart = '', yearEnd = '') {
+    const container = document.getElementById('toolFormVehicleApps');
+    const idx = toolVehicleAppCount++;
+
+    // Get unique makes from DB
+    const makes = [...new Set(DB.flatMap(k => k.vehicles?.map(v => v.make) || []))].sort();
+
+    const div = document.createElement('div');
+    div.className = 'vehicle-app-item';
+    div.id = `vehicleApp-${idx}`;
+    div.innerHTML = `
+        <select onchange="updateVehicleAppModels(${idx})" id="vehicleAppMake-${idx}">
+            <option value="">Make</option>
+            ${makes.map(m => `<option value="${m}" ${m === make ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+        <select id="vehicleAppModel-${idx}">
+            <option value="">Model</option>
+        </select>
+        <input type="number" placeholder="Start" value="${yearStart}" id="vehicleAppYearStart-${idx}">
+        <input type="number" placeholder="End" value="${yearEnd}" id="vehicleAppYearEnd-${idx}">
+        <button class="remove-vehicle-app-btn" onclick="removeVehicleApp(${idx})">×</button>
+    `;
+    container.appendChild(div);
+
+    // Populate models if make is set
+    if (make) {
+        updateVehicleAppModels(idx, model);
+    }
+}
+
+function updateVehicleAppModels(idx, selectedModel = '') {
+    const make = document.getElementById(`vehicleAppMake-${idx}`).value;
+    const modelSelect = document.getElementById(`vehicleAppModel-${idx}`);
+
+    if (!make) {
+        modelSelect.innerHTML = '<option value="">Model</option>';
+        return;
+    }
+
+    // Get models for this make from DB
+    const models = [...new Set(DB.flatMap(k =>
+        (k.vehicles || []).filter(v => v.make === make).map(v => v.model)
+    ))].sort();
+
+    modelSelect.innerHTML = '<option value="">Model</option>' +
+        models.map(m => `<option value="${m}" ${m === selectedModel ? 'selected' : ''}>${m}</option>`).join('');
+}
+
+function removeVehicleApp(idx) {
+    const elem = document.getElementById(`vehicleApp-${idx}`);
+    if (elem) elem.remove();
+}
+
+function saveToolForm() {
+    const name = document.getElementById('toolFormName').value.trim();
+    const partNumber = document.getElementById('toolFormPartNumber').value.trim();
+    const category = document.getElementById('toolFormCategory').value;
+    const compatType = document.getElementById('toolFormCompatType').value;
+
+    if (!name || !category) {
+        toast('Please fill in all required fields');
+        return;
+    }
+
+    // Get selected platforms
+    let compatiblePlatforms = [];
+    if (compatType === 'single') {
+        const singlePlatform = document.getElementById('toolFormSinglePlatform').value;
+        if (singlePlatform) compatiblePlatforms = [singlePlatform];
+    } else {
+        document.querySelectorAll('#toolFormPlatformCheckboxes input:checked').forEach(cb => {
+            compatiblePlatforms.push(cb.value);
+        });
+    }
+
+    // Get job types
+    const jobTypes = [];
+    if (document.getElementById('jobTypeAKL').checked) jobTypes.push('AKL');
+    if (document.getElementById('jobTypeAddKey').checked) jobTypes.push('Add Key');
+    if (document.getElementById('jobTypeRemote').checked) jobTypes.push('Remote Programming');
+    if (document.getElementById('jobTypeParamReset').checked) jobTypes.push('Parameter Reset');
+
+    // Get status
+    const status = document.querySelector('.status-radio-item.selected input')?.value || 'owned';
+
+    // Get vehicle applications
+    const vehicleApplications = [];
+    document.querySelectorAll('.vehicle-app-item').forEach(item => {
+        const itemId = item.id.replace('vehicleApp-', '');
+        const make = document.getElementById(`vehicleAppMake-${itemId}`)?.value;
+        const model = document.getElementById(`vehicleAppModel-${itemId}`)?.value;
+        const yearStart = parseInt(document.getElementById(`vehicleAppYearStart-${itemId}`)?.value) || null;
+        const yearEnd = parseInt(document.getElementById(`vehicleAppYearEnd-${itemId}`)?.value) || null;
+
+        if (make && model) {
+            vehicleApplications.push({ make, model, yearStart, yearEnd });
+        }
+    });
+
+    // Get notes
+    const toolNotes = document.getElementById('toolFormNotes').value.trim().split('\n').filter(n => n.trim());
+    const crossReferenceNotes = document.getElementById('toolFormCrossRefNotes').value.trim().split('\n').filter(n => n.trim());
+
+    const toolId = editingToolId || 'tool-' + Date.now();
+
+    toolsDatabase.tools[toolId] = {
+        name,
+        partNumber,
+        category,
+        platformCompatibility: compatType,
+        compatiblePlatforms,
+        vehicleApplications,
+        jobTypes,
+        status,
+        toolNotes,
+        crossReferenceNotes,
+        lastEdited: new Date().toISOString()
+    };
+
+    saveToolsDatabase();
+    closeAddToolPanel();
+
+    // Close detail panel if editing and re-open with new data
+    if (editingToolId) {
+        closeToolDetail();
+        openToolDetail(toolId);
+    }
+
+    renderToolsList();
+    toast(editingToolId ? 'Tool updated' : 'Tool added');
+}
+
+function deleteTool(toolId) {
+    if (!confirm('Delete this tool?')) return;
+    delete toolsDatabase.tools[toolId];
+    saveToolsDatabase();
+    closeToolDetail();
+    renderToolsList();
+    toast('Tool deleted');
+}
+
+// Wishlist Panel
+function openWishlistPanel() {
+    renderWishlistTools();
+    document.getElementById('wishlistPanel').classList.add('on');
+}
+
+function closeWishlistPanel() {
+    document.getElementById('wishlistPanel').classList.remove('on');
+}
+
+function renderWishlistTools() {
+    const container = document.getElementById('wishlistToolsList');
+    const wishlistTools = Object.keys(toolsDatabase.tools).filter(id =>
+        toolsDatabase.tools[id].status === 'wishlist'
+    );
+
+    if (wishlistTools.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No items in wishlist</div>';
+        return;
+    }
+
+    container.innerHTML = wishlistTools.map(id => {
+        const tool = toolsDatabase.tools[id];
+        const platformBadges = tool.compatiblePlatforms.map(pid => {
+            const platform = toolsDatabase.platforms[pid];
+            return platform ? `<span class="platform-badge">${platform.name}</span>` : '';
+        }).join('');
+        const vehicleCount = tool.vehicleApplications ? tool.vehicleApplications.length : 0;
+
+        return `
+            <div class="tool-card" onclick="openToolDetail('${id}')">
+                <div class="tool-card-header">
+                    <div>
+                        <div class="tool-card-name">${tool.name}</div>
+                        ${tool.partNumber ? `<div class="tool-card-pn">#${tool.partNumber}</div>` : ''}
+                    </div>
+                    <span class="tool-status-badge wishlist">⭐ Wishlist</span>
+                </div>
+                <div class="tool-card-platforms">${platformBadges || '<span style="color:var(--dim);font-size:11px;">No platform assigned</span>'}</div>
+                <div class="tool-card-meta">
+                    <span>${tool.category}</span>
+                    <span>Covers ${vehicleCount} vehicle${vehicleCount !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Find tools that match a vehicle's make/model/year
+function findToolsForVehicle(make, model, startYear, endYear) {
+    const matchingTools = [];
+
+    Object.entries(toolsDatabase.tools).forEach(([toolId, tool]) => {
+        if (!tool.vehicleApplications || tool.vehicleApplications.length === 0) return;
+
+        // Check if any vehicle application matches
+        const matches = tool.vehicleApplications.some(app => {
+            if (app.make !== make) return false;
+            if (app.model !== model) return false;
+
+            // Check year overlap
+            const appStart = app.yearStart || 1900;
+            const appEnd = app.yearEnd || 2100;
+            const vehStart = startYear || 1900;
+            const vehEnd = endYear || 2100;
+
+            // Years overlap if: appStart <= vehEnd AND appEnd >= vehStart
+            return appStart <= vehEnd && appEnd >= vehStart;
+        });
+
+        if (matches) {
+            matchingTools.push({
+                id: toolId,
+                ...tool
+            });
+        }
+    });
+
+    // Sort: owned first, then wishlist, then not-owned
+    matchingTools.sort((a, b) => {
+        const statusOrder = { 'owned': 0, 'wishlist': 1, 'not-owned': 2 };
+        return (statusOrder[a.status] || 2) - (statusOrder[b.status] || 2);
+    });
+
+    return matchingTools;
+}
+
+// ===================== END TOOLS & EQUIPMENT MODULE =====================
+
 function closeSettings() {
     document.getElementById('settingsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -5956,7 +7725,7 @@ function closeSettings() {
 
 function exportData() {
     const data = {
-        version: 40,
+        version: 41,
         exportDate: new Date().toISOString(),
         records: DB,
         stock: stockData,
@@ -5969,7 +7738,8 @@ function exportData() {
         fidMerges: fidMerges,
         fidPrefixes: fidPrefixes,
         purchaseHistory: purchaseHistory,
-        customKeys: customKeys
+        customKeys: customKeys,
+        toolsDatabase: toolsDatabase
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -6053,7 +7823,18 @@ function importData(event) {
                     }
                 });
             }
-            
+
+            if (data.toolsDatabase) {
+                toolsDatabase = data.toolsDatabase;
+                // Ensure structure integrity
+                if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
+                if (!toolsDatabase.tools) toolsDatabase.tools = {};
+                if (!toolsDatabase.categories) {
+                    toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
+                }
+                saveToolsDatabase();
+            }
+
             toast('Data imported successfully');
             applyFilters();
             updateVendorCount();
@@ -6730,17 +8511,68 @@ function openVehicleDetail(vehicleKey) {
         `;
     }
 
-    // Tools & Adapters Section (placeholder for future expansion)
-    html += `
-        <div class="vehicle-section">
-            <div class="vehicle-section-title">Programming Tools & Adapters</div>
-            <div class="vehicle-tools-section">
-                <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px;">
-                    Tool and adapter requirements coming soon
+    // Programming Tools & Adapters Section - find matching tools from toolsDatabase
+    const matchingTools = findToolsForVehicle(make, model, vehicle.startYear, vehicle.endYear);
+    const hasToolWarning = matchingTools.some(t => t.status !== 'owned');
+
+    if (matchingTools.length > 0) {
+        html += `
+            <div class="vehicle-section">
+                <div class="vehicle-section-title">
+                    Programming Tools & Adapters
+                    ${hasToolWarning ? '<span style="color:#ff9500;margin-left:8px;">⚠️ Missing tools</span>' : ''}
+                </div>
+                <div class="vehicle-tools-section">
+                    ${matchingTools.map(tool => {
+                        const statusColor = tool.status === 'owned' ? 'var(--success)' :
+                            (tool.status === 'wishlist' ? '#ffc107' : '#9e9e9e');
+                        const statusText = tool.status === 'owned' ? '✓ Owned' :
+                            (tool.status === 'wishlist' ? '⭐ Wishlist' : '✗ Not Owned');
+                        const platformNames = tool.compatiblePlatforms.map(pid => {
+                            const platform = toolsDatabase.platforms[pid];
+                            return platform ? platform.name : '';
+                        }).filter(n => n).join(', ');
+
+                        return `
+                            <div class="vehicle-tool-item" style="flex-direction:column;align-items:stretch;gap:8px;" onclick="openToolDetail('${tool.id}')">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div class="vehicle-tool-name">${tool.name}</div>
+                                        ${tool.partNumber ? `<div style="font-size:11px;color:var(--dim);">#${tool.partNumber}</div>` : ''}
+                                    </div>
+                                    <div style="padding:4px 8px;border-radius:4px;font-size:11px;background:rgba(${tool.status === 'owned' ? '76,175,80' : (tool.status === 'wishlist' ? '255,193,7' : '158,158,158')},0.2);color:${statusColor};">
+                                        ${statusText}
+                                    </div>
+                                </div>
+                                ${platformNames ? `<div style="font-size:11px;color:var(--dim);">Platform: ${platformNames}</div>` : ''}
+                                ${tool.jobTypes && tool.jobTypes.length > 0 ? `
+                                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                                        ${tool.jobTypes.map(jt => `<span style="padding:2px 6px;background:rgba(156,39,176,0.2);border-radius:8px;color:#ce93d8;font-size:10px;">${jt}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                                ${tool.crossReferenceNotes && tool.crossReferenceNotes.length > 0 ? `
+                                    <div style="margin-top:4px;padding:8px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--dim);">
+                                        ${tool.crossReferenceNotes.map(note => `<div style="margin-bottom:4px;">📝 ${note}</div>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    } else {
+        html += `
+            <div class="vehicle-section">
+                <div class="vehicle-section-title">Programming Tools & Adapters</div>
+                <div class="vehicle-tools-section">
+                    <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px;">
+                        No tools assigned for this vehicle yet
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     document.getElementById('vehicleDetailContent').innerHTML = html;
     document.getElementById('vehicleDetailPanel').classList.add('on');
