@@ -7892,8 +7892,8 @@ function findToolsForVehicle(make, model, startYear, endYear) {
     Object.entries(toolsDatabase.tools).forEach(([toolId, tool]) => {
         if (!tool.vehicleApplications || tool.vehicleApplications.length === 0) return;
 
-        // Check if any vehicle application matches
-        const matches = tool.vehicleApplications.some(app => {
+        // Find all matching vehicle applications (there could be multiple with different year ranges)
+        const matchingApps = tool.vehicleApplications.filter(app => {
             if (app.make !== make) return false;
             if (app.model !== model) return false;
 
@@ -7907,10 +7907,16 @@ function findToolsForVehicle(make, model, startYear, endYear) {
             return appStart <= vehEnd && appEnd >= vehStart;
         });
 
-        if (matches) {
+        if (matchingApps.length > 0) {
             matchingTools.push({
                 id: toolId,
-                ...tool
+                ...tool,
+                // Include the specific matching applications with their year ranges and notes
+                matchingApplications: matchingApps.map(app => ({
+                    yearStart: app.yearStart,
+                    yearEnd: app.yearEnd,
+                    variantNote: app.variantNote || ''
+                }))
             });
         }
     });
@@ -8770,6 +8776,14 @@ function openVehicleDetail(vehicleKey) {
                             return platform ? platform.name : '';
                         }).filter(n => n).join(', ');
 
+                        // Get the tool's specific year ranges for this vehicle
+                        const toolYearRanges = tool.matchingApplications ? tool.matchingApplications.map(app => {
+                            const yearText = app.yearStart === app.yearEnd
+                                ? app.yearStart
+                                : `${app.yearStart}-${app.yearEnd}`;
+                            return { yearText, variantNote: app.variantNote };
+                        }) : [];
+
                         return `
                             <div class="vehicle-tool-item" style="flex-direction:column;align-items:stretch;gap:8px;" onclick="openToolDetail('${tool.id}')">
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -8781,6 +8795,16 @@ function openVehicleDetail(vehicleKey) {
                                         ${statusText}
                                     </div>
                                 </div>
+                                ${toolYearRanges.length > 0 ? `
+                                    <div style="font-size:11px;color:var(--accent);font-weight:500;">
+                                        Applies to: ${toolYearRanges.map(r => r.yearText).join(', ')}
+                                    </div>
+                                    ${toolYearRanges.filter(r => r.variantNote).map(r => `
+                                        <div style="font-size:11px;color:#ff9500;padding-left:8px;border-left:2px solid #ff9500;">
+                                            ⚠️ ${r.variantNote}
+                                        </div>
+                                    `).join('')}
+                                ` : ''}
                                 ${platformNames ? `<div style="font-size:11px;color:var(--dim);">Platform: ${platformNames}</div>` : ''}
                                 ${tool.jobTypes && tool.jobTypes.length > 0 ? `
                                     <div style="display:flex;flex-wrap:wrap;gap:4px;">
