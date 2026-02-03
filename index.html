@@ -3636,6 +3636,56 @@
         </div>
     </div>
     <input type="text" class="search-box" id="searchBox" placeholder="Search part #, FCC ID, keyway..." oninput="applyFilters()">
+
+    <!-- Advanced Search Toggle -->
+    <button onclick="toggleAdvancedSearch()" id="advancedSearchToggle" style="width:100%;padding:10px;margin-top:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span id="advancedSearchIcon">▼</span> Advanced Search
+    </button>
+
+    <!-- Advanced Search Panel -->
+    <div id="advancedSearchPanel" style="display:none;margin-top:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Keyway</label>
+                <select id="advKeywayFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any Keyway</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Chip Type</label>
+                <select id="advChipFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any Chip</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Key Type</label>
+                <select id="advKeyTypeFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any Type</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Frequency</label>
+                <select id="advFrequencyFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any Frequency</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Buttons</label>
+                <select id="advButtonsFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any Buttons</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">FCC ID</label>
+                <input type="text" id="advFccFilter" class="modal-input" style="width:100%;padding:8px;box-sizing:border-box;" placeholder="e.g. KR5TXN7" oninput="applyFilters()">
+            </div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span id="advancedFilterCount" style="font-size:12px;color:var(--dim);"></span>
+            <button onclick="clearAdvancedFilters()" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;">Clear Advanced Filters</button>
+        </div>
+    </div>
+
     <div class="stats">
         <div>Showing: <span id="showCount">0</span></div>
         <div>Total: <span id="totalCount">0</span></div>
@@ -6084,6 +6134,135 @@ function buildFilters() {
     updateYearDropdown();
     updateMakeDropdown();
     updateModelDropdown();
+    populateAdvancedFilters();
+}
+
+// Advanced Search Functions
+let advancedSearchOpen = false;
+
+function toggleAdvancedSearch() {
+    advancedSearchOpen = !advancedSearchOpen;
+    const panel = document.getElementById('advancedSearchPanel');
+    const icon = document.getElementById('advancedSearchIcon');
+
+    if (advancedSearchOpen) {
+        panel.style.display = 'block';
+        icon.textContent = '▲';
+    } else {
+        panel.style.display = 'none';
+        icon.textContent = '▼';
+    }
+}
+
+function populateAdvancedFilters() {
+    // Collect unique values from DB
+    const keyways = new Set();
+    const chips = new Set();
+    const keyTypes = new Set();
+    const frequencies = new Set();
+    const buttonCounts = new Set();
+
+    DB.forEach(key => {
+        if (key.keyway) keyways.add(key.keyway);
+        if (key.chip) chips.add(key.chip);
+        if (key.keyType) keyTypes.add(key.keyType);
+        if (key.frequency) frequencies.add(key.frequency);
+        if (key.buttons) {
+            // Extract button count (e.g., "3 Button" from "3 Button: L, U, P")
+            const match = key.buttons.match(/^(\d+)\s*Button/i);
+            if (match) buttonCounts.add(match[1] + ' Button');
+        }
+    });
+
+    // Populate Keyway dropdown
+    const keywaySelect = document.getElementById('advKeywayFilter');
+    if (keywaySelect) {
+        const currentVal = keywaySelect.value;
+        keywaySelect.innerHTML = '<option value="">Any Keyway</option>';
+        Array.from(keyways).sort().forEach(kw => {
+            keywaySelect.innerHTML += `<option value="${kw}">${kw}</option>`;
+        });
+        if (currentVal) keywaySelect.value = currentVal;
+    }
+
+    // Populate Chip dropdown
+    const chipSelect = document.getElementById('advChipFilter');
+    if (chipSelect) {
+        const currentVal = chipSelect.value;
+        chipSelect.innerHTML = '<option value="">Any Chip</option>';
+        Array.from(chips).sort().forEach(c => {
+            chipSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        if (currentVal) chipSelect.value = currentVal;
+    }
+
+    // Populate Key Type dropdown
+    const keyTypeSelect = document.getElementById('advKeyTypeFilter');
+    if (keyTypeSelect) {
+        const currentVal = keyTypeSelect.value;
+        keyTypeSelect.innerHTML = '<option value="">Any Type</option>';
+        Array.from(keyTypes).sort().forEach(kt => {
+            keyTypeSelect.innerHTML += `<option value="${kt}">${kt}</option>`;
+        });
+        if (currentVal) keyTypeSelect.value = currentVal;
+    }
+
+    // Populate Frequency dropdown
+    const freqSelect = document.getElementById('advFrequencyFilter');
+    if (freqSelect) {
+        const currentVal = freqSelect.value;
+        freqSelect.innerHTML = '<option value="">Any Frequency</option>';
+        Array.from(frequencies).sort().forEach(f => {
+            freqSelect.innerHTML += `<option value="${f}">${f}</option>`;
+        });
+        if (currentVal) freqSelect.value = currentVal;
+    }
+
+    // Populate Buttons dropdown
+    const buttonsSelect = document.getElementById('advButtonsFilter');
+    if (buttonsSelect) {
+        const currentVal = buttonsSelect.value;
+        buttonsSelect.innerHTML = '<option value="">Any Buttons</option>';
+        Array.from(buttonCounts).sort((a, b) => parseInt(a) - parseInt(b)).forEach(b => {
+            buttonsSelect.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+        if (currentVal) buttonsSelect.value = currentVal;
+    }
+}
+
+function clearAdvancedFilters() {
+    document.getElementById('advKeywayFilter').value = '';
+    document.getElementById('advChipFilter').value = '';
+    document.getElementById('advKeyTypeFilter').value = '';
+    document.getElementById('advFrequencyFilter').value = '';
+    document.getElementById('advButtonsFilter').value = '';
+    document.getElementById('advFccFilter').value = '';
+    applyFilters();
+}
+
+function updateAdvancedFilterCount() {
+    const advKeyway = document.getElementById('advKeywayFilter')?.value || '';
+    const advChip = document.getElementById('advChipFilter')?.value || '';
+    const advKeyType = document.getElementById('advKeyTypeFilter')?.value || '';
+    const advFrequency = document.getElementById('advFrequencyFilter')?.value || '';
+    const advButtons = document.getElementById('advButtonsFilter')?.value || '';
+    const advFcc = document.getElementById('advFccFilter')?.value || '';
+
+    const count = [advKeyway, advChip, advKeyType, advFrequency, advButtons, advFcc].filter(v => v).length;
+    const countEl = document.getElementById('advancedFilterCount');
+    if (countEl) {
+        countEl.textContent = count > 0 ? `${count} advanced filter${count > 1 ? 's' : ''} active` : '';
+    }
+
+    // Update toggle button to show active filters
+    const toggleBtn = document.getElementById('advancedSearchToggle');
+    if (toggleBtn && count > 0 && !advancedSearchOpen) {
+        toggleBtn.style.borderColor = 'var(--accent)';
+        toggleBtn.style.color = 'var(--accent)';
+    } else if (toggleBtn) {
+        toggleBtn.style.borderColor = 'var(--border)';
+        toggleBtn.style.color = 'var(--accent)';
+    }
 }
 
 function updateYearDropdown() {
@@ -6218,6 +6397,15 @@ function resetFilters() {
     document.getElementById('fMake').value = '';
     document.getElementById('fModel').value = '';
     document.getElementById('searchBox').value = '';
+    // Clear advanced filters
+    if (document.getElementById('advKeywayFilter')) {
+        document.getElementById('advKeywayFilter').value = '';
+        document.getElementById('advChipFilter').value = '';
+        document.getElementById('advKeyTypeFilter').value = '';
+        document.getElementById('advFrequencyFilter').value = '';
+        document.getElementById('advButtonsFilter').value = '';
+        document.getElementById('advFccFilter').value = '';
+    }
     // Rebuild all dropdowns with full options
     buildFilters();
     applyFilters();
@@ -6228,7 +6416,15 @@ function applyFilters() {
     const make = document.getElementById('fMake').value;
     const model = document.getElementById('fModel').value;
     const search = document.getElementById('searchBox').value.toLowerCase().trim();
-    
+
+    // Advanced filters
+    const advKeyway = document.getElementById('advKeywayFilter')?.value || '';
+    const advChip = document.getElementById('advChipFilter')?.value || '';
+    const advKeyType = document.getElementById('advKeyTypeFilter')?.value || '';
+    const advFrequency = document.getElementById('advFrequencyFilter')?.value || '';
+    const advButtons = document.getElementById('advButtonsFilter')?.value || '';
+    const advFcc = (document.getElementById('advFccFilter')?.value || '').toUpperCase().trim();
+
     filteredKeys = DB.filter((key, idx) => {
         if (search) {
             const searchStr = [
@@ -6240,10 +6436,10 @@ function applyFilters() {
                 key.buttons,
                 ...(key.vehicles || []).map(v => `${v.make} ${v.model}`)
             ].join(' ').toLowerCase();
-            
+
             if (!searchStr.includes(search)) return false;
         }
-        
+
         if (year || make || model) {
             const vehicles = key.vehicles || [];
             const match = vehicles.some(v => {
@@ -6257,10 +6453,19 @@ function applyFilters() {
             });
             if (!match) return false;
         }
-        
+
+        // Advanced filters
+        if (advKeyway && (key.keyway || '').toLowerCase() !== advKeyway.toLowerCase()) return false;
+        if (advChip && !(key.chip || '').toLowerCase().includes(advChip.toLowerCase())) return false;
+        if (advKeyType && (key.keyType || '').toLowerCase() !== advKeyType.toLowerCase()) return false;
+        if (advFrequency && (key.frequency || '').toLowerCase() !== advFrequency.toLowerCase()) return false;
+        if (advButtons && !(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
+        if (advFcc && !(key.fccid || '').toUpperCase().includes(advFcc)) return false;
+
         return true;
     });
-    
+
+    updateAdvancedFilterCount();
     renderKeys();
 }
 
