@@ -2280,7 +2280,32 @@
             cursor: pointer;
             margin-top: 8px;
         }
-        
+
+        /* Fixed Home Button */
+        .home-btn-fixed {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            width: 44px;
+            height: 44px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: var(--accent);
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .home-btn-fixed:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
         /* Bottom Nav */
         .bottom-nav {
             position: fixed;
@@ -3724,6 +3749,9 @@
         <span>Settings</span>
     </button>
 </div>
+
+<!-- Fixed Home Button -->
+<button class="home-btn-fixed" onclick="goHome()" title="Home">🏠</button>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -5890,6 +5918,33 @@ function showTab(tab, event) {
         renderLishiInventory();
         renderCustomKeysList();
         document.getElementById('settingsPanel').classList.add('on');
+    }
+}
+
+function goHome() {
+    // Close all panels and modals
+    document.getElementById('settingsPanel').classList.remove('on');
+    document.getElementById('lishiLookupPanel').classList.remove('on');
+    document.getElementById('fidPanel').classList.remove('on');
+    document.getElementById('addInventoryPanel').classList.remove('on');
+    document.getElementById('vehiclePanel').classList.remove('on');
+    document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
+    document.getElementById('vehicleDetailPanel').classList.remove('on');
+    document.getElementById('detailPanel').classList.remove('on');
+    document.getElementById('renameModelModal').classList.remove('on');
+
+    // Reset vehicle state
+    selectedVehicleMake = null;
+    selectedVehicleModel = null;
+    cameFromVehicle = null;
+    currentViewingVehicleKey = null;
+
+    // Reset nav buttons to show Keys as active
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    const navBtns = document.querySelectorAll('.nav-btn');
+    if (navBtns[0]) {
+        navBtns[0].classList.add('active');
     }
 }
 
