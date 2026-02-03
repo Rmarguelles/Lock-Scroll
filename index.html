@@ -3897,7 +3897,23 @@
 
         <!-- FID List -->
         <div class="settings-section">
-            <h3>📋 All FID Assignments <span id="fidManagerListCount" style="font-size:12px;color:var(--dim);font-weight:normal;"></span></h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="margin:0;">📋 All FID Assignments <span id="fidManagerListCount" style="font-size:12px;color:var(--dim);font-weight:normal;"></span></h3>
+                <div id="fidDragControls">
+                    <button id="fidDragModeBtn" onclick="toggleFidDragMode()" style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;">
+                        ↕️ Reorder Mode
+                    </button>
+                </div>
+            </div>
+            <div id="fidDragModeBar" style="display:none;margin-bottom:12px;padding:12px;background:rgba(255,149,0,0.1);border:1px solid #ff9500;border-radius:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#ff9500;font-weight:600;">↕️ Drag Mode Active - Drag items to reorder</span>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="cancelFidDragMode()" style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;">Cancel</button>
+                        <button onclick="saveFidDragOrder()" style="padding:6px 12px;background:#34c759;border:none;border-radius:6px;color:white;font-size:12px;font-weight:600;cursor:pointer;">✓ Save Order</button>
+                    </div>
+                </div>
+            </div>
             <div id="fidManagerList" style="max-height:400px;overflow-y:auto;"></div>
         </div>
     </div>
@@ -7460,7 +7476,7 @@ function renderFidManagerList() {
     container.innerHTML = filtered.map(item => {
         const isSelected = fidManagerSelectedFccs.has(item.fccid);
         return `
-            <div class="fid-manager-item" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${item.fccid}')">
+            <div class="fid-manager-item" data-fccid="${item.fccid}" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${item.fccid}')">
                 <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFidManagerSelection('${item.fccid}')" style="width:18px;height:18px;cursor:pointer;">
                 <div style="flex:1;min-width:0;">
                     <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${item.fccid}</div>
@@ -7723,6 +7739,179 @@ function fidManagerBulkRemove() {
     renderFidManagerList();
     renderFidList();
     toast('Removed ' + removed + ' FID assignments');
+}
+
+// FID Drag and Drop Reorder
+let fidDragModeActive = false;
+let fidDragOrder = []; // Stores the current order of FCC IDs during drag mode
+let fidDraggedItem = null;
+
+function toggleFidDragMode() {
+    if (fidDragModeActive) {
+        cancelFidDragMode();
+    } else {
+        enableFidDragMode();
+    }
+}
+
+function enableFidDragMode() {
+    // Only allow drag mode when filtering by a specific prefix
+    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
+    if (!prefixFilter) {
+        toast('Select a prefix filter first to reorder within that prefix');
+        return;
+    }
+
+    fidDragModeActive = true;
+    document.getElementById('fidDragModeBtn').style.display = 'none';
+    document.getElementById('fidDragModeBar').style.display = 'block';
+    document.getElementById('fidBulkActions').style.display = 'none';
+
+    // Build initial order from current list
+    fidDragOrder = [];
+    const container = document.getElementById('fidManagerList');
+    container.querySelectorAll('.fid-manager-item').forEach(item => {
+        const fccId = item.getAttribute('data-fccid');
+        if (fccId) fidDragOrder.push(fccId);
+    });
+
+    renderFidDragList();
+}
+
+function cancelFidDragMode() {
+    fidDragModeActive = false;
+    fidDragOrder = [];
+    document.getElementById('fidDragModeBtn').style.display = 'inline-block';
+    document.getElementById('fidDragModeBar').style.display = 'none';
+    renderFidManagerList();
+}
+
+function renderFidDragList() {
+    const container = document.getElementById('fidManagerList');
+    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
+
+    if (fidDragOrder.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">No items to reorder</div>';
+        return;
+    }
+
+    container.innerHTML = fidDragOrder.map((fccId, index) => {
+        const fid = fidAssignments[fccId];
+        const key = DB.find(k => k.fccid === fccId);
+        const keyType = key ? key.keyType || '' : '';
+
+        return `
+            <div class="fid-manager-item fid-drag-item"
+                 data-fccid="${fccId}"
+                 data-index="${index}"
+                 draggable="true"
+                 ondragstart="fidDragStart(event)"
+                 ondragover="fidDragOver(event)"
+                 ondragenter="fidDragEnter(event)"
+                 ondragleave="fidDragLeave(event)"
+                 ondrop="fidDrop(event)"
+                 ondragend="fidDragEnd(event)"
+                 style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:grab;border:2px solid transparent;transition:border-color 0.2s, background 0.2s;">
+                <div style="color:var(--dim);font-size:16px;">☰</div>
+                <div style="width:40px;text-align:center;font-weight:700;color:var(--accent);font-size:14px;">#${index + 1}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${fccId}</div>
+                    <div style="font-size:11px;color:var(--dim);">${keyType || 'Unknown type'}</div>
+                </div>
+                <div style="text-align:right;">
+                    ${fid
+                        ? `<span style="font-family:monospace;font-weight:600;color:var(--accent);background:rgba(0,212,255,0.1);padding:4px 8px;border-radius:4px;">${fid}</span>`
+                        : `<span style="font-size:12px;color:var(--dim);font-style:italic;">Unassigned</span>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function fidDragStart(e) {
+    fidDraggedItem = e.target.closest('.fid-drag-item');
+    fidDraggedItem.style.opacity = '0.5';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', fidDraggedItem.getAttribute('data-index'));
+}
+
+function fidDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function fidDragEnter(e) {
+    e.preventDefault();
+    const item = e.target.closest('.fid-drag-item');
+    if (item && item !== fidDraggedItem) {
+        item.style.borderColor = 'var(--accent)';
+        item.style.background = 'rgba(0,212,255,0.1)';
+    }
+}
+
+function fidDragLeave(e) {
+    const item = e.target.closest('.fid-drag-item');
+    if (item) {
+        item.style.borderColor = 'transparent';
+        item.style.background = 'var(--bg)';
+    }
+}
+
+function fidDrop(e) {
+    e.preventDefault();
+    const targetItem = e.target.closest('.fid-drag-item');
+    if (!targetItem || !fidDraggedItem || targetItem === fidDraggedItem) return;
+
+    const fromIndex = parseInt(fidDraggedItem.getAttribute('data-index'));
+    const toIndex = parseInt(targetItem.getAttribute('data-index'));
+
+    // Reorder the array
+    const [moved] = fidDragOrder.splice(fromIndex, 1);
+    fidDragOrder.splice(toIndex, 0, moved);
+
+    // Re-render
+    renderFidDragList();
+}
+
+function fidDragEnd(e) {
+    if (fidDraggedItem) {
+        fidDraggedItem.style.opacity = '1';
+    }
+    fidDraggedItem = null;
+
+    // Reset all item styles
+    document.querySelectorAll('.fid-drag-item').forEach(item => {
+        item.style.borderColor = 'transparent';
+        item.style.background = 'var(--bg)';
+    });
+}
+
+function saveFidDragOrder() {
+    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
+    if (!prefixFilter) {
+        toast('No prefix selected');
+        return;
+    }
+
+    // Reassign FID numbers based on new order
+    fidDragOrder.forEach((fccId, index) => {
+        const newNum = index + 1;
+        fidAssignments[fccId] = `${prefixFilter}-${formatFidNumber(newNum)}`;
+    });
+
+    saveFidAssignments();
+
+    // Exit drag mode
+    fidDragModeActive = false;
+    fidDragOrder = [];
+    document.getElementById('fidDragModeBtn').style.display = 'inline-block';
+    document.getElementById('fidDragModeBar').style.display = 'none';
+
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('FID order saved');
 }
 
 // Prefix Management Functions
