@@ -7331,14 +7331,19 @@ function unmergeFid(fccId) {
 let fidManagerSelectedFccs = new Set();
 
 function openFidManager() {
-    fidManagerSelectedFccs.clear();
-    renderFidManagerStats();
-    renderFidManagerList();
-    populateFidManagerPrefixFilter();
-    document.getElementById('fidManagerSearch').value = '';
-    document.getElementById('fidManagerPrefixFilter').value = '';
-    document.getElementById('fidBulkActions').style.display = 'none';
-    document.getElementById('fidManagerPanel').classList.add('on');
+    try {
+        fidManagerSelectedFccs.clear();
+        renderFidManagerStats();
+        renderFidManagerList();
+        populateFidManagerPrefixFilter();
+        document.getElementById('fidManagerSearch').value = '';
+        document.getElementById('fidManagerPrefixFilter').value = '';
+        document.getElementById('fidBulkActions').style.display = 'none';
+        document.getElementById('fidManagerPanel').classList.add('on');
+    } catch (e) {
+        console.error('Error opening FID Manager:', e);
+        toast('Error opening FID Manager: ' + e.message);
+    }
 }
 
 function closeFidManager() {
