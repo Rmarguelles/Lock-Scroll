@@ -6522,6 +6522,11 @@ function openKey(idx, fromFcc = false, fromFid = false) {
     cameFromFcc = fromFcc;
     cameFromFid = fromFid;
 
+    // Hide FCC panel if coming from FCC list
+    if (fromFcc) {
+        document.getElementById('fccPanel').classList.remove('on');
+    }
+
     const key = DB[idx];
     const stock = stockData[key.pn] || 0;
     const keyway = key.keyway || '';
