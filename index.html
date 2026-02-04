@@ -3687,7 +3687,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v44</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v45</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4191,7 +4191,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v44<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v45<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6826,11 +6826,45 @@ function openKey(idx, fromFcc = false, fromFid = false) {
 // ===================== EDIT VEHICLES FOR KEY =====================
 let editingVehiclesKeyIdx = null;
 let editingVehicles = [];
+let vehicleMakesCache = [];
+let vehicleModelsCache = {}; // { make: [models] }
+
+function buildVehicleDropdownData() {
+    // Build unique makes and models from DB
+    const makes = new Set();
+    const modelsByMake = {};
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make) {
+                makes.add(v.make);
+                if (!modelsByMake[v.make]) modelsByMake[v.make] = new Set();
+                if (v.model) modelsByMake[v.make].add(v.model);
+            }
+        });
+    });
+
+    // Also include custom vehicles
+    customVehicles.forEach(v => {
+        if (v.make) {
+            makes.add(v.make);
+            if (!modelsByMake[v.make]) modelsByMake[v.make] = new Set();
+            if (v.model) modelsByMake[v.make].add(v.model);
+        }
+    });
+
+    vehicleMakesCache = Array.from(makes).sort();
+    vehicleModelsCache = {};
+    for (const make in modelsByMake) {
+        vehicleModelsCache[make] = Array.from(modelsByMake[make]).sort();
+    }
+}
 
 function openEditVehiclesModal(keyIdx) {
     editingVehiclesKeyIdx = keyIdx;
     const key = DB[keyIdx];
     editingVehicles = JSON.parse(JSON.stringify(key.vehicles || [])); // Deep copy
+    buildVehicleDropdownData();
     renderEditVehiclesList();
     document.getElementById('editVehiclesModal').classList.add('on');
 }
@@ -6849,25 +6883,117 @@ function renderEditVehiclesList() {
         return;
     }
 
-    container.innerHTML = editingVehicles.map((v, i) => `
-        <div style="display:flex;gap:8px;align-items:center;padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
-            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <input type="text" value="${v.make || ''}" placeholder="Make"
-                    onchange="updateEditVehicle(${i}, 'make', this.value)"
-                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                <input type="text" value="${v.model || ''}" placeholder="Model"
-                    onchange="updateEditVehicle(${i}, 'model', this.value)"
-                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                <input type="number" value="${v.startYear || ''}" placeholder="Start Year"
-                    onchange="updateEditVehicle(${i}, 'startYear', parseInt(this.value))"
-                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                <input type="number" value="${v.endYear || ''}" placeholder="End Year"
-                    onchange="updateEditVehicle(${i}, 'endYear', parseInt(this.value))"
-                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+    const makeOptions = vehicleMakesCache.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    container.innerHTML = editingVehicles.map((v, i) => {
+        const models = v.make ? (vehicleModelsCache[v.make] || []) : [];
+        const modelOptions = models.map(m => `<option value="${m}"${m === v.model ? ' selected' : ''}>${m}</option>`).join('');
+
+        return `
+            <div style="padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <select id="editVehMake${i}" onchange="onEditVehicleMakeChange(${i}, this.value)"
+                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                        <option value="">Select Make...</option>
+                        ${makeOptions}
+                        <option value="__add_new__">+ Add New Make...</option>
+                    </select>
+                    <select id="editVehModel${i}" onchange="onEditVehicleModelChange(${i}, this.value)"
+                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                        <option value="">Select Model...</option>
+                        ${modelOptions}
+                        <option value="__add_new__">+ Add New Model...</option>
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;">
+                    <input type="number" value="${v.startYear || ''}" placeholder="Start Year"
+                        onchange="updateEditVehicle(${i}, 'startYear', parseInt(this.value))"
+                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                    <input type="number" value="${v.endYear || ''}" placeholder="End Year"
+                        onchange="updateEditVehicle(${i}, 'endYear', parseInt(this.value))"
+                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                    <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🗑️</button>
+                </div>
             </div>
-            <button onclick="removeEditVehicle(${i})" style="padding:8px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🗑️</button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+
+    // Set the selected make values after rendering
+    editingVehicles.forEach((v, i) => {
+        const makeSelect = document.getElementById(`editVehMake${i}`);
+        if (makeSelect && v.make) {
+            // Check if make exists in options, if not add it
+            if (!vehicleMakesCache.includes(v.make)) {
+                const opt = document.createElement('option');
+                opt.value = v.make;
+                opt.text = v.make;
+                makeSelect.insertBefore(opt, makeSelect.lastElementChild);
+            }
+            makeSelect.value = v.make;
+        }
+
+        const modelSelect = document.getElementById(`editVehModel${i}`);
+        if (modelSelect && v.model) {
+            // Check if model exists in options, if not add it
+            const models = vehicleModelsCache[v.make] || [];
+            if (!models.includes(v.model)) {
+                const opt = document.createElement('option');
+                opt.value = v.model;
+                opt.text = v.model;
+                modelSelect.insertBefore(opt, modelSelect.lastElementChild);
+            }
+            modelSelect.value = v.model;
+        }
+    });
+}
+
+function onEditVehicleMakeChange(index, value) {
+    if (value === '__add_new__') {
+        const newMake = prompt('Enter new make name:');
+        if (newMake && newMake.trim()) {
+            const make = newMake.trim();
+            if (!vehicleMakesCache.includes(make)) {
+                vehicleMakesCache.push(make);
+                vehicleMakesCache.sort();
+                vehicleModelsCache[make] = [];
+            }
+            editingVehicles[index].make = make;
+            editingVehicles[index].model = ''; // Reset model when make changes
+            renderEditVehiclesList();
+        } else {
+            renderEditVehiclesList(); // Reset dropdown
+        }
+    } else {
+        editingVehicles[index].make = value;
+        editingVehicles[index].model = ''; // Reset model when make changes
+        renderEditVehiclesList();
+    }
+}
+
+function onEditVehicleModelChange(index, value) {
+    const make = editingVehicles[index].make;
+    if (value === '__add_new__') {
+        if (!make) {
+            alert('Please select a make first');
+            renderEditVehiclesList();
+            return;
+        }
+        const newModel = prompt(`Enter new model name for ${make}:`);
+        if (newModel && newModel.trim()) {
+            const model = newModel.trim();
+            if (!vehicleModelsCache[make]) vehicleModelsCache[make] = [];
+            if (!vehicleModelsCache[make].includes(model)) {
+                vehicleModelsCache[make].push(model);
+                vehicleModelsCache[make].sort();
+            }
+            editingVehicles[index].model = model;
+            renderEditVehiclesList();
+        } else {
+            renderEditVehiclesList(); // Reset dropdown
+        }
+    } else {
+        editingVehicles[index].model = value;
+    }
 }
 
 function updateEditVehicle(index, field, value) {
