@@ -3697,7 +3697,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v50</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v51</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -3828,8 +3828,17 @@
     <div class="vehicle-list" id="vehicleModelsList"></div>
 </div>
 
-<!-- Vehicle Years Panel - After selecting model -->
-<div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:206;">
+<!-- Vehicle Key Type Panel - After selecting model -->
+<div class="vehicle-panel" id="vehicleKeyTypePanel" style="z-index:206;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeVehicleKeyTypePanel()">←</button>
+        <div class="vehicle-title" id="vehicleKeyTypePanelTitle">🔑 Select Key Type</div>
+    </div>
+    <div class="vehicle-list" id="vehicleKeyTypeList"></div>
+</div>
+
+<!-- Vehicle Years Panel - After selecting key type -->
+<div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:207;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehicleYearsPanel()">←</button>
         <div class="vehicle-title" id="vehicleYearsPanelTitle">🚗 Select Year</div>
@@ -4201,7 +4210,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v50<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v51<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -9086,6 +9095,7 @@ function goHome() {
     // Reset vehicle state
     selectedVehicleMake = null;
     selectedVehicleModel = null;
+    selectedVehicleKeyType = null;
     cameFromVehicle = null;
     currentViewingVehicleKey = null;
 
@@ -10277,6 +10287,7 @@ function clearStock() {
 let vehicleToolsData = {}; // Future: { "IM508": { adapters: [...], cables: [...] }, ... }
 let selectedVehicleMake = null;
 let selectedVehicleModel = null;
+let selectedVehicleKeyType = null;
 let cameFromVehicle = null; // Stores the vehicle key if we came from vehicle detail
 let currentViewingVehicleKey = null; // Current vehicle being viewed in detail
 
@@ -10289,6 +10300,7 @@ function openVehiclePanel() {
 function closeVehiclePanel() {
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
@@ -10296,6 +10308,13 @@ function closeVehiclePanel() {
 
 function closeVehicleModelsPanel() {
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
+}
+
+function closeVehicleKeyTypePanel() {
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
 }
 
 function closeVehicleYearsPanel() {
@@ -10622,15 +10641,108 @@ function renameVehicleModel() {
     toast(`Renamed ${updatedCount} entries to "${newName}"`);
 }
 
-// Model selection -> Show year groups
+// Model selection -> Show key types
 function selectVehicleModel(model) {
     selectedVehicleModel = model;
-    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${selectedVehicleMake} ${model}`;
-    renderVehicleYearsForModel(selectedVehicleMake, model);
+    document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${selectedVehicleMake} ${model}`;
+    renderKeyTypesForModel(selectedVehicleMake, model);
+    document.getElementById('vehicleKeyTypePanel').classList.add('on');
+}
+
+// Render key types for a make/model
+function renderKeyTypesForModel(make, model) {
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+
+    // Group keys by key type for this make/model
+    const keyTypeMap = {};
+
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model) {
+                // Apply year filter if set
+                if (yearFilter) {
+                    const year = parseInt(yearFilter);
+                    if (!(year >= v.startYear && year <= (v.endYear || v.startYear))) {
+                        return;
+                    }
+                }
+
+                const keyType = key.keyType || 'Unknown';
+                // Normalize key types
+                let normalizedType = keyType;
+                const lowerType = keyType.toLowerCase();
+                if (lowerType.includes('proximity') || lowerType.includes('smart') || lowerType.includes('prox')) {
+                    normalizedType = 'Proximity';
+                } else if (lowerType.includes('transponder') || lowerType.includes('chip') || lowerType === 'unknown' || lowerType === '') {
+                    normalizedType = 'Keyed Ignition';
+                } else if (lowerType.includes('remote head') || lowerType.includes('flip') || lowerType.includes('fobik')) {
+                    normalizedType = 'Keyed Ignition';
+                }
+
+                if (!keyTypeMap[normalizedType]) {
+                    keyTypeMap[normalizedType] = { keyType: normalizedType, keys: new Set(), inStock: 0 };
+                }
+                keyTypeMap[normalizedType].keys.add(key.pn);
+                if ((stockData[key.pn] || 0) > 0) {
+                    keyTypeMap[normalizedType].inStock++;
+                }
+            }
+        });
+    });
+
+    const keyTypes = Object.values(keyTypeMap).sort((a, b) => {
+        // Sort: Proximity first, then Keyed Ignition, then others
+        const order = { 'Proximity': 1, 'Keyed Ignition': 2 };
+        return (order[a.keyType] || 99) - (order[b.keyType] || 99);
+    });
+
+    const container = document.getElementById('vehicleKeyTypeList');
+
+    if (keyTypes.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No key types found</div>';
+        return;
+    }
+
+    container.innerHTML = keyTypes.map(kt => {
+        const icon = kt.keyType === 'Proximity' ? '📡' : '🔑';
+        return `
+            <div class="vehicle-card" onclick="selectVehicleKeyType('${kt.keyType.replace(/'/g, "\\'")}')">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${icon} ${kt.keyType}</div>
+                    <span class="vehicle-stock-badge ${kt.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
+                        ${kt.inStock > 0 ? `${kt.inStock} in stock` : 'None in stock'}
+                    </span>
+                </div>
+                <div class="vehicle-card-info">
+                    <span style="color:var(--dim);">${kt.keys.size} key${kt.keys.size !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Key type selection -> Show year groups
+function selectVehicleKeyType(keyType) {
+    selectedVehicleKeyType = keyType;
+    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${selectedVehicleMake} ${selectedVehicleModel} - ${keyType}`;
+    renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, keyType);
     document.getElementById('vehicleYearsPanel').classList.add('on');
 }
 
-function renderVehicleYearsForModel(make, model) {
+// Helper to normalize key type for filtering
+function normalizeKeyType(keyType) {
+    const lowerType = (keyType || '').toLowerCase();
+    if (lowerType.includes('proximity') || lowerType.includes('smart') || lowerType.includes('prox')) {
+        return 'Proximity';
+    } else if (lowerType.includes('transponder') || lowerType.includes('chip') || lowerType === 'unknown' || lowerType === '') {
+        return 'Keyed Ignition';
+    } else if (lowerType.includes('remote head') || lowerType.includes('flip') || lowerType.includes('fobik')) {
+        return 'Keyed Ignition';
+    }
+    return 'Keyed Ignition'; // Default to Keyed Ignition
+}
+
+function renderVehicleYearsForModel(make, model, keyType) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
 
@@ -10640,6 +10752,14 @@ function renderVehicleYearsForModel(make, model) {
         const year = parseInt(yearFilter);
         filteredVehicles = vehicles.filter(v => year >= v.startYear && year <= v.endYear);
     }
+
+    // Filter keys within each vehicle by key type and recalculate
+    filteredVehicles = filteredVehicles.map(v => {
+        const filteredKeys = keyType
+            ? v.keys.filter(k => normalizeKeyType(k.keyType) === keyType)
+            : v.keys;
+        return { ...v, keys: filteredKeys };
+    }).filter(v => v.keys.length > 0); // Remove vehicles with no matching keys
 
     // Sort by year descending
     filteredVehicles.sort((a, b) => b.startYear - a.startYear);
@@ -10659,6 +10779,17 @@ function renderVehicleYearsForModel(make, model) {
         const yearDisplay = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
         const vehicleKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear}`;
 
+        // Build key type breakdown
+        const keyTypeCounts = {};
+        v.keys.forEach(k => {
+            const kt = k.keyType || 'Unknown';
+            if (!keyTypeCounts[kt]) keyTypeCounts[kt] = 0;
+            keyTypeCounts[kt]++;
+        });
+        const keyTypeBreakdown = Object.entries(keyTypeCounts)
+            .map(([type, count]) => `${type}: ${count}`)
+            .join(' | ');
+
         return `
             <div class="vehicle-card" onclick="openVehicleDetail('${vehicleKey.replace(/'/g, "\\'")}')">
                 <div class="vehicle-card-header">
@@ -10667,8 +10798,9 @@ function renderVehicleYearsForModel(make, model) {
                         ${hasStock ? `${totalStock} in stock` : 'Out of stock'}
                     </span>
                 </div>
-                <div class="vehicle-card-info">
+                <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
                     <span style="color:var(--dim);">${v.keys.length} key${v.keys.length !== 1 ? 's' : ''}</span>
+                    <span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>
                 </div>
             </div>
         `;
