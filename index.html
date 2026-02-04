@@ -4770,6 +4770,75 @@
     </div>
 </div>
 
+<!-- Add New Make Modal -->
+<div class="modal" id="addNewMakeModal">
+    <div class="modal-content">
+        <div class="modal-title">🚗 Add New Make</div>
+        <div id="addNewMakeSimilarWarning" style="display:none;padding:12px;background:rgba(255,193,7,0.1);border:1px solid var(--warning);border-radius:8px;margin-bottom:16px;">
+            <div style="font-size:12px;color:var(--warning);font-weight:600;margin-bottom:8px;">Similar makes found:</div>
+            <div id="addNewMakeSimilarList" style="font-size:13px;color:var(--text);"></div>
+        </div>
+        <div class="modal-input-group">
+            <label>Make Name</label>
+            <input type="text" class="modal-input" id="addNewMakeName" placeholder="e.g., Toyota, Ford, BMW" oninput="checkSimilarMakes()">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeAddNewMakeModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveNewMake()">Add Make</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Model Modal -->
+<div class="modal" id="addNewModelModal">
+    <div class="modal-content">
+        <div class="modal-title" id="addNewModelTitle">🚗 Add New Model</div>
+        <input type="hidden" id="addNewModelMake">
+        <div id="addNewModelSimilarWarning" style="display:none;padding:12px;background:rgba(255,193,7,0.1);border:1px solid var(--warning);border-radius:8px;margin-bottom:16px;">
+            <div style="font-size:12px;color:var(--warning);font-weight:600;margin-bottom:8px;">Similar models found:</div>
+            <div id="addNewModelSimilarList" style="font-size:13px;color:var(--text);"></div>
+        </div>
+        <div class="modal-input-group">
+            <label>Model Name</label>
+            <input type="text" class="modal-input" id="addNewModelName" placeholder="e.g., Camry, F-150, X5" oninput="checkSimilarModels()">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeAddNewModelModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveNewModel()">Add Model</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Year Range Modal -->
+<div class="modal" id="addYearRangeModal">
+    <div class="modal-content">
+        <div class="modal-title">📅 Add Year Range</div>
+        <input type="hidden" id="addYearRangeMake">
+        <input type="hidden" id="addYearRangeModel">
+        <input type="hidden" id="addYearRangeKeyType">
+        <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:16px;">
+            <div id="addYearRangeVehicleInfo" style="font-size:14px;color:var(--accent);font-weight:600;"></div>
+        </div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Start Year</label>
+                <input type="number" class="modal-input" id="addYearRangeStart" placeholder="2020" min="1900" max="2099">
+            </div>
+            <div style="flex:1;">
+                <label>End Year</label>
+                <input type="number" class="modal-input" id="addYearRangeEnd" placeholder="2024" min="1900" max="2099">
+            </div>
+        </div>
+        <div id="addYearRangeOverlapWarning" style="display:none;padding:12px;background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:8px;margin-top:12px;">
+            <div style="font-size:12px;color:#ff4444;"></div>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeAddYearRangeModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveNewYearRange()">Add Year Range</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add Inventory Panel -->
 <div class="add-inventory-panel" id="addInventoryPanel">
     <div class="add-inv-header">
@@ -10356,6 +10425,7 @@ function populateVehicleDropdowns() {
         Array.from(years).sort((a,b) => b - a).map(y => `<option value="${y}">${y}</option>`).join('');
 
     document.getElementById('vehicleMakeFilter').innerHTML = '<option value="">Make</option>' +
+        '<option value="__ADD_NEW__" style="color:var(--accent);font-weight:600;">+ Add New Make</option>' +
         Array.from(makes).sort().map(m => `<option value="${m}">${m}</option>`).join('');
 
     document.getElementById('vehicleModelFilter').innerHTML = '<option value="">Model</option>';
@@ -10369,6 +10439,13 @@ function onYearFilterChange() {
 function onMakeFilterChange() {
     const selectedMake = document.getElementById('vehicleMakeFilter').value;
     const modelSelect = document.getElementById('vehicleModelFilter');
+
+    // Handle "Add New Make" selection
+    if (selectedMake === '__ADD_NEW__') {
+        document.getElementById('vehicleMakeFilter').value = '';
+        openAddNewMakeModal();
+        return;
+    }
 
     if (!selectedMake) {
         modelSelect.innerHTML = '<option value="">Model</option>';
@@ -10391,6 +10468,7 @@ function onMakeFilterChange() {
     });
 
     modelSelect.innerHTML = '<option value="">Model</option>' +
+        '<option value="__ADD_NEW__" style="color:var(--accent);font-weight:600;">+ Add New Model</option>' +
         Array.from(models).sort().map(m => `<option value="${m}">${m}</option>`).join('');
 
     renderVehicleMakeList();
@@ -10400,6 +10478,13 @@ function onModelFilterChange() {
     const selectedMake = document.getElementById('vehicleMakeFilter').value;
     const selectedModel = document.getElementById('vehicleModelFilter').value;
     const selectedYear = document.getElementById('vehicleYearFilter').value;
+
+    // Handle "Add New Model" selection
+    if (selectedModel === '__ADD_NEW__') {
+        document.getElementById('vehicleModelFilter').value = '';
+        openAddNewModelModal(selectedMake);
+        return;
+    }
 
     if (selectedMake && selectedModel) {
         // If all three are selected, go directly to year groups for that make/model
@@ -10438,7 +10523,19 @@ function renderVehicleMakeList() {
 
     const container = document.getElementById('vehicleMakeList');
 
-    container.innerHTML = filteredMakes.map(make => {
+    // Add New Make card always appears first
+    let html = `
+        <div class="vehicle-card" onclick="openAddNewMakeModal()" style="border:1px dashed var(--accent);background:transparent;cursor:pointer;">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title" style="color:var(--accent);">+ Add New Make</div>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">Create a new vehicle make</span>
+            </div>
+        </div>
+    `;
+
+    html += filteredMakes.map(make => {
         // Count how many keys for this make are in stock
         let inStockCount = 0;
         DB.forEach(key => {
@@ -10463,8 +10560,10 @@ function renderVehicleMakeList() {
         `;
     }).join('');
 
-    if (filteredMakes.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No makes found</div>';
+    container.innerHTML = html;
+
+    if (filteredMakes.length === 0 && !makeFilter) {
+        container.innerHTML = html + '<div style="text-align:center;color:var(--dim);padding:40px;">No makes found in database</div>';
     }
 }
 
@@ -10507,14 +10606,26 @@ function renderVehicleModelsForMake(make) {
     const models = Object.values(modelMap).sort((a, b) => a.model.localeCompare(b.model));
     const container = document.getElementById('vehicleModelsList');
 
+    const encodedMake = encodeURIComponent(selectedVehicleMake);
+
+    // Add New Model card always appears first
+    let html = `
+        <div class="vehicle-card" onclick="openAddNewModelModal('${selectedVehicleMake.replace(/'/g, "\\'")}')" style="border:1px dashed var(--accent);background:transparent;cursor:pointer;">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title" style="color:var(--accent);">+ Add New Model</div>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">Create a new model for ${make}</span>
+            </div>
+        </div>
+    `;
+
     if (models.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No models found</div>';
+        container.innerHTML = html + '<div style="text-align:center;color:var(--dim);padding:40px;">No existing models found</div>';
         return;
     }
 
-    const encodedMake = encodeURIComponent(selectedVehicleMake);
-
-    container.innerHTML = models.map(m => {
+    html += models.map(m => {
         const encodedModel = encodeURIComponent(m.model);
         return `
         <div class="vehicle-card" style="display:flex;align-items:center;">
@@ -10532,6 +10643,8 @@ function renderVehicleModelsForMake(make) {
             <button onclick="event.stopPropagation(); openRenameModelModal(decodeURIComponent('${encodedMake}'), decodeURIComponent('${encodedModel}'))" style="margin-left:12px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️</button>
         </div>
     `}).join('');
+
+    container.innerHTML = html;
 }
 
 // Rename Model functions
@@ -10641,6 +10754,375 @@ function renameVehicleModel() {
     toast(`Renamed ${updatedCount} entries to "${newName}"`);
 }
 
+// ==================== ADD NEW MAKE FUNCTIONS ====================
+
+function openAddNewMakeModal() {
+    document.getElementById('addNewMakeName').value = '';
+    document.getElementById('addNewMakeSimilarWarning').style.display = 'none';
+    document.getElementById('addNewMakeModal').classList.add('on');
+    document.getElementById('addNewMakeName').focus();
+}
+
+function closeAddNewMakeModal() {
+    document.getElementById('addNewMakeModal').classList.remove('on');
+}
+
+function checkSimilarMakes() {
+    const input = document.getElementById('addNewMakeName').value.trim().toLowerCase();
+    const warningEl = document.getElementById('addNewMakeSimilarWarning');
+    const listEl = document.getElementById('addNewMakeSimilarList');
+
+    if (input.length < 2) {
+        warningEl.style.display = 'none';
+        return;
+    }
+
+    // Get all existing makes
+    const makes = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make) makes.add(v.make);
+        });
+    });
+
+    // Also check customVehicles
+    customVehicles.forEach(v => {
+        if (v.make) makes.add(v.make);
+    });
+
+    // Find similar makes using fuzzy matching
+    const similarMakes = Array.from(makes).filter(make => {
+        const makeLower = make.toLowerCase();
+        // Check for substring match
+        if (makeLower.includes(input) || input.includes(makeLower)) return true;
+        // Check for Levenshtein distance (simple similarity)
+        if (levenshteinDistance(makeLower, input) <= 2) return true;
+        return false;
+    });
+
+    if (similarMakes.length > 0) {
+        warningEl.style.display = 'block';
+        listEl.innerHTML = similarMakes.map(m =>
+            `<div style="padding:4px 0;cursor:pointer;" onclick="selectExistingMake('${m.replace(/'/g, "\\'")}')">${m} <span style="color:var(--accent);font-size:11px;">(click to use)</span></div>`
+        ).join('');
+    } else {
+        warningEl.style.display = 'none';
+    }
+}
+
+function selectExistingMake(make) {
+    closeAddNewMakeModal();
+    document.getElementById('vehicleMakeFilter').value = make;
+    onMakeFilterChange();
+    toast(`Selected existing make: ${make}`);
+}
+
+function saveNewMake() {
+    const makeName = document.getElementById('addNewMakeName').value.trim();
+
+    if (!makeName) {
+        toast('Please enter a make name');
+        return;
+    }
+
+    // Check if make already exists (exact match)
+    const existingMakes = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make) existingMakes.add(v.make.toLowerCase());
+        });
+    });
+    customVehicles.forEach(v => {
+        if (v.make) existingMakes.add(v.make.toLowerCase());
+    });
+
+    if (existingMakes.has(makeName.toLowerCase())) {
+        toast('This make already exists');
+        return;
+    }
+
+    // Create a placeholder custom vehicle for this make
+    const newVehicle = {
+        id: Date.now().toString(),
+        make: makeName,
+        model: '',
+        startYear: null,
+        endYear: null,
+        dataStatus: 'incomplete',
+        keyType: '',
+        chip: '',
+        buttons: '',
+        fccid: '',
+        frequency: '',
+        keyway: '',
+        notes: 'Placeholder - add models and year ranges',
+        createdAt: new Date().toISOString()
+    };
+
+    customVehicles.push(newVehicle);
+    saveToIndexedDB('customVehicles', customVehicles);
+
+    if (syncEnabled) {
+        uploadToCloud();
+    }
+
+    closeAddNewMakeModal();
+    populateVehicleDropdowns();
+    renderVehicleMakeList();
+
+    // Auto-select the new make
+    document.getElementById('vehicleMakeFilter').value = makeName;
+    onMakeFilterChange();
+    selectVehicleMake(makeName);
+
+    toast(`Added new make: ${makeName}`);
+}
+
+// ==================== ADD NEW MODEL FUNCTIONS ====================
+
+function openAddNewModelModal(make) {
+    document.getElementById('addNewModelMake').value = make;
+    document.getElementById('addNewModelTitle').textContent = `🚗 Add New Model for ${make}`;
+    document.getElementById('addNewModelName').value = '';
+    document.getElementById('addNewModelSimilarWarning').style.display = 'none';
+    document.getElementById('addNewModelModal').classList.add('on');
+    document.getElementById('addNewModelName').focus();
+}
+
+function closeAddNewModelModal() {
+    document.getElementById('addNewModelModal').classList.remove('on');
+}
+
+function checkSimilarModels() {
+    const input = document.getElementById('addNewModelName').value.trim().toLowerCase();
+    const make = document.getElementById('addNewModelMake').value;
+    const warningEl = document.getElementById('addNewModelSimilarWarning');
+    const listEl = document.getElementById('addNewModelSimilarList');
+
+    if (input.length < 2) {
+        warningEl.style.display = 'none';
+        return;
+    }
+
+    // Get all existing models for this make
+    const models = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model) models.add(v.model);
+        });
+    });
+
+    // Also check customVehicles
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model) models.add(v.model);
+    });
+
+    // Find similar models using fuzzy matching
+    const similarModels = Array.from(models).filter(model => {
+        const modelLower = model.toLowerCase();
+        // Check for substring match
+        if (modelLower.includes(input) || input.includes(modelLower)) return true;
+        // Check for Levenshtein distance (simple similarity)
+        if (levenshteinDistance(modelLower, input) <= 2) return true;
+        return false;
+    });
+
+    if (similarModels.length > 0) {
+        warningEl.style.display = 'block';
+        listEl.innerHTML = similarModels.map(m =>
+            `<div style="padding:4px 0;cursor:pointer;" onclick="selectExistingModel('${m.replace(/'/g, "\\'")}')">${m} <span style="color:var(--accent);font-size:11px;">(click to use)</span></div>`
+        ).join('');
+    } else {
+        warningEl.style.display = 'none';
+    }
+}
+
+function selectExistingModel(model) {
+    closeAddNewModelModal();
+    selectVehicleModel(model);
+    toast(`Selected existing model: ${model}`);
+}
+
+function saveNewModel() {
+    const make = document.getElementById('addNewModelMake').value;
+    const modelName = document.getElementById('addNewModelName').value.trim();
+
+    if (!modelName) {
+        toast('Please enter a model name');
+        return;
+    }
+
+    // Check if model already exists (exact match)
+    const existingModels = new Set();
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model) existingModels.add(v.model.toLowerCase());
+        });
+    });
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model) existingModels.add(v.model.toLowerCase());
+    });
+
+    if (existingModels.has(modelName.toLowerCase())) {
+        toast('This model already exists for this make');
+        return;
+    }
+
+    // Create a placeholder custom vehicle for this model
+    const newVehicle = {
+        id: Date.now().toString(),
+        make: make,
+        model: modelName,
+        startYear: null,
+        endYear: null,
+        dataStatus: 'incomplete',
+        keyType: '',
+        chip: '',
+        buttons: '',
+        fccid: '',
+        frequency: '',
+        keyway: '',
+        notes: 'Placeholder - add year ranges',
+        createdAt: new Date().toISOString()
+    };
+
+    customVehicles.push(newVehicle);
+    saveToIndexedDB('customVehicles', customVehicles);
+
+    if (syncEnabled) {
+        uploadToCloud();
+    }
+
+    closeAddNewModelModal();
+    renderVehicleModelsForMake(make);
+    selectVehicleModel(modelName);
+
+    toast(`Added new model: ${make} ${modelName}`);
+}
+
+// ==================== ADD YEAR RANGE FUNCTIONS ====================
+
+function openAddYearRangeModal(make, model, keyType) {
+    document.getElementById('addYearRangeMake').value = make;
+    document.getElementById('addYearRangeModel').value = model;
+    document.getElementById('addYearRangeKeyType').value = keyType;
+    document.getElementById('addYearRangeVehicleInfo').textContent = `${make} ${model} - ${keyType}`;
+    document.getElementById('addYearRangeStart').value = '';
+    document.getElementById('addYearRangeEnd').value = '';
+    document.getElementById('addYearRangeOverlapWarning').style.display = 'none';
+    document.getElementById('addYearRangeModal').classList.add('on');
+    document.getElementById('addYearRangeStart').focus();
+}
+
+function closeAddYearRangeModal() {
+    document.getElementById('addYearRangeModal').classList.remove('on');
+}
+
+function saveNewYearRange() {
+    const make = document.getElementById('addYearRangeMake').value;
+    const model = document.getElementById('addYearRangeModel').value;
+    const keyType = document.getElementById('addYearRangeKeyType').value;
+    const startYear = parseInt(document.getElementById('addYearRangeStart').value);
+    const endYear = parseInt(document.getElementById('addYearRangeEnd').value) || startYear;
+
+    if (!startYear) {
+        toast('Please enter a start year');
+        return;
+    }
+
+    if (startYear < 1900 || startYear > 2099) {
+        toast('Please enter a valid year (1900-2099)');
+        return;
+    }
+
+    if (endYear < startYear) {
+        toast('End year cannot be before start year');
+        return;
+    }
+
+    // Check for overlapping year ranges
+    const existingRanges = [];
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model && normalizeKeyType(key.keyType) === keyType) {
+                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
+            }
+        });
+    });
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model === model && normalizeKeyType(v.keyType) === keyType) {
+            if (v.startYear) {
+                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
+            }
+        }
+    });
+
+    const hasOverlap = existingRanges.some(range => {
+        return !(endYear < range.start || startYear > range.end);
+    });
+
+    if (hasOverlap) {
+        const warningEl = document.getElementById('addYearRangeOverlapWarning');
+        warningEl.style.display = 'block';
+        warningEl.querySelector('div').textContent = 'Warning: This year range overlaps with an existing range. The new range will still be created.';
+    }
+
+    // Create a new custom vehicle for this year range
+    const newVehicle = {
+        id: Date.now().toString(),
+        make: make,
+        model: model,
+        startYear: startYear,
+        endYear: endYear,
+        dataStatus: 'incomplete',
+        keyType: keyType === 'Proximity' ? 'Proximity' : 'Transponder',
+        chip: '',
+        buttons: '',
+        fccid: '',
+        frequency: '',
+        keyway: '',
+        notes: '',
+        createdAt: new Date().toISOString()
+    };
+
+    customVehicles.push(newVehicle);
+    saveToIndexedDB('customVehicles', customVehicles);
+
+    if (syncEnabled) {
+        uploadToCloud();
+    }
+
+    closeAddYearRangeModal();
+    renderVehicleYearsForModel(make, model, keyType);
+
+    const yearDisplay = startYear === endYear ? startYear : `${startYear}-${endYear}`;
+    toast(`Added year range: ${yearDisplay}`);
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+// Levenshtein distance for fuzzy matching
+function levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+            }
+        }
+    }
+
+    return dp[m][n];
+}
+
 // Model selection -> Show key types
 function selectVehicleModel(model) {
     selectedVehicleModel = model;
@@ -10653,8 +11135,11 @@ function selectVehicleModel(model) {
 function renderKeyTypesForModel(make, model) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
 
-    // Group keys by key type for this make/model
-    const keyTypeMap = {};
+    // Initialize both key types - they should always be shown
+    const keyTypeMap = {
+        'Keyed Ignition': { keyType: 'Keyed Ignition', keys: new Set(), inStock: 0 },
+        'Proximity': { keyType: 'Proximity', keys: new Set(), inStock: 0 }
+    };
 
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
@@ -10679,9 +11164,6 @@ function renderKeyTypesForModel(make, model) {
                     normalizedType = 'Keyed Ignition';
                 }
 
-                if (!keyTypeMap[normalizedType]) {
-                    keyTypeMap[normalizedType] = { keyType: normalizedType, keys: new Set(), inStock: 0 };
-                }
                 keyTypeMap[normalizedType].keys.add(key.pn);
                 if ((stockData[key.pn] || 0) > 0) {
                     keyTypeMap[normalizedType].inStock++;
@@ -10690,31 +11172,32 @@ function renderKeyTypesForModel(make, model) {
         });
     });
 
-    const keyTypes = Object.values(keyTypeMap).sort((a, b) => {
-        // Sort: Proximity first, then Keyed Ignition, then others
-        const order = { 'Proximity': 1, 'Keyed Ignition': 2 };
-        return (order[a.keyType] || 99) - (order[b.keyType] || 99);
+    // Also check custom vehicles for this make/model
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model === model && v.startYear) {
+            const normalizedType = normalizeKeyType(v.keyType);
+            // Custom vehicles don't have part numbers, so we just note they exist
+        }
     });
+
+    // Always show both key types, with Keyed Ignition first, then Proximity
+    const keyTypes = [keyTypeMap['Keyed Ignition'], keyTypeMap['Proximity']];
 
     const container = document.getElementById('vehicleKeyTypeList');
 
-    if (keyTypes.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No key types found</div>';
-        return;
-    }
-
     container.innerHTML = keyTypes.map(kt => {
         const icon = kt.keyType === 'Proximity' ? '📡' : '🔑';
+        const hasKeys = kt.keys.size > 0;
         return `
             <div class="vehicle-card" onclick="selectVehicleKeyType('${kt.keyType.replace(/'/g, "\\'")}')">
                 <div class="vehicle-card-header">
                     <div class="vehicle-card-title">${icon} ${kt.keyType}</div>
-                    <span class="vehicle-stock-badge ${kt.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
-                        ${kt.inStock > 0 ? `${kt.inStock} in stock` : 'None in stock'}
+                    <span class="vehicle-stock-badge ${kt.inStock > 0 ? 'in-stock' : (hasKeys ? 'out-of-stock' : '')}" style="${!hasKeys ? 'background:var(--bg);color:var(--dim);' : ''}">
+                        ${kt.inStock > 0 ? `${kt.inStock} in stock` : (hasKeys ? 'None in stock' : 'No keys yet')}
                     </span>
                 </div>
                 <div class="vehicle-card-info">
-                    <span style="color:var(--dim);">${kt.keys.size} key${kt.keys.size !== 1 ? 's' : ''}</span>
+                    <span style="color:var(--dim);">${hasKeys ? `${kt.keys.size} key${kt.keys.size !== 1 ? 's' : ''}` : 'Add year ranges to get started'}</span>
                 </div>
             </div>
         `;
@@ -10766,12 +11249,27 @@ function renderVehicleYearsForModel(make, model, keyType) {
 
     const container = document.getElementById('vehicleYearsList');
 
+    // Add Year Range button always appears first
+    const escapedMake = make.replace(/'/g, "\\'");
+    const escapedModel = model.replace(/'/g, "\\'");
+    const escapedKeyType = keyType.replace(/'/g, "\\'");
+    let html = `
+        <div class="vehicle-card" onclick="openAddYearRangeModal('${escapedMake}', '${escapedModel}', '${escapedKeyType}')" style="border:1px dashed var(--accent);background:transparent;cursor:pointer;">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title" style="color:var(--accent);">+ Add Year Range</div>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">Add a new year range for ${keyType}</span>
+            </div>
+        </div>
+    `;
+
     if (filteredVehicles.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No year groups found</div>';
+        container.innerHTML = html + '<div style="text-align:center;color:var(--dim);padding:40px;">No existing year groups found</div>';
         return;
     }
 
-    container.innerHTML = filteredVehicles.map(v => {
+    html += filteredVehicles.map(v => {
         const inStockKeys = v.keys.filter(k => (stockData[k.pn] || 0) > 0);
         const hasStock = inStockKeys.length > 0;
         const totalStock = inStockKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
@@ -10805,6 +11303,8 @@ function renderVehicleYearsForModel(make, model, keyType) {
             </div>
         `;
     }).join('');
+
+    container.innerHTML = html;
 }
 
 function getUniqueVehicles() {
