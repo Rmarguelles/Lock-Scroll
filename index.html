@@ -3687,7 +3687,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v47</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v48</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4191,7 +4191,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v47<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v48<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -4342,6 +4342,10 @@
         <div class="modal-input-group">
             <label>Frequency</label>
             <input type="text" class="modal-input" id="editCustomKeyFrequency">
+        </div>
+        <div class="modal-input-group">
+            <label>Code Series</label>
+            <input type="text" class="modal-input" id="editCustomKeyCodeSeries" placeholder="e.g., 1001-4096">
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -5018,7 +5022,12 @@
             </select>
             <input type="text" class="add-inv-input" id="customKeyFreqOther" placeholder="Enter custom frequency..." style="display:none;margin-top:8px;">
         </div>
-        
+
+        <div class="add-inv-section">
+            <label>Code Series</label>
+            <input type="text" class="add-inv-input" id="customKeyCodeSeries" placeholder="e.g., 1001-4096, A1001-A4096">
+        </div>
+
         <div class="add-inv-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
             <label>Vehicle Applications</label>
             <div id="customKeyVehicles"></div>
@@ -6835,6 +6844,12 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                 <span class="detail-label">Emergency Key PN</span>
                 <span class="detail-value mono">${key.emergencyPN || 'N/A'}</span>
             </div>
+            ${key.codeSeries ? `
+            <div class="detail-row">
+                <span class="detail-label">Code Series</span>
+                <span class="detail-value mono">${key.codeSeries}</span>
+            </div>
+            ` : ''}
             <div class="detail-row" style="cursor:pointer" onclick="openFccPage('${key.fccid}')">
                 <span class="detail-label">FCC ID</span>
                 <span class="detail-value mono" style="color:var(--accent)">${key.fccid || 'N/A'} →</span>
@@ -12543,7 +12558,9 @@ function openAddCustomKey() {
     document.getElementById('customKeyFreq').value = '';
     document.getElementById('customKeyFreqOther').style.display = 'none';
     document.getElementById('customKeyFreqOther').value = '';
-    
+
+    document.getElementById('customKeyCodeSeries').value = '';
+
     // Add one vehicle row by default
     addCustomKeyVehicle();
     
@@ -12771,6 +12788,7 @@ function saveCustomKey() {
         keyType: keyType || null,
         buttons: buttons || null,
         frequency: frequency || null,
+        codeSeries: document.getElementById('customKeyCodeSeries').value.trim() || null,
         notes: document.getElementById('customKeyNotes').value.trim() || null,
         vehicles: vehicles,
         isCustom: true,
@@ -12848,8 +12866,9 @@ function openEditCustomKeyModal(idx) {
     document.getElementById('editCustomKeyType').value = key.keyType || '';
     document.getElementById('editCustomKeyButtons').value = key.buttons || '';
     document.getElementById('editCustomKeyFrequency').value = key.frequency || '';
+    document.getElementById('editCustomKeyCodeSeries').value = key.codeSeries || '';
     document.getElementById('editCustomKeyNotes').value = key.notes || '';
-    
+
     document.getElementById('editCustomKeyModal').classList.add('on');
 }
 
@@ -12871,6 +12890,7 @@ function saveEditCustomKey() {
     key.keyType = document.getElementById('editCustomKeyType').value.trim() || null;
     key.buttons = document.getElementById('editCustomKeyButtons').value.trim() || null;
     key.frequency = document.getElementById('editCustomKeyFrequency').value.trim() || null;
+    key.codeSeries = document.getElementById('editCustomKeyCodeSeries').value.trim() || null;
     key.notes = document.getElementById('editCustomKeyNotes').value.trim() || null;
     
     // Update in DB array
