@@ -2106,6 +2106,51 @@
             outline: none;
             border-color: var(--accent);
         }
+
+        .settings-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .settings-nav-btn:hover {
+            border-color: var(--accent);
+            background: var(--bg);
+        }
+
+        .settings-nav-icon {
+            font-size: 24px;
+        }
+
+        .settings-nav-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-nav-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .settings-nav-desc {
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .settings-nav-arrow {
+            font-size: 16px;
+            color: var(--dim);
+        }
         
         /* Lishi Inventory Item */
         .lishi-inventory-item {
@@ -3642,7 +3687,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v43</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v44</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4070,64 +4115,161 @@
     <div class="settings-content">
         <div class="settings-section cloud-sync-section">
             <h3>☁️ Cloud Sync</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Sync your data across all devices. Sign in once, and your inventory, custom keys, and settings stay in sync everywhere.</p>
-            
-            <div id="cloudSyncUI">
-                <!-- Will be populated by JavaScript -->
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Sync your data across all devices.</p>
+            <div id="cloudSyncUI"></div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Manage Data</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="settings-nav-btn" onclick="openLishiSettingsPanel()">
+                    <span class="settings-nav-icon">🔧</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Lishi Tool Inventory</span>
+                        <span class="settings-nav-desc">Manage your Lishi tools and cut ranges</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
+                <button class="settings-nav-btn" onclick="openVendorsSettingsPanel()">
+                    <span class="settings-nav-icon">💰</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Vendors</span>
+                        <span class="settings-nav-desc">Manage pricing vendors</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
+                <button class="settings-nav-btn" onclick="openCustomKeysSettingsPanel()">
+                    <span class="settings-nav-icon">🔑</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Custom Keys</span>
+                        <span class="settings-nav-desc">Manage keys you've added</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
+                <button class="settings-nav-btn" onclick="openCategoriesSettingsPanel()">
+                    <span class="settings-nav-icon">🏷️</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Tool Categories</span>
+                        <span class="settings-nav-desc">Organize equipment categories</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
+                <button class="settings-nav-btn" onclick="openPlatformsSettingsPanel()">
+                    <span class="settings-nav-icon">💻</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Tool Platforms</span>
+                        <span class="settings-nav-desc">Programming platforms and manufacturers</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
+                <button class="settings-nav-btn" onclick="openFidManager()">
+                    <span class="settings-nav-icon">📋</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">FID Manager</span>
+                        <span class="settings-nav-desc">Manage Fob ID assignments</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
             </div>
         </div>
+
         <div class="settings-section">
-            <h3>🔧 Lishi Tool Inventory</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage your Lishi tools, ignition compatibility, and cut ranges.</p>
-            <input type="text" class="settings-search" id="lishiInventorySearch" placeholder="Search Lishi tools..." oninput="filterLishiInventory()">
-            <div id="lishiInventoryList" style="margin-top:12px;max-height:400px;overflow-y:auto;"></div>
-            <button class="add-vendor-btn" onclick="openAddLishiToolModal()" style="margin-top:12px;">+ Add Lishi Tool</button>
-        </div>
-        <div class="settings-section">
-            <h3>💰 Vendors</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage vendors for pricing. Default vendors cannot be removed.</p>
-            <div id="vendorList"></div>
-            <button class="add-vendor-btn" onclick="openAddVendorModal()">+ Add Vendor</button>
-        </div>
-        <div class="settings-section">
-            <h3>🔑 Custom Keys</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage keys you've added to the database. Edit or delete custom entries.</p>
-            <div id="customKeysList" style="max-height:300px;overflow-y:auto;"></div>
-            <button class="add-vendor-btn" onclick="openAddCustomKey(); closeSettings();" style="margin-top:12px;">+ Add Custom Key</button>
-        </div>
-        <div class="settings-section">
-            <h3>🏷️ Tool Categories</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage equipment categories for organizing your tools.</p>
-            <div id="categoryList" style="max-height:300px;overflow-y:auto;"></div>
-            <button class="add-vendor-btn" onclick="openAddCategoryModal()" style="margin-top:12px;">+ Add Category</button>
-        </div>
-        <div class="settings-section">
-            <h3>💻 Tool Platforms</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage programming platforms and manufacturers.</p>
-            <div id="settingsPlatformList" style="max-height:300px;overflow-y:auto;"></div>
-            <button class="add-vendor-btn" onclick="openAddPlatformModal()" style="margin-top:12px;">+ Add Platform</button>
-        </div>
-        <div class="settings-section">
-            <h3>🏷️ FID Manager</h3>
-            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Complete control over FID (Fob ID) assignments. Bulk edit, reassign, or clear all FIDs.</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="settings-btn" onclick="openFidManager()" style="flex:1;">📋 Open FID Manager</button>
+            <h3>Import / Export</h3>
+            <div style="display:flex;gap:8px;">
+                <button class="settings-btn" onclick="exportData()" style="flex:1;">📤 Export</button>
+                <button class="settings-btn" onclick="document.getElementById('importInput').click()" style="flex:1;">📥 Import</button>
+                <input type="file" id="importInput" accept=".json" onchange="importData(event)" style="display:none;">
             </div>
         </div>
-        <div class="settings-section">
-            <h3>Data Management</h3>
-            <button class="settings-btn" onclick="exportData()">📤 Export All Data</button>
-            <button class="settings-btn" onclick="document.getElementById('importInput').click()">📥 Import Data</button>
-            <input type="file" id="importInput" accept=".json" onchange="importData(event)">
-        </div>
+
         <div class="settings-section">
             <h3>Reset Data</h3>
-            <button class="settings-btn danger" onclick="clearLishi()">🗑️ Clear All Lishi Data</button>
-            <button class="settings-btn danger" onclick="clearStock()">🗑️ Reset All Stock to 0</button>
+            <div style="display:flex;gap:8px;">
+                <button class="settings-btn danger" onclick="clearLishi()" style="flex:1;font-size:12px;">🗑️ Clear Lishi</button>
+                <button class="settings-btn danger" onclick="clearStock()" style="flex:1;font-size:12px;">🗑️ Reset Stock</button>
+            </div>
         </div>
-        <div class="settings-section">
-            <h3>About</h3>
-            <p style="color:var(--dim);font-size:12px;">Lock & Scroll v43<br>Keys: <span id="aboutTotal">0</span><br>Keyways: <span id="aboutKeyways">0</span><br>Vendors: <span id="aboutVendors">0</span><br>Lishi Tools: <span id="aboutLishi">0</span><br>Programmer Tools: <span id="aboutTools">0</span><br>Platforms: <span id="aboutPlatforms">0</span></p>
+
+        <div class="settings-section" style="text-align:center;">
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v44<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+        </div>
+    </div>
+</div>
+
+<!-- Lishi Settings Panel -->
+<div class="panel" id="lishiSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeLishiSettingsPanel()">←</button>
+        <h2>🔧 Lishi Tool Inventory</h2>
+    </div>
+    <div style="padding:16px;">
+        <input type="text" class="settings-search" id="lishiInventorySearch" placeholder="Search Lishi tools..." oninput="filterLishiInventory()" style="width:100%;box-sizing:border-box;">
+        <div id="lishiInventoryList" style="margin-top:12px;"></div>
+        <button class="add-vendor-btn" onclick="openAddLishiToolModal()" style="margin-top:12px;width:100%;">+ Add Lishi Tool</button>
+    </div>
+</div>
+
+<!-- Vendors Settings Panel -->
+<div class="panel" id="vendorsSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeVendorsSettingsPanel()">←</button>
+        <h2>💰 Vendors</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage vendors for pricing. Default vendors cannot be removed.</p>
+        <div id="vendorList"></div>
+        <button class="add-vendor-btn" onclick="openAddVendorModal()" style="margin-top:12px;width:100%;">+ Add Vendor</button>
+    </div>
+</div>
+
+<!-- Custom Keys Settings Panel -->
+<div class="panel" id="customKeysSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeCustomKeysSettingsPanel()">←</button>
+        <h2>🔑 Custom Keys</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage keys you've added to the database.</p>
+        <div id="customKeysList"></div>
+        <button class="add-vendor-btn" onclick="openAddCustomKey(); closeCustomKeysSettingsPanel(); closeSettings();" style="margin-top:12px;width:100%;">+ Add Custom Key</button>
+    </div>
+</div>
+
+<!-- Categories Settings Panel -->
+<div class="panel" id="categoriesSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeCategoriesSettingsPanel()">←</button>
+        <h2>🏷️ Tool Categories</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage equipment categories for organizing your tools.</p>
+        <div id="categoryList"></div>
+        <button class="add-vendor-btn" onclick="openAddCategoryModal()" style="margin-top:12px;width:100%;">+ Add Category</button>
+    </div>
+</div>
+
+<!-- Platforms Settings Panel -->
+<div class="panel" id="platformsSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closePlatformsSettingsPanel()">←</button>
+        <h2>💻 Tool Platforms</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage programming platforms and manufacturers.</p>
+        <div id="settingsPlatformList"></div>
+        <button class="add-vendor-btn" onclick="openAddPlatformModal()" style="margin-top:12px;width:100%;">+ Add Platform</button>
+    </div>
+</div>
+
+<!-- Edit Vehicles Modal -->
+<div class="modal" id="editVehiclesModal">
+    <div class="modal-content" style="max-width:550px;">
+        <div class="modal-title">Edit Compatible Vehicles</div>
+        <div id="editVehiclesList" style="max-height:350px;overflow-y:auto;margin-bottom:12px;"></div>
+        <button onclick="addVehicleToKey()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:16px;">+ Add Vehicle</button>
+        <div class="modal-buttons">
+            <button class="modal-btn" onclick="closeEditVehiclesModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveKeyVehicles()">Save Changes</button>
         </div>
     </div>
 </div>
@@ -6664,7 +6806,10 @@ function openKey(idx, fromFcc = false, fromFid = false) {
 
         <!-- Vehicles Section -->
         <div class="detail-section">
-            <h3>🚙 Compatible Vehicles</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h3 style="margin:0;">🚙 Compatible Vehicles</h3>
+                <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+            </div>
             ${(key.vehicles || []).map(v => `
                 <div class="detail-row">
                     <span class="detail-label">${v.make} ${v.model}</span>
@@ -6676,6 +6821,93 @@ function openKey(idx, fromFcc = false, fromFid = false) {
 
     document.getElementById('detailContent').innerHTML = html;
     document.getElementById('detailPanel').classList.add('on');
+}
+
+// ===================== EDIT VEHICLES FOR KEY =====================
+let editingVehiclesKeyIdx = null;
+let editingVehicles = [];
+
+function openEditVehiclesModal(keyIdx) {
+    editingVehiclesKeyIdx = keyIdx;
+    const key = DB[keyIdx];
+    editingVehicles = JSON.parse(JSON.stringify(key.vehicles || [])); // Deep copy
+    renderEditVehiclesList();
+    document.getElementById('editVehiclesModal').classList.add('on');
+}
+
+function closeEditVehiclesModal() {
+    document.getElementById('editVehiclesModal').classList.remove('on');
+    editingVehiclesKeyIdx = null;
+    editingVehicles = [];
+}
+
+function renderEditVehiclesList() {
+    const container = document.getElementById('editVehiclesList');
+
+    if (editingVehicles.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">No vehicles. Click "Add Vehicle" to add one.</div>';
+        return;
+    }
+
+    container.innerHTML = editingVehicles.map((v, i) => `
+        <div style="display:flex;gap:8px;align-items:center;padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <input type="text" value="${v.make || ''}" placeholder="Make"
+                    onchange="updateEditVehicle(${i}, 'make', this.value)"
+                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                <input type="text" value="${v.model || ''}" placeholder="Model"
+                    onchange="updateEditVehicle(${i}, 'model', this.value)"
+                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                <input type="number" value="${v.startYear || ''}" placeholder="Start Year"
+                    onchange="updateEditVehicle(${i}, 'startYear', parseInt(this.value))"
+                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+                <input type="number" value="${v.endYear || ''}" placeholder="End Year"
+                    onchange="updateEditVehicle(${i}, 'endYear', parseInt(this.value))"
+                    style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+            </div>
+            <button onclick="removeEditVehicle(${i})" style="padding:8px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function updateEditVehicle(index, field, value) {
+    editingVehicles[index][field] = value;
+}
+
+function addVehicleToKey() {
+    editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() });
+    renderEditVehiclesList();
+}
+
+function removeEditVehicle(index) {
+    editingVehicles.splice(index, 1);
+    renderEditVehiclesList();
+}
+
+function saveKeyVehicles() {
+    if (editingVehiclesKeyIdx === null) return;
+
+    // Filter out empty entries
+    const validVehicles = editingVehicles.filter(v => v.make && v.model && v.startYear && v.endYear);
+
+    // Update DB
+    DB[editingVehiclesKeyIdx].vehicles = validVehicles;
+
+    // If this is a custom key, save to customKeys
+    const key = DB[editingVehiclesKeyIdx];
+    if (key.isCustom) {
+        const customIdx = customKeys.findIndex(k => k.pn === key.pn);
+        if (customIdx >= 0) {
+            customKeys[customIdx].vehicles = validVehicles;
+            saveCustomKeys();
+        }
+    }
+
+    // Refresh the key detail view
+    openKey(editingVehiclesKeyIdx, cameFromFcc, cameFromFid);
+    closeEditVehiclesModal();
+    toast('Vehicles updated');
+    triggerAutoSync();
 }
 
 function renderVendorPrices(pn) {
@@ -9353,6 +9585,47 @@ function closeSettings() {
     document.getElementById('settingsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
+}
+
+// Settings Sub-Panels
+function openLishiSettingsPanel() {
+    renderLishiInventory();
+    document.getElementById('lishiSettingsPanel').classList.add('on');
+}
+function closeLishiSettingsPanel() {
+    document.getElementById('lishiSettingsPanel').classList.remove('on');
+}
+
+function openVendorsSettingsPanel() {
+    renderVendorList();
+    document.getElementById('vendorsSettingsPanel').classList.add('on');
+}
+function closeVendorsSettingsPanel() {
+    document.getElementById('vendorsSettingsPanel').classList.remove('on');
+}
+
+function openCustomKeysSettingsPanel() {
+    renderCustomKeysList();
+    document.getElementById('customKeysSettingsPanel').classList.add('on');
+}
+function closeCustomKeysSettingsPanel() {
+    document.getElementById('customKeysSettingsPanel').classList.remove('on');
+}
+
+function openCategoriesSettingsPanel() {
+    renderCategoryList();
+    document.getElementById('categoriesSettingsPanel').classList.add('on');
+}
+function closeCategoriesSettingsPanel() {
+    document.getElementById('categoriesSettingsPanel').classList.remove('on');
+}
+
+function openPlatformsSettingsPanel() {
+    renderSettingsPlatformList();
+    document.getElementById('platformsSettingsPanel').classList.add('on');
+}
+function closePlatformsSettingsPanel() {
+    document.getElementById('platformsSettingsPanel').classList.remove('on');
 }
 
 function exportData() {
