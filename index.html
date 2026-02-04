@@ -3687,7 +3687,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v45</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v46</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4191,7 +4191,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v45<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v46<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -4270,6 +4270,43 @@
         <div class="modal-buttons">
             <button class="modal-btn" onclick="closeEditVehiclesModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveKeyVehicles()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Single Vehicle Modal -->
+<div class="modal" id="addSingleVehicleModal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-title">Add Vehicle Application</div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Make</label>
+            <select id="addVehMake" onchange="onAddVehicleMakeChange(this.value)"
+                style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+                <option value="">Select Make...</option>
+            </select>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Model</label>
+            <select id="addVehModel" onchange="onAddVehicleModelChange(this.value)"
+                style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+                <option value="">Select Model...</option>
+            </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div>
+                <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Start Year</label>
+                <input type="number" id="addVehStartYear" placeholder="e.g. 2015"
+                    style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">End Year</label>
+                <input type="number" id="addVehEndYear" placeholder="e.g. 2020"
+                    style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn" onclick="closeAddSingleVehicleModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveAddSingleVehicle()">Add Vehicle</button>
         </div>
     </div>
 </div>
@@ -6808,7 +6845,10 @@ function openKey(idx, fromFcc = false, fromFid = false) {
         <div class="detail-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h3 style="margin:0;">🚙 Compatible Vehicles</h3>
-                <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="openAddSingleVehicleModal(${idx})" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">+ Add</button>
+                    <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                </div>
             </div>
             ${(key.vehicles || []).map(v => `
                 <div class="detail-row">
@@ -7033,6 +7073,162 @@ function saveKeyVehicles() {
     openKey(editingVehiclesKeyIdx, cameFromFcc, cameFromFid);
     closeEditVehiclesModal();
     toast('Vehicles updated');
+    triggerAutoSync();
+}
+
+// ===================== ADD SINGLE VEHICLE =====================
+let addingVehicleKeyIdx = null;
+let addingVehicle = { make: '', model: '', startYear: '', endYear: '' };
+
+function openAddSingleVehicleModal(keyIdx) {
+    addingVehicleKeyIdx = keyIdx;
+    addingVehicle = { make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() };
+    buildVehicleDropdownData();
+
+    // Populate make dropdown
+    const makeSelect = document.getElementById('addVehMake');
+    const makeOptions = vehicleMakesCache.map(m => `<option value="${m}">${m}</option>`).join('');
+    makeSelect.innerHTML = `
+        <option value="">Select Make...</option>
+        ${makeOptions}
+        <option value="__add_new__">+ Add New Make...</option>
+    `;
+
+    // Reset model dropdown
+    document.getElementById('addVehModel').innerHTML = '<option value="">Select Model...</option>';
+
+    // Set default years
+    document.getElementById('addVehStartYear').value = new Date().getFullYear();
+    document.getElementById('addVehEndYear').value = new Date().getFullYear();
+
+    document.getElementById('addSingleVehicleModal').classList.add('on');
+}
+
+function closeAddSingleVehicleModal() {
+    document.getElementById('addSingleVehicleModal').classList.remove('on');
+    addingVehicleKeyIdx = null;
+    addingVehicle = { make: '', model: '', startYear: '', endYear: '' };
+}
+
+function onAddVehicleMakeChange(value) {
+    if (value === '__add_new__') {
+        const newMake = prompt('Enter new make name:');
+        if (newMake && newMake.trim()) {
+            const make = newMake.trim();
+            if (!vehicleMakesCache.includes(make)) {
+                vehicleMakesCache.push(make);
+                vehicleMakesCache.sort();
+                vehicleModelsCache[make] = [];
+            }
+            addingVehicle.make = make;
+
+            // Refresh make dropdown and select new make
+            const makeSelect = document.getElementById('addVehMake');
+            const makeOptions = vehicleMakesCache.map(m => `<option value="${m}"${m === make ? ' selected' : ''}>${m}</option>`).join('');
+            makeSelect.innerHTML = `
+                <option value="">Select Make...</option>
+                ${makeOptions}
+                <option value="__add_new__">+ Add New Make...</option>
+            `;
+            makeSelect.value = make;
+
+            // Reset model dropdown for new make
+            updateAddVehicleModelDropdown(make);
+        } else {
+            document.getElementById('addVehMake').value = addingVehicle.make || '';
+        }
+    } else {
+        addingVehicle.make = value;
+        addingVehicle.model = '';
+        updateAddVehicleModelDropdown(value);
+    }
+}
+
+function updateAddVehicleModelDropdown(make) {
+    const modelSelect = document.getElementById('addVehModel');
+    const models = vehicleModelsCache[make] || [];
+    const modelOptions = models.map(m => `<option value="${m}">${m}</option>`).join('');
+    modelSelect.innerHTML = `
+        <option value="">Select Model...</option>
+        ${modelOptions}
+        <option value="__add_new__">+ Add New Model...</option>
+    `;
+}
+
+function onAddVehicleModelChange(value) {
+    const make = addingVehicle.make;
+    if (value === '__add_new__') {
+        if (!make) {
+            alert('Please select a make first');
+            document.getElementById('addVehModel').value = '';
+            return;
+        }
+        const newModel = prompt(`Enter new model name for ${make}:`);
+        if (newModel && newModel.trim()) {
+            const model = newModel.trim();
+            if (!vehicleModelsCache[make]) vehicleModelsCache[make] = [];
+            if (!vehicleModelsCache[make].includes(model)) {
+                vehicleModelsCache[make].push(model);
+                vehicleModelsCache[make].sort();
+            }
+            addingVehicle.model = model;
+
+            // Refresh model dropdown and select new model
+            updateAddVehicleModelDropdown(make);
+            document.getElementById('addVehModel').value = model;
+        } else {
+            document.getElementById('addVehModel').value = addingVehicle.model || '';
+        }
+    } else {
+        addingVehicle.model = value;
+    }
+}
+
+function saveAddSingleVehicle() {
+    if (addingVehicleKeyIdx === null) return;
+
+    const make = addingVehicle.make;
+    const model = addingVehicle.model;
+    const startYear = parseInt(document.getElementById('addVehStartYear').value);
+    const endYear = parseInt(document.getElementById('addVehEndYear').value);
+
+    // Validate
+    if (!make || !model) {
+        alert('Please select a make and model');
+        return;
+    }
+    if (!startYear || !endYear) {
+        alert('Please enter start and end years');
+        return;
+    }
+    if (startYear > endYear) {
+        alert('Start year cannot be after end year');
+        return;
+    }
+
+    const newVehicle = { make, model, startYear, endYear };
+
+    // Get existing vehicles and add new one
+    const key = DB[addingVehicleKeyIdx];
+    const existingVehicles = key.vehicles || [];
+    const updatedVehicles = [...existingVehicles, newVehicle];
+
+    // Update DB
+    DB[addingVehicleKeyIdx].vehicles = updatedVehicles;
+
+    // If this is a custom key, save to customKeys
+    if (key.isCustom) {
+        const customIdx = customKeys.findIndex(k => k.pn === key.pn);
+        if (customIdx >= 0) {
+            customKeys[customIdx].vehicles = updatedVehicles;
+            saveCustomKeys();
+        }
+    }
+
+    // Refresh the key detail view
+    openKey(addingVehicleKeyIdx, cameFromFcc, cameFromFid);
+    closeAddSingleVehicleModal();
+    toast('Vehicle added');
     triggerAutoSync();
 }
 
