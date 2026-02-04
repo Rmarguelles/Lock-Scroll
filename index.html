@@ -3642,7 +3642,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v42</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v43</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4127,7 +4127,7 @@
         </div>
         <div class="settings-section">
             <h3>About</h3>
-            <p style="color:var(--dim);font-size:12px;">Lock & Scroll v42<br>Keys: <span id="aboutTotal">0</span><br>Keyways: <span id="aboutKeyways">0</span><br>Vendors: <span id="aboutVendors">0</span><br>Lishi Tools: <span id="aboutLishi">0</span><br>Programmer Tools: <span id="aboutTools">0</span><br>Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:12px;">Lock & Scroll v43<br>Keys: <span id="aboutTotal">0</span><br>Keyways: <span id="aboutKeyways">0</span><br>Vendors: <span id="aboutVendors">0</span><br>Lishi Tools: <span id="aboutLishi">0</span><br>Programmer Tools: <span id="aboutTools">0</span><br>Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7162,15 +7162,30 @@ function formatFidNumber(num) {
 }
 
 function getKeyTypePriority(keyType) {
-    // Priority: 1 = Non-chip/Chip keys, 2 = Remote head/Flip keys, 3 = Prox keys
+    // Priority order: 1=Non-chip, 2=Chip, 3=Fobik, 4=Remote Head/Flip/PEPS, 5=Proximity, 6=Remote Only
     const kt = (keyType || '').toLowerCase();
+
+    // Remote only - last
+    if (kt.includes('remote only') || kt === 'remote') {
+        return 6;
+    }
+    // Proximity/Smart keys
     if (kt.includes('proximity') || kt.includes('smart') || kt.includes('prox')) {
-        return 3; // Prox keys last
+        return 5;
     }
-    if (kt.includes('remote head') || kt.includes('flip') || kt.includes('fobik') || kt.includes('peps')) {
-        return 2; // Remote head and flip keys middle
+    // Remote Head, Flip, PEPS keys
+    if (kt.includes('remote head') || kt.includes('flip') || kt.includes('peps')) {
+        return 4;
     }
-    // Non-chip, chip, transponder, VATS, etc. - first
+    // Fobik
+    if (kt.includes('fobik')) {
+        return 3;
+    }
+    // Chip/Transponder keys
+    if (kt.includes('chip') || kt.includes('transponder') || kt.includes('vats')) {
+        return 2;
+    }
+    // Non-chip keys - first
     return 1;
 }
 
