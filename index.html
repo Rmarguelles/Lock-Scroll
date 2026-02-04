@@ -3687,7 +3687,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v46</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v47</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4191,7 +4191,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v46<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v47<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5751,6 +5751,7 @@ async function uploadToCloud() {
             fidPrefixes: fidPrefixes,
             purchaseHistory: purchaseHistory,
             toolsDatabase: toolsDatabase,
+            vehicleOverrides: vehicleOverrides,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastUpdatedBy: currentUser.email
         };
@@ -5772,6 +5773,7 @@ async function uploadToCloud() {
             fidPrefixes: fidPrefixes,
             purchaseHistory: purchaseHistory,
             toolsDatabase: toolsDatabase,
+            vehicleOverrides: vehicleOverrides,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await personalDocRef.set(allData, { merge: true });
@@ -5917,6 +5919,11 @@ async function downloadFromCloud() {
             }
             saveToolsDatabase();
         }
+        if (data.vehicleOverrides) {
+            vehicleOverrides = { ...vehicleOverrides, ...data.vehicleOverrides };
+            saveVehicleOverrides();
+            applyVehicleOverridesToDB();
+        }
 
         // Refresh UI
         buildFilters();
@@ -6016,6 +6023,7 @@ let customVehicles = []; // Array of user-created vehicles independent of keys: 
 const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_family": "GM B / GM37", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "B111": {"keyways": ["GM Z"], "keyway_family": "GM Z", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BAOJUN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BQSB": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BW9MH": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01R": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CHAANGAN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24": {"keyways": ["Chrysler CY24", "Y157", "Y159", "Y164"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24-CV": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24 TRUCK": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DAT12R": {"keyways": ["Datsun DAT12"], "keyway_family": "Datsun DAT12", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DW04R V.2": {"keyways": ["Peugeot/Citroen DW04"], "keyway_family": "Peugeot/Citroen DW04", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FO38": {"keyways": ["Ford FO38", "H75"], "keyway_family": "Ford FO38", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FORD 2017": {"keyways": ["Ford HU101 variant"], "keyway_family": "Ford HU101 variant", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM39": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM45": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HAIMA": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON58R": {"keyways": ["Honda HON58"], "keyway_family": "Honda HON58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON66": {"keyways": ["Honda HON66"], "keyway_family": "Honda HON66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU39": {"keyways": ["Mercedes HU39"], "keyway_family": "Mercedes HU39", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU43": {"keyways": ["Mercedes HU43"], "keyway_family": "Mercedes HU43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU46": {"keyways": ["Mercedes HU46"], "keyway_family": "Mercedes HU46", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU49": {"keyways": ["Mercedes HU49"], "keyway_family": "Mercedes HU49", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58TL": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU64 V.2": {"keyways": ["Mercedes HU64"], "keyway_family": "Mercedes HU64", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 Generation 1 & 2": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 V.3": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU71": {"keyways": ["Mercedes HU71"], "keyway_family": "Mercedes HU71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU92": {"keyways": ["BMW HU92"], "keyway_family": "BMW HU92", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100V3(10 Cut)": {"keyways": ["GM HU100", "B119", "B120"], "keyway_family": "GM HU100", "door": true, "ignition": false, "trunk": true, "cutStart": 3, "cutEnd": 10, "cutTotal": 10, "inStock": false, "notes": "Does NOT work on ignition. Reads cuts 3-10 only."}, "HU100V3(8 Cut)": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100R V.3": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU101 V.3": {"keyways": ["Ford HU101"], "keyway_family": "Ford HU101", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162 (VAG2015)": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC9": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC10 V.3": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY16": {"keyways": ["Hyundai HY16"], "keyway_family": "Hyundai HY16", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY17(HYN15)": {"keyways": ["Hyundai HY17"], "keyway_family": "Hyundai HY17", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY20": {"keyways": ["Hyundai HY20"], "keyway_family": "Hyundai HY20", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY22": {"keyways": ["Hyundai HY22"], "keyway_family": "Hyundai HY22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14(HY15)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14R(HY16)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN22": {"keyways": ["Hyundai HYN22"], "keyway_family": "Hyundai HYN22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN7R": {"keyways": ["Hyundai HYN7"], "keyway_family": "Hyundai HYN7", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ICF03": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "K5 V.3": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MAZ24R V.2": {"keyways": ["Mazda MAZ24"], "keyway_family": "Mazda MAZ24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT11R": {"keyways": ["Mitsubishi MIT11"], "keyway_family": "Mitsubishi MIT11", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT8": {"keyways": ["Mitsubishi MIT8"], "keyway_family": "Mitsubishi MIT8", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT9/MIT6": {"keyways": ["Mitsubishi MIT9 / MIT6"], "keyway_family": "Mitsubishi MIT9 / MIT6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE38 V.2 Boot": {"keyways": ["Nissan NE38"], "keyway_family": "Nissan NE38", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Boot/Trunk only - does not work on ignition"}, "NE66": {"keyways": ["Nissan NE66"], "keyway_family": "Nissan NE66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE71R V.2": {"keyways": ["Nissan NE71"], "keyway_family": "Nissan NE71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE72": {"keyways": ["Nissan NE72"], "keyway_family": "Nissan NE72", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE78": {"keyways": ["Nissan NE78"], "keyway_family": "Nissan NE78", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NSN14": {"keyways": ["Nissan NSN14", "DA34"], "keyway_family": "Nissan NSN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "QIRUI": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SIP22": {"keyways": ["Fiat SIP22"], "keyway_family": "Fiat SIP22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SRT2018": {"keyways": ["Dodge SRT"], "keyway_family": "Dodge SRT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SX9": {"keyways": ["Citroen SX9"], "keyway_family": "Citroen SX9", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY2": {"keyways": ["Toyota TOY2"], "keyway_family": "Toyota TOY2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43": {"keyways": ["Toyota TOY43", "TR47"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT Dr/Bt": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Door/Boot only - does not work on ignition"}, "TOY43AT Ignition": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": false, "ignition": true, "trunk": false, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Ignition only"}, "TOY43R": {"keyways": ["Toyota TOY43"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY48": {"keyways": ["Toyota TOY48"], "keyway_family": "Toyota TOY48", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA2": {"keyways": ["Peugeot/Citroen VA2"], "keyway_family": "Peugeot/Citroen VA2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA6": {"keyways": ["Peugeot/Citroen VA6"], "keyway_family": "Peugeot/Citroen VA6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VAC102": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "YM23": {"keyways": ["Yamaha YM23 (auto use)"], "keyway_family": "Yamaha YM23 (auto use)", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ZD30": {"keyways": ["Isuzu ZD30"], "keyway_family": "Isuzu ZD30", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}};
 let vendorPrices = {}; // { partNumber: { vendorName: { priceA, priceB, emergency, shell, oem } } }
 let customVendors = []; // User-added vendors
+let vehicleOverrides = {}; // { partNumber: [vehicles] } - vehicle modifications for base keys
 
 // FID System - Prefix-based tracking
 let fidAssignments = {}; // { fccId: "N-001" }
@@ -6053,6 +6061,7 @@ async function init() {
     await loadLocalData();
     await loadCustomKeys();
     await loadCustomVehicles();
+    applyVehicleOverridesToDB();
     initializeVendorPricesFromDB();
     buildFilters();
     applyFilters();
@@ -6197,6 +6206,9 @@ async function loadLocalData() {
             const savedFidPrefixes = await loadFromIndexedDB('fidPrefixes');
             if (savedFidPrefixes) fidPrefixes = { ...fidPrefixes, ...savedFidPrefixes };
 
+            const savedVehicleOverrides = await loadFromIndexedDB('vehicleOverrides');
+            if (savedVehicleOverrides) vehicleOverrides = savedVehicleOverrides;
+
             // Load tools database
             await loadToolsDatabase();
         }
@@ -6328,6 +6340,21 @@ function savePurchaseHistory() {
 function saveFidPrefixes() {
     saveToIndexedDB('fidPrefixes', fidPrefixes);
     triggerAutoSync();
+}
+
+function saveVehicleOverrides() {
+    saveToIndexedDB('vehicleOverrides', vehicleOverrides);
+    triggerAutoSync();
+}
+
+function applyVehicleOverridesToDB() {
+    // Apply saved vehicle overrides to base database keys
+    for (const pn in vehicleOverrides) {
+        const idx = DB.findIndex(k => k.pn === pn && !k.isCustom);
+        if (idx >= 0) {
+            DB[idx].vehicles = vehicleOverrides[pn];
+        }
+    }
 }
 
 function getAllVendors() {
@@ -7059,14 +7086,18 @@ function saveKeyVehicles() {
     // Update DB
     DB[editingVehiclesKeyIdx].vehicles = validVehicles;
 
-    // If this is a custom key, save to customKeys
     const key = DB[editingVehiclesKeyIdx];
     if (key.isCustom) {
+        // Save to customKeys for custom keys
         const customIdx = customKeys.findIndex(k => k.pn === key.pn);
         if (customIdx >= 0) {
             customKeys[customIdx].vehicles = validVehicles;
             saveCustomKeys();
         }
+    } else {
+        // Save to vehicleOverrides for base database keys
+        vehicleOverrides[key.pn] = validVehicles;
+        saveVehicleOverrides();
     }
 
     // Refresh the key detail view
@@ -7216,13 +7247,17 @@ function saveAddSingleVehicle() {
     // Update DB
     DB[addingVehicleKeyIdx].vehicles = updatedVehicles;
 
-    // If this is a custom key, save to customKeys
     if (key.isCustom) {
+        // Save to customKeys for custom keys
         const customIdx = customKeys.findIndex(k => k.pn === key.pn);
         if (customIdx >= 0) {
             customKeys[customIdx].vehicles = updatedVehicles;
             saveCustomKeys();
         }
+    } else {
+        // Save to vehicleOverrides for base database keys
+        vehicleOverrides[key.pn] = updatedVehicles;
+        saveVehicleOverrides();
     }
 
     // Refresh the key detail view
