@@ -13813,18 +13813,6 @@ function openVehicleDetail(vehicleKey) {
         return stockB - stockA; // In-stock first
     });
 
-    // Check if any key is a VATS key
-    const vatsKeys = sortedKeys.filter(k => k.isVATS);
-    const hasVATS = vatsKeys.length > 0;
-
-    // Collect secondary keys for VATS (door/trunk keys)
-    const secondaryKeyPNs = new Set();
-    vatsKeys.forEach(k => {
-        if (k.secondaryKeyPartNumber) {
-            secondaryKeyPNs.add(k.secondaryKeyPartNumber);
-        }
-    });
-
     html += `
         <div class="vehicle-section">
             <div class="vehicle-section-title">Compatible Keys (${sortedKeys.length})</div>
