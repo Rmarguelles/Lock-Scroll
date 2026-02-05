@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v56</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v57</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -11114,6 +11114,23 @@ function renderVehicleModelsForMake(make) {
         });
     });
 
+    // Also include models from custom vehicles
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model) {
+            // Apply year filter if set
+            if (yearFilter) {
+                const year = parseInt(yearFilter);
+                if (!(year >= v.startYear && year <= (v.endYear || v.startYear))) {
+                    return;
+                }
+            }
+
+            if (!modelMap[v.model]) {
+                modelMap[v.model] = { model: v.model, keys: new Set(), inStock: 0, isCustom: true };
+            }
+        }
+    });
+
     const models = Object.values(modelMap).sort((a, b) => a.model.localeCompare(b.model));
     const container = document.getElementById('vehicleModelsList');
 
@@ -11155,26 +11172,34 @@ function renderVehicleModelsForMake(make) {
     `}).join('');
 
     container.innerHTML = html;
-
-    // Add click handlers using event delegation
-    container.querySelectorAll('.vehicle-model-card').forEach(card => {
-        card.addEventListener('click', function(e) {
-            // Don't trigger if clicking the rename button
-            if (e.target.closest('.rename-model-btn')) return;
-            const model = this.getAttribute('data-model');
-            selectVehicleModel(model);
-        });
-    });
-
-    container.querySelectorAll('.rename-model-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const make = this.getAttribute('data-make');
-            const model = this.getAttribute('data-model');
-            openRenameModelModal(make, model);
-        });
-    });
 }
+
+// Set up event delegation for vehicle model clicks (runs once on page load)
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('vehicleModelsList');
+    if (container) {
+        container.addEventListener('click', function(e) {
+            // Check if clicked on rename button
+            const renameBtn = e.target.closest('.rename-model-btn');
+            if (renameBtn) {
+                e.stopPropagation();
+                const make = renameBtn.getAttribute('data-make');
+                const model = renameBtn.getAttribute('data-model');
+                openRenameModelModal(make, model);
+                return;
+            }
+
+            // Check if clicked on a model card
+            const card = e.target.closest('.vehicle-model-card');
+            if (card) {
+                const model = card.getAttribute('data-model');
+                if (model) {
+                    selectVehicleModel(model);
+                }
+            }
+        });
+    }
+});
 
 // Rename Model functions
 function openRenameModelModal(make, oldName) {
