@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v66</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v67</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v66</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v67</p>
         </div>
 
         <div class="settings-section">
@@ -4819,11 +4819,12 @@
             </div>
         </div>
         <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Code Series (optional)</label>
-            <select id="addVehCodeSeries" onchange="onAddSingleVehicleCodeSeriesChange(this.value)"
-                style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
-                <option value="">Select Code Series...</option>
-            </select>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <label style="font-size:12px;color:var(--dim);">Code Series (optional)</label>
+                <button onclick="addAddVehicleCodeSeriesEntry()"
+                    style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Series</button>
+            </div>
+            <div id="addVehCodeSeriesList" style="max-height:150px;overflow-y:auto;"></div>
         </div>
         <div class="modal-buttons">
             <button class="modal-btn" onclick="closeAddSingleVehicleModal()">Cancel</button>
@@ -4851,6 +4852,16 @@
         <div class="modal-input-group">
             <label>Chip Type</label>
             <input type="text" class="modal-input" id="editCustomKeyChip">
+        </div>
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="editCustomKeyIsVATS" onchange="toggleVATSFields()" style="width:18px;height:18px;cursor:pointer;">
+                <span>VATS Key</span>
+            </label>
+        </div>
+        <div class="modal-input-group" id="editCustomKeyVATSSection" style="display:none;background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border-left:3px solid var(--accent2);">
+            <label style="color:var(--accent2);">Secondary Key Part Number (Door/Trunk)</label>
+            <input type="text" class="modal-input" id="editCustomKeySecondaryPN" placeholder="e.g., B62">
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
@@ -5712,7 +5723,18 @@
             </select>
             <input type="text" class="add-inv-input" id="customKeyChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:8px;">
         </div>
-        
+
+        <div class="add-inv-section" style="display:flex;align-items:center;gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
+                <input type="checkbox" id="customKeyIsVATS" onchange="toggleAddCustomKeyVATSFields()" style="width:18px;height:18px;cursor:pointer;">
+                <span>VATS Key</span>
+            </label>
+        </div>
+        <div class="add-inv-section" id="customKeyVATSSection" style="display:none;background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border-left:3px solid var(--accent2);">
+            <label style="color:var(--accent2);">Secondary Key Part Number (Door/Trunk)</label>
+            <input type="text" class="add-inv-input" id="customKeySecondaryPN" placeholder="e.g., B62">
+        </div>
+
         <div class="add-inv-section">
             <label>Key Type</label>
             <select class="add-inv-select" id="customKeyType" onchange="handleCustomDropdown(this, 'customKeyTypeOther')">
@@ -7632,6 +7654,18 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                 <span class="detail-label">Chip Type</span>
                 <span class="detail-value">${key.chip || 'N/A'}</span>
             </div>
+            ${key.isVATS ? `
+            <div class="detail-row" style="background:linear-gradient(90deg, rgba(255,107,53,0.15), transparent);border-left:3px solid var(--accent2);padding-left:12px;margin:8px 0;">
+                <span class="detail-label" style="color:var(--accent2);font-weight:600;">🔑 VATS Key</span>
+                <span class="detail-value" style="color:var(--accent2);font-weight:600;">Yes</span>
+            </div>
+            ${key.secondaryKeyPartNumber ? `
+            <div class="detail-row" style="background:rgba(255,107,53,0.08);padding-left:15px;">
+                <span class="detail-label">Secondary Key (Door/Trunk)</span>
+                <span class="detail-value mono">${key.secondaryKeyPartNumber} <span style="color:var(--accent);font-size:11px;">(Stock: ${stockData[key.secondaryKeyPartNumber] || 0})</span></span>
+            </div>
+            ` : ''}
+            ` : ''}
             <div class="detail-row">
                 <span class="detail-label">Frequency</span>
                 <span class="detail-value">${key.frequency || 'N/A'}</span>
@@ -7690,12 +7724,29 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                     <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
                 </div>
             </div>
-            ${(key.vehicles || []).map(v => `
-                <div class="detail-row" style="flex-wrap:wrap;">
-                    <span class="detail-label">${v.make} ${v.model}</span>
-                    <span class="detail-value">${v.startYear} - ${v.endYear}${v.codeSeries ? ` <span style="color:var(--accent2);font-size:11px;margin-left:6px;">📋 ${v.codeSeries}</span>` : ''}</span>
+            ${(key.vehicles || []).map(v => {
+                // Handle codeSeries: can be string (old format) or array (new format)
+                let codeSeriesHtml = '';
+                if (v.codeSeries) {
+                    if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
+                        // New array format: [{ years: "1997-1999", series: "AA00-7T51" }]
+                        codeSeriesHtml = v.codeSeries.map(cs =>
+                            `<div style="color:var(--accent2);font-size:11px;margin-top:4px;">📋 ${cs.series} <span style="color:var(--dim);font-size:10px;">(${cs.years})</span></div>`
+                        ).join('');
+                    } else if (typeof v.codeSeries === 'string') {
+                        // Old string format for backwards compatibility
+                        codeSeriesHtml = `<span style="color:var(--accent2);font-size:11px;margin-left:6px;">📋 ${v.codeSeries}</span>`;
+                    }
+                }
+                return `
+                <div class="detail-row" style="flex-wrap:wrap;flex-direction:column;align-items:flex-start;">
+                    <div style="display:flex;justify-content:space-between;width:100%;">
+                        <span class="detail-label">${v.make} ${v.model}</span>
+                        <span class="detail-value">${v.startYear} - ${v.endYear}</span>
+                    </div>
+                    ${Array.isArray(v.codeSeries) && v.codeSeries.length > 0 ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : (typeof v.codeSeries === 'string' && v.codeSeries ? codeSeriesHtml : '')}
                 </div>
-            `).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
+            `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
         </div>
     `;
 
@@ -7822,6 +7873,35 @@ function renderEditVehiclesList() {
         const models = v.make ? (vehicleModelsCache[v.make] || []) : [];
         const modelOptions = models.map(m => `<option value="${m}"${m === v.model ? ' selected' : ''}>${m}</option>`).join('');
 
+        // Normalize codeSeries to array format
+        let codeSeriesArr = [];
+        if (v.codeSeries) {
+            if (Array.isArray(v.codeSeries)) {
+                codeSeriesArr = v.codeSeries;
+            } else if (typeof v.codeSeries === 'string') {
+                // Convert old string format to array format
+                codeSeriesArr = [{ years: `${v.startYear || ''}-${v.endYear || ''}`, series: v.codeSeries }];
+            }
+        }
+
+        // Render code series entries
+        const codeSeriesEntriesHtml = codeSeriesArr.map((cs, j) => `
+            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;" data-vehicle="${i}" data-cs="${j}">
+                <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
+                    onchange="updateEditVehicleCodeSeriesYears(${i}, ${j}, this.value)"
+                    style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
+                <select onchange="onEditVehicleCodeSeriesEntryChange(${i}, ${j}, this.value)"
+                    style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                    id="editVehCodeSeriesEntry${i}_${j}">
+                    <option value="">Select Series...</option>
+                    ${codeSeriesOptions}
+                    <option value="__add_new__">+ Add New...</option>
+                </select>
+                <button onclick="removeEditVehicleCodeSeriesEntry(${i}, ${j})"
+                    style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+            </div>
+        `).join('');
+
         return `
             <div style="padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -7847,12 +7927,14 @@ function renderEditVehiclesList() {
                         style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
                     <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🗑️</button>
                 </div>
-                <select id="editVehCodeSeries${i}" onchange="onEditVehicleCodeSeriesChange(${i}, this.value)"
-                    style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                    <option value="">Code Series (optional)</option>
-                    ${codeSeriesOptions}
-                    <option value="__add_new__">+ Add New Code Series...</option>
-                </select>
+                <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:11px;color:var(--dim);">Code Series (with year ranges)</span>
+                        <button onclick="addEditVehicleCodeSeriesEntry(${i})"
+                            style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Series</button>
+                    </div>
+                    ${codeSeriesEntriesHtml || '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px;">No code series added</div>'}
+                </div>
             </div>
         `;
     }).join('');
@@ -7884,21 +7966,70 @@ function renderEditVehiclesList() {
             modelSelect.value = v.model;
         }
 
-        const codeSeriesSelect = document.getElementById(`editVehCodeSeries${i}`);
-        if (codeSeriesSelect && v.codeSeries) {
-            // Check if code series exists in options, if not add it
-            if (!codeSeriesCache.includes(v.codeSeries)) {
-                const opt = document.createElement('option');
-                opt.value = v.codeSeries;
-                opt.text = v.codeSeries;
-                codeSeriesSelect.insertBefore(opt, codeSeriesSelect.lastElementChild);
+        // Set code series entry values
+        let codeSeriesArr = [];
+        if (v.codeSeries) {
+            if (Array.isArray(v.codeSeries)) {
+                codeSeriesArr = v.codeSeries;
+            } else if (typeof v.codeSeries === 'string') {
+                codeSeriesArr = [{ years: `${v.startYear || ''}-${v.endYear || ''}`, series: v.codeSeries }];
             }
-            codeSeriesSelect.value = v.codeSeries;
         }
+        codeSeriesArr.forEach((cs, j) => {
+            const csSelect = document.getElementById(`editVehCodeSeriesEntry${i}_${j}`);
+            if (csSelect && cs.series) {
+                // Check if series exists in options, if not add it
+                if (!codeSeriesCache.includes(cs.series)) {
+                    const opt = document.createElement('option');
+                    opt.value = cs.series;
+                    opt.text = cs.series;
+                    csSelect.insertBefore(opt, csSelect.lastElementChild);
+                }
+                csSelect.value = cs.series;
+            }
+        });
     });
 }
 
-function onEditVehicleCodeSeriesChange(index, value) {
+// Helper to ensure codeSeries is array format
+function ensureCodeSeriesArray(vehicleIdx) {
+    const v = editingVehicles[vehicleIdx];
+    if (!v.codeSeries) {
+        v.codeSeries = [];
+    } else if (typeof v.codeSeries === 'string') {
+        // Convert old string format to array
+        v.codeSeries = [{ years: `${v.startYear || ''}-${v.endYear || ''}`, series: v.codeSeries }];
+    } else if (!Array.isArray(v.codeSeries)) {
+        v.codeSeries = [];
+    }
+}
+
+function addEditVehicleCodeSeriesEntry(vehicleIdx) {
+    ensureCodeSeriesArray(vehicleIdx);
+    const v = editingVehicles[vehicleIdx];
+    const defaultYears = `${v.startYear || new Date().getFullYear()}-${v.endYear || new Date().getFullYear()}`;
+    v.codeSeries.push({ years: defaultYears, series: '' });
+    renderEditVehiclesList();
+}
+
+function removeEditVehicleCodeSeriesEntry(vehicleIdx, csIdx) {
+    ensureCodeSeriesArray(vehicleIdx);
+    editingVehicles[vehicleIdx].codeSeries.splice(csIdx, 1);
+    if (editingVehicles[vehicleIdx].codeSeries.length === 0) {
+        editingVehicles[vehicleIdx].codeSeries = [];
+    }
+    renderEditVehiclesList();
+}
+
+function updateEditVehicleCodeSeriesYears(vehicleIdx, csIdx, value) {
+    ensureCodeSeriesArray(vehicleIdx);
+    if (editingVehicles[vehicleIdx].codeSeries[csIdx]) {
+        editingVehicles[vehicleIdx].codeSeries[csIdx].years = value;
+    }
+}
+
+function onEditVehicleCodeSeriesEntryChange(vehicleIdx, csIdx, value) {
+    ensureCodeSeriesArray(vehicleIdx);
     if (value === '__add_new__') {
         const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
         if (newCodeSeries && newCodeSeries.trim()) {
@@ -7907,13 +8038,38 @@ function onEditVehicleCodeSeriesChange(index, value) {
                 codeSeriesCache.push(cs);
                 codeSeriesCache.sort();
             }
-            editingVehicles[index].codeSeries = cs;
+            editingVehicles[vehicleIdx].codeSeries[csIdx].series = cs;
             renderEditVehiclesList();
         } else {
             renderEditVehiclesList();
         }
     } else {
-        editingVehicles[index].codeSeries = value || null;
+        editingVehicles[vehicleIdx].codeSeries[csIdx].series = value || '';
+    }
+}
+
+// Legacy function for backwards compatibility
+function onEditVehicleCodeSeriesChange(index, value) {
+    ensureCodeSeriesArray(index);
+    if (value === '__add_new__') {
+        const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
+        if (newCodeSeries && newCodeSeries.trim()) {
+            const cs = newCodeSeries.trim();
+            if (!codeSeriesCache.includes(cs)) {
+                codeSeriesCache.push(cs);
+                codeSeriesCache.sort();
+            }
+            const v = editingVehicles[index];
+            const defaultYears = `${v.startYear || ''}-${v.endYear || ''}`;
+            v.codeSeries.push({ years: defaultYears, series: cs });
+            renderEditVehiclesList();
+        } else {
+            renderEditVehiclesList();
+        }
+    } else if (value) {
+        const v = editingVehicles[index];
+        const defaultYears = `${v.startYear || ''}-${v.endYear || ''}`;
+        v.codeSeries.push({ years: defaultYears, series: value });
     }
 }
 
@@ -7971,7 +8127,7 @@ function updateEditVehicle(index, field, value) {
 }
 
 function addVehicleToKey() {
-    editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: null });
+    editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] });
     renderEditVehiclesList();
 }
 
@@ -8012,11 +8168,11 @@ function saveKeyVehicles() {
 
 // ===================== ADD SINGLE VEHICLE =====================
 let addingVehicleKeyIdx = null;
-let addingVehicle = { make: '', model: '', startYear: '', endYear: '', codeSeries: '' };
+let addingVehicle = { make: '', model: '', startYear: '', endYear: '', codeSeries: [] };
 
 function openAddSingleVehicleModal(keyIdx) {
     addingVehicleKeyIdx = keyIdx;
-    addingVehicle = { make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: '' };
+    addingVehicle = { make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] };
     buildVehicleDropdownData();
     buildCodeSeriesCache();
 
@@ -8032,18 +8188,12 @@ function openAddSingleVehicleModal(keyIdx) {
     // Reset model dropdown
     document.getElementById('addVehModel').innerHTML = '<option value="">Select Model...</option>';
 
-    // Populate code series dropdown
-    const codeSeriesSelect = document.getElementById('addVehCodeSeries');
-    const codeSeriesOptions = codeSeriesCache.map(cs => `<option value="${cs}">${cs}</option>`).join('');
-    codeSeriesSelect.innerHTML = `
-        <option value="">Select Code Series...</option>
-        ${codeSeriesOptions}
-        <option value="__add_new__">+ Add New Code Series...</option>
-    `;
-
     // Set default years
     document.getElementById('addVehStartYear').value = new Date().getFullYear();
     document.getElementById('addVehEndYear').value = new Date().getFullYear();
+
+    // Render empty code series list
+    renderAddVehicleCodeSeriesList();
 
     document.getElementById('addSingleVehicleModal').classList.add('on');
 }
@@ -8051,9 +8201,88 @@ function openAddSingleVehicleModal(keyIdx) {
 function closeAddSingleVehicleModal() {
     document.getElementById('addSingleVehicleModal').classList.remove('on');
     addingVehicleKeyIdx = null;
-    addingVehicle = { make: '', model: '', startYear: '', endYear: '', codeSeries: '' };
+    addingVehicle = { make: '', model: '', startYear: '', endYear: '', codeSeries: [] };
 }
 
+function renderAddVehicleCodeSeriesList() {
+    const container = document.getElementById('addVehCodeSeriesList');
+    const codeSeriesOptions = codeSeriesCache.map(cs => `<option value="${cs}">${cs}</option>`).join('');
+
+    if (!addingVehicle.codeSeries || addingVehicle.codeSeries.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px;">No code series added</div>';
+        return;
+    }
+
+    container.innerHTML = addingVehicle.codeSeries.map((cs, j) => `
+        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
+                onchange="updateAddVehicleCodeSeriesYears(${j}, this.value)"
+                style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
+            <select onchange="onAddVehicleCodeSeriesEntryChange(${j}, this.value)"
+                style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                id="addVehCodeSeriesEntry${j}">
+                <option value="">Select Series...</option>
+                ${codeSeriesOptions}
+                <option value="__add_new__">+ Add New...</option>
+            </select>
+            <button onclick="removeAddVehicleCodeSeriesEntry(${j})"
+                style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+        </div>
+    `).join('');
+
+    // Set selected values
+    addingVehicle.codeSeries.forEach((cs, j) => {
+        const csSelect = document.getElementById(`addVehCodeSeriesEntry${j}`);
+        if (csSelect && cs.series) {
+            if (!codeSeriesCache.includes(cs.series)) {
+                const opt = document.createElement('option');
+                opt.value = cs.series;
+                opt.text = cs.series;
+                csSelect.insertBefore(opt, csSelect.lastElementChild);
+            }
+            csSelect.value = cs.series;
+        }
+    });
+}
+
+function addAddVehicleCodeSeriesEntry() {
+    const startYear = document.getElementById('addVehStartYear').value || new Date().getFullYear();
+    const endYear = document.getElementById('addVehEndYear').value || new Date().getFullYear();
+    addingVehicle.codeSeries.push({ years: `${startYear}-${endYear}`, series: '' });
+    renderAddVehicleCodeSeriesList();
+}
+
+function removeAddVehicleCodeSeriesEntry(idx) {
+    addingVehicle.codeSeries.splice(idx, 1);
+    renderAddVehicleCodeSeriesList();
+}
+
+function updateAddVehicleCodeSeriesYears(idx, value) {
+    if (addingVehicle.codeSeries[idx]) {
+        addingVehicle.codeSeries[idx].years = value;
+    }
+}
+
+function onAddVehicleCodeSeriesEntryChange(idx, value) {
+    if (value === '__add_new__') {
+        const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
+        if (newCodeSeries && newCodeSeries.trim()) {
+            const cs = newCodeSeries.trim();
+            if (!codeSeriesCache.includes(cs)) {
+                codeSeriesCache.push(cs);
+                codeSeriesCache.sort();
+            }
+            addingVehicle.codeSeries[idx].series = cs;
+            renderAddVehicleCodeSeriesList();
+        } else {
+            renderAddVehicleCodeSeriesList();
+        }
+    } else {
+        addingVehicle.codeSeries[idx].series = value || '';
+    }
+}
+
+// Legacy function for backwards compatibility
 function onAddSingleVehicleCodeSeriesChange(value) {
     if (value === '__add_new__') {
         const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
@@ -8063,22 +8292,16 @@ function onAddSingleVehicleCodeSeriesChange(value) {
                 codeSeriesCache.push(cs);
                 codeSeriesCache.sort();
             }
-            addingVehicle.codeSeries = cs;
-
-            // Refresh dropdown and select new value
-            const codeSeriesSelect = document.getElementById('addVehCodeSeries');
-            const codeSeriesOptions = codeSeriesCache.map(c => `<option value="${c}"${c === cs ? ' selected' : ''}>${c}</option>`).join('');
-            codeSeriesSelect.innerHTML = `
-                <option value="">Select Code Series...</option>
-                ${codeSeriesOptions}
-                <option value="__add_new__">+ Add New Code Series...</option>
-            `;
-            codeSeriesSelect.value = cs;
-        } else {
-            document.getElementById('addVehCodeSeries').value = addingVehicle.codeSeries || '';
+            const startYear = document.getElementById('addVehStartYear').value || new Date().getFullYear();
+            const endYear = document.getElementById('addVehEndYear').value || new Date().getFullYear();
+            addingVehicle.codeSeries.push({ years: `${startYear}-${endYear}`, series: cs });
+            renderAddVehicleCodeSeriesList();
         }
-    } else {
-        addingVehicle.codeSeries = value;
+    } else if (value) {
+        const startYear = document.getElementById('addVehStartYear').value || new Date().getFullYear();
+        const endYear = document.getElementById('addVehEndYear').value || new Date().getFullYear();
+        addingVehicle.codeSeries.push({ years: `${startYear}-${endYear}`, series: value });
+        renderAddVehicleCodeSeriesList();
     }
 }
 
@@ -8163,8 +8386,9 @@ function saveAddSingleVehicle() {
     const model = addingVehicle.model;
     const startYear = parseInt(document.getElementById('addVehStartYear').value);
     const endYear = parseInt(document.getElementById('addVehEndYear').value);
-    const codeSeriesVal = document.getElementById('addVehCodeSeries').value;
-    const codeSeries = codeSeriesVal && codeSeriesVal !== '__add_new__' ? codeSeriesVal : null;
+
+    // Filter out empty code series entries and use array format
+    const codeSeries = (addingVehicle.codeSeries || []).filter(cs => cs.series && cs.series.trim());
 
     // Validate
     if (!make || !model) {
@@ -8180,7 +8404,7 @@ function saveAddSingleVehicle() {
         return;
     }
 
-    const newVehicle = { make, model, startYear, endYear, codeSeries };
+    const newVehicle = { make, model, startYear, endYear, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
 
     // Get existing vehicles and add new one
     const key = DB[addingVehicleKeyIdx];
@@ -15414,34 +15638,45 @@ function openAddCustomKey() {
     document.getElementById('newKeyFidDisplay').style.display = 'none';
     document.getElementById('newKeyFidDisplay').textContent = '';
     customKeyVehicleCount = 0;
-    
+
     // Populate keyway dropdown
     populateCustomKeyDropdown('customKeyKeyway', 'keyway', 'Select keyway...');
     document.getElementById('customKeyKeywayOther').style.display = 'none';
     document.getElementById('customKeyKeywayOther').value = '';
-    
+
     // Populate chip dropdown
     populateCustomKeyDropdown('customKeyChip', 'chip', 'Select chip type...');
     document.getElementById('customKeyChipOther').style.display = 'none';
     document.getElementById('customKeyChipOther').value = '';
-    
+
+    // Reset VATS fields
+    document.getElementById('customKeyIsVATS').checked = false;
+    document.getElementById('customKeySecondaryPN').value = '';
+    document.getElementById('customKeyVATSSection').style.display = 'none';
+
     // Reset other dropdowns
     document.getElementById('customKeyType').value = '';
     document.getElementById('customKeyTypeOther').style.display = 'none';
     document.getElementById('customKeyTypeOther').value = '';
-    
+
     document.getElementById('customKeyButtons').value = '';
     document.getElementById('customKeyButtonsOther').style.display = 'none';
     document.getElementById('customKeyButtonsOther').value = '';
-    
+
     document.getElementById('customKeyFreq').value = '';
     document.getElementById('customKeyFreqOther').style.display = 'none';
     document.getElementById('customKeyFreqOther').value = '';
 
     // Add one vehicle row by default
     addCustomKeyVehicle();
-    
+
     document.getElementById('addCustomKeyPanel').classList.add('on');
+}
+
+function toggleAddCustomKeyVATSFields() {
+    const isVATS = document.getElementById('customKeyIsVATS').checked;
+    const vatsSection = document.getElementById('customKeyVATSSection');
+    vatsSection.style.display = isVATS ? 'block' : 'none';
 }
 
 function populateCustomKeyDropdown(selectId, field, placeholder) {
@@ -15699,6 +15934,10 @@ function saveCustomKey() {
         }
     });
 
+    // Get VATS fields
+    const isVATS = document.getElementById('customKeyIsVATS').checked;
+    const secondaryKeyPartNumber = isVATS ? (document.getElementById('customKeySecondaryPN').value.trim() || null) : null;
+
     // Create the new key object
     const newKey = {
         pn: pn,
@@ -15711,7 +15950,9 @@ function saveCustomKey() {
         notes: document.getElementById('customKeyNotes').value.trim() || null,
         vehicles: vehicles,
         isCustom: true,
-        addedDate: new Date().toISOString()
+        addedDate: new Date().toISOString(),
+        isVATS: isVATS,
+        secondaryKeyPartNumber: secondaryKeyPartNumber
     };
     
     // Add to DB array
@@ -15777,7 +16018,7 @@ let editingCustomKeyIndex = null;
 function openEditCustomKeyModal(idx) {
     editingCustomKeyIndex = idx;
     const key = customKeys[idx];
-    
+
     document.getElementById('editCustomKeyPN').value = key.pn || '';
     document.getElementById('editCustomKeyFCC').value = key.fccid || '';
     document.getElementById('editCustomKeyKeyway').value = key.keyway || '';
@@ -15787,7 +16028,18 @@ function openEditCustomKeyModal(idx) {
     document.getElementById('editCustomKeyFrequency').value = key.frequency || '';
     document.getElementById('editCustomKeyNotes').value = key.notes || '';
 
+    // VATS fields
+    document.getElementById('editCustomKeyIsVATS').checked = key.isVATS || false;
+    document.getElementById('editCustomKeySecondaryPN').value = key.secondaryKeyPartNumber || '';
+    toggleVATSFields();
+
     document.getElementById('editCustomKeyModal').classList.add('on');
+}
+
+function toggleVATSFields() {
+    const isVATS = document.getElementById('editCustomKeyIsVATS').checked;
+    const vatsSection = document.getElementById('editCustomKeyVATSSection');
+    vatsSection.style.display = isVATS ? 'block' : 'none';
 }
 
 function closeEditCustomKeyModal() {
@@ -15797,10 +16049,10 @@ function closeEditCustomKeyModal() {
 
 function saveEditCustomKey() {
     if (editingCustomKeyIndex === null) return;
-    
+
     const key = customKeys[editingCustomKeyIndex];
     const oldPn = key.pn;
-    
+
     // Update custom key
     key.fccid = document.getElementById('editCustomKeyFCC').value.trim() || null;
     key.keyway = document.getElementById('editCustomKeyKeyway').value.trim() || null;
@@ -15809,13 +16061,17 @@ function saveEditCustomKey() {
     key.buttons = document.getElementById('editCustomKeyButtons').value.trim() || null;
     key.frequency = document.getElementById('editCustomKeyFrequency').value.trim() || null;
     key.notes = document.getElementById('editCustomKeyNotes').value.trim() || null;
-    
+
+    // VATS fields
+    key.isVATS = document.getElementById('editCustomKeyIsVATS').checked;
+    key.secondaryKeyPartNumber = key.isVATS ? (document.getElementById('editCustomKeySecondaryPN').value.trim() || null) : null;
+
     // Update in DB array
     const dbIndex = DB.findIndex(k => String(k.pn) === String(oldPn) && k.isCustom);
     if (dbIndex >= 0) {
         DB[dbIndex] = { ...key };
     }
-    
+
     saveCustomKeys();
     renderCustomKeysList();
     buildFilters();
