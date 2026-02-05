@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v54</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v55</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -11137,9 +11137,10 @@ function renderVehicleModelsForMake(make) {
     }
 
     html += models.map(m => {
-        const encodedModel = encodeURIComponent(m.model);
+        const safeModel = m.model.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeMake = selectedVehicleMake.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         return `
-        <div class="vehicle-card" onclick="selectVehicleModel(decodeURIComponent('${encodedModel}'))" style="display:flex;align-items:center;cursor:pointer;">
+        <div class="vehicle-card" onclick="selectVehicleModel('${safeModel}')" style="display:flex;align-items:center;cursor:pointer;">
             <div style="flex:1;">
                 <div class="vehicle-card-header">
                     <div class="vehicle-card-title">${m.model}</div>
@@ -11151,7 +11152,7 @@ function renderVehicleModelsForMake(make) {
                     <span style="color:var(--dim);">${m.keys.size} key${m.keys.size !== 1 ? 's' : ''}</span>
                 </div>
             </div>
-            <button onclick="event.stopPropagation(); openRenameModelModal(decodeURIComponent('${encodedMake}'), decodeURIComponent('${encodedModel}'))" style="margin-left:12px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️</button>
+            <button onclick="event.stopPropagation(); openRenameModelModal('${safeMake}', '${safeModel}')" style="margin-left:12px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">✏️</button>
         </div>
     `}).join('');
 
