@@ -3691,6 +3691,302 @@
         }
         
         .toast.on { display: block; }
+
+        /* Year Range Form Styles */
+        .year-range-form-modal .modal-content {
+            max-width: 500px;
+            max-height: 90vh;
+        }
+
+        .year-range-section {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .year-range-section-title {
+            font-size: 11px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .year-range-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .year-range-row > div {
+            flex: 1;
+        }
+
+        .dropdown-with-new {
+            position: relative;
+        }
+
+        .dropdown-with-new select {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .dropdown-with-new select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .inline-add-new {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .inline-add-new.visible {
+            display: block;
+        }
+
+        .inline-add-new input {
+            width: 100%;
+            padding: 10px;
+            background: var(--card);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .inline-add-new input:focus {
+            outline: none;
+        }
+
+        .auto-populated {
+            position: relative;
+        }
+
+        .auto-populated::after {
+            content: '⚡';
+            position: absolute;
+            right: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .auto-populated select {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        /* Multi-select for Button Functions */
+        .multiselect-container {
+            position: relative;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            min-height: 44px;
+        }
+
+        .multiselect-container:focus-within {
+            border-color: var(--accent);
+        }
+
+        .multiselect-selected {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px;
+            min-height: 44px;
+            cursor: pointer;
+        }
+
+        .multiselect-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .multiselect-tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .multiselect-tag-remove:hover {
+            opacity: 1;
+        }
+
+        .multiselect-placeholder {
+            color: var(--dim);
+            font-size: 14px;
+            padding: 4px 0;
+        }
+
+        .multiselect-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            margin-top: 4px;
+        }
+
+        .multiselect-dropdown.open {
+            display: block;
+        }
+
+        .multiselect-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .multiselect-option:last-child {
+            border-bottom: none;
+        }
+
+        .multiselect-option:hover {
+            background: var(--bg);
+        }
+
+        .multiselect-option.selected {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .multiselect-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .multiselect-option.selected .multiselect-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .multiselect-option.selected .multiselect-checkbox::after {
+            content: '✓';
+            color: var(--bg);
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Conflict Warnings */
+        .conflict-warning {
+            display: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .conflict-warning.visible {
+            display: block;
+        }
+
+        .conflict-warning.warn {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .conflict-warning.block {
+            background: rgba(255, 68, 68, 0.15);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+        }
+
+        .conflict-warning-text {
+            margin-bottom: 8px;
+        }
+
+        .conflict-verify {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .conflict-verify input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--warning);
+        }
+
+        .conflict-verify label {
+            font-size: 11px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .warnings-summary {
+            display: none;
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .warnings-summary.visible {
+            display: block;
+        }
+
+        .warnings-summary-title {
+            font-size: 12px;
+            color: var(--warning);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .warnings-summary-list {
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        .warnings-summary-item {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .warnings-summary-item::before {
+            content: '⚠️';
+            font-size: 10px;
+        }
+
+        .modal-btn.primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -4809,32 +5105,218 @@
     </div>
 </div>
 
-<!-- Add Year Range Modal -->
-<div class="modal" id="addYearRangeModal">
+<!-- Add Year Range Modal (Enhanced) -->
+<div class="modal year-range-form-modal" id="addYearRangeModal">
     <div class="modal-content">
-        <div class="modal-title">📅 Add Year Range</div>
+        <div class="modal-title">Add Year Range</div>
         <input type="hidden" id="addYearRangeMake">
         <input type="hidden" id="addYearRangeModel">
         <input type="hidden" id="addYearRangeKeyType">
+
+        <!-- Vehicle Info Banner -->
         <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:16px;">
             <div id="addYearRangeVehicleInfo" style="font-size:14px;color:var(--accent);font-weight:600;"></div>
         </div>
-        <div class="modal-input-group" style="display:flex;gap:8px;">
-            <div style="flex:1;">
-                <label>Start Year</label>
-                <input type="number" class="modal-input" id="addYearRangeStart" placeholder="2020" min="1900" max="2099">
+
+        <!-- Required: Year Range -->
+        <div class="year-range-section">
+            <div class="year-range-section-title">Year Range (Required)</div>
+            <div class="year-range-row">
+                <div class="modal-input-group" style="margin-bottom:0;">
+                    <label>Start Year</label>
+                    <input type="number" class="modal-input" id="addYearRangeStart" placeholder="2020" min="1900" max="2099" oninput="checkYearRangeConflicts()">
+                </div>
+                <div class="modal-input-group" style="margin-bottom:0;">
+                    <label>End Year</label>
+                    <input type="number" class="modal-input" id="addYearRangeEnd" placeholder="2024" min="1900" max="2099" oninput="checkYearRangeConflicts()">
+                </div>
             </div>
-            <div style="flex:1;">
-                <label>End Year</label>
-                <input type="number" class="modal-input" id="addYearRangeEnd" placeholder="2024" min="1900" max="2099">
+            <!-- Year Range Conflict Warnings -->
+            <div class="conflict-warning block" id="duplicateYearWarning">
+                <div class="conflict-warning-text">This year range already exists. Edit instead?</div>
+            </div>
+            <div class="conflict-warning warn" id="overlapYearWarning">
+                <div class="conflict-warning-text" id="overlapYearWarningText">Overlaps with existing range. Verify intentional.</div>
+                <div class="conflict-verify">
+                    <input type="checkbox" id="verifyOverlapYear" onchange="updateSaveButtonState()">
+                    <label for="verifyOverlapYear">I've verified this is correct</label>
+                </div>
             </div>
         </div>
-        <div id="addYearRangeOverlapWarning" style="display:none;padding:12px;background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:8px;margin-top:12px;">
-            <div style="font-size:12px;color:#ff4444;"></div>
+
+        <!-- Key Information Section -->
+        <div class="year-range-section">
+            <div class="year-range-section-title">Key Information</div>
+
+            <!-- Key Blank -->
+            <div class="modal-input-group">
+                <label>Key Blank</label>
+                <div class="dropdown-with-new">
+                    <select class="modal-input" id="yrfKeyBlank" onchange="onKeyBlankChange()">
+                        <option value="">Select Key Blank...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfKeyBlankNew">
+                        <input type="text" placeholder="Enter new key blank..." id="yrfKeyBlankNewInput">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyway (auto-populates from Key Blank) -->
+            <div class="modal-input-group">
+                <label>Keyway</label>
+                <div class="dropdown-with-new" id="yrfKeywayContainer">
+                    <select class="modal-input" id="yrfKeyway" onchange="onYrfFieldChange('keyway')">
+                        <option value="">Select Keyway...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfKeywayNew">
+                        <input type="text" placeholder="Enter new keyway..." id="yrfKeywayNewInput">
+                    </div>
+                </div>
+                <div class="conflict-warning warn" id="keywayMismatchWarning">
+                    <div class="conflict-warning-text" id="keywayMismatchText"></div>
+                    <div class="conflict-verify">
+                        <input type="checkbox" id="verifyKeywayMismatch" onchange="updateSaveButtonState()">
+                        <label for="verifyKeywayMismatch">I've verified this is correct</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chip Type (auto-populates from Key Blank) -->
+            <div class="modal-input-group">
+                <label>Chip Type</label>
+                <div class="dropdown-with-new" id="yrfChipContainer">
+                    <select class="modal-input" id="yrfChipType" onchange="onYrfFieldChange('chip')">
+                        <option value="">Select Chip Type...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfChipTypeNew">
+                        <input type="text" placeholder="Enter new chip type..." id="yrfChipTypeNewInput">
+                    </div>
+                </div>
+                <div class="conflict-warning warn" id="chipMismatchWarning">
+                    <div class="conflict-warning-text" id="chipMismatchText"></div>
+                    <div class="conflict-verify">
+                        <input type="checkbox" id="verifyChipMismatch" onchange="updateSaveButtonState()">
+                        <label for="verifyChipMismatch">I've verified this is correct</label>
+                    </div>
+                </div>
+                <div class="conflict-warning warn" id="noChipWarning">
+                    <div class="conflict-warning-text" id="noChipWarningText"></div>
+                    <div class="conflict-verify">
+                        <input type="checkbox" id="verifyNoChip" onchange="updateSaveButtonState()">
+                        <label for="verifyNoChip">I've verified this is correct</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Type -->
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <div class="dropdown-with-new">
+                    <select class="modal-input" id="yrfKeyType" onchange="onYrfDropdownChange('yrfKeyType')">
+                        <option value="">Select Key Type...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfKeyTypeNew">
+                        <input type="text" placeholder="Enter new key type..." id="yrfKeyTypeNewInput">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Button Count -->
+            <div class="modal-input-group">
+                <label>Button Count</label>
+                <div class="dropdown-with-new" id="yrfButtonCountContainer">
+                    <select class="modal-input" id="yrfButtonCount" onchange="onYrfDropdownChange('yrfButtonCount')">
+                        <option value="">Select Button Count...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfButtonCountNew">
+                        <input type="text" placeholder="Enter button count..." id="yrfButtonCountNewInput">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Button Functions (multi-select) -->
+            <div class="modal-input-group">
+                <label>Button Functions</label>
+                <div class="multiselect-container" id="yrfButtonFunctionsContainer" onclick="toggleButtonFunctionsDropdown(event)">
+                    <div class="multiselect-selected" id="yrfButtonFunctionsSelected">
+                        <span class="multiselect-placeholder">Select functions...</span>
+                    </div>
+                    <div class="multiselect-dropdown" id="yrfButtonFunctionsDropdown">
+                        <!-- Options populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- FCC ID -->
+            <div class="modal-input-group">
+                <label>FCC ID</label>
+                <div class="dropdown-with-new">
+                    <select class="modal-input" id="yrfFccId" onchange="onFccIdChange()">
+                        <option value="">Select FCC ID...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfFccIdNew">
+                        <input type="text" placeholder="Enter new FCC ID..." id="yrfFccIdNewInput">
+                    </div>
+                </div>
+                <div class="conflict-warning warn" id="fccMismatchWarning">
+                    <div class="conflict-warning-text" id="fccMismatchText"></div>
+                    <div class="conflict-verify">
+                        <input type="checkbox" id="verifyFccMismatch" onchange="updateSaveButtonState()">
+                        <label for="verifyFccMismatch">I've verified this is correct</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Frequency -->
+            <div class="modal-input-group">
+                <label>Frequency</label>
+                <div class="dropdown-with-new" id="yrfFrequencyContainer">
+                    <select class="modal-input" id="yrfFrequency" onchange="onYrfDropdownChange('yrfFrequency')">
+                        <option value="">Select Frequency...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfFrequencyNew">
+                        <input type="text" placeholder="Enter new frequency..." id="yrfFrequencyNewInput">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part Numbers Row -->
+            <div class="year-range-row">
+                <div class="modal-input-group" style="margin-bottom:0;">
+                    <label>Ilco Part Number</label>
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIlcoPartNum" onchange="onYrfDropdownChange('yrfIlcoPartNum')">
+                            <option value="">Select Ilco PN...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIlcoPartNumNew">
+                            <input type="text" placeholder="Enter Ilco PN..." id="yrfIlcoPartNumNewInput">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-input-group" style="margin-bottom:0;">
+                    <label>Keystone Part Number</label>
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfKeystonePartNum" onchange="onYrfDropdownChange('yrfKeystonePartNum')">
+                            <option value="">Select Keystone PN...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfKeystonePartNumNew">
+                            <input type="text" placeholder="Enter Keystone PN..." id="yrfKeystonePartNumNewInput">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- Warnings Summary -->
+        <div class="warnings-summary" id="yearRangeWarningsSummary">
+            <div class="warnings-summary-title">Warnings require verification before saving:</div>
+            <div class="warnings-summary-list" id="yearRangeWarningsList"></div>
+        </div>
+
+        <!-- Buttons -->
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeAddYearRangeModal()">Cancel</button>
-            <button class="modal-btn primary" onclick="saveNewYearRange()">Add Year Range</button>
+            <button class="modal-btn primary" id="saveYearRangeBtn" onclick="saveNewYearRange()">Add Year Range</button>
         </div>
     </div>
 </div>
@@ -11002,26 +11484,652 @@ function saveNewModel() {
 
 // ==================== ADD YEAR RANGE FUNCTIONS ====================
 
+// State for tracking auto-populated values and warnings
+let yrfAutoPopulated = {
+    keyway: null,
+    chip: null,
+    buttonCount: null,
+    frequency: null,
+    buttonFunctions: []
+};
+let yrfSelectedButtonFunctions = [];
+let yrfActiveWarnings = [];
+let yrfNewValues = {}; // Store new values to be added on save
+
+// Get all unique values from database for dropdowns
+function getYrfDropdownOptions() {
+    const options = {
+        keyBlanks: new Set(),
+        keyways: new Set(),
+        chipTypes: new Set(),
+        keyTypes: new Set(),
+        buttonCounts: new Set(),
+        buttonFunctions: new Set(),
+        fccIds: new Set(),
+        frequencies: new Set(),
+        ilcoPartNums: new Set(),
+        keystonePartNums: new Set()
+    };
+
+    // Collect from base DB
+    DB.forEach(key => {
+        if (key.pn) options.keyBlanks.add(key.pn);
+        if (key.keyway) options.keyways.add(key.keyway);
+        if (key.chip) options.chipTypes.add(key.chip);
+        if (key.keyType) options.keyTypes.add(key.keyType);
+        if (key.buttons) options.buttonCounts.add(key.buttons);
+        if (key.fccid) options.fccIds.add(key.fccid);
+        if (key.frequency) options.frequencies.add(key.frequency);
+        // Parse button functions if stored
+        if (key.buttonFunctions) {
+            (Array.isArray(key.buttonFunctions) ? key.buttonFunctions : key.buttonFunctions.split(',')).forEach(f => {
+                if (f.trim()) options.buttonFunctions.add(f.trim());
+            });
+        }
+        if (key.ilcoPartNum) options.ilcoPartNums.add(key.ilcoPartNum);
+        if (key.keystonePartNum) options.keystonePartNums.add(key.keystonePartNum);
+    });
+
+    // Collect from custom keys
+    customKeys.forEach(key => {
+        if (key.pn) options.keyBlanks.add(key.pn);
+        if (key.keyway) options.keyways.add(key.keyway);
+        if (key.chip) options.chipTypes.add(key.chip);
+        if (key.keyType) options.keyTypes.add(key.keyType);
+        if (key.buttons) options.buttonCounts.add(key.buttons);
+        if (key.fccid) options.fccIds.add(key.fccid);
+        if (key.frequency) options.frequencies.add(key.frequency);
+        if (key.ilcoPartNum) options.ilcoPartNums.add(key.ilcoPartNum);
+        if (key.keystonePartNum) options.keystonePartNums.add(key.keystonePartNum);
+    });
+
+    // Collect from custom vehicles
+    customVehicles.forEach(v => {
+        if (v.keyway) options.keyways.add(v.keyway);
+        if (v.chip) options.chipTypes.add(v.chip);
+        if (v.keyType) options.keyTypes.add(v.keyType);
+        if (v.buttons) options.buttonCounts.add(v.buttons);
+        if (v.fccid) options.fccIds.add(v.fccid);
+        if (v.frequency) options.frequencies.add(v.frequency);
+    });
+
+    // Add common button functions if not present
+    ['Lock', 'Unlock', 'Trunk', 'Panic', 'Remote Start', 'Hatch'].forEach(f => options.buttonFunctions.add(f));
+
+    // Add common key types if not present
+    ['Transponder', 'Proximity', 'Remote Head', 'Flip Key', 'FOBIK', 'Smart Key'].forEach(t => options.keyTypes.add(t));
+
+    // Add common frequencies
+    ['315 MHz', '433 MHz', '868 MHz'].forEach(f => options.frequencies.add(f));
+
+    return {
+        keyBlanks: [...options.keyBlanks].filter(v => v).sort(),
+        keyways: [...options.keyways].filter(v => v).sort(),
+        chipTypes: [...options.chipTypes].filter(v => v).sort(),
+        keyTypes: [...options.keyTypes].filter(v => v).sort(),
+        buttonCounts: [...options.buttonCounts].filter(v => v).sort((a, b) => {
+            const numA = parseInt(a) || 0;
+            const numB = parseInt(b) || 0;
+            return numA - numB;
+        }),
+        buttonFunctions: [...options.buttonFunctions].filter(v => v).sort(),
+        fccIds: [...options.fccIds].filter(v => v).sort(),
+        frequencies: [...options.frequencies].filter(v => v).sort(),
+        ilcoPartNums: [...options.ilcoPartNums].filter(v => v).sort(),
+        keystonePartNums: [...options.keystonePartNums].filter(v => v).sort()
+    };
+}
+
+// Populate a dropdown with options and "Add New"
+function populateYrfDropdown(selectId, options, placeholder) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    let html = `<option value="">${placeholder}</option>`;
+    html += `<option value="__ADD_NEW__" style="color:var(--accent);font-weight:600;">+ Add New</option>`;
+    options.forEach(opt => {
+        html += `<option value="${opt}">${opt}</option>`;
+    });
+    select.innerHTML = html;
+}
+
+// Populate all dropdowns
+function populateYrfDropdowns() {
+    const options = getYrfDropdownOptions();
+
+    populateYrfDropdown('yrfKeyBlank', options.keyBlanks, 'Select Key Blank...');
+    populateYrfDropdown('yrfKeyway', options.keyways, 'Select Keyway...');
+    populateYrfDropdown('yrfChipType', options.chipTypes, 'Select Chip Type...');
+    populateYrfDropdown('yrfKeyType', options.keyTypes, 'Select Key Type...');
+    populateYrfDropdown('yrfButtonCount', options.buttonCounts, 'Select Button Count...');
+    populateYrfDropdown('yrfFccId', options.fccIds, 'Select FCC ID...');
+    populateYrfDropdown('yrfFrequency', options.frequencies, 'Select Frequency...');
+    populateYrfDropdown('yrfIlcoPartNum', options.ilcoPartNums, 'Select Ilco PN...');
+    populateYrfDropdown('yrfKeystonePartNum', options.keystonePartNums, 'Select Keystone PN...');
+
+    // Populate button functions multi-select
+    populateButtonFunctionsDropdown(options.buttonFunctions);
+}
+
+// Populate button functions multi-select dropdown
+function populateButtonFunctionsDropdown(functions) {
+    const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
+    if (!dropdown) return;
+
+    let html = `<div class="multiselect-option" data-value="__ADD_NEW__" onclick="addNewButtonFunction(event)">
+        <div class="multiselect-checkbox" style="background:#4a90d9;border-color:#4a90d9;color:white;font-weight:bold;font-size:12px;">+</div>
+        <span style="color:var(--accent);">Add New Function</span>
+    </div>`;
+
+    functions.forEach(func => {
+        const isSelected = yrfSelectedButtonFunctions.includes(func);
+        html += `<div class="multiselect-option ${isSelected ? 'selected' : ''}" data-value="${func}" onclick="toggleButtonFunction(event, '${func}')">
+            <div class="multiselect-checkbox"></div>
+            <span class="multiselect-option-label">${func}</span>
+        </div>`;
+    });
+
+    dropdown.innerHTML = html;
+}
+
+// Toggle button function selection
+function toggleButtonFunction(event, func) {
+    event.stopPropagation();
+
+    const idx = yrfSelectedButtonFunctions.indexOf(func);
+    if (idx === -1) {
+        yrfSelectedButtonFunctions.push(func);
+    } else {
+        yrfSelectedButtonFunctions.splice(idx, 1);
+    }
+
+    updateButtonFunctionsDisplay();
+
+    // Update option styling
+    const option = event.currentTarget;
+    option.classList.toggle('selected');
+}
+
+// Add new button function
+function addNewButtonFunction(event) {
+    event.stopPropagation();
+
+    const newFunc = prompt('Enter new button function:');
+    if (newFunc && newFunc.trim()) {
+        const trimmed = newFunc.trim();
+        if (!yrfSelectedButtonFunctions.includes(trimmed)) {
+            yrfSelectedButtonFunctions.push(trimmed);
+            yrfNewValues.buttonFunctions = yrfNewValues.buttonFunctions || [];
+            yrfNewValues.buttonFunctions.push(trimmed);
+
+            // Re-populate dropdown with new function
+            const options = getYrfDropdownOptions();
+            options.buttonFunctions.push(trimmed);
+            options.buttonFunctions.sort();
+            populateButtonFunctionsDropdown([...new Set(options.buttonFunctions)]);
+            updateButtonFunctionsDisplay();
+        }
+    }
+}
+
+// Update button functions display
+function updateButtonFunctionsDisplay() {
+    const container = document.getElementById('yrfButtonFunctionsSelected');
+    if (!container) return;
+
+    if (yrfSelectedButtonFunctions.length === 0) {
+        container.innerHTML = '<span class="multiselect-placeholder">Select functions...</span>';
+    } else {
+        container.innerHTML = yrfSelectedButtonFunctions.map(func =>
+            `<span class="multiselect-tag">${func}<span class="multiselect-tag-remove" onclick="removeButtonFunction(event, '${func}')">&times;</span></span>`
+        ).join('');
+    }
+}
+
+// Remove button function
+function removeButtonFunction(event, func) {
+    event.stopPropagation();
+    const idx = yrfSelectedButtonFunctions.indexOf(func);
+    if (idx !== -1) {
+        yrfSelectedButtonFunctions.splice(idx, 1);
+        updateButtonFunctionsDisplay();
+
+        // Update dropdown option
+        const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
+        const option = dropdown.querySelector(`[data-value="${func}"]`);
+        if (option) option.classList.remove('selected');
+    }
+}
+
+// Toggle button functions dropdown
+function toggleButtonFunctionsDropdown(event) {
+    // Don't toggle if clicking on a tag remove button
+    if (event.target.classList.contains('multiselect-tag-remove')) return;
+
+    const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
+    dropdown.classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const container = document.getElementById('yrfButtonFunctionsContainer');
+    const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
+    if (container && dropdown && !container.contains(event.target)) {
+        dropdown.classList.remove('open');
+    }
+});
+
+// Handle "Add New" selection in dropdowns
+function onYrfDropdownChange(selectId) {
+    const select = document.getElementById(selectId);
+    const newInputContainer = document.getElementById(selectId + 'New');
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        newInputContainer.querySelector('input').focus();
+        select.value = '';
+    } else {
+        newInputContainer.classList.remove('visible');
+    }
+}
+
+// Key Blank change handler - auto-populate keyway and chip
+function onKeyBlankChange() {
+    const select = document.getElementById('yrfKeyBlank');
+    const newInputContainer = document.getElementById('yrfKeyBlankNew');
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        newInputContainer.querySelector('input').focus();
+        select.value = '';
+        return;
+    }
+
+    newInputContainer.classList.remove('visible');
+
+    if (!select.value) {
+        // Clear auto-populated values
+        yrfAutoPopulated.keyway = null;
+        yrfAutoPopulated.chip = null;
+        document.getElementById('yrfKeywayContainer').classList.remove('auto-populated');
+        document.getElementById('yrfChipContainer').classList.remove('auto-populated');
+        return;
+    }
+
+    // Find key blank in database
+    const keyBlank = select.value;
+    let foundKey = DB.find(k => k.pn === keyBlank) || customKeys.find(k => k.pn === keyBlank);
+
+    if (foundKey) {
+        // Auto-populate keyway
+        if (foundKey.keyway) {
+            yrfAutoPopulated.keyway = foundKey.keyway;
+            document.getElementById('yrfKeyway').value = foundKey.keyway;
+            document.getElementById('yrfKeywayContainer').classList.add('auto-populated');
+        }
+
+        // Auto-populate chip
+        if (foundKey.chip) {
+            yrfAutoPopulated.chip = foundKey.chip;
+            document.getElementById('yrfChipType').value = foundKey.chip;
+            document.getElementById('yrfChipContainer').classList.add('auto-populated');
+        }
+
+        // Clear any mismatch warnings since we just auto-populated
+        hideWarning('keywayMismatchWarning');
+        hideWarning('chipMismatchWarning');
+        hideWarning('noChipWarning');
+    }
+
+    updateSaveButtonState();
+}
+
+// FCC ID change handler - auto-populate button count, frequency, button functions
+function onFccIdChange() {
+    const select = document.getElementById('yrfFccId');
+    const newInputContainer = document.getElementById('yrfFccIdNew');
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        newInputContainer.querySelector('input').focus();
+        select.value = '';
+        return;
+    }
+
+    newInputContainer.classList.remove('visible');
+
+    if (!select.value) {
+        yrfAutoPopulated.buttonCount = null;
+        yrfAutoPopulated.frequency = null;
+        yrfAutoPopulated.buttonFunctions = [];
+        document.getElementById('yrfButtonCountContainer').classList.remove('auto-populated');
+        document.getElementById('yrfFrequencyContainer').classList.remove('auto-populated');
+        return;
+    }
+
+    // Find keys with this FCC ID
+    const fccId = select.value;
+    let foundKey = DB.find(k => k.fccid === fccId) || customKeys.find(k => k.fccid === fccId);
+
+    if (foundKey) {
+        // Auto-populate button count
+        if (foundKey.buttons) {
+            yrfAutoPopulated.buttonCount = foundKey.buttons;
+            document.getElementById('yrfButtonCount').value = foundKey.buttons;
+            document.getElementById('yrfButtonCountContainer').classList.add('auto-populated');
+        }
+
+        // Auto-populate frequency
+        if (foundKey.frequency) {
+            yrfAutoPopulated.frequency = foundKey.frequency;
+            document.getElementById('yrfFrequency').value = foundKey.frequency;
+            document.getElementById('yrfFrequencyContainer').classList.add('auto-populated');
+        }
+
+        // Auto-populate button functions
+        if (foundKey.buttonFunctions) {
+            const functions = Array.isArray(foundKey.buttonFunctions)
+                ? foundKey.buttonFunctions
+                : foundKey.buttonFunctions.split(',').map(f => f.trim()).filter(f => f);
+            yrfAutoPopulated.buttonFunctions = [...functions];
+            yrfSelectedButtonFunctions = [...functions];
+            updateButtonFunctionsDisplay();
+
+            // Update dropdown selections
+            const options = getYrfDropdownOptions();
+            populateButtonFunctionsDropdown([...new Set([...options.buttonFunctions, ...functions])]);
+        }
+
+        // Clear FCC mismatch warning
+        hideWarning('fccMismatchWarning');
+    }
+
+    updateSaveButtonState();
+}
+
+// Field change handler - check for mismatches
+function onYrfFieldChange(fieldType) {
+    const selectId = fieldType === 'keyway' ? 'yrfKeyway' : 'yrfChipType';
+    const select = document.getElementById(selectId);
+    const newInputContainer = document.getElementById(selectId === 'yrfKeyway' ? 'yrfKeywayNew' : 'yrfChipTypeNew');
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        newInputContainer.querySelector('input').focus();
+        select.value = '';
+        return;
+    }
+
+    newInputContainer.classList.remove('visible');
+
+    const keyBlank = document.getElementById('yrfKeyBlank').value;
+    if (!keyBlank) return;
+
+    // Check for mismatch with auto-populated value
+    if (fieldType === 'keyway' && yrfAutoPopulated.keyway) {
+        if (select.value && select.value !== yrfAutoPopulated.keyway) {
+            showWarning('keywayMismatchWarning', `${keyBlank} typically uses ${yrfAutoPopulated.keyway}. Confirm change.`);
+        } else {
+            hideWarning('keywayMismatchWarning');
+        }
+    }
+
+    if (fieldType === 'chip') {
+        // Check chip mismatch
+        if (yrfAutoPopulated.chip && select.value && select.value !== yrfAutoPopulated.chip) {
+            showWarning('chipMismatchWarning', `${keyBlank} typically uses ${yrfAutoPopulated.chip}. Confirm change.`);
+        } else {
+            hideWarning('chipMismatchWarning');
+        }
+
+        // Check "no chip" warning - Rule 6
+        if (yrfAutoPopulated.chip && yrfAutoPopulated.chip.toLowerCase() !== 'none' &&
+            select.value && (select.value.toLowerCase() === 'none' || select.value === '')) {
+            showWarning('noChipWarning', `${keyBlank} typically has chip. Did you mean ${yrfAutoPopulated.keyway || 'a different keyway'}?`);
+        } else {
+            hideWarning('noChipWarning');
+        }
+    }
+
+    updateSaveButtonState();
+}
+
+// Show a warning
+function showWarning(warningId, message) {
+    const warning = document.getElementById(warningId);
+    if (!warning) return;
+
+    const textEl = warning.querySelector('.conflict-warning-text');
+    if (textEl && message) textEl.textContent = message;
+
+    warning.classList.add('visible');
+
+    // Track active warning
+    if (!yrfActiveWarnings.includes(warningId)) {
+        yrfActiveWarnings.push(warningId);
+    }
+
+    updateWarningsSummary();
+}
+
+// Hide a warning
+function hideWarning(warningId) {
+    const warning = document.getElementById(warningId);
+    if (!warning) return;
+
+    warning.classList.remove('visible');
+
+    // Uncheck the verify checkbox
+    const checkbox = warning.querySelector('input[type="checkbox"]');
+    if (checkbox) checkbox.checked = false;
+
+    // Remove from active warnings
+    const idx = yrfActiveWarnings.indexOf(warningId);
+    if (idx !== -1) yrfActiveWarnings.splice(idx, 1);
+
+    updateWarningsSummary();
+}
+
+// Update warnings summary
+function updateWarningsSummary() {
+    const summary = document.getElementById('yearRangeWarningsSummary');
+    const list = document.getElementById('yearRangeWarningsList');
+
+    const activeWarnWarnings = yrfActiveWarnings.filter(w => {
+        const el = document.getElementById(w);
+        return el && el.classList.contains('warn') && el.classList.contains('visible');
+    });
+
+    if (activeWarnWarnings.length === 0) {
+        summary.classList.remove('visible');
+        return;
+    }
+
+    summary.classList.add('visible');
+
+    const warningMessages = {
+        'overlapYearWarning': 'Overlapping year range',
+        'keywayMismatchWarning': 'Keyway mismatch',
+        'chipMismatchWarning': 'Chip type mismatch',
+        'noChipWarning': 'Key blank typically has chip',
+        'fccMismatchWarning': 'FCC ID data mismatch'
+    };
+
+    list.innerHTML = activeWarnWarnings.map(w =>
+        `<div class="warnings-summary-item">${warningMessages[w] || 'Warning'}</div>`
+    ).join('');
+}
+
+// Check year range conflicts (Rules 1 & 2)
+function checkYearRangeConflicts() {
+    const make = document.getElementById('addYearRangeMake').value;
+    const model = document.getElementById('addYearRangeModel').value;
+    const keyType = document.getElementById('addYearRangeKeyType').value;
+    const startYear = parseInt(document.getElementById('addYearRangeStart').value);
+    const endYear = parseInt(document.getElementById('addYearRangeEnd').value) || startYear;
+
+    if (!startYear) {
+        hideWarning('duplicateYearWarning');
+        hideWarning('overlapYearWarning');
+        updateSaveButtonState();
+        return;
+    }
+
+    // Get existing ranges for this make/model/keyType
+    const existingRanges = [];
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model && normalizeKeyType(key.keyType) === keyType) {
+                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
+            }
+        });
+    });
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model === model && normalizeKeyType(v.keyType) === keyType) {
+            if (v.startYear) {
+                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
+            }
+        }
+    });
+
+    // Rule 1: Check for exact duplicate
+    const hasDuplicate = existingRanges.some(range =>
+        range.start === startYear && range.end === (endYear || startYear)
+    );
+
+    if (hasDuplicate) {
+        showWarning('duplicateYearWarning');
+        hideWarning('overlapYearWarning');
+        updateSaveButtonState();
+        return;
+    }
+
+    hideWarning('duplicateYearWarning');
+
+    // Rule 2: Check for overlap
+    const overlappingRanges = existingRanges.filter(range =>
+        !(endYear < range.start || startYear > range.end)
+    );
+
+    if (overlappingRanges.length > 0) {
+        const overlapText = overlappingRanges.map(r =>
+            r.start === r.end ? r.start : `${r.start}-${r.end}`
+        ).join(', ');
+        showWarning('overlapYearWarning', `Overlaps with [${overlapText}]. Verify intentional.`);
+    } else {
+        hideWarning('overlapYearWarning');
+    }
+
+    updateSaveButtonState();
+}
+
+// Update save button state based on validations
+function updateSaveButtonState() {
+    const btn = document.getElementById('saveYearRangeBtn');
+    if (!btn) return;
+
+    // Check for blocking error (duplicate)
+    const duplicateWarning = document.getElementById('duplicateYearWarning');
+    if (duplicateWarning && duplicateWarning.classList.contains('visible')) {
+        btn.disabled = true;
+        return;
+    }
+
+    // Check all warn warnings have verified checkboxes
+    const warnWarnings = ['overlapYearWarning', 'keywayMismatchWarning', 'chipMismatchWarning', 'noChipWarning', 'fccMismatchWarning'];
+
+    for (const warningId of warnWarnings) {
+        const warning = document.getElementById(warningId);
+        if (warning && warning.classList.contains('visible')) {
+            const checkbox = warning.querySelector('input[type="checkbox"]');
+            if (checkbox && !checkbox.checked) {
+                btn.disabled = true;
+                return;
+            }
+        }
+    }
+
+    btn.disabled = false;
+}
+
 function openAddYearRangeModal(make, model, keyType) {
+    // Reset state
+    yrfAutoPopulated = { keyway: null, chip: null, buttonCount: null, frequency: null, buttonFunctions: [] };
+    yrfSelectedButtonFunctions = [];
+    yrfActiveWarnings = [];
+    yrfNewValues = {};
+
+    // Set hidden fields
     document.getElementById('addYearRangeMake').value = make;
     document.getElementById('addYearRangeModel').value = model;
     document.getElementById('addYearRangeKeyType').value = keyType;
     document.getElementById('addYearRangeVehicleInfo').textContent = `${make} ${model} - ${keyType}`;
+
+    // Clear year inputs
     document.getElementById('addYearRangeStart').value = '';
     document.getElementById('addYearRangeEnd').value = '';
-    document.getElementById('addYearRangeOverlapWarning').style.display = 'none';
+
+    // Populate all dropdowns
+    populateYrfDropdowns();
+
+    // Reset all dropdowns
+    ['yrfKeyBlank', 'yrfKeyway', 'yrfChipType', 'yrfKeyType', 'yrfButtonCount', 'yrfFccId', 'yrfFrequency', 'yrfIlcoPartNum', 'yrfKeystonePartNum'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    // Reset button functions display
+    updateButtonFunctionsDisplay();
+
+    // Hide all inline add new inputs
+    document.querySelectorAll('.inline-add-new').forEach(el => {
+        el.classList.remove('visible');
+        const input = el.querySelector('input');
+        if (input) input.value = '';
+    });
+
+    // Remove auto-populated styling
+    document.querySelectorAll('.auto-populated').forEach(el => el.classList.remove('auto-populated'));
+
+    // Hide all warnings
+    ['duplicateYearWarning', 'overlapYearWarning', 'keywayMismatchWarning', 'chipMismatchWarning', 'noChipWarning', 'fccMismatchWarning'].forEach(id => {
+        hideWarning(id);
+    });
+
+    // Reset save button
+    document.getElementById('saveYearRangeBtn').disabled = false;
+
+    // Show modal
     document.getElementById('addYearRangeModal').classList.add('on');
     document.getElementById('addYearRangeStart').focus();
 }
 
 function closeAddYearRangeModal() {
     document.getElementById('addYearRangeModal').classList.remove('on');
+
+    // Close button functions dropdown
+    const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
+    if (dropdown) dropdown.classList.remove('open');
+}
+
+// Get value from dropdown or inline input
+function getYrfFieldValue(selectId, inputId) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+
+    // If inline add new is visible, use that value
+    const newContainer = document.getElementById(selectId + 'New');
+    if (newContainer && newContainer.classList.contains('visible') && input && input.value.trim()) {
+        return input.value.trim();
+    }
+
+    return select ? select.value : '';
 }
 
 function saveNewYearRange() {
     const make = document.getElementById('addYearRangeMake').value;
     const model = document.getElementById('addYearRangeModel').value;
-    const keyType = document.getElementById('addYearRangeKeyType').value;
+    const baseKeyType = document.getElementById('addYearRangeKeyType').value;
     const startYear = parseInt(document.getElementById('addYearRangeStart').value);
     const endYear = parseInt(document.getElementById('addYearRangeEnd').value) || startYear;
 
@@ -11040,48 +12148,73 @@ function saveNewYearRange() {
         return;
     }
 
-    // Check for overlapping year ranges
-    const existingRanges = [];
-    DB.forEach(key => {
-        (key.vehicles || []).forEach(v => {
-            if (v.make === make && v.model === model && normalizeKeyType(key.keyType) === keyType) {
-                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
-            }
-        });
-    });
-    customVehicles.forEach(v => {
-        if (v.make === make && v.model === model && normalizeKeyType(v.keyType) === keyType) {
-            if (v.startYear) {
-                existingRanges.push({ start: v.startYear, end: v.endYear || v.startYear });
-            }
-        }
-    });
-
-    const hasOverlap = existingRanges.some(range => {
-        return !(endYear < range.start || startYear > range.end);
-    });
-
-    if (hasOverlap) {
-        const warningEl = document.getElementById('addYearRangeOverlapWarning');
-        warningEl.style.display = 'block';
-        warningEl.querySelector('div').textContent = 'Warning: This year range overlaps with an existing range. The new range will still be created.';
+    // Check for blocking duplicate
+    const duplicateWarning = document.getElementById('duplicateYearWarning');
+    if (duplicateWarning && duplicateWarning.classList.contains('visible')) {
+        toast('Cannot save duplicate year range');
+        return;
     }
 
-    // Create a new custom vehicle for this year range
+    // Collect all field values
+    const keyBlank = getYrfFieldValue('yrfKeyBlank', 'yrfKeyBlankNewInput');
+    const keyway = getYrfFieldValue('yrfKeyway', 'yrfKeywayNewInput');
+    const chipType = getYrfFieldValue('yrfChipType', 'yrfChipTypeNewInput');
+    const keyType = getYrfFieldValue('yrfKeyType', 'yrfKeyTypeNewInput') || (baseKeyType === 'Proximity' ? 'Proximity' : 'Transponder');
+    const buttonCount = getYrfFieldValue('yrfButtonCount', 'yrfButtonCountNewInput');
+    const fccId = getYrfFieldValue('yrfFccId', 'yrfFccIdNewInput');
+    const frequency = getYrfFieldValue('yrfFrequency', 'yrfFrequencyNewInput');
+    const ilcoPartNum = getYrfFieldValue('yrfIlcoPartNum', 'yrfIlcoPartNumNewInput');
+    const keystonePartNum = getYrfFieldValue('yrfKeystonePartNum', 'yrfKeystonePartNumNewInput');
+    const buttonFunctions = [...yrfSelectedButtonFunctions];
+
+    // Collect override notes for any verified warnings
+    const overrideNotes = [];
+    const warnWarnings = ['overlapYearWarning', 'keywayMismatchWarning', 'chipMismatchWarning', 'noChipWarning', 'fccMismatchWarning'];
+
+    const warningLabels = {
+        'overlapYearWarning': 'Overlap verified',
+        'keywayMismatchWarning': 'Keyway mismatch verified',
+        'chipMismatchWarning': 'Chip mismatch verified',
+        'noChipWarning': 'No chip verified',
+        'fccMismatchWarning': 'FCC mismatch verified'
+    };
+
+    for (const warningId of warnWarnings) {
+        const warning = document.getElementById(warningId);
+        if (warning && warning.classList.contains('visible')) {
+            const checkbox = warning.querySelector('input[type="checkbox"]');
+            if (checkbox && checkbox.checked) {
+                const textEl = warning.querySelector('.conflict-warning-text');
+                overrideNotes.push(`${warningLabels[warningId]}: ${textEl ? textEl.textContent : ''}`);
+            }
+        }
+    }
+
+    // Determine data status based on fields filled
+    const hasKeyInfo = keyBlank || keyway || chipType || fccId;
+    const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+
+    // Create new custom vehicle
     const newVehicle = {
         id: Date.now().toString(),
         make: make,
         model: model,
         startYear: startYear,
         endYear: endYear,
-        dataStatus: 'incomplete',
-        keyType: keyType === 'Proximity' ? 'Proximity' : 'Transponder',
-        chip: '',
-        buttons: '',
-        fccid: '',
-        frequency: '',
-        keyway: '',
+        dataStatus: dataStatus,
+        keyType: keyType,
+        keyBlank: keyBlank,
+        chip: chipType,
+        buttons: buttonCount,
+        buttonFunctions: buttonFunctions,
+        fccid: fccId,
+        frequency: frequency,
+        keyway: keyway,
+        ilcoPartNum: ilcoPartNum,
+        keystonePartNum: keystonePartNum,
         notes: '',
+        hasOverrides: overrideNotes.length > 0,
+        overrideNotes: overrideNotes,
         createdAt: new Date().toISOString()
     };
 
@@ -11093,7 +12226,7 @@ function saveNewYearRange() {
     }
 
     closeAddYearRangeModal();
-    renderVehicleYearsForModel(make, model, keyType);
+    renderVehicleYearsForModel(make, model, baseKeyType);
 
     const yearDisplay = startYear === endYear ? startYear : `${startYear}-${endYear}`;
     toast(`Added year range: ${yearDisplay}`);
