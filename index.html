@@ -11139,8 +11139,8 @@ function renderVehicleModelsForMake(make) {
     html += models.map(m => {
         const encodedModel = encodeURIComponent(m.model);
         return `
-        <div class="vehicle-card" style="display:flex;align-items:center;">
-            <div onclick="selectVehicleModel(decodeURIComponent('${encodedModel}'))" style="flex:1;cursor:pointer;">
+        <div class="vehicle-card" onclick="selectVehicleModel(decodeURIComponent('${encodedModel}'))" style="display:flex;align-items:center;cursor:pointer;">
+            <div style="flex:1;">
                 <div class="vehicle-card-header">
                     <div class="vehicle-card-title">${m.model}</div>
                     <span class="vehicle-stock-badge ${m.inStock > 0 ? 'in-stock' : 'out-of-stock'}">
