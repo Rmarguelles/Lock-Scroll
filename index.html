@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v67</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v68</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v67</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v68</p>
         </div>
 
         <div class="settings-section">
@@ -5039,15 +5039,12 @@
         <div class="modal-title">✏️ Edit Vehicle Data</div>
         <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
         <div class="modal-input-group">
-            <label>Code Series</label>
-            <div class="dropdown-with-new">
-                <select class="modal-input" id="vehicleDataCodeSeries" onchange="onVehicleDataCodeSeriesChange()">
-                    <option value="">Select Code Series...</option>
-                </select>
-                <div class="inline-add-new" id="vehicleDataCodeSeriesNew">
-                    <input type="text" class="modal-input" id="vehicleDataCodeSeriesNewInput" placeholder="Enter new code series...">
-                </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <label style="margin:0;">Code Series</label>
+                <button onclick="addVehicleDataCodeSeriesEntry()"
+                    style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
             </div>
+            <div id="vehicleDataCodeSeriesList" style="max-height:200px;overflow-y:auto;"></div>
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -13672,8 +13669,25 @@ function openVehicleDetail(vehicleKey) {
     const vehicleData = lishiVehicleData[groupKey] || {};
 
     // Get code series - use override if available, otherwise use keyway as placeholder
-    const codeSeries = vehicleData.codeSeries || (keyways.length > 0 ? keyways[0] : 'N/A');
-    const isCodeSeriesOverride = !!vehicleData.codeSeries;
+    let codeSeriesDisplay = '';
+    let isCodeSeriesOverride = false;
+    if (vehicleData.codeSeries) {
+        isCodeSeriesOverride = true;
+        if (Array.isArray(vehicleData.codeSeries) && vehicleData.codeSeries.length > 0) {
+            // New array format: show each series with its year range
+            codeSeriesDisplay = vehicleData.codeSeries.map(cs =>
+                `<div style="margin-bottom:4px;">${cs.series} <span style="color:var(--dim);font-size:11px;">(${cs.years})</span></div>`
+            ).join('');
+        } else if (typeof vehicleData.codeSeries === 'string' && vehicleData.codeSeries) {
+            // Old string format
+            codeSeriesDisplay = vehicleData.codeSeries;
+        } else {
+            isCodeSeriesOverride = false;
+            codeSeriesDisplay = keyways.length > 0 ? keyways[0] : 'N/A';
+        }
+    } else {
+        codeSeriesDisplay = keyways.length > 0 ? keyways[0] : 'N/A';
+    }
 
     // Get FIDs for this vehicle's FCC IDs
     const fccids = Array.from(vehicle.fccids);
@@ -13729,7 +13743,7 @@ function openVehicleDetail(vehicleKey) {
             </div>
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Code Series ${!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : ''}</div>
-                <div class="vehicle-info-value highlight">${codeSeries}</div>
+                <div class="vehicle-info-value highlight">${codeSeriesDisplay}</div>
             </div>
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Keyway${keyways.length > 1 ? 's' : ''}</div>
@@ -15122,67 +15136,127 @@ function saveLishiNotes() {
 
 // Vehicle Data Edit Modal
 let currentVehicleDataEditKey = null;
+let currentVehicleDataStartYear = null;
+let currentVehicleDataEndYear = null;
+let vehicleDataCodeSeriesEntries = []; // Array of { years, series }
 
 function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     currentVehicleDataEditKey = groupKey;
+    currentVehicleDataStartYear = startYear;
+    currentVehicleDataEndYear = endYear;
     const vehicleData = lishiVehicleData[groupKey] || {};
 
     document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${startYear}-${endYear})`;
 
-    // Populate code series dropdown
-    populateVehicleDataCodeSeriesDropdown(vehicleData.codeSeries);
-
-    // Reset inline add new field
-    document.getElementById('vehicleDataCodeSeriesNew').classList.remove('visible');
-    document.getElementById('vehicleDataCodeSeriesNewInput').value = '';
-
-    document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
-    document.getElementById('vehicleDataEditModal').classList.add('on');
-}
-
-function populateVehicleDataCodeSeriesDropdown(selectedValue) {
     // Build code series cache if empty
     if (codeSeriesCache.length === 0) {
         buildCodeSeriesCache();
     }
 
-    const select = document.getElementById('vehicleDataCodeSeries');
-    const options = ['<option value="">Select Code Series...</option>'];
-
-    // Add all cached code series
-    codeSeriesCache.forEach(cs => {
-        const selected = cs === selectedValue ? ' selected' : '';
-        options.push(`<option value="${cs}"${selected}>${cs}</option>`);
-    });
-
-    // If current value exists but not in cache, add it
-    if (selectedValue && !codeSeriesCache.includes(selectedValue)) {
-        options.push(`<option value="${selectedValue}" selected>${selectedValue}</option>`);
+    // Initialize code series entries from existing data
+    if (vehicleData.codeSeries) {
+        if (Array.isArray(vehicleData.codeSeries)) {
+            vehicleDataCodeSeriesEntries = JSON.parse(JSON.stringify(vehicleData.codeSeries));
+        } else if (typeof vehicleData.codeSeries === 'string' && vehicleData.codeSeries) {
+            // Convert old string format to array format
+            vehicleDataCodeSeriesEntries = [{ years: `${startYear}-${endYear}`, series: vehicleData.codeSeries }];
+        } else {
+            vehicleDataCodeSeriesEntries = [];
+        }
+    } else {
+        vehicleDataCodeSeriesEntries = [];
     }
 
-    // Add "Add New" option at the end
-    options.push('<option value="__ADD_NEW__">+ Add New...</option>');
+    // Render the code series list
+    renderVehicleDataCodeSeriesList();
 
-    select.innerHTML = options.join('');
+    document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
+    document.getElementById('vehicleDataEditModal').classList.add('on');
 }
 
-function onVehicleDataCodeSeriesChange() {
-    const select = document.getElementById('vehicleDataCodeSeries');
-    const newInputContainer = document.getElementById('vehicleDataCodeSeriesNew');
+function renderVehicleDataCodeSeriesList() {
+    const container = document.getElementById('vehicleDataCodeSeriesList');
+    const codeSeriesOptions = codeSeriesCache.map(cs => `<option value="${cs}">${cs}</option>`).join('');
 
-    if (select.value === '__ADD_NEW__') {
-        newInputContainer.classList.add('visible');
-        document.getElementById('vehicleDataCodeSeriesNewInput').focus();
-        select.value = '';
+    if (vehicleDataCodeSeriesEntries.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:11px;text-align:center;padding:12px;">No code series added. Click "+ Add Code Series" to add one.</div>';
+        return;
+    }
+
+    container.innerHTML = vehicleDataCodeSeriesEntries.map((cs, j) => `
+        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
+                onchange="updateVehicleDataCodeSeriesYears(${j}, this.value)"
+                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
+            <select onchange="onVehicleDataCodeSeriesEntryChange(${j}, this.value)"
+                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                id="vehicleDataCodeSeriesEntry${j}">
+                <option value="">Select Series...</option>
+                ${codeSeriesOptions}
+                <option value="__add_new__">+ Add New...</option>
+            </select>
+            <button onclick="removeVehicleDataCodeSeriesEntry(${j})"
+                style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
+        </div>
+    `).join('');
+
+    // Set selected values
+    vehicleDataCodeSeriesEntries.forEach((cs, j) => {
+        const csSelect = document.getElementById(`vehicleDataCodeSeriesEntry${j}`);
+        if (csSelect && cs.series) {
+            if (!codeSeriesCache.includes(cs.series)) {
+                const opt = document.createElement('option');
+                opt.value = cs.series;
+                opt.text = cs.series;
+                csSelect.insertBefore(opt, csSelect.lastElementChild);
+            }
+            csSelect.value = cs.series;
+        }
+    });
+}
+
+function addVehicleDataCodeSeriesEntry() {
+    const defaultYears = `${currentVehicleDataStartYear || new Date().getFullYear()}-${currentVehicleDataEndYear || new Date().getFullYear()}`;
+    vehicleDataCodeSeriesEntries.push({ years: defaultYears, series: '' });
+    renderVehicleDataCodeSeriesList();
+}
+
+function removeVehicleDataCodeSeriesEntry(idx) {
+    vehicleDataCodeSeriesEntries.splice(idx, 1);
+    renderVehicleDataCodeSeriesList();
+}
+
+function updateVehicleDataCodeSeriesYears(idx, value) {
+    if (vehicleDataCodeSeriesEntries[idx]) {
+        vehicleDataCodeSeriesEntries[idx].years = value;
+    }
+}
+
+function onVehicleDataCodeSeriesEntryChange(idx, value) {
+    if (value === '__add_new__') {
+        const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
+        if (newCodeSeries && newCodeSeries.trim()) {
+            const cs = newCodeSeries.trim();
+            if (!codeSeriesCache.includes(cs)) {
+                codeSeriesCache.push(cs);
+                codeSeriesCache.sort();
+            }
+            vehicleDataCodeSeriesEntries[idx].series = cs;
+            renderVehicleDataCodeSeriesList();
+        } else {
+            renderVehicleDataCodeSeriesList();
+        }
     } else {
-        newInputContainer.classList.remove('visible');
-        document.getElementById('vehicleDataCodeSeriesNewInput').value = '';
+        vehicleDataCodeSeriesEntries[idx].series = value || '';
     }
 }
 
 function closeVehicleDataEditModal() {
     document.getElementById('vehicleDataEditModal').classList.remove('on');
     currentVehicleDataEditKey = null;
+    currentVehicleDataStartYear = null;
+    currentVehicleDataEndYear = null;
+    vehicleDataCodeSeriesEntries = [];
 }
 
 function saveVehicleDataEdit() {
@@ -15196,31 +15270,16 @@ function saveVehicleDataEdit() {
             lastConfirmedBy: null,
             notes: '',
             lastEditedBy: null,
-            codeSeries: ''
+            codeSeries: []
         };
     }
 
-    // Get code series from dropdown or new input field
-    const newInputContainer = document.getElementById('vehicleDataCodeSeriesNew');
-    const newInput = document.getElementById('vehicleDataCodeSeriesNewInput');
-    const select = document.getElementById('vehicleDataCodeSeries');
-
-    let codeSeries = '';
-    if (newInputContainer.classList.contains('visible') && newInput.value.trim()) {
-        // User is adding a new code series
-        codeSeries = newInput.value.trim();
-        // Add to cache for future use
-        if (!codeSeriesCache.includes(codeSeries)) {
-            codeSeriesCache.push(codeSeries);
-            codeSeriesCache.sort();
-        }
-    } else {
-        codeSeries = select.value || '';
-    }
+    // Filter out empty code series entries
+    const validCodeSeries = vehicleDataCodeSeriesEntries.filter(cs => cs.series && cs.series.trim());
 
     const notes = document.getElementById('vehicleDataNotes').value.trim();
 
-    lishiVehicleData[currentVehicleDataEditKey].codeSeries = codeSeries;
+    lishiVehicleData[currentVehicleDataEditKey].codeSeries = validCodeSeries.length > 0 ? validCodeSeries : [];
     lishiVehicleData[currentVehicleDataEditKey].notes = notes;
     lishiVehicleData[currentVehicleDataEditKey].lastEdited = new Date().toISOString();
     lishiVehicleData[currentVehicleDataEditKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
