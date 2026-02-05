@@ -3987,13 +3987,205 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* Year Override Styles */
+        .year-overrides-section {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px dashed var(--accent2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .year-overrides-title {
+            font-size: 11px;
+            color: var(--accent2);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-override-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px dashed var(--accent2);
+            border-radius: 6px;
+            color: var(--accent2);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-override-btn:hover {
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .override-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .override-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .override-item-title {
+            font-size: 13px;
+            color: var(--accent2);
+            font-weight: 600;
+        }
+
+        .remove-override-btn {
+            background: transparent;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+        }
+
+        .override-year-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .override-year-row .modal-input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .override-fields-select {
+            margin-bottom: 12px;
+        }
+
+        .override-field-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .override-field-checkbox:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .override-field-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .override-field-value {
+            margin-top: 8px;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .override-field-value-label {
+            font-size: 11px;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+
+        .override-validation-error {
+            color: #ff4444;
+            font-size: 12px;
+            padding: 8px;
+            background: rgba(255, 68, 68, 0.1);
+            border-radius: 4px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .override-validation-error.visible {
+            display: block;
+        }
+
+        /* Vehicle detail override display */
+        .vehicle-override-section {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--accent2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .vehicle-override-header {
+            font-size: 12px;
+            color: var(--accent2);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .vehicle-override-item {
+            background: var(--card);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .vehicle-override-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .vehicle-override-years {
+            font-size: 13px;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .vehicle-override-fields {
+            font-size: 12px;
+            color: var(--dim);
+        }
+
+        .vehicle-override-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vehicle-override-field:last-child {
+            border-bottom: none;
+        }
+
+        .vehicle-override-field-name {
+            color: var(--dim);
+        }
+
+        .vehicle-override-field-value {
+            color: var(--accent2);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v59</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v60</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4501,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v59</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v60</p>
         </div>
 
         <div class="settings-section">
@@ -5319,6 +5511,18 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Year-Specific Overrides Section -->
+        <div class="year-overrides-section">
+            <div class="year-overrides-title">
+                <span>⚡ Year-Specific Overrides</span>
+                <span style="font-weight:400;font-size:10px;color:var(--dim);text-transform:none;">(Optional)</span>
+            </div>
+            <div id="yearOverridesList"></div>
+            <button type="button" class="add-override-btn" onclick="addYearOverride()">
+                + Add Year-Specific Override
+            </button>
         </div>
 
         <!-- Warnings Summary -->
@@ -11613,6 +11817,7 @@ let yrfAutoPopulated = {
 let yrfSelectedButtonFunctions = [];
 let yrfActiveWarnings = [];
 let yrfNewValues = {}; // Store new values to be added on save
+let yrfYearOverrides = []; // Array of year-specific overrides
 
 // Get all unique values from database for dropdowns
 function getYrfDropdownOptions() {
@@ -12241,6 +12446,10 @@ function openAddYearRangeModal(make, model, keyType) {
     yrfSelectedButtonFunctions = [];
     yrfActiveWarnings = [];
     yrfNewValues = {};
+    yrfYearOverrides = [];
+
+    // Clear year overrides list
+    document.getElementById('yearOverridesList').innerHTML = '';
 
     // Set hidden fields
     document.getElementById('addYearRangeMake').value = make;
@@ -12295,6 +12504,418 @@ function closeAddYearRangeModal() {
     if (dropdown) dropdown.classList.remove('open');
 }
 
+// ==================== YEAR-SPECIFIC OVERRIDES ====================
+
+const OVERRIDE_FIELDS = [
+    { id: 'keyBlank', label: 'Key Blank' },
+    { id: 'keyway', label: 'Keyway' },
+    { id: 'chip', label: 'Chip Type' },
+    { id: 'keyType', label: 'Key Type' },
+    { id: 'buttonCount', label: 'Button Count' },
+    { id: 'buttonFunctions', label: 'Button Functions' },
+    { id: 'fccId', label: 'FCC ID' },
+    { id: 'frequency', label: 'Frequency' },
+    { id: 'ilcoPartNum', label: 'Ilco Part Number' },
+    { id: 'keystonePartNum', label: 'Keystone Part Number' }
+];
+
+function addYearOverride() {
+    const mainStartYear = parseInt(document.getElementById('addYearRangeStart').value);
+    const mainEndYear = parseInt(document.getElementById('addYearRangeEnd').value) || mainStartYear;
+
+    if (!mainStartYear) {
+        toast('Please enter the main year range first');
+        document.getElementById('addYearRangeStart').focus();
+        return;
+    }
+
+    const overrideIndex = yrfYearOverrides.length;
+    yrfYearOverrides.push({
+        yearStart: mainStartYear,
+        yearEnd: mainStartYear,
+        selectedFields: [],
+        fieldValues: {}
+    });
+
+    renderYearOverrides();
+}
+
+function removeYearOverride(index) {
+    yrfYearOverrides.splice(index, 1);
+    renderYearOverrides();
+}
+
+function renderYearOverrides() {
+    const container = document.getElementById('yearOverridesList');
+
+    if (yrfYearOverrides.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = yrfYearOverrides.map((override, index) => `
+        <div class="override-item" id="overrideItem${index}">
+            <div class="override-item-header">
+                <div class="override-item-title">Override #${index + 1}</div>
+                <button type="button" class="remove-override-btn" onclick="removeYearOverride(${index})">×</button>
+            </div>
+
+            <!-- Override Year Range -->
+            <div class="override-year-row">
+                <div class="modal-input-group">
+                    <label>Start Year</label>
+                    <input type="number" class="modal-input"
+                        id="overrideStart${index}"
+                        value="${override.yearStart}"
+                        min="1900" max="2099"
+                        onchange="updateOverrideYear(${index}, 'yearStart', this.value)">
+                </div>
+                <div class="modal-input-group">
+                    <label>End Year</label>
+                    <input type="number" class="modal-input"
+                        id="overrideEnd${index}"
+                        value="${override.yearEnd}"
+                        min="1900" max="2099"
+                        onchange="updateOverrideYear(${index}, 'yearEnd', this.value)">
+                </div>
+            </div>
+
+            <div class="override-validation-error" id="overrideError${index}"></div>
+
+            <!-- Field Selection -->
+            <div class="override-fields-select">
+                <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:8px;">Select fields to override:</label>
+                ${OVERRIDE_FIELDS.map(field => `
+                    <label class="override-field-checkbox">
+                        <input type="checkbox"
+                            ${override.selectedFields.includes(field.id) ? 'checked' : ''}
+                            onchange="toggleOverrideField(${index}, '${field.id}', this.checked)">
+                        <span>${field.label}</span>
+                    </label>
+                `).join('')}
+            </div>
+
+            <!-- Field Value Inputs -->
+            <div id="overrideFieldValues${index}">
+                ${renderOverrideFieldValues(index, override)}
+            </div>
+        </div>
+    `).join('');
+
+    // Validate overrides after rendering
+    validateAllOverrides();
+}
+
+function renderOverrideFieldValues(index, override) {
+    if (override.selectedFields.length === 0) {
+        return '<div style="color:var(--dim);font-size:12px;font-style:italic;">Select at least one field to override</div>';
+    }
+
+    const options = getYrfDropdownOptions();
+
+    return override.selectedFields.map(fieldId => {
+        const field = OVERRIDE_FIELDS.find(f => f.id === fieldId);
+        const currentValue = override.fieldValues[fieldId] || '';
+
+        let inputHtml = '';
+
+        switch(fieldId) {
+            case 'keyBlank':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.keyBlanks), currentValue, 'Select Key Blank...');
+                break;
+            case 'keyway':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.keyways), currentValue, 'Select Keyway...');
+                break;
+            case 'chip':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.chipTypes), currentValue, 'Select Chip Type...');
+                break;
+            case 'keyType':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.keyTypes), currentValue, 'Select Key Type...');
+                break;
+            case 'buttonCount':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.buttonCounts), currentValue, 'Select Button Count...');
+                break;
+            case 'fccId':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.fccIds), currentValue, 'Select FCC ID...');
+                break;
+            case 'frequency':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.frequencies), currentValue, 'Select Frequency...');
+                break;
+            case 'ilcoPartNum':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.ilcoPartNums), currentValue, 'Select Ilco PN...');
+                break;
+            case 'keystonePartNum':
+                inputHtml = renderOverrideDropdown(index, fieldId, Array.from(options.keystonePartNums), currentValue, 'Select Keystone PN...');
+                break;
+            case 'buttonFunctions':
+                inputHtml = renderOverrideButtonFunctions(index, override.fieldValues.buttonFunctions || []);
+                break;
+            default:
+                inputHtml = `<input type="text" class="modal-input" value="${currentValue}" onchange="updateOverrideFieldValue(${index}, '${fieldId}', this.value)">`;
+        }
+
+        return `
+            <div class="override-field-value">
+                <div class="override-field-value-label">${field.label}</div>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+function renderOverrideDropdown(index, fieldId, options, currentValue, placeholder) {
+    return `
+        <select class="modal-input" onchange="updateOverrideFieldValue(${index}, '${fieldId}', this.value)">
+            <option value="">${placeholder}</option>
+            ${options.sort().map(opt => `<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`).join('')}
+            <option value="__NEW__">+ Add New...</option>
+        </select>
+        <input type="text" class="modal-input"
+            id="overrideNewValue${index}_${fieldId}"
+            style="display:none;margin-top:8px;"
+            placeholder="Enter new value..."
+            onchange="updateOverrideFieldValue(${index}, '${fieldId}', this.value)">
+    `;
+}
+
+function renderOverrideButtonFunctions(index, selectedFunctions) {
+    const options = getYrfDropdownOptions();
+    const allFunctions = Array.from(options.buttonFunctions).sort();
+
+    return `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${allFunctions.map(func => `
+                <label style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:${selectedFunctions.includes(func) ? 'var(--accent)' : 'var(--bg)'};border-radius:4px;cursor:pointer;font-size:12px;color:${selectedFunctions.includes(func) ? 'var(--bg)' : 'var(--text)'};">
+                    <input type="checkbox"
+                        style="display:none;"
+                        ${selectedFunctions.includes(func) ? 'checked' : ''}
+                        onchange="toggleOverrideButtonFunction(${index}, '${func}', this.checked)">
+                    ${func}
+                </label>
+            `).join('')}
+        </div>
+    `;
+}
+
+function toggleOverrideField(index, fieldId, checked) {
+    const override = yrfYearOverrides[index];
+
+    if (checked) {
+        if (!override.selectedFields.includes(fieldId)) {
+            override.selectedFields.push(fieldId);
+        }
+    } else {
+        override.selectedFields = override.selectedFields.filter(f => f !== fieldId);
+        delete override.fieldValues[fieldId];
+    }
+
+    // Re-render just the field values section
+    const fieldValuesContainer = document.getElementById(`overrideFieldValues${index}`);
+    if (fieldValuesContainer) {
+        fieldValuesContainer.innerHTML = renderOverrideFieldValues(index, override);
+    }
+}
+
+function updateOverrideYear(index, field, value) {
+    yrfYearOverrides[index][field] = parseInt(value) || 0;
+    validateAllOverrides();
+}
+
+function updateOverrideFieldValue(index, fieldId, value) {
+    // Handle "Add New" selection
+    if (value === '__NEW__') {
+        const newInput = document.getElementById(`overrideNewValue${index}_${fieldId}`);
+        if (newInput) {
+            newInput.style.display = 'block';
+            newInput.focus();
+        }
+        return;
+    }
+
+    yrfYearOverrides[index].fieldValues[fieldId] = value;
+}
+
+function toggleOverrideButtonFunction(index, func, checked) {
+    const override = yrfYearOverrides[index];
+    if (!override.fieldValues.buttonFunctions) {
+        override.fieldValues.buttonFunctions = [];
+    }
+
+    if (checked) {
+        if (!override.fieldValues.buttonFunctions.includes(func)) {
+            override.fieldValues.buttonFunctions.push(func);
+        }
+    } else {
+        override.fieldValues.buttonFunctions = override.fieldValues.buttonFunctions.filter(f => f !== func);
+    }
+
+    // Re-render the button functions display
+    const fieldValuesContainer = document.getElementById(`overrideFieldValues${index}`);
+    if (fieldValuesContainer) {
+        fieldValuesContainer.innerHTML = renderOverrideFieldValues(index, override);
+    }
+}
+
+function validateAllOverrides() {
+    const mainStartYear = parseInt(document.getElementById('addYearRangeStart').value) || 0;
+    const mainEndYear = parseInt(document.getElementById('addYearRangeEnd').value) || mainStartYear;
+
+    let hasErrors = false;
+
+    yrfYearOverrides.forEach((override, index) => {
+        const errors = [];
+
+        // Check if override is within main range
+        if (override.yearStart < mainStartYear || override.yearEnd > mainEndYear) {
+            errors.push(`Override range must be within ${mainStartYear}-${mainEndYear}`);
+        }
+
+        // Check if start <= end
+        if (override.yearStart > override.yearEnd) {
+            errors.push('Start year cannot be after end year');
+        }
+
+        // Check for overlapping overrides with same fields
+        yrfYearOverrides.forEach((other, otherIndex) => {
+            if (otherIndex !== index) {
+                // Check if year ranges overlap
+                const yearsOverlap = !(override.yearEnd < other.yearStart || override.yearStart > other.yearEnd);
+
+                if (yearsOverlap) {
+                    // Check if they share any fields
+                    const sharedFields = override.selectedFields.filter(f => other.selectedFields.includes(f));
+                    if (sharedFields.length > 0) {
+                        const fieldNames = sharedFields.map(f => OVERRIDE_FIELDS.find(of => of.id === f)?.label).join(', ');
+                        errors.push(`Overlaps with Override #${otherIndex + 1} for: ${fieldNames}`);
+                    }
+                }
+            }
+        });
+
+        // Display errors
+        const errorEl = document.getElementById(`overrideError${index}`);
+        if (errorEl) {
+            if (errors.length > 0) {
+                errorEl.innerHTML = errors.join('<br>');
+                errorEl.classList.add('visible');
+                hasErrors = true;
+            } else {
+                errorEl.classList.remove('visible');
+            }
+        }
+    });
+
+    return !hasErrors;
+}
+
+function getValidatedYearOverrides() {
+    // Only return overrides that have at least one field with a value
+    return yrfYearOverrides
+        .filter(override => {
+            return override.selectedFields.length > 0 &&
+                   override.selectedFields.some(fieldId => {
+                       const value = override.fieldValues[fieldId];
+                       if (fieldId === 'buttonFunctions') {
+                           return Array.isArray(value) && value.length > 0;
+                       }
+                       return value && value.trim && value.trim() !== '';
+                   });
+        })
+        .map(override => ({
+            yearStart: override.yearStart,
+            yearEnd: override.yearEnd,
+            fields: Object.fromEntries(
+                override.selectedFields
+                    .filter(fieldId => {
+                        const value = override.fieldValues[fieldId];
+                        if (fieldId === 'buttonFunctions') {
+                            return Array.isArray(value) && value.length > 0;
+                        }
+                        return value && value.trim && value.trim() !== '';
+                    })
+                    .map(fieldId => [fieldId, override.fieldValues[fieldId]])
+            )
+        }));
+}
+
+// Render year overrides display for vehicle detail page
+function renderYearOverridesDisplay(make, model, startYear, endYear) {
+    // Find custom vehicles with year overrides for this make/model/year range
+    const matchingVehicles = customVehicles.filter(v =>
+        v.make === make &&
+        v.model === model &&
+        v.startYear === startYear &&
+        v.endYear === endYear &&
+        v.yearOverrides &&
+        v.yearOverrides.length > 0
+    );
+
+    if (matchingVehicles.length === 0) {
+        return '';
+    }
+
+    // Collect all year overrides from matching vehicles
+    const allOverrides = [];
+    matchingVehicles.forEach(v => {
+        v.yearOverrides.forEach(override => {
+            allOverrides.push(override);
+        });
+    });
+
+    if (allOverrides.length === 0) {
+        return '';
+    }
+
+    const fieldLabels = {
+        keyBlank: 'Key Blank',
+        keyway: 'Keyway',
+        chip: 'Chip Type',
+        keyType: 'Key Type',
+        buttonCount: 'Button Count',
+        buttonFunctions: 'Button Functions',
+        fccId: 'FCC ID',
+        frequency: 'Frequency',
+        ilcoPartNum: 'Ilco Part Number',
+        keystonePartNum: 'Keystone Part Number'
+    };
+
+    return `
+        <div class="vehicle-override-section">
+            <div class="vehicle-override-header">
+                ⚡ Year-Specific Overrides
+            </div>
+            ${allOverrides.map(override => {
+                const yearDisplay = override.yearStart === override.yearEnd
+                    ? override.yearStart
+                    : `${override.yearStart}-${override.yearEnd}`;
+
+                const fields = Object.entries(override.fields || {});
+                if (fields.length === 0) return '';
+
+                return `
+                    <div class="vehicle-override-item">
+                        <div class="vehicle-override-years">${yearDisplay}</div>
+                        <div class="vehicle-override-fields">
+                            ${fields.map(([fieldId, value]) => {
+                                const label = fieldLabels[fieldId] || fieldId;
+                                const displayValue = Array.isArray(value) ? value.join(', ') : value;
+                                return `
+                                    <div class="vehicle-override-field">
+                                        <span class="vehicle-override-field-name">${label}</span>
+                                        <span class="vehicle-override-field-value">${displayValue}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ==================== END YEAR-SPECIFIC OVERRIDES ====================
+
 // Get value from dropdown or inline input
 function getYrfFieldValue(selectId, inputId) {
     const select = document.getElementById(selectId);
@@ -12337,6 +12958,15 @@ function saveNewYearRange() {
         toast('Cannot save duplicate year range');
         return;
     }
+
+    // Validate year overrides
+    if (yrfYearOverrides.length > 0 && !validateAllOverrides()) {
+        toast('Please fix override validation errors');
+        return;
+    }
+
+    // Get validated year overrides
+    const yearOverrides = getValidatedYearOverrides();
 
     // Collect all field values
     const keyBlank = getYrfFieldValue('yrfKeyBlank', 'yrfKeyBlankNewInput');
@@ -12398,6 +13028,7 @@ function saveNewYearRange() {
         notes: '',
         hasOverrides: overrideNotes.length > 0,
         overrideNotes: overrideNotes,
+        yearOverrides: yearOverrides,
         createdAt: new Date().toISOString()
     };
 
@@ -12797,6 +13428,8 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-value">${Array.from(vehicle.frequencies).join(', ') || 'N/A'}</div>
             </div>
         </div>
+
+        ${renderYearOverridesDisplay(make, model, parseInt(startYear), parseInt(endYear))}
 
         ${fidInfo.length > 0 ? `
         <div class="vehicle-section">
