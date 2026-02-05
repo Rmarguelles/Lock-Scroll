@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v79</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v80</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4701,7 +4701,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v79</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v80</p>
         </div>
 
         <div class="settings-section">
@@ -4794,6 +4794,17 @@
         <input type="text" class="settings-search" id="codeSeriesSearch" placeholder="Search code series..." oninput="renderCodeSeriesList()" style="width:100%;box-sizing:border-box;">
         <div id="codeSeriesList" style="margin-top:12px;"></div>
         <button class="add-vendor-btn" onclick="addNewCodeSeriesValue()" style="margin-top:12px;width:100%;">+ Add Code Series</button>
+    </div>
+</div>
+
+<!-- Code Series Usages Modal -->
+<div class="modal" id="codeSeriesUsagesModal">
+    <div class="modal-content" style="max-width:450px;">
+        <div class="modal-title" id="codeSeriesUsagesTitle">Usages</div>
+        <div id="codeSeriesUsagesList" style="max-height:400px;overflow-y:auto;"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="document.getElementById('codeSeriesUsagesModal').classList.remove('on')">Close</button>
+        </div>
     </div>
 </div>
 
@@ -11255,6 +11266,32 @@ function closeCodeSeriesSettingsPanel() {
     document.getElementById('codeSeriesSettingsPanel').classList.remove('on');
 }
 
+function openCodeSeriesUsagesModal(seriesValue) {
+    const usages = getCodeSeriesUsageDetails(seriesValue);
+    document.getElementById('codeSeriesUsagesTitle').textContent = `Usages for "${seriesValue}"`;
+    const container = document.getElementById('codeSeriesUsagesList');
+
+    if (usages.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);text-align:center;padding:16px;">No usages found.</div>';
+    } else {
+        container.innerHTML = usages.map(u => {
+            const icon = u.source === 'vehicle' ? '🚗' : u.source === 'lishi' ? '🔧' : u.source === 'key' ? '🔑' : '📝';
+            const sourceLabel = u.source === 'vehicle' ? 'Vehicle Data' : u.source === 'lishi' ? 'Lishi Tool' : u.source === 'key' ? 'Key Database' : 'Custom Vehicle';
+            return `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;">
+                    <span style="font-size:18px;">${icon}</span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.label}</div>
+                        <div style="font-size:11px;color:var(--dim);margin-top:2px;">${sourceLabel}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    document.getElementById('codeSeriesUsagesModal').classList.add('on');
+}
+
 function getCodeSeriesUsageDetails(seriesValue) {
     const usages = [];
 
@@ -11335,7 +11372,7 @@ function renderCodeSeriesList() {
             <div class="platform-card" style="margin-bottom:8px;">
                 <div class="platform-card-info">
                     <div class="platform-card-name" style="font-family:'JetBrains Mono',monospace;">${cs}</div>
-                    <div class="platform-card-count">${usageText}</div>
+                    <div class="platform-card-count">${usageCount > 0 ? `<a href="#" onclick="event.preventDefault();openCodeSeriesUsagesModal('${cs.replace(/'/g, "\\'")}')" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${usageText}</a>` : usageText}</div>
                 </div>
                 <div class="platform-card-actions">
                     <button class="platform-action-btn" onclick="openEditCodeSeriesModal('${cs.replace(/'/g, "\\'")}')">Edit</button>
