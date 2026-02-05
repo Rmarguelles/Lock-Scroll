@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v57</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v58</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -12434,7 +12434,7 @@ function renderKeyTypesForModel(make, model) {
 
                 const keyType = key.keyType || 'Unknown';
                 // Normalize key types
-                let normalizedType = keyType;
+                let normalizedType = 'Keyed Ignition'; // Default fallback
                 const lowerType = keyType.toLowerCase();
                 if (lowerType.includes('proximity') || lowerType.includes('smart') || lowerType.includes('prox')) {
                     normalizedType = 'Proximity';
@@ -12442,7 +12442,11 @@ function renderKeyTypesForModel(make, model) {
                     normalizedType = 'Keyed Ignition';
                 } else if (lowerType.includes('remote head') || lowerType.includes('flip') || lowerType.includes('fobik')) {
                     normalizedType = 'Keyed Ignition';
+                } else if (lowerType.includes('remote')) {
+                    // Remote-only keys go to Proximity
+                    normalizedType = 'Proximity';
                 }
+                // normalizedType is guaranteed to be either 'Keyed Ignition' or 'Proximity'
 
                 keyTypeMap[normalizedType].keys.add(key.pn);
                 if ((stockData[key.pn] || 0) > 0) {
