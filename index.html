@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v70</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v71</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v70</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v71</p>
         </div>
 
         <div class="settings-section">
@@ -5045,6 +5045,11 @@
                     style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
             </div>
             <div id="vehicleDataCodeSeriesList" style="max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-input-group" style="background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border:1px solid var(--accent2);">
+            <label style="color:var(--accent2);">Door/Trunk/GB Key (for VATS vehicles)</label>
+            <input type="text" class="modal-input" id="vehicleDataSecondaryKey" placeholder="e.g., B62, B48, etc.">
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Enter the part number of the non-chip key used for doors, trunk, and glovebox</div>
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -13722,15 +13727,11 @@ function openVehicleDetail(vehicleKey) {
     const totalVehicleStock = vehicle.keys.reduce((sum, key) => sum + (stockData[key.pn] || 0), 0);
     const hasStock = totalVehicleStock > 0;
 
-    // Check for VATS keys and get secondary key info
-    const vatsKeys = vehicle.keys.filter(k => k.isVATS);
-    const hasVATS = vatsKeys.length > 0;
-    const secondaryKeyPNs = [...new Set(vatsKeys.map(k => k.secondaryKeyPartNumber).filter(Boolean))];
-    const secondaryKeyDisplay = secondaryKeyPNs.length > 0
-        ? secondaryKeyPNs.map(pn => {
-            const stock = stockData[pn] || 0;
-            return `${pn} <span style="color:${stock > 0 ? 'var(--success)' : 'var(--danger)'};">(${stock})</span>`;
-        }).join(', ')
+    // Get secondary key (Door/Trunk/GB) from vehicle data
+    const secondaryKeyPN = vehicleData.secondaryKeyPN || null;
+    const secondaryKeyStock = secondaryKeyPN ? (stockData[secondaryKeyPN] || 0) : 0;
+    const secondaryKeyDisplay = secondaryKeyPN
+        ? `${secondaryKeyPN} <span style="color:${secondaryKeyStock > 0 ? 'var(--success)' : 'var(--danger)'};">(${secondaryKeyStock})</span>`
         : null;
 
     // Build content
@@ -13772,10 +13773,10 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-label">Chip Type${vehicle.chips.size > 1 ? 's' : ''}</div>
                 <div class="vehicle-info-value">${Array.from(vehicle.chips).join(', ') || 'N/A'}</div>
             </div>
-            ${hasVATS ? `
+            ${secondaryKeyPN ? `
             <div class="vehicle-info-item" style="background:rgba(255,107,53,0.1);border:1px solid var(--accent2);border-radius:6px;">
                 <div class="vehicle-info-label" style="color:var(--accent2);">Door/Trunk/GB Key</div>
-                <div class="vehicle-info-value highlight">${secondaryKeyDisplay || 'Not specified'}</div>
+                <div class="vehicle-info-value highlight">${secondaryKeyDisplay}</div>
             </div>
             ` : ''}
             <div class="vehicle-info-item">
@@ -13820,26 +13821,16 @@ function openVehicleDetail(vehicleKey) {
                 const stock = stockData[key.pn] || 0;
                 const inStock = stock > 0;
                 const keyIdx = DB.findIndex(k => k.pn === key.pn);
-                const isVATSKey = key.isVATS;
-                const secondaryPN = key.secondaryKeyPartNumber;
-                const secondaryStock = secondaryPN ? (stockData[secondaryPN] || 0) : 0;
 
                 return `
                     <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
                         <div class="vehicle-key-info">
-                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${isVATSKey ? ' <span style="background:var(--accent2);color:white;padding:1px 6px;border-radius:3px;font-size:10px;">VATS IGNITION</span>' : ''}</h4>
+                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
-                            ${isVATSKey && secondaryPN ? `
-                                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
-                                    <span style="font-size:11px;color:var(--accent2);">Door/Trunk/GB:</span>
-                                    <span style="font-size:12px;font-weight:600;color:var(--text);margin-left:4px;">${secondaryPN}</span>
-                                    <span style="font-size:11px;color:${secondaryStock > 0 ? 'var(--success)' : 'var(--danger)'};">(${secondaryStock} in stock)</span>
-                                </div>
-                            ` : ''}
                         </div>
                         <div class="vehicle-key-stock">
                             <div class="count" style="color:${inStock ? 'var(--success)' : 'var(--dim)'}">${stock}</div>
-                            <div class="label">${isVATSKey ? 'ignition' : 'in stock'}</div>
+                            <div class="label">in stock</div>
                         </div>
                     </div>
                 `;
@@ -15198,6 +15189,9 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     // Render the code series list
     renderVehicleDataCodeSeriesList();
 
+    // Load secondary key (Door/Trunk/GB)
+    document.getElementById('vehicleDataSecondaryKey').value = vehicleData.secondaryKeyPN || '';
+
     document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
     document.getElementById('vehicleDataEditModal').classList.add('on');
 }
@@ -15298,7 +15292,8 @@ function saveVehicleDataEdit() {
             lastConfirmedBy: null,
             notes: '',
             lastEditedBy: null,
-            codeSeries: []
+            codeSeries: [],
+            secondaryKeyPN: ''
         };
     }
 
@@ -15306,9 +15301,11 @@ function saveVehicleDataEdit() {
     const validCodeSeries = vehicleDataCodeSeriesEntries.filter(cs => cs.series && cs.series.trim());
 
     const notes = document.getElementById('vehicleDataNotes').value.trim();
+    const secondaryKeyPN = document.getElementById('vehicleDataSecondaryKey').value.trim();
 
     lishiVehicleData[currentVehicleDataEditKey].codeSeries = validCodeSeries.length > 0 ? validCodeSeries : [];
     lishiVehicleData[currentVehicleDataEditKey].notes = notes;
+    lishiVehicleData[currentVehicleDataEditKey].secondaryKeyPN = secondaryKeyPN || null;
     lishiVehicleData[currentVehicleDataEditKey].lastEdited = new Date().toISOString();
     lishiVehicleData[currentVehicleDataEditKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
 
