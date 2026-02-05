@@ -5048,8 +5048,10 @@
         </div>
         <div class="modal-input-group" style="background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border:1px solid var(--accent2);">
             <label style="color:var(--accent2);">Door/Trunk/GB Key (for VATS vehicles)</label>
-            <input type="text" class="modal-input" id="vehicleDataSecondaryKey" placeholder="e.g., B62, B48, etc.">
-            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Enter the part number of the non-chip key used for doors, trunk, and glovebox</div>
+            <select class="modal-input" id="vehicleDataSecondaryKey">
+                <option value="">None</option>
+            </select>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Select the non-chip key used for doors, trunk, and glovebox</div>
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -5718,28 +5720,10 @@
             </select>
             <input type="text" class="add-inv-input" id="customKeyKeywayOther" placeholder="Enter custom keyway..." style="display:none;margin-top:8px;">
         </div>
-        
-        <div class="add-inv-section">
-            <label>Chip Type</label>
-            <select class="add-inv-select" id="customKeyChip" onchange="handleCustomDropdown(this, 'customKeyChipOther')">
-            </select>
-            <input type="text" class="add-inv-input" id="customKeyChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:8px;">
-        </div>
-
-        <div class="add-inv-section" style="display:flex;align-items:center;gap:12px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
-                <input type="checkbox" id="customKeyIsVATS" onchange="toggleAddCustomKeyVATSFields()" style="width:18px;height:18px;cursor:pointer;">
-                <span>VATS Key</span>
-            </label>
-        </div>
-        <div class="add-inv-section" id="customKeyVATSSection" style="display:none;background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border-left:3px solid var(--accent2);">
-            <label style="color:var(--accent2);">Secondary Key Part Number (Door/Trunk)</label>
-            <input type="text" class="add-inv-input" id="customKeySecondaryPN" placeholder="e.g., B62">
-        </div>
 
         <div class="add-inv-section">
             <label>Key Type</label>
-            <select class="add-inv-select" id="customKeyType" onchange="handleCustomDropdown(this, 'customKeyTypeOther')">
+            <select class="add-inv-select" id="customKeyType" onchange="handleCustomDropdown(this, 'customKeyTypeOther'); toggleCustomKeyChipType()">
                 <option value="">Select type...</option>
                 <option value="Proximity">Proximity / Smart Key</option>
                 <option value="Remote Head Key">Remote Head Key</option>
@@ -5756,7 +5740,14 @@
             </select>
             <input type="text" class="add-inv-input" id="customKeyTypeOther" placeholder="Enter custom key type..." style="display:none;margin-top:8px;">
         </div>
-        
+
+        <div class="add-inv-section" id="customKeyChipSection">
+            <label>Chip Type</label>
+            <select class="add-inv-select" id="customKeyChip" onchange="handleCustomDropdown(this, 'customKeyChipOther')">
+            </select>
+            <input type="text" class="add-inv-input" id="customKeyChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:8px;">
+        </div>
+
         <div class="add-inv-section">
             <label>Buttons</label>
             <select class="add-inv-select" id="customKeyButtons" onchange="handleCustomDropdown(this, 'customKeyButtonsOther')">
@@ -15189,8 +15180,13 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     // Render the code series list
     renderVehicleDataCodeSeriesList();
 
-    // Load secondary key (Door/Trunk/GB)
-    document.getElementById('vehicleDataSecondaryKey').value = vehicleData.secondaryKeyPN || '';
+    // Load secondary key (Door/Trunk/GB) dropdown with non-chip keys
+    const secondaryKeySelect = document.getElementById('vehicleDataSecondaryKey');
+    const nonChipKeys = DB.filter(k => k.keyType === 'Non-Chip Key').sort((a, b) => (a.pn || '').localeCompare(b.pn || ''));
+    const uniqueNonChipPNs = [...new Set(nonChipKeys.map(k => k.pn))].filter(pn => pn);
+    secondaryKeySelect.innerHTML = '<option value="">None</option>' +
+        uniqueNonChipPNs.map(pn => `<option value="${pn}">${pn}</option>`).join('');
+    secondaryKeySelect.value = vehicleData.secondaryKeyPN || '';
 
     document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
     document.getElementById('vehicleDataEditModal').classList.add('on');
@@ -15757,10 +15753,16 @@ function openAddCustomKey() {
     document.getElementById('addCustomKeyPanel').classList.add('on');
 }
 
-function toggleAddCustomKeyVATSFields() {
-    const isVATS = document.getElementById('customKeyIsVATS').checked;
-    const vatsSection = document.getElementById('customKeyVATSSection');
-    vatsSection.style.display = isVATS ? 'block' : 'none';
+function toggleCustomKeyChipType() {
+    const keyType = document.getElementById('customKeyType').value;
+    const chipSection = document.getElementById('customKeyChipSection');
+    // Hide chip type for Non-Chip Key and Remote Only
+    if (keyType === 'Non-Chip Key' || keyType === 'Remote Only') {
+        chipSection.style.display = 'none';
+        document.getElementById('customKeyChip').value = '';
+    } else {
+        chipSection.style.display = 'block';
+    }
 }
 
 function populateCustomKeyDropdown(selectId, field, placeholder) {
@@ -16018,9 +16020,8 @@ function saveCustomKey() {
         }
     });
 
-    // Get VATS fields
-    const isVATS = document.getElementById('customKeyIsVATS').checked;
-    const secondaryKeyPartNumber = isVATS ? (document.getElementById('customKeySecondaryPN').value.trim() || null) : null;
+    // Determine if this is a VATS key based on keyType
+    const isVATS = keyType && (keyType === 'VATS' || keyType.startsWith('VATS '));
 
     // Create the new key object
     const newKey = {
@@ -16035,17 +16036,38 @@ function saveCustomKey() {
         vehicles: vehicles,
         isCustom: true,
         addedDate: new Date().toISOString(),
-        isVATS: isVATS,
-        secondaryKeyPartNumber: secondaryKeyPartNumber
+        isVATS: isVATS
     };
-    
+
     // Add to DB array
     DB.push(newKey);
-    
+
     // Save to custom keys storage
     customKeys.push(newKey);
     saveCustomKeys();
-    
+
+    // Also save vehicle entries to lishiVehicleData for Vehicle search page
+    vehicles.forEach(v => {
+        const groupKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear}`;
+        if (!lishiVehicleData[groupKey]) {
+            lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '' };
+        }
+        // If code series was provided, add it
+        if (v.codeSeries) {
+            const existingCodeSeries = lishiVehicleData[groupKey].codeSeries;
+            if (!existingCodeSeries) {
+                lishiVehicleData[groupKey].codeSeries = [{ years: `${v.startYear}-${v.endYear}`, series: v.codeSeries }];
+            } else if (Array.isArray(existingCodeSeries)) {
+                // Check if this series already exists
+                const exists = existingCodeSeries.some(cs => cs.series === v.codeSeries);
+                if (!exists) {
+                    existingCodeSeries.push({ years: `${v.startYear}-${v.endYear}`, series: v.codeSeries });
+                }
+            }
+        }
+    });
+    saveLishiVehicle();
+
     // Refresh filters to include new data
     buildFilters();
     applyFilters();
