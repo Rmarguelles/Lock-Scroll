@@ -4677,6 +4677,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openCodeSeriesSettingsPanel()">
+                    <span class="settings-nav-icon">#</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Code Series</span>
+                        <span class="settings-nav-desc">Manage key cut code series values</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
             </div>
         </div>
 
@@ -4772,6 +4780,36 @@
         <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage programming platforms and manufacturers.</p>
         <div id="settingsPlatformList"></div>
         <button class="add-vendor-btn" onclick="openAddPlatformModal()" style="margin-top:12px;width:100%;">+ Add Platform</button>
+    </div>
+</div>
+
+<!-- Code Series Settings Panel -->
+<div class="panel" id="codeSeriesSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeCodeSeriesSettingsPanel()">←</button>
+        <h2># Code Series</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage key cut code series values used across vehicles and Lishi tools.</p>
+        <input type="text" class="settings-search" id="codeSeriesSearch" placeholder="Search code series..." oninput="renderCodeSeriesList()" style="width:100%;box-sizing:border-box;">
+        <div id="codeSeriesList" style="margin-top:12px;"></div>
+        <button class="add-vendor-btn" onclick="addNewCodeSeriesValue()" style="margin-top:12px;width:100%;">+ Add Code Series</button>
+    </div>
+</div>
+
+<!-- Edit Code Series Modal -->
+<div class="modal" id="editCodeSeriesModal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-title">Edit Code Series</div>
+        <div id="editCodeSeriesInfo" style="font-size:12px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>Code Series Value</label>
+            <input type="text" class="modal-input" id="editCodeSeriesValue" placeholder="e.g., 1001-4096">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeEditCodeSeriesModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveEditCodeSeries()">Save</button>
+        </div>
     </div>
 </div>
 
@@ -11202,6 +11240,296 @@ function openPlatformsSettingsPanel() {
 }
 function closePlatformsSettingsPanel() {
     document.getElementById('platformsSettingsPanel').classList.remove('on');
+}
+
+// ===================== CODE SERIES SETTINGS PANEL =====================
+let editingCodeSeriesOldValue = null;
+
+function openCodeSeriesSettingsPanel() {
+    buildCodeSeriesCache();
+    renderCodeSeriesList();
+    document.getElementById('codeSeriesSettingsPanel').classList.add('on');
+}
+
+function closeCodeSeriesSettingsPanel() {
+    document.getElementById('codeSeriesSettingsPanel').classList.remove('on');
+}
+
+function getCodeSeriesUsageDetails(seriesValue) {
+    const usages = [];
+
+    // Check lishiVehicleData
+    for (const key in lishiVehicleData) {
+        const vd = lishiVehicleData[key];
+        if (vd && vd.codeSeries) {
+            if (Array.isArray(vd.codeSeries)) {
+                const match = vd.codeSeries.find(cs => cs.series === seriesValue);
+                if (match) {
+                    const parts = key.split('|');
+                    usages.push({ source: 'vehicle', label: `${parts[0]} ${parts[1]} (${parts[2]}-${parts[3]})` });
+                }
+            } else if (typeof vd.codeSeries === 'string' && vd.codeSeries === seriesValue) {
+                const parts = key.split('|');
+                usages.push({ source: 'vehicle', label: `${parts[0]} ${parts[1]} (${parts[2]}-${parts[3]})` });
+            }
+        }
+    }
+
+    // Check Lishi inventory
+    for (const toolName in lishiInventory) {
+        const tool = lishiInventory[toolName];
+        if (tool.codeSeries && Array.isArray(tool.codeSeries) && tool.codeSeries.includes(seriesValue)) {
+            usages.push({ source: 'lishi', label: `Lishi: ${toolName}` });
+        }
+    }
+
+    // Check DB vehicles
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.codeSeries) {
+                if (Array.isArray(v.codeSeries)) {
+                    if (v.codeSeries.some(cs => cs.series === seriesValue)) {
+                        usages.push({ source: 'key', label: `Key ${key.pn}: ${v.make} ${v.model}` });
+                    }
+                } else if (typeof v.codeSeries === 'string' && v.codeSeries === seriesValue) {
+                    usages.push({ source: 'key', label: `Key ${key.pn}: ${v.make} ${v.model}` });
+                }
+            }
+        });
+    });
+
+    // Check custom vehicles
+    customVehicles.forEach(cv => {
+        if (cv.codeSeries === seriesValue) {
+            usages.push({ source: 'custom', label: `Custom: ${cv.make} ${cv.model}` });
+        }
+    });
+
+    return usages;
+}
+
+function renderCodeSeriesList() {
+    const container = document.getElementById('codeSeriesList');
+    const searchTerm = (document.getElementById('codeSeriesSearch')?.value || '').toLowerCase().trim();
+
+    if (codeSeriesCache.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">No code series found.</div>';
+        return;
+    }
+
+    const filtered = searchTerm
+        ? codeSeriesCache.filter(cs => cs.toLowerCase().includes(searchTerm))
+        : codeSeriesCache;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">No matching code series.</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(cs => {
+        const usages = getCodeSeriesUsageDetails(cs);
+        const usageCount = usages.length;
+        const usageText = usageCount === 1 ? '1 usage' : `${usageCount} usages`;
+
+        return `
+            <div class="platform-card" style="margin-bottom:8px;">
+                <div class="platform-card-info">
+                    <div class="platform-card-name" style="font-family:'JetBrains Mono',monospace;">${cs}</div>
+                    <div class="platform-card-count">${usageText}</div>
+                </div>
+                <div class="platform-card-actions">
+                    <button class="platform-action-btn" onclick="openEditCodeSeriesModal('${cs.replace(/'/g, "\\'")}')">Edit</button>
+                    <button class="platform-action-btn delete" onclick="deleteCodeSeriesValue('${cs.replace(/'/g, "\\'")}')">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openEditCodeSeriesModal(oldValue) {
+    editingCodeSeriesOldValue = oldValue;
+    const usages = getCodeSeriesUsageDetails(oldValue);
+    document.getElementById('editCodeSeriesValue').value = oldValue;
+    document.getElementById('editCodeSeriesInfo').textContent = `Used in ${usages.length} place${usages.length !== 1 ? 's' : ''}. Renaming will update all references.`;
+    document.getElementById('editCodeSeriesModal').classList.add('on');
+}
+
+function closeEditCodeSeriesModal() {
+    document.getElementById('editCodeSeriesModal').classList.remove('on');
+    editingCodeSeriesOldValue = null;
+}
+
+function saveEditCodeSeries() {
+    const newValue = document.getElementById('editCodeSeriesValue').value.trim();
+    if (!newValue) {
+        toast('Code series value cannot be empty');
+        return;
+    }
+    if (!editingCodeSeriesOldValue) return;
+    if (newValue === editingCodeSeriesOldValue) {
+        closeEditCodeSeriesModal();
+        return;
+    }
+    if (codeSeriesCache.includes(newValue) && newValue !== editingCodeSeriesOldValue) {
+        if (!confirm(`"${newValue}" already exists. Merge all usages of "${editingCodeSeriesOldValue}" into "${newValue}"?`)) {
+            return;
+        }
+    }
+
+    const oldVal = editingCodeSeriesOldValue;
+    let changed = false;
+
+    // Update lishiVehicleData
+    for (const key in lishiVehicleData) {
+        const vd = lishiVehicleData[key];
+        if (vd && vd.codeSeries) {
+            if (Array.isArray(vd.codeSeries)) {
+                vd.codeSeries.forEach(cs => {
+                    if (cs.series === oldVal) { cs.series = newValue; changed = true; }
+                });
+            } else if (typeof vd.codeSeries === 'string' && vd.codeSeries === oldVal) {
+                vd.codeSeries = newValue;
+                changed = true;
+            }
+        }
+    }
+
+    // Update lishiInventory
+    for (const toolName in lishiInventory) {
+        const tool = lishiInventory[toolName];
+        if (tool.codeSeries && Array.isArray(tool.codeSeries)) {
+            tool.codeSeries = tool.codeSeries.map(cs => cs === oldVal ? newValue : cs);
+            if (tool.codeSeries.includes(newValue)) changed = true;
+        }
+    }
+
+    // Update DB vehicles
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.codeSeries) {
+                if (Array.isArray(v.codeSeries)) {
+                    v.codeSeries.forEach(cs => {
+                        if (cs.series === oldVal) { cs.series = newValue; changed = true; }
+                    });
+                } else if (typeof v.codeSeries === 'string' && v.codeSeries === oldVal) {
+                    v.codeSeries = newValue;
+                    changed = true;
+                }
+            }
+        });
+    });
+
+    // Update custom vehicles
+    customVehicles.forEach(cv => {
+        if (cv.codeSeries === oldVal) { cv.codeSeries = newValue; changed = true; }
+    });
+
+    // Update cache
+    const idx = codeSeriesCache.indexOf(oldVal);
+    if (idx !== -1) codeSeriesCache.splice(idx, 1);
+    if (!codeSeriesCache.includes(newValue)) {
+        codeSeriesCache.push(newValue);
+        codeSeriesCache.sort();
+    }
+
+    // Persist changes
+    if (changed) {
+        saveLishiVehicle();
+        saveLishiInventory();
+        saveToIndexedDB('database', DB);
+        saveCustomVehicles();
+        triggerAutoSync();
+    }
+
+    closeEditCodeSeriesModal();
+    renderCodeSeriesList();
+    toast(`Renamed "${oldVal}" to "${newValue}"`);
+}
+
+function deleteCodeSeriesValue(seriesValue) {
+    const usages = getCodeSeriesUsageDetails(seriesValue);
+    const msg = usages.length > 0
+        ? `Delete "${seriesValue}"? It is used in ${usages.length} place${usages.length !== 1 ? 's' : ''}. This will remove it from all vehicles and tools.`
+        : `Delete "${seriesValue}"?`;
+    if (!confirm(msg)) return;
+
+    let changed = false;
+
+    // Remove from lishiVehicleData
+    for (const key in lishiVehicleData) {
+        const vd = lishiVehicleData[key];
+        if (vd && vd.codeSeries) {
+            if (Array.isArray(vd.codeSeries)) {
+                const before = vd.codeSeries.length;
+                vd.codeSeries = vd.codeSeries.filter(cs => cs.series !== seriesValue);
+                if (vd.codeSeries.length !== before) changed = true;
+            } else if (typeof vd.codeSeries === 'string' && vd.codeSeries === seriesValue) {
+                vd.codeSeries = [];
+                changed = true;
+            }
+        }
+    }
+
+    // Remove from lishiInventory
+    for (const toolName in lishiInventory) {
+        const tool = lishiInventory[toolName];
+        if (tool.codeSeries && Array.isArray(tool.codeSeries)) {
+            const before = tool.codeSeries.length;
+            tool.codeSeries = tool.codeSeries.filter(cs => cs !== seriesValue);
+            if (tool.codeSeries.length !== before) changed = true;
+        }
+    }
+
+    // Remove from DB vehicles
+    DB.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.codeSeries) {
+                if (Array.isArray(v.codeSeries)) {
+                    const before = v.codeSeries.length;
+                    v.codeSeries = v.codeSeries.filter(cs => cs.series !== seriesValue);
+                    if (v.codeSeries.length !== before) changed = true;
+                } else if (typeof v.codeSeries === 'string' && v.codeSeries === seriesValue) {
+                    v.codeSeries = '';
+                    changed = true;
+                }
+            }
+        });
+    });
+
+    // Remove from custom vehicles
+    customVehicles.forEach(cv => {
+        if (cv.codeSeries === seriesValue) { cv.codeSeries = ''; changed = true; }
+    });
+
+    // Update cache
+    const idx = codeSeriesCache.indexOf(seriesValue);
+    if (idx !== -1) codeSeriesCache.splice(idx, 1);
+
+    // Persist changes
+    if (changed) {
+        saveLishiVehicle();
+        saveLishiInventory();
+        saveToIndexedDB('database', DB);
+        saveCustomVehicles();
+        triggerAutoSync();
+    }
+
+    renderCodeSeriesList();
+    toast(`Deleted "${seriesValue}"`);
+}
+
+function addNewCodeSeriesValue() {
+    const newValue = prompt('Enter new code series (e.g., 1001-4096):');
+    if (!newValue || !newValue.trim()) return;
+    const cs = newValue.trim();
+    if (codeSeriesCache.includes(cs)) {
+        toast('Code series already exists');
+        return;
+    }
+    codeSeriesCache.push(cs);
+    codeSeriesCache.sort();
+    renderCodeSeriesList();
+    toast(`Added "${cs}"`);
 }
 
 function exportData() {
