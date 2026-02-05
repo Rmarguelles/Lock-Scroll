@@ -5048,8 +5048,10 @@
         </div>
         <div class="modal-input-group" style="background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border:1px solid var(--accent2);">
             <label style="color:var(--accent2);">Door/Trunk/GB Key (for VATS vehicles)</label>
-            <input type="text" class="modal-input" id="vehicleDataSecondaryKey" placeholder="e.g., B62, B48, etc.">
-            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Enter the part number of the non-chip key used for doors, trunk, and glovebox</div>
+            <select class="modal-input" id="vehicleDataSecondaryKey">
+                <option value="">None</option>
+            </select>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Select the non-chip key used for doors, trunk, and glovebox</div>
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -15189,8 +15191,13 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     // Render the code series list
     renderVehicleDataCodeSeriesList();
 
-    // Load secondary key (Door/Trunk/GB)
-    document.getElementById('vehicleDataSecondaryKey').value = vehicleData.secondaryKeyPN || '';
+    // Load secondary key (Door/Trunk/GB) dropdown with non-chip keys
+    const secondaryKeySelect = document.getElementById('vehicleDataSecondaryKey');
+    const nonChipKeys = DB.filter(k => k.keyType === 'Non-Chip Key').sort((a, b) => (a.pn || '').localeCompare(b.pn || ''));
+    const uniqueNonChipPNs = [...new Set(nonChipKeys.map(k => k.pn))].filter(pn => pn);
+    secondaryKeySelect.innerHTML = '<option value="">None</option>' +
+        uniqueNonChipPNs.map(pn => `<option value="${pn}">${pn}</option>`).join('');
+    secondaryKeySelect.value = vehicleData.secondaryKeyPN || '';
 
     document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
     document.getElementById('vehicleDataEditModal').classList.add('on');
