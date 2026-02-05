@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v52</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v53</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -6336,6 +6336,8 @@ async function uploadToCloud() {
             purchaseHistory: purchaseHistory,
             toolsDatabase: toolsDatabase,
             vehicleOverrides: vehicleOverrides,
+            keyRelationships: keyRelationships,
+            fccRelationships: fccRelationships,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastUpdatedBy: currentUser.email
         };
@@ -6358,6 +6360,8 @@ async function uploadToCloud() {
             purchaseHistory: purchaseHistory,
             toolsDatabase: toolsDatabase,
             vehicleOverrides: vehicleOverrides,
+            keyRelationships: keyRelationships,
+            fccRelationships: fccRelationships,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await personalDocRef.set(allData, { merge: true });
@@ -6508,6 +6512,14 @@ async function downloadFromCloud() {
             saveVehicleOverrides();
             applyVehicleOverridesToDB();
         }
+        if (data.keyRelationships) {
+            keyRelationships = { ...keyRelationships, ...data.keyRelationships };
+            saveToIndexedDB('keyRelationships', keyRelationships);
+        }
+        if (data.fccRelationships) {
+            fccRelationships = { ...fccRelationships, ...data.fccRelationships };
+            saveToIndexedDB('fccRelationships', fccRelationships);
+        }
 
         // Refresh UI
         buildFilters();
@@ -6603,6 +6615,14 @@ let deletedLishiTools = []; // Array of tool names that user has deleted (includ
 let customKeyways = []; // Array of user-added keyways that persist even without keys
 let customVehicles = []; // Array of user-created vehicles independent of keys: { id, make, model, startYear, endYear, dataStatus, keyType, chip, buttons, fccid, frequency, keyway, notes, createdAt }
 
+// Key Relationships - dynamically built from entered data
+// Tracks key blank → keyway/chip relationships for auto-population and conflict detection
+let keyRelationships = {}; // { "B99": { keyway: "B86", typicalChip: "Philips 46" }, "HD106": { keyway: "HD103", typicalChip: "Texas 4D" } }
+
+// FCC ID Relationships - dynamically built from entered data
+// Tracks FCC ID → button count/frequency/button functions for auto-population
+let fccRelationships = {}; // { "KR5TXN7": { buttonCount: "4", frequency: "433 MHz", buttonFunctions: ["Lock", "Unlock", "Trunk", "Panic"] } }
+
 // Master list of known Lishi tools (pre-populated)
 const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_family": "GM B / GM37", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "B111": {"keyways": ["GM Z"], "keyway_family": "GM Z", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BAOJUN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BQSB": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BW9MH": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "BYD01R": {"keyways": ["BYD"], "keyway_family": "BYD", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CHAANGAN": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24": {"keyways": ["Chrysler CY24", "Y157", "Y159", "Y164"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24-CV": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "CY24 TRUCK": {"keyways": ["Chrysler CY24"], "keyway_family": "Chrysler CY24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DAT12R": {"keyways": ["Datsun DAT12"], "keyway_family": "Datsun DAT12", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "DW04R V.2": {"keyways": ["Peugeot/Citroen DW04"], "keyway_family": "Peugeot/Citroen DW04", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FO38": {"keyways": ["Ford FO38", "H75"], "keyway_family": "Ford FO38", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "FORD 2017": {"keyways": ["Ford HU101 variant"], "keyway_family": "Ford HU101 variant", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM39": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "GM45": {"keyways": ["GM"], "keyway_family": "GM", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HAIMA": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON58R": {"keyways": ["Honda HON58"], "keyway_family": "Honda HON58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HON66": {"keyways": ["Honda HON66"], "keyway_family": "Honda HON66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU39": {"keyways": ["Mercedes HU39"], "keyway_family": "Mercedes HU39", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU43": {"keyways": ["Mercedes HU43"], "keyway_family": "Mercedes HU43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU46": {"keyways": ["Mercedes HU46"], "keyway_family": "Mercedes HU46", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU49": {"keyways": ["Mercedes HU49"], "keyway_family": "Mercedes HU49", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU58TL": {"keyways": ["Mercedes HU58"], "keyway_family": "Mercedes HU58", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU64 V.2": {"keyways": ["Mercedes HU64"], "keyway_family": "Mercedes HU64", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 Generation 1 & 2": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU66 V.3": {"keyways": ["VAG HU66", "HU66"], "keyway_family": "VAG HU66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU71": {"keyways": ["Mercedes HU71"], "keyway_family": "Mercedes HU71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU92": {"keyways": ["BMW HU92"], "keyway_family": "BMW HU92", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100V3(10 Cut)": {"keyways": ["GM HU100", "B119", "B120"], "keyway_family": "GM HU100", "door": true, "ignition": false, "trunk": true, "cutStart": 3, "cutEnd": 10, "cutTotal": 10, "inStock": false, "notes": "Does NOT work on ignition. Reads cuts 3-10 only."}, "HU100V3(8 Cut)": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU100R V.3": {"keyways": ["GM HU100"], "keyway_family": "GM HU100", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU101 V.3": {"keyways": ["Ford HU101"], "keyway_family": "Ford HU101", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162 (VAG2015)": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC9": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HU162-SC10 V.3": {"keyways": ["VAG HU162"], "keyway_family": "VAG HU162", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY16": {"keyways": ["Hyundai HY16"], "keyway_family": "Hyundai HY16", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY17(HYN15)": {"keyways": ["Hyundai HY17"], "keyway_family": "Hyundai HY17", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY20": {"keyways": ["Hyundai HY20"], "keyway_family": "Hyundai HY20", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HY22": {"keyways": ["Hyundai HY22"], "keyway_family": "Hyundai HY22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14(HY15)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN14R(HY16)": {"keyways": ["Hyundai HYN14"], "keyway_family": "Hyundai HYN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN22": {"keyways": ["Hyundai HYN22"], "keyway_family": "Hyundai HYN22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "HYN7R": {"keyways": ["Hyundai HYN7"], "keyway_family": "Hyundai HYN7", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ICF03": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "K5 V.3": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MAZ24R V.2": {"keyways": ["Mazda MAZ24"], "keyway_family": "Mazda MAZ24", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT11R": {"keyways": ["Mitsubishi MIT11"], "keyway_family": "Mitsubishi MIT11", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT8": {"keyways": ["Mitsubishi MIT8"], "keyway_family": "Mitsubishi MIT8", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "MIT9/MIT6": {"keyways": ["Mitsubishi MIT9 / MIT6"], "keyway_family": "Mitsubishi MIT9 / MIT6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE38 V.2 Boot": {"keyways": ["Nissan NE38"], "keyway_family": "Nissan NE38", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Boot/Trunk only - does not work on ignition"}, "NE66": {"keyways": ["Nissan NE66"], "keyway_family": "Nissan NE66", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE71R V.2": {"keyways": ["Nissan NE71"], "keyway_family": "Nissan NE71", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE72": {"keyways": ["Nissan NE72"], "keyway_family": "Nissan NE72", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NE78": {"keyways": ["Nissan NE78"], "keyway_family": "Nissan NE78", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "NSN14": {"keyways": ["Nissan NSN14", "DA34"], "keyway_family": "Nissan NSN14", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "QIRUI": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SIP22": {"keyways": ["Fiat SIP22"], "keyway_family": "Fiat SIP22", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SRT2018": {"keyways": ["Dodge SRT"], "keyway_family": "Dodge SRT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "SX9": {"keyways": ["Citroen SX9"], "keyway_family": "Citroen SX9", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY2": {"keyways": ["Toyota TOY2"], "keyway_family": "Toyota TOY2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43": {"keyways": ["Toyota TOY43", "TR47"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY43AT Dr/Bt": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": true, "ignition": false, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Door/Boot only - does not work on ignition"}, "TOY43AT Ignition": {"keyways": ["Toyota TOY43AT"], "keyway_family": "Toyota TOY43AT", "door": false, "ignition": true, "trunk": false, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": "Ignition only"}, "TOY43R": {"keyways": ["Toyota TOY43"], "keyway_family": "Toyota TOY43", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "TOY48": {"keyways": ["Toyota TOY48"], "keyway_family": "Toyota TOY48", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA2": {"keyways": ["Peugeot/Citroen VA2"], "keyway_family": "Peugeot/Citroen VA2", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VA6": {"keyways": ["Peugeot/Citroen VA6"], "keyway_family": "Peugeot/Citroen VA6", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "VAC102": {"keyways": [], "keyway_family": "", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "YM23": {"keyways": ["Yamaha YM23 (auto use)"], "keyway_family": "Yamaha YM23 (auto use)", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}, "ZD30": {"keyways": ["Isuzu ZD30"], "keyway_family": "Isuzu ZD30", "door": true, "ignition": true, "trunk": true, "cutStart": 1, "cutEnd": null, "cutTotal": null, "inStock": false, "notes": ""}};
 let vendorPrices = {}; // { partNumber: { vendorName: { priceA, priceB, emergency, shell, oem } } }
@@ -6645,6 +6665,8 @@ async function init() {
     await loadLocalData();
     await loadCustomKeys();
     await loadCustomVehicles();
+    await loadKeyRelationships();
+    buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
     initializeVendorPricesFromDB();
     buildFilters();
@@ -11828,22 +11850,22 @@ function onKeyBlankChange() {
         return;
     }
 
-    // Find key blank in database
+    // Get key blank relationship data (uses relationships store, falls back to database)
     const keyBlank = select.value;
-    let foundKey = DB.find(k => k.pn === keyBlank) || customKeys.find(k => k.pn === keyBlank);
+    const relationshipData = getKeyRelationshipData(keyBlank);
 
-    if (foundKey) {
+    if (relationshipData) {
         // Auto-populate keyway
-        if (foundKey.keyway) {
-            yrfAutoPopulated.keyway = foundKey.keyway;
-            document.getElementById('yrfKeyway').value = foundKey.keyway;
+        if (relationshipData.keyway) {
+            yrfAutoPopulated.keyway = relationshipData.keyway;
+            document.getElementById('yrfKeyway').value = relationshipData.keyway;
             document.getElementById('yrfKeywayContainer').classList.add('auto-populated');
         }
 
         // Auto-populate chip
-        if (foundKey.chip) {
-            yrfAutoPopulated.chip = foundKey.chip;
-            document.getElementById('yrfChipType').value = foundKey.chip;
+        if (relationshipData.typicalChip) {
+            yrfAutoPopulated.chip = relationshipData.typicalChip;
+            document.getElementById('yrfChipType').value = relationshipData.typicalChip;
             document.getElementById('yrfChipContainer').classList.add('auto-populated');
         }
 
@@ -11879,30 +11901,30 @@ function onFccIdChange() {
         return;
     }
 
-    // Find keys with this FCC ID
+    // Get FCC ID relationship data (uses relationships store, falls back to database)
     const fccId = select.value;
-    let foundKey = DB.find(k => k.fccid === fccId) || customKeys.find(k => k.fccid === fccId);
+    const relationshipData = getFccRelationshipData(fccId);
 
-    if (foundKey) {
+    if (relationshipData) {
         // Auto-populate button count
-        if (foundKey.buttons) {
-            yrfAutoPopulated.buttonCount = foundKey.buttons;
-            document.getElementById('yrfButtonCount').value = foundKey.buttons;
+        if (relationshipData.buttonCount) {
+            yrfAutoPopulated.buttonCount = relationshipData.buttonCount;
+            document.getElementById('yrfButtonCount').value = relationshipData.buttonCount;
             document.getElementById('yrfButtonCountContainer').classList.add('auto-populated');
         }
 
         // Auto-populate frequency
-        if (foundKey.frequency) {
-            yrfAutoPopulated.frequency = foundKey.frequency;
-            document.getElementById('yrfFrequency').value = foundKey.frequency;
+        if (relationshipData.frequency) {
+            yrfAutoPopulated.frequency = relationshipData.frequency;
+            document.getElementById('yrfFrequency').value = relationshipData.frequency;
             document.getElementById('yrfFrequencyContainer').classList.add('auto-populated');
         }
 
         // Auto-populate button functions
-        if (foundKey.buttonFunctions) {
-            const functions = Array.isArray(foundKey.buttonFunctions)
-                ? foundKey.buttonFunctions
-                : foundKey.buttonFunctions.split(',').map(f => f.trim()).filter(f => f);
+        if (relationshipData.buttonFunctions) {
+            const functions = Array.isArray(relationshipData.buttonFunctions)
+                ? relationshipData.buttonFunctions
+                : relationshipData.buttonFunctions.split(',').map(f => f.trim()).filter(f => f);
             yrfAutoPopulated.buttonFunctions = [...functions];
             yrfSelectedButtonFunctions = [...functions];
             updateButtonFunctionsDisplay();
@@ -12292,6 +12314,16 @@ function saveNewYearRange() {
 
     customVehicles.push(newVehicle);
     saveToIndexedDB('customVehicles', customVehicles);
+
+    // Update key and FCC relationships with new data
+    if (keyBlank && (keyway || chipType)) {
+        updateKeyRelationship(keyBlank, keyway, chipType);
+        saveKeyRelationships();
+    }
+    if (fccId && (buttonCount || frequency || buttonFunctions.length > 0)) {
+        updateFccRelationship(fccId, buttonCount, frequency, buttonFunctions);
+        saveKeyRelationships();
+    }
 
     if (syncEnabled) {
         uploadToCloud();
@@ -15026,6 +15058,144 @@ async function loadCustomVehicles() {
 function saveCustomVehicles() {
     saveToIndexedDB('customVehicles', customVehicles);
     triggerAutoSync();
+}
+
+// ===================== KEY RELATIONSHIPS =====================
+// Load key and FCC relationships from IndexedDB
+async function loadKeyRelationships() {
+    try {
+        const savedKeyRel = await loadFromIndexedDB('keyRelationships');
+        if (savedKeyRel && typeof savedKeyRel === 'object') {
+            keyRelationships = savedKeyRel;
+        }
+        const savedFccRel = await loadFromIndexedDB('fccRelationships');
+        if (savedFccRel && typeof savedFccRel === 'object') {
+            fccRelationships = savedFccRel;
+        }
+    } catch (e) {
+        console.error('Error loading key relationships:', e);
+    }
+}
+
+// Save key relationships to IndexedDB
+function saveKeyRelationships() {
+    saveToIndexedDB('keyRelationships', keyRelationships);
+    saveToIndexedDB('fccRelationships', fccRelationships);
+    triggerAutoSync();
+}
+
+// Build relationships from existing data in DB, customKeys, and customVehicles
+function buildRelationshipsFromExistingData() {
+    // Build from main DB (key inventory)
+    DB.forEach(key => {
+        // Key blank relationships
+        if (key.pn && (key.keyway || key.chip)) {
+            updateKeyRelationship(key.pn, key.keyway, key.chip);
+        }
+        // FCC ID relationships
+        if (key.fccid && (key.buttons || key.frequency)) {
+            updateFccRelationship(key.fccid, key.buttons, key.frequency, key.buttonFunctions);
+        }
+    });
+
+    // Build from custom keys
+    customKeys.forEach(key => {
+        if (key.pn && (key.keyway || key.chip)) {
+            updateKeyRelationship(key.pn, key.keyway, key.chip);
+        }
+        if (key.fccid && (key.buttons || key.frequency)) {
+            updateFccRelationship(key.fccid, key.buttons, key.frequency, key.buttonFunctions);
+        }
+    });
+
+    // Build from custom vehicles
+    customVehicles.forEach(vehicle => {
+        if (vehicle.keyBlank && (vehicle.keyway || vehicle.chip)) {
+            updateKeyRelationship(vehicle.keyBlank, vehicle.keyway, vehicle.chip);
+        }
+        if (vehicle.fccid && (vehicle.buttons || vehicle.frequency)) {
+            updateFccRelationship(vehicle.fccid, vehicle.buttons, vehicle.frequency, vehicle.buttonFunctions);
+        }
+    });
+
+    // Save the built relationships
+    saveKeyRelationships();
+}
+
+// Update or create a key blank relationship
+function updateKeyRelationship(keyBlank, keyway, chip) {
+    if (!keyBlank) return;
+
+    if (!keyRelationships[keyBlank]) {
+        keyRelationships[keyBlank] = {};
+    }
+
+    // Only update if we have new data (don't overwrite with empty)
+    if (keyway && !keyRelationships[keyBlank].keyway) {
+        keyRelationships[keyBlank].keyway = keyway;
+    }
+    if (chip && !keyRelationships[keyBlank].typicalChip) {
+        keyRelationships[keyBlank].typicalChip = chip;
+    }
+}
+
+// Update or create an FCC ID relationship
+function updateFccRelationship(fccId, buttonCount, frequency, buttonFunctions) {
+    if (!fccId) return;
+
+    if (!fccRelationships[fccId]) {
+        fccRelationships[fccId] = {};
+    }
+
+    // Only update if we have new data (don't overwrite with empty)
+    if (buttonCount && !fccRelationships[fccId].buttonCount) {
+        fccRelationships[fccId].buttonCount = buttonCount;
+    }
+    if (frequency && !fccRelationships[fccId].frequency) {
+        fccRelationships[fccId].frequency = frequency;
+    }
+    if (buttonFunctions && buttonFunctions.length > 0 && (!fccRelationships[fccId].buttonFunctions || fccRelationships[fccId].buttonFunctions.length === 0)) {
+        fccRelationships[fccId].buttonFunctions = Array.isArray(buttonFunctions) ? buttonFunctions : [buttonFunctions];
+    }
+}
+
+// Get key relationship data for auto-population
+function getKeyRelationshipData(keyBlank) {
+    // First check our stored relationships
+    if (keyRelationships[keyBlank]) {
+        return keyRelationships[keyBlank];
+    }
+
+    // Fallback to searching the database
+    const foundKey = DB.find(k => k.pn === keyBlank) || customKeys.find(k => k.pn === keyBlank);
+    if (foundKey) {
+        return {
+            keyway: foundKey.keyway,
+            typicalChip: foundKey.chip
+        };
+    }
+
+    return null;
+}
+
+// Get FCC relationship data for auto-population
+function getFccRelationshipData(fccId) {
+    // First check our stored relationships
+    if (fccRelationships[fccId]) {
+        return fccRelationships[fccId];
+    }
+
+    // Fallback to searching the database
+    const foundKey = DB.find(k => k.fccid === fccId) || customKeys.find(k => k.fccid === fccId);
+    if (foundKey) {
+        return {
+            buttonCount: foundKey.buttons,
+            frequency: foundKey.frequency,
+            buttonFunctions: foundKey.buttonFunctions
+        };
+    }
+
+    return null;
 }
 
 function getIncompleteVehicleCount() {
