@@ -15992,7 +15992,7 @@ function saveCustomKey() {
     
     // Gather vehicle data
     const vehicles = [];
-    document.querySelectorAll('[id^="customVehicle"][id$=""]').forEach(row => {
+    document.querySelectorAll('.custom-vehicle-row').forEach(row => {
         const num = row.id.replace('customVehicle', '');
         if (!num || isNaN(num)) return;
 
@@ -16003,7 +16003,9 @@ function saveCustomKey() {
         const model = (modelSelect === '__other__' ? modelOther : modelSelect)?.trim();
         const startYear = parseInt(document.getElementById('customVehicleStart' + num)?.value) || new Date().getFullYear();
         const endYear = parseInt(document.getElementById('customVehicleEnd' + num)?.value) || startYear;
-        const codeSeries = document.getElementById('customVehicleCodeSeries' + num)?.value || null;
+        const codeSeriesSelect = document.getElementById('customVehicleCodeSeries' + num)?.value;
+        const codeSeriesOther = document.getElementById('customVehicleCodeSeriesOther' + num)?.value?.trim();
+        const codeSeries = (codeSeriesSelect === '__add_new__' ? codeSeriesOther : codeSeriesSelect) || null;
 
         if (make && make !== '__other__') {
             vehicles.push({
