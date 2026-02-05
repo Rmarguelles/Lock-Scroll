@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v51</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v52</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4830,7 +4830,14 @@
         <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
         <div class="modal-input-group">
             <label>Code Series</label>
-            <input type="text" class="modal-input" id="vehicleDataCodeSeries" placeholder="e.g., HPC1, FC1, B107">
+            <div class="dropdown-with-new">
+                <select class="modal-input" id="vehicleDataCodeSeries" onchange="onVehicleDataCodeSeriesChange()">
+                    <option value="">Select Code Series...</option>
+                </select>
+                <div class="inline-add-new" id="vehicleDataCodeSeriesNew">
+                    <input type="text" class="modal-input" id="vehicleDataCodeSeriesNewInput" placeholder="Enter new code series...">
+                </div>
+            </div>
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -11648,6 +11655,9 @@ function toggleButtonFunction(event, func) {
     // Update option styling
     const option = event.currentTarget;
     option.classList.toggle('selected');
+
+    // Check for FCC data mismatch (Rule 5)
+    checkFccDataMismatch('buttonFunctions');
 }
 
 // Add new button function
@@ -11668,6 +11678,9 @@ function addNewButtonFunction(event) {
             options.buttonFunctions.sort();
             populateButtonFunctionsDropdown([...new Set(options.buttonFunctions)]);
             updateButtonFunctionsDisplay();
+
+            // Check for FCC data mismatch (Rule 5)
+            checkFccDataMismatch('buttonFunctions');
         }
     }
 }
@@ -11698,6 +11711,9 @@ function removeButtonFunction(event, func) {
         const dropdown = document.getElementById('yrfButtonFunctionsDropdown');
         const option = dropdown.querySelector(`[data-value="${func}"]`);
         if (option) option.classList.remove('selected');
+
+        // Check for FCC data mismatch (Rule 5)
+        checkFccDataMismatch('buttonFunctions');
     }
 }
 
@@ -11731,6 +11747,62 @@ function onYrfDropdownChange(selectId) {
     } else {
         newInputContainer.classList.remove('visible');
     }
+
+    // Check for FCC data mismatch (Rule 5) when Button Count or Frequency changes
+    checkFccDataMismatch(selectId);
+}
+
+// Check for FCC data mismatch when user changes auto-populated FCC fields
+function checkFccDataMismatch(changedField) {
+    const fccId = document.getElementById('yrfFccId').value;
+    if (!fccId) {
+        hideWarning('fccMismatchWarning');
+        return;
+    }
+
+    // Only check if relevant fields were changed
+    if (changedField !== 'yrfButtonCount' && changedField !== 'yrfFrequency' && changedField !== 'buttonFunctions') {
+        return;
+    }
+
+    let hasMismatch = false;
+    let mismatchDetails = [];
+
+    // Check Button Count mismatch
+    if (yrfAutoPopulated.buttonCount) {
+        const currentButtonCount = document.getElementById('yrfButtonCount').value;
+        if (currentButtonCount && currentButtonCount !== yrfAutoPopulated.buttonCount) {
+            hasMismatch = true;
+            mismatchDetails.push(`button count (expected: ${yrfAutoPopulated.buttonCount})`);
+        }
+    }
+
+    // Check Frequency mismatch
+    if (yrfAutoPopulated.frequency) {
+        const currentFrequency = document.getElementById('yrfFrequency').value;
+        if (currentFrequency && currentFrequency !== yrfAutoPopulated.frequency) {
+            hasMismatch = true;
+            mismatchDetails.push(`frequency (expected: ${yrfAutoPopulated.frequency})`);
+        }
+    }
+
+    // Check Button Functions mismatch
+    if (yrfAutoPopulated.buttonFunctions && yrfAutoPopulated.buttonFunctions.length > 0) {
+        const currentFunctions = [...yrfSelectedButtonFunctions].sort();
+        const expectedFunctions = [...yrfAutoPopulated.buttonFunctions].sort();
+        if (JSON.stringify(currentFunctions) !== JSON.stringify(expectedFunctions)) {
+            hasMismatch = true;
+            mismatchDetails.push(`button functions (expected: ${expectedFunctions.join(', ')})`);
+        }
+    }
+
+    if (hasMismatch) {
+        showWarning('fccMismatchWarning', `${fccId} listed elsewhere with different ${mismatchDetails.join(', ')}. Confirm change.`);
+    } else {
+        hideWarning('fccMismatchWarning');
+    }
+
+    updateSaveButtonState();
 }
 
 // Key Blank change handler - auto-populate keyway and chip
@@ -13974,9 +14046,56 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     const vehicleData = lishiVehicleData[groupKey] || {};
 
     document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${startYear}-${endYear})`;
-    document.getElementById('vehicleDataCodeSeries').value = vehicleData.codeSeries || '';
+
+    // Populate code series dropdown
+    populateVehicleDataCodeSeriesDropdown(vehicleData.codeSeries);
+
+    // Reset inline add new field
+    document.getElementById('vehicleDataCodeSeriesNew').classList.remove('visible');
+    document.getElementById('vehicleDataCodeSeriesNewInput').value = '';
+
     document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
     document.getElementById('vehicleDataEditModal').classList.add('on');
+}
+
+function populateVehicleDataCodeSeriesDropdown(selectedValue) {
+    // Build code series cache if empty
+    if (codeSeriesCache.length === 0) {
+        buildCodeSeriesCache();
+    }
+
+    const select = document.getElementById('vehicleDataCodeSeries');
+    const options = ['<option value="">Select Code Series...</option>'];
+
+    // Add all cached code series
+    codeSeriesCache.forEach(cs => {
+        const selected = cs === selectedValue ? ' selected' : '';
+        options.push(`<option value="${cs}"${selected}>${cs}</option>`);
+    });
+
+    // If current value exists but not in cache, add it
+    if (selectedValue && !codeSeriesCache.includes(selectedValue)) {
+        options.push(`<option value="${selectedValue}" selected>${selectedValue}</option>`);
+    }
+
+    // Add "Add New" option at the end
+    options.push('<option value="__ADD_NEW__">+ Add New...</option>');
+
+    select.innerHTML = options.join('');
+}
+
+function onVehicleDataCodeSeriesChange() {
+    const select = document.getElementById('vehicleDataCodeSeries');
+    const newInputContainer = document.getElementById('vehicleDataCodeSeriesNew');
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        document.getElementById('vehicleDataCodeSeriesNewInput').focus();
+        select.value = '';
+    } else {
+        newInputContainer.classList.remove('visible');
+        document.getElementById('vehicleDataCodeSeriesNewInput').value = '';
+    }
 }
 
 function closeVehicleDataEditModal() {
@@ -13999,7 +14118,24 @@ function saveVehicleDataEdit() {
         };
     }
 
-    const codeSeries = document.getElementById('vehicleDataCodeSeries').value.trim();
+    // Get code series from dropdown or new input field
+    const newInputContainer = document.getElementById('vehicleDataCodeSeriesNew');
+    const newInput = document.getElementById('vehicleDataCodeSeriesNewInput');
+    const select = document.getElementById('vehicleDataCodeSeries');
+
+    let codeSeries = '';
+    if (newInputContainer.classList.contains('visible') && newInput.value.trim()) {
+        // User is adding a new code series
+        codeSeries = newInput.value.trim();
+        // Add to cache for future use
+        if (!codeSeriesCache.includes(codeSeries)) {
+            codeSeriesCache.push(codeSeries);
+            codeSeriesCache.sort();
+        }
+    } else {
+        codeSeries = select.value || '';
+    }
+
     const notes = document.getElementById('vehicleDataNotes').value.trim();
 
     lishiVehicleData[currentVehicleDataEditKey].codeSeries = codeSeries;
