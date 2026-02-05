@@ -3993,7 +3993,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v58</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v59</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4495,6 +4495,13 @@
                 <button class="settings-btn" onclick="document.getElementById('importInput').click()" style="flex:1;">📥 Import</button>
                 <input type="file" id="importInput" accept=".json" onchange="importData(event)" style="display:none;">
             </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>App Updates</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
+            <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v59</p>
         </div>
 
         <div class="settings-section">
@@ -10666,6 +10673,45 @@ function closeSettings() {
     document.getElementById('settingsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
+}
+
+// Force update app - clears service worker cache and reloads
+async function forceUpdateApp() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '🔄 Updating...';
+
+    try {
+        // Unregister all service workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                await registration.unregister();
+            }
+        }
+
+        // Clear all caches
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+                await caches.delete(cacheName);
+            }
+        }
+
+        // Show success message and reload
+        toast('Cache cleared! Reloading...');
+
+        // Small delay to show the toast, then force reload from server
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 1000);
+
+    } catch (error) {
+        console.error('Update failed:', error);
+        toast('Update failed. Try clearing browser data manually.');
+        btn.disabled = false;
+        btn.textContent = '🔄 Update App';
+    }
 }
 
 // Settings Sub-Panels
