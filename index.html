@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v69</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v70</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v69</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v70</p>
         </div>
 
         <div class="settings-section">
@@ -13722,6 +13722,17 @@ function openVehicleDetail(vehicleKey) {
     const totalVehicleStock = vehicle.keys.reduce((sum, key) => sum + (stockData[key.pn] || 0), 0);
     const hasStock = totalVehicleStock > 0;
 
+    // Check for VATS keys and get secondary key info
+    const vatsKeys = vehicle.keys.filter(k => k.isVATS);
+    const hasVATS = vatsKeys.length > 0;
+    const secondaryKeyPNs = [...new Set(vatsKeys.map(k => k.secondaryKeyPartNumber).filter(Boolean))];
+    const secondaryKeyDisplay = secondaryKeyPNs.length > 0
+        ? secondaryKeyPNs.map(pn => {
+            const stock = stockData[pn] || 0;
+            return `${pn} <span style="color:${stock > 0 ? 'var(--success)' : 'var(--danger)'};">(${stock})</span>`;
+        }).join(', ')
+        : null;
+
     // Build content
     let html = `
         <!-- Big Stock Indicator -->
@@ -13761,6 +13772,12 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-label">Chip Type${vehicle.chips.size > 1 ? 's' : ''}</div>
                 <div class="vehicle-info-value">${Array.from(vehicle.chips).join(', ') || 'N/A'}</div>
             </div>
+            ${hasVATS ? `
+            <div class="vehicle-info-item" style="background:rgba(255,107,53,0.1);border:1px solid var(--accent2);border-radius:6px;">
+                <div class="vehicle-info-label" style="color:var(--accent2);">Door/Trunk/GB Key</div>
+                <div class="vehicle-info-value highlight">${secondaryKeyDisplay || 'Not specified'}</div>
+            </div>
+            ` : ''}
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Frequency</div>
                 <div class="vehicle-info-value">${Array.from(vehicle.frequencies).join(', ') || 'N/A'}</div>
@@ -13810,16 +13827,7 @@ function openVehicleDetail(vehicleKey) {
 
     html += `
         <div class="vehicle-section">
-            <div class="vehicle-section-title">Compatible Keys (${sortedKeys.length})${hasVATS ? ' <span style="background:var(--accent2);color:white;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">VATS</span>' : ''}</div>
-            ${hasVATS ? `
-                <div style="background:rgba(255,107,53,0.1);border:1px solid var(--accent2);border-radius:8px;padding:12px;margin-bottom:12px;">
-                    <div style="font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:8px;">🔑 VATS Vehicle - Two Different Keys Required</div>
-                    <div style="font-size:11px;color:var(--dim);">
-                        <strong>Ignition Key:</strong> Contains resistor chip (VATS) - cuts to ignition<br>
-                        <strong>Door/Trunk Key:</strong> Standard key - cuts to doors, trunk, glovebox
-                    </div>
-                </div>
-            ` : ''}
+            <div class="vehicle-section-title">Compatible Keys (${sortedKeys.length})</div>
             ${sortedKeys.map(key => {
                 const stock = stockData[key.pn] || 0;
                 const inStock = stock > 0;
@@ -13831,11 +13839,11 @@ function openVehicleDetail(vehicleKey) {
                 return `
                     <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
                         <div class="vehicle-key-info">
-                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${isVATSKey ? ' <span style="background:var(--accent2);color:white;padding:1px 6px;border-radius:3px;font-size:10px;">IGNITION</span>' : ''}</h4>
+                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${isVATSKey ? ' <span style="background:var(--accent2);color:white;padding:1px 6px;border-radius:3px;font-size:10px;">VATS IGNITION</span>' : ''}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
                             ${isVATSKey && secondaryPN ? `
                                 <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
-                                    <span style="font-size:11px;color:var(--dim);">Door/Trunk Key:</span>
+                                    <span style="font-size:11px;color:var(--accent2);">Door/Trunk/GB:</span>
                                     <span style="font-size:12px;font-weight:600;color:var(--text);margin-left:4px;">${secondaryPN}</span>
                                     <span style="font-size:11px;color:${secondaryStock > 0 ? 'var(--success)' : 'var(--danger)'};">(${secondaryStock} in stock)</span>
                                 </div>
