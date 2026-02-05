@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v65</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v66</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v65</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v66</p>
         </div>
 
         <div class="settings-section">
@@ -5605,7 +5605,7 @@
                 <label>Quantity</label>
                 <div class="add-inv-qty-row">
                     <button class="add-inv-qty-btn" onclick="adjustAddQty(-1)">−</button>
-                    <input type="number" class="add-inv-input add-inv-qty" id="addInvQty" value="1" min="1">
+                    <input type="number" class="add-inv-input add-inv-qty" id="addInvQty" value="1" min="0">
                     <button class="add-inv-qty-btn" onclick="adjustAddQty(1)">+</button>
                 </div>
             </div>
@@ -9874,14 +9874,20 @@ function goHome() {
     // Close all panels and modals
     document.getElementById('settingsPanel').classList.remove('on');
     document.getElementById('lishiLookupPanel').classList.remove('on');
+    document.getElementById('lishiDetailPanel').classList.remove('on');
     document.getElementById('fidPanel').classList.remove('on');
+    document.getElementById('fidManagerPanel').classList.remove('on');
     document.getElementById('addInventoryPanel').classList.remove('on');
+    document.getElementById('purchaseHistoryPanel').classList.remove('on');
+    document.getElementById('addCustomKeyPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.getElementById('vehicleDetailPanel').classList.remove('on');
     document.getElementById('detailPanel').classList.remove('on');
     document.getElementById('renameModelModal').classList.remove('on');
+    document.getElementById('incompleteVehiclesPanel').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -15263,9 +15269,9 @@ function goToStep1() {
 
 function adjustAddQty(delta) {
     const input = document.getElementById('addInvQty');
-    let val = parseInt(input.value) || 1;
+    let val = parseInt(input.value) || 0;
     val += delta;
-    if (val < 1) val = 1;
+    if (val < 0) val = 0;
     input.value = val;
 }
 
@@ -15275,7 +15281,8 @@ function submitInventory() {
         return;
     }
     
-    const qty = parseInt(document.getElementById('addInvQty').value) || 1;
+    const qtyInput = document.getElementById('addInvQty').value;
+    const qty = qtyInput === '' ? 1 : parseInt(qtyInput) || 0;
     let vendor = document.getElementById('addInvVendor').value;
     const price = parseFloat(document.getElementById('addInvPrice').value) || 0;
     const date = document.getElementById('addInvDate').value || new Date().toISOString().split('T')[0];
