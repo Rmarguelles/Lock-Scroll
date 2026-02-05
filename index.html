@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v79</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v80</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4653,6 +4653,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openCodeSeriesSettingsPanel()">
+                    <span class="settings-nav-icon">🔢</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Code Series</span>
+                        <span class="settings-nav-desc">Manage bitting code series</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openCategoriesSettingsPanel()">
                     <span class="settings-nav-icon">🏷️</span>
                     <div class="settings-nav-info">
@@ -4693,7 +4701,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v79</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v80</p>
         </div>
 
         <div class="settings-section">
@@ -4746,6 +4754,22 @@
         <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage keys you've added to the database.</p>
         <div id="customKeysList"></div>
         <button class="add-vendor-btn" onclick="openAddCustomKey(); closeCustomKeysSettingsPanel(); closeSettings();" style="margin-top:12px;width:100%;">+ Add Custom Key</button>
+    </div>
+</div>
+
+<!-- Code Series Settings Panel -->
+<div class="panel" id="codeSeriesSettingsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeCodeSeriesSettingsPanel()">←</button>
+        <h2>🔢 Code Series</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage bitting code series values used for vehicle key cuts.</p>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <input type="text" id="newCodeSeriesInput" class="modal-input" placeholder="e.g., 1001-4096" style="flex:1;">
+            <button class="add-vendor-btn" onclick="addNewCodeSeries()" style="white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="codeSeriesList" style="max-height:400px;overflow-y:auto;"></div>
     </div>
 </div>
 
@@ -6555,6 +6579,7 @@ async function uploadToCloud() {
                 lishiData: lishiData,
                 deletedLishiTools: deletedLishiTools,
                 customKeyways: customKeyways,
+                customCodeSeries: customCodeSeries,
                 vendorPrices: vendorPrices,
                 customVendors: customVendors,
                 fidAssignments: fidAssignments,
@@ -6579,6 +6604,7 @@ async function uploadToCloud() {
                 lishiData: lishiData,
                 deletedLishiTools: deletedLishiTools,
                 customKeyways: customKeyways,
+                customCodeSeries: customCodeSeries,
                 vendorPrices: vendorPrices,
                 customVendors: customVendors,
                 fidAssignments: fidAssignments,
@@ -6693,6 +6719,15 @@ async function downloadFromCloud() {
                 }
             });
             saveCustomKeyways();
+        }
+        if (data.customCodeSeries && data.customCodeSeries.length > 0) {
+            // Merge custom code series lists
+            data.customCodeSeries.forEach(cs => {
+                if (!customCodeSeries.includes(cs)) {
+                    customCodeSeries.push(cs);
+                }
+            });
+            saveCustomCodeSeries();
         }
         if (data.vendorPrices) {
             vendorPrices = { ...vendorPrices, ...data.vendorPrices };
@@ -6914,7 +6949,7 @@ async function init() {
     // Register service worker for PWA (with cache-busting version)
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('service-worker.js?v=79');
+            const registration = await navigator.serviceWorker.register('service-worker.js?v=80');
             console.log('Service Worker registered:', registration.scope);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
@@ -7025,6 +7060,9 @@ async function loadLocalData() {
 
             const savedCustomKeyways = await loadFromIndexedDB('customKeyways');
             if (savedCustomKeyways) customKeyways = savedCustomKeyways;
+
+            const savedCustomCodeSeries = await loadFromIndexedDB('customCodeSeries');
+            if (savedCustomCodeSeries) customCodeSeries = savedCustomCodeSeries;
 
             const savedVendorPrices = await loadFromIndexedDB('vendorPrices');
             if (savedVendorPrices) vendorPrices = savedVendorPrices;
@@ -7808,6 +7846,11 @@ function buildCodeSeriesCache() {
     // Collect from custom vehicles
     customVehicles.forEach(cv => {
         if (cv.codeSeries) series.add(cv.codeSeries);
+    });
+
+    // Collect from user-added custom code series
+    customCodeSeries.forEach(cs => {
+        if (cs) series.add(cs);
     });
 
     codeSeriesCache = Array.from(series).sort();
@@ -11186,6 +11229,123 @@ function openCustomKeysSettingsPanel() {
 }
 function closeCustomKeysSettingsPanel() {
     document.getElementById('customKeysSettingsPanel').classList.remove('on');
+}
+
+// Code Series Settings Panel
+let customCodeSeries = []; // User-added code series that persist
+
+function openCodeSeriesSettingsPanel() {
+    buildCodeSeriesCache();
+    renderCodeSeriesList();
+    document.getElementById('codeSeriesSettingsPanel').classList.add('on');
+}
+function closeCodeSeriesSettingsPanel() {
+    document.getElementById('codeSeriesSettingsPanel').classList.remove('on');
+}
+
+function renderCodeSeriesList() {
+    const container = document.getElementById('codeSeriesList');
+
+    if (codeSeriesCache.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:12px;text-align:center;">No code series found</div>';
+        return;
+    }
+
+    container.innerHTML = codeSeriesCache.map(cs => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;border:1px solid var(--border);">
+            <div style="font-weight:600;color:var(--text);">${cs}</div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="editCodeSeries('${cs}')" style="padding:6px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;cursor:pointer;font-size:12px;">Edit</button>
+                <button onclick="deleteCodeSeries('${cs}')" style="padding:6px 12px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addNewCodeSeries() {
+    const input = document.getElementById('newCodeSeriesInput');
+    const cs = input.value.trim();
+
+    if (!cs) {
+        toast('Please enter a code series value');
+        return;
+    }
+
+    if (codeSeriesCache.includes(cs)) {
+        toast('This code series already exists');
+        return;
+    }
+
+    codeSeriesCache.push(cs);
+    codeSeriesCache.sort();
+    customCodeSeries.push(cs);
+    saveCustomCodeSeries();
+
+    input.value = '';
+    renderCodeSeriesList();
+    toast('Code series added');
+}
+
+function editCodeSeries(oldCs) {
+    const newCs = prompt('Edit code series:', oldCs);
+    if (!newCs || newCs.trim() === '' || newCs.trim() === oldCs) return;
+
+    const trimmedNew = newCs.trim();
+
+    // Update in codeSeriesCache
+    const idx = codeSeriesCache.indexOf(oldCs);
+    if (idx >= 0) {
+        codeSeriesCache[idx] = trimmedNew;
+        codeSeriesCache.sort();
+    }
+
+    // Update in customCodeSeries
+    const customIdx = customCodeSeries.indexOf(oldCs);
+    if (customIdx >= 0) {
+        customCodeSeries[customIdx] = trimmedNew;
+    } else {
+        customCodeSeries.push(trimmedNew);
+    }
+
+    // Update in lishiVehicleData
+    for (const key in lishiVehicleData) {
+        const vd = lishiVehicleData[key];
+        if (vd.codeSeries) {
+            if (Array.isArray(vd.codeSeries)) {
+                vd.codeSeries.forEach(cs => {
+                    if (cs.series === oldCs) cs.series = trimmedNew;
+                });
+            } else if (vd.codeSeries === oldCs) {
+                vd.codeSeries = trimmedNew;
+            }
+        }
+    }
+
+    saveCustomCodeSeries();
+    saveLishiVehicle();
+    renderCodeSeriesList();
+    toast('Code series updated');
+}
+
+function deleteCodeSeries(cs) {
+    if (!confirm(`Delete code series "${cs}"? This will not remove it from vehicles that already use it.`)) return;
+
+    // Remove from codeSeriesCache
+    const idx = codeSeriesCache.indexOf(cs);
+    if (idx >= 0) codeSeriesCache.splice(idx, 1);
+
+    // Remove from customCodeSeries
+    const customIdx = customCodeSeries.indexOf(cs);
+    if (customIdx >= 0) customCodeSeries.splice(customIdx, 1);
+
+    saveCustomCodeSeries();
+    renderCodeSeriesList();
+    toast('Code series deleted');
+}
+
+function saveCustomCodeSeries() {
+    saveToIndexedDB('customCodeSeries', customCodeSeries);
+    triggerAutoSync();
 }
 
 function openCategoriesSettingsPanel() {
