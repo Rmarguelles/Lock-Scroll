@@ -6528,69 +6528,75 @@ async function syncNow() {
 async function uploadToCloud() {
     if (!currentUser || !firebaseDb) return;
 
-    // Always save personal data (stock counts) to user's own location
-    const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
-    const personalData = {
-        stockData: stockData,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await personalDocRef.set(personalData, { merge: true });
-
-    // Check if user is authorized for shared mode
-    if (sharedModeEnabled) {
-        const isAuthorized = authorizedUsers.includes(currentUser.email);
-        if (!isAuthorized) {
-            console.log('User not authorized for shared database');
-            return;
-        }
-
-        // Save shared data to shared location (excludes stockData)
-        const sharedDocRef = firebaseDb.collection('shared').doc('data');
-        const sharedData = {
-            customKeys: customKeys,
-            customVehicles: customVehicles,
-            lishiInventory: lishiInventory,
-            lishiVehicleData: lishiVehicleData,
-            lishiData: lishiData,
-            deletedLishiTools: deletedLishiTools,
-            customKeyways: customKeyways,
-            vendorPrices: vendorPrices,
-            customVendors: customVendors,
-            fidAssignments: fidAssignments,
-            fidMerges: fidMerges,
-            fidPrefixes: fidPrefixes,
-            purchaseHistory: purchaseHistory,
-            toolsDatabase: toolsDatabase,
-            vehicleOverrides: vehicleOverrides,
-            keyRelationships: keyRelationships,
-            fccRelationships: fccRelationships,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastUpdatedBy: currentUser.email
-        };
-        await sharedDocRef.set(sharedData, { merge: true });
-    } else {
-        // Not in shared mode - save everything to personal location
-        const allData = {
-            customKeys: customKeys,
-            customVehicles: customVehicles,
-            lishiInventory: lishiInventory,
-            lishiVehicleData: lishiVehicleData,
-            lishiData: lishiData,
-            deletedLishiTools: deletedLishiTools,
-            customKeyways: customKeyways,
-            vendorPrices: vendorPrices,
-            customVendors: customVendors,
-            fidAssignments: fidAssignments,
-            fidMerges: fidMerges,
-            fidPrefixes: fidPrefixes,
-            purchaseHistory: purchaseHistory,
-            toolsDatabase: toolsDatabase,
-            vehicleOverrides: vehicleOverrides,
-            keyRelationships: keyRelationships,
-            fccRelationships: fccRelationships,
+    try {
+        // Always save personal data (stock counts) to user's own location
+        const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
+        const personalData = {
+            stockData: stockData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        await personalDocRef.set(allData, { merge: true });
+        await personalDocRef.set(personalData, { merge: true });
+
+        // Check if user is authorized for shared mode
+        if (sharedModeEnabled) {
+            const isAuthorized = authorizedUsers.includes(currentUser.email);
+            if (!isAuthorized) {
+                console.log('User not authorized for shared database');
+                return;
+            }
+
+            // Save shared data to shared location (excludes stockData)
+            const sharedDocRef = firebaseDb.collection('shared').doc('data');
+            const sharedData = {
+                customKeys: customKeys,
+                customVehicles: customVehicles,
+                lishiInventory: lishiInventory,
+                lishiVehicleData: lishiVehicleData,
+                lishiData: lishiData,
+                deletedLishiTools: deletedLishiTools,
+                customKeyways: customKeyways,
+                vendorPrices: vendorPrices,
+                customVendors: customVendors,
+                fidAssignments: fidAssignments,
+                fidMerges: fidMerges,
+                fidPrefixes: fidPrefixes,
+                purchaseHistory: purchaseHistory,
+                toolsDatabase: toolsDatabase,
+                vehicleOverrides: vehicleOverrides,
+                keyRelationships: keyRelationships,
+                fccRelationships: fccRelationships,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastUpdatedBy: currentUser.email
+            };
+            await sharedDocRef.set(sharedData, { merge: true });
+        } else {
+            // Not in shared mode - save everything to personal location
+            const allData = {
+                customKeys: customKeys,
+                customVehicles: customVehicles,
+                lishiInventory: lishiInventory,
+                lishiVehicleData: lishiVehicleData,
+                lishiData: lishiData,
+                deletedLishiTools: deletedLishiTools,
+                customKeyways: customKeyways,
+                vendorPrices: vendorPrices,
+                customVendors: customVendors,
+                fidAssignments: fidAssignments,
+                fidMerges: fidMerges,
+                fidPrefixes: fidPrefixes,
+                purchaseHistory: purchaseHistory,
+                toolsDatabase: toolsDatabase,
+                vehicleOverrides: vehicleOverrides,
+                keyRelationships: keyRelationships,
+                fccRelationships: fccRelationships,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await personalDocRef.set(allData, { merge: true });
+        }
+        console.log('Cloud sync successful');
+    } catch (error) {
+        console.error('Cloud sync failed:', error);
+        toast('Cloud backup failed: ' + error.message);
     }
 }
 
