@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v60</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v61</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v60</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v61</p>
         </div>
 
         <div class="settings-section">
@@ -13203,7 +13203,7 @@ function renderVehicleYearsForModel(make, model, keyType) {
             ? v.keys.filter(k => normalizeKeyType(k.keyType) === keyType)
             : v.keys;
         return { ...v, keys: filteredKeys };
-    }).filter(v => v.keys.length > 0); // Remove vehicles with no matching keys
+    }).filter(v => v.keys.length > 0 || v.isCustom); // Keep custom vehicles even without matching keys
 
     // Sort by year descending
     filteredVehicles.sort((a, b) => b.startYear - a.startYear);
@@ -13297,6 +13297,56 @@ function getUniqueVehicles() {
             if (key.chip) vehicleMap[vehicleKey].chips.add(key.chip);
             if (key.frequency) vehicleMap[vehicleKey].frequencies.add(key.frequency);
         });
+    });
+
+    // Also include custom vehicles (year ranges added by user)
+    customVehicles.forEach(cv => {
+        if (!cv.make || !cv.model || !cv.startYear) return;
+
+        const vehicleKey = `${cv.make}|${cv.model}|${cv.startYear}|${cv.endYear || cv.startYear}`;
+
+        if (!vehicleMap[vehicleKey]) {
+            vehicleMap[vehicleKey] = {
+                make: cv.make,
+                model: cv.model,
+                startYear: cv.startYear,
+                endYear: cv.endYear || cv.startYear,
+                keys: [],
+                keyways: new Set(),
+                fccids: new Set(),
+                chips: new Set(),
+                frequencies: new Set(),
+                isCustom: true
+            };
+        }
+
+        // Add custom vehicle data to the entry
+        vehicleMap[vehicleKey].isCustom = true;
+        if (cv.keyway) vehicleMap[vehicleKey].keyways.add(cv.keyway);
+        if (cv.fccid) vehicleMap[vehicleKey].fccids.add(cv.fccid);
+        if (cv.chip) vehicleMap[vehicleKey].chips.add(cv.chip);
+        if (cv.frequency) vehicleMap[vehicleKey].frequencies.add(cv.frequency);
+
+        // Create a pseudo-key object for display purposes if custom vehicle has key data
+        if (cv.keyBlank || cv.keyType) {
+            const pseudoKey = {
+                pn: cv.keyBlank || 'Custom',
+                keyType: cv.keyType || 'Unknown',
+                keyway: cv.keyway,
+                chip: cv.chip,
+                fccid: cv.fccid,
+                frequency: cv.frequency,
+                buttons: cv.buttons,
+                isCustom: true
+            };
+            // Only add if not already in keys array
+            const exists = vehicleMap[vehicleKey].keys.some(k =>
+                k.pn === pseudoKey.pn && k.isCustom
+            );
+            if (!exists) {
+                vehicleMap[vehicleKey].keys.push(pseudoKey);
+            }
+        }
     });
 
     return Object.values(vehicleMap);
