@@ -15728,11 +15728,7 @@ function openAddCustomKey() {
     populateCustomKeyDropdown('customKeyChip', 'chip', 'Select chip type...');
     document.getElementById('customKeyChipOther').style.display = 'none';
     document.getElementById('customKeyChipOther').value = '';
-
-    // Reset VATS fields
-    document.getElementById('customKeyIsVATS').checked = false;
-    document.getElementById('customKeySecondaryPN').value = '';
-    document.getElementById('customKeyVATSSection').style.display = 'none';
+    document.getElementById('customKeyChipSection').style.display = 'block';
 
     // Reset other dropdowns
     document.getElementById('customKeyType').value = '';
