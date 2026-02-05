@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v63</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v64</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4693,7 +4693,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v63</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v64</p>
         </div>
 
         <div class="settings-section">
@@ -13247,7 +13247,7 @@ function renderVehicleYearsForModel(make, model, keyType) {
         const yearDisplay = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
         const vehicleKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear}`;
 
-        // Build key type breakdown
+        // Build key type breakdown from filtered keys
         const keyTypeCounts = {};
         v.keys.forEach(k => {
             const kt = k.keyType || 'Unknown';
@@ -13258,6 +13258,27 @@ function renderVehicleYearsForModel(make, model, keyType) {
             .map(([type, count]) => `${type}: ${count}`)
             .join(' | ');
 
+        // For custom vehicles with no matching keys, check if there are keys of other types
+        let keyCountDisplay = `${v.keys.length} key${v.keys.length !== 1 ? 's' : ''}`;
+        if (v.keys.length === 0 && v.isCustom) {
+            // Check if there are keys from DB for this year range (different key type)
+            const allVehicles = getUniqueVehicles();
+            const fullVehicle = allVehicles.find(fv =>
+                fv.make === v.make && fv.model === v.model &&
+                fv.startYear === v.startYear && fv.endYear === v.endYear
+            );
+            if (fullVehicle && fullVehicle.keys.length > 0) {
+                const otherTypeCount = fullVehicle.keys.filter(k => normalizeKeyType(k.keyType) !== keyType).length;
+                if (otherTypeCount > 0) {
+                    keyCountDisplay = `0 ${keyType} keys (${otherTypeCount} other type)`;
+                } else {
+                    keyCountDisplay = 'Custom year range';
+                }
+            } else {
+                keyCountDisplay = 'Custom year range';
+            }
+        }
+
         return `
             <div class="vehicle-card" onclick="openVehicleDetail('${vehicleKey.replace(/'/g, "\\'")}')">
                 <div class="vehicle-card-header">
@@ -13267,8 +13288,8 @@ function renderVehicleYearsForModel(make, model, keyType) {
                     </span>
                 </div>
                 <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
-                    <span style="color:var(--dim);">${v.keys.length} key${v.keys.length !== 1 ? 's' : ''}</span>
-                    <span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>
+                    <span style="color:var(--dim);">${keyCountDisplay}</span>
+                    ${keyTypeBreakdown ? `<span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>` : ''}
                 </div>
             </div>
         `;
