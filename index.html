@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v89</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v90</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v89</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v90</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v89<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v90<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7037,6 +7037,7 @@ async function uploadToCloud() {
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
+                vehicleYearNotes: vehicleYearNotes,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -7063,6 +7064,7 @@ async function uploadToCloud() {
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
+                vehicleYearNotes: vehicleYearNotes,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -7226,6 +7228,10 @@ async function downloadFromCloud() {
             saveKeyInfoOverrides();
             applyKeyInfoOverridesToDB();
         }
+        if (data.vehicleYearNotes) {
+            vehicleYearNotes = { ...vehicleYearNotes, ...data.vehicleYearNotes };
+            saveVehicleYearNotes();
+        }
         if (data.customDropdownValues) {
             customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], ...data.customDropdownValues };
             saveCustomDropdownValues();
@@ -7355,6 +7361,7 @@ let customVendors = []; // User-added vendors
 let vehicleOverrides = {}; // { partNumber: [vehicles] } - vehicle modifications for base keys
 let keyInfoOverrides = {}; // { partNumber: { keyType, chip, keyway, fccid, frequency, buttons, battery, notes, emergencyPN, isVATS, secondaryKeyPartNumber } }
 let customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [] }; // User-added dropdown values that persist
+let vehicleYearNotes = {}; // { "Make|Model|KeyType": "notes text" } - notes on vehicle year range pages
 
 // FID System - Prefix-based tracking
 let fidAssignments = {}; // { fccId: "N-001" }
@@ -7549,6 +7556,9 @@ async function loadLocalData() {
             const savedCustomDropdownValues = await loadFromIndexedDB('customDropdownValues');
             if (savedCustomDropdownValues) customDropdownValues = { ...customDropdownValues, ...savedCustomDropdownValues };
 
+            const savedVehicleYearNotes = await loadFromIndexedDB('vehicleYearNotes');
+            if (savedVehicleYearNotes) vehicleYearNotes = savedVehicleYearNotes;
+
             // Load tools database
             await loadToolsDatabase();
         }
@@ -7718,6 +7728,25 @@ function applyKeyInfoOverridesToDB() {
 function saveKeyInfoOverrides() {
     saveToIndexedDB('keyInfoOverrides', keyInfoOverrides);
     triggerAutoSync();
+}
+
+function saveVehicleYearNotes() {
+    saveToIndexedDB('vehicleYearNotes', vehicleYearNotes);
+    triggerAutoSync();
+}
+
+function saveVehicleYearNote(make, model, keyType) {
+    const noteKey = `${make}|${model}|${keyType}`;
+    const textarea = document.getElementById('vehicleYearNoteInput');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (text) {
+        vehicleYearNotes[noteKey] = text;
+    } else {
+        delete vehicleYearNotes[noteKey];
+    }
+    saveVehicleYearNotes();
+    toast('Note saved');
 }
 
 let editingKeyInfoIdx = null;
@@ -14560,6 +14589,24 @@ function renderVehicleYearsForModel(make, model, keyType) {
             </div>
         `;
     }).join('');
+
+    // Add notes section at the bottom
+    const noteKey = `${make}|${model}|${keyType}`;
+    const existingNote = vehicleYearNotes[noteKey] || '';
+    const escapedMakeNote = make.replace(/'/g, "\\'");
+    const escapedModelNote = model.replace(/'/g, "\\'");
+    const escapedKeyTypeNote = keyType.replace(/'/g, "\\'");
+    html += `
+        <div style="margin-top:16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text);">Notes</span>
+                <button onclick="saveVehicleYearNote('${escapedMakeNote}', '${escapedModelNote}', '${escapedKeyTypeNote}')"
+                    style="padding:5px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">Save</button>
+            </div>
+            <textarea id="vehicleYearNoteInput" placeholder="Add notes about key changes, reference source differences, etc..."
+                style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${existingNote}</textarea>
+        </div>
+    `;
 
     container.innerHTML = html;
 }
