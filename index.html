@@ -5234,6 +5234,10 @@
                         <select class="modal-input" id="vehicleDataIgnFrequency" onchange="onVehicleDataDropdownChange('vehicleDataIgnFrequency','frequency')"></select>
                     </div>
                 </div>
+                <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
+                    <label>Code Series (Ignition)</label>
+                    <input type="text" class="modal-input" id="vehicleDataIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                </div>
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
@@ -5255,9 +5259,17 @@
                         <select class="modal-input" id="vehicleDataDoorFccid" onchange="onVehicleDataDropdownChange('vehicleDataDoorFccid','fccid')"></select>
                     </div>
                 </div>
+                <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
+                    <label>Code Series (Door)</label>
+                    <input type="text" class="modal-input" id="vehicleDataDoorCodeSeries" placeholder="e.g., A01-D70">
+                </div>
+            </div>
+            <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+                <input type="checkbox" id="vehicleDataDiffCodeSeries" onchange="toggleVehicleDataDiffCodeSeries()" style="width:18px;height:18px;cursor:pointer;">
+                <label for="vehicleDataDiffCodeSeries" style="cursor:pointer;font-size:12px;margin:0;">Different code series for ignition vs. door key</label>
             </div>
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="vehicleDataSharedCodeSeriesGroup">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <label style="margin:0;">Code Series</label>
                 <button onclick="addVehicleDataCodeSeriesEntry()"
@@ -14527,6 +14539,7 @@ function openVehicleDetail(vehicleKey) {
 
     if (isDualKey) {
         // Dual-key vehicle display
+        const hasDiffCS = vehicleData.differentCodeSeries === true;
         const ign = {
             keyBlank: vehicleData.ignition_keyBlank || (cvForDetail && cvForDetail.ignition_keyBlank) || '',
             chip: vehicleData.ignition_chip || (cvForDetail && cvForDetail.ignition_chip) || '',
@@ -14556,6 +14569,7 @@ function openVehicleDetail(vehicleKey) {
                 const keyTypeDisplay = vdKeyType || (aggKeyTypes.length > 0 ? [...new Set(aggKeyTypes)].join(', ') : '');
                 return keyTypeDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Type</div><div class="vehicle-info-value">' + keyTypeDisplay + '</div></div>' : '';
             })()}
+            ${!hasDiffCS ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series ' + (!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : '') + '</div><div class="vehicle-info-value highlight">' + codeSeriesDisplay + '</div></div>' : ''}
             ${fids.size > 0 ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FID' + (fids.size > 1 ? 's' : '') + '</div><div class="vehicle-info-value highlight">' + fidDisplay + '</div></div>' : ''}
             ${vehicleData.battery ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Battery</div><div class="vehicle-info-value">' + vehicleData.battery + '</div></div>' : ''}
         </div>
@@ -16188,6 +16202,17 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
         uniqueNonChipPNs.map(pn => `<option value="${pn}">${pn}</option>`).join('');
     secondaryKeySelect.value = vehicleData.secondaryKeyPN || '';
 
+    // Set up differentCodeSeries checkbox and per-key code series inputs
+    const hasDiffCS = vehicleData.differentCodeSeries === true;
+    document.getElementById('vehicleDataDiffCodeSeries').checked = hasDiffCS;
+    document.getElementById('vehicleDataIgnCodeSeries').value = vehicleData.ignition_codeSeries || (cv && cv.ignition_codeSeries) || '';
+    document.getElementById('vehicleDataDoorCodeSeries').value = vehicleData.door_codeSeries || (cv && cv.door_codeSeries) || '';
+    // Toggle visibility
+    document.getElementById('vehicleDataSharedCodeSeriesGroup').style.display = hasDiffCS ? 'none' : 'block';
+    document.querySelectorAll('.vehicleDataPerKeyCodeSeries').forEach(el => {
+        el.style.display = hasDiffCS ? 'block' : 'none';
+    });
+
     document.getElementById('vehicleDataNotes').value = vehicleData.notes || '';
     document.getElementById('vehicleDataEditModal').classList.add('on');
 }
@@ -16318,6 +16343,9 @@ function saveVehicleDataEdit() {
         const door_chip = document.getElementById('vehicleDataDoorChip').value.trim();
         const door_keyway = document.getElementById('vehicleDataDoorKeyway').value.trim();
         const door_fccid = document.getElementById('vehicleDataDoorFccid').value.trim();
+        const diffCS = document.getElementById('vehicleDataDiffCodeSeries').checked;
+        const ignition_codeSeries = diffCS ? document.getElementById('vehicleDataIgnCodeSeries').value.trim() : '';
+        const door_codeSeries = diffCS ? document.getElementById('vehicleDataDoorCodeSeries').value.trim() : '';
 
         vd.keyType = keyType;
         vd.battery = battery;
@@ -16326,16 +16354,19 @@ function saveVehicleDataEdit() {
         vd.fccid = '';
         vd.frequency = '';
         vd.buttons = '';
+        vd.differentCodeSeries = diffCS;
         vd.ignition_keyBlank = ignition_keyBlank;
         vd.ignition_chip = ignition_chip;
         vd.ignition_keyway = ignition_keyway;
         vd.ignition_fccid = ignition_fccid;
         vd.ignition_buttons = ignition_buttons;
         vd.ignition_frequency = ignition_frequency;
+        vd.ignition_codeSeries = ignition_codeSeries;
         vd.door_keyBlank = door_keyBlank;
         vd.door_chip = door_chip;
         vd.door_keyway = door_keyway;
         vd.door_fccid = door_fccid;
+        vd.door_codeSeries = door_codeSeries;
         vd.secondaryKeyPN = null;
 
         // Sync back to custom vehicle
@@ -16362,6 +16393,8 @@ function saveVehicleDataEdit() {
             customVehicles[cvIdx].door_chip = door_chip;
             customVehicles[cvIdx].door_keyway = door_keyway;
             customVehicles[cvIdx].door_fccid = door_fccid;
+            customVehicles[cvIdx].ignition_codeSeries = ignition_codeSeries;
+            customVehicles[cvIdx].door_codeSeries = door_codeSeries;
             if (notes) customVehicles[cvIdx].notes = notes;
             customVehicles[cvIdx].dataStatus = (ignition_keyBlank || ignition_chip || ignition_keyway || door_keyBlank || door_chip || door_keyway) ? 'complete' : 'partial';
             customVehicles[cvIdx].lastEdited = new Date().toISOString();
@@ -17818,6 +17851,20 @@ function toggleVehicleDataMultipleKeys() {
     document.getElementById('vehicleDataDualKeyFields').style.display = checked ? 'block' : 'none';
     // Hide secondary key picker when using dual-key mode (it's replaced by the dual-key sections)
     document.getElementById('vehicleDataSecondaryKeyGroup').style.display = checked ? 'none' : 'block';
+    // Reset diff code series when toggling off dual-key
+    if (!checked) {
+        document.getElementById('vehicleDataDiffCodeSeries').checked = false;
+        toggleVehicleDataDiffCodeSeries();
+    }
+}
+
+function toggleVehicleDataDiffCodeSeries() {
+    const checked = document.getElementById('vehicleDataDiffCodeSeries').checked;
+    // Hide shared code series, show per-key inputs (or vice versa)
+    document.getElementById('vehicleDataSharedCodeSeriesGroup').style.display = checked ? 'none' : 'block';
+    document.querySelectorAll('.vehicleDataPerKeyCodeSeries').forEach(el => {
+        el.style.display = checked ? 'block' : 'none';
+    });
 }
 
 function saveQuickAddVehicle() {
