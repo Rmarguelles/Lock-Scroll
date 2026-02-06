@@ -14594,6 +14594,7 @@ function openVehicleDetail(vehicleKey) {
         `;
     }
 
+    html += `
         ${renderYearOverridesDisplay(make, model, parseInt(startYear), parseInt(endYear))}
 
         ${fidInfo.length > 0 ? `
@@ -14613,7 +14614,6 @@ function openVehicleDetail(vehicleKey) {
             </div>
         </div>
         ` : ''}
-
     `;
 
     // Compatible Keys Section - sorted by stock
