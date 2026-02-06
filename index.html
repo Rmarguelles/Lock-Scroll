@@ -7575,7 +7575,9 @@ function saveCustomDropdownValues() {
 function applyVehicleOverridesToDB() {
     // Apply saved vehicle overrides to base database keys
     for (const pn in vehicleOverrides) {
-        const idx = DB.findIndex(k => k.pn === pn && !k.isCustom);
+        // Use == instead of === because object keys are always strings
+        // but DB pn values can be numbers (e.g., 40076 vs "40076")
+        const idx = DB.findIndex(k => k.pn == pn && !k.isCustom);
         if (idx >= 0) {
             DB[idx].vehicles = vehicleOverrides[pn];
         }
@@ -12131,6 +12133,10 @@ function closeVehicleYearsPanel() {
 
 function closeVehicleDetail() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
+    // Re-render the years panel to reflect any changes made while viewing vehicle detail
+    if (selectedVehicleMake && selectedVehicleModel && selectedVehicleKeyType) {
+        renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, selectedVehicleKeyType);
+    }
 }
 
 function openKeyFromVehicle(idx) {
@@ -14289,8 +14295,8 @@ function getUniqueVehicles() {
                 vehicleMap[vehicleKey] = {
                     make: v.make,
                     model: v.model,
-                    startYear: v.startYear,
-                    endYear: v.endYear || v.startYear,
+                    startYear: parseInt(v.startYear) || 0,
+                    endYear: parseInt(v.endYear || v.startYear) || 0,
                     keys: [],
                     keyways: new Set(),
                     fccids: new Set(),
@@ -14317,8 +14323,8 @@ function getUniqueVehicles() {
             vehicleMap[vehicleKey] = {
                 make: cv.make,
                 model: cv.model,
-                startYear: cv.startYear,
-                endYear: cv.endYear || cv.startYear,
+                startYear: parseInt(cv.startYear) || 0,
+                endYear: parseInt(cv.endYear || cv.startYear) || 0,
                 keys: [],
                 keyways: new Set(),
                 fccids: new Set(),
@@ -14433,6 +14439,11 @@ function openVehicleDetail(vehicleKey) {
 
     if (!vehicle) {
         toast('Vehicle not found');
+        // Close the detail panel and refresh the years list so user sees current data
+        document.getElementById('vehicleDetailPanel').classList.remove('on');
+        if (selectedVehicleMake && selectedVehicleModel && selectedVehicleKeyType) {
+            renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, selectedVehicleKeyType);
+        }
         return;
     }
 
