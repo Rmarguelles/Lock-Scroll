@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v84</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v85</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v84</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v85</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v84<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v85<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5236,7 +5236,9 @@
                 </div>
                 <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
                     <label>Code Series (Ignition)</label>
-                    <input type="text" class="modal-input" id="vehicleDataIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                    <select class="modal-input" id="vehicleDataIgnCodeSeries" onchange="onVehicleDataPerKeyCodeSeriesChange('vehicleDataIgnCodeSeries')">
+                        <option value="">None</option>
+                    </select>
                 </div>
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
@@ -5261,7 +5263,9 @@
                 </div>
                 <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
                     <label>Code Series (Door)</label>
-                    <input type="text" class="modal-input" id="vehicleDataDoorCodeSeries" placeholder="e.g., A01-D70">
+                    <select class="modal-input" id="vehicleDataDoorCodeSeries" onchange="onVehicleDataPerKeyCodeSeriesChange('vehicleDataDoorCodeSeries')">
+                        <option value="">None</option>
+                    </select>
                 </div>
             </div>
             <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
@@ -16202,11 +16206,11 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
         uniqueNonChipPNs.map(pn => `<option value="${pn}">${pn}</option>`).join('');
     secondaryKeySelect.value = vehicleData.secondaryKeyPN || '';
 
-    // Set up differentCodeSeries checkbox and per-key code series inputs
+    // Set up differentCodeSeries checkbox and per-key code series dropdowns
     const hasDiffCS = vehicleData.differentCodeSeries === true;
     document.getElementById('vehicleDataDiffCodeSeries').checked = hasDiffCS;
-    document.getElementById('vehicleDataIgnCodeSeries').value = vehicleData.ignition_codeSeries || (cv && cv.ignition_codeSeries) || '';
-    document.getElementById('vehicleDataDoorCodeSeries').value = vehicleData.door_codeSeries || (cv && cv.door_codeSeries) || '';
+    populatePerKeyCodeSeriesSelect('vehicleDataIgnCodeSeries', vehicleData.ignition_codeSeries || (cv && cv.ignition_codeSeries) || '');
+    populatePerKeyCodeSeriesSelect('vehicleDataDoorCodeSeries', vehicleData.door_codeSeries || (cv && cv.door_codeSeries) || '');
     // Toggle visibility
     document.getElementById('vehicleDataSharedCodeSeriesGroup').style.display = hasDiffCS ? 'none' : 'block';
     document.querySelectorAll('.vehicleDataPerKeyCodeSeries').forEach(el => {
@@ -17865,6 +17869,45 @@ function toggleVehicleDataDiffCodeSeries() {
     document.querySelectorAll('.vehicleDataPerKeyCodeSeries').forEach(el => {
         el.style.display = checked ? 'block' : 'none';
     });
+}
+
+function populatePerKeyCodeSeriesSelect(selectId, currentValue) {
+    if (codeSeriesCache.length === 0) buildCodeSeriesCache();
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '<option value="">None</option>';
+    codeSeriesCache.forEach(cs => {
+        sel.innerHTML += '<option value="' + cs.replace(/"/g, '&quot;') + '">' + cs + '</option>';
+    });
+    sel.innerHTML += '<option value="__add_new__">+ Add New...</option>';
+    // If current value exists but isn't in cache, add it
+    if (currentValue && !codeSeriesCache.includes(currentValue)) {
+        const opt = document.createElement('option');
+        opt.value = currentValue;
+        opt.textContent = currentValue;
+        sel.insertBefore(opt, sel.lastElementChild);
+    }
+    sel.value = currentValue || '';
+}
+
+function onVehicleDataPerKeyCodeSeriesChange(selectId) {
+    const sel = document.getElementById(selectId);
+    if (sel.value === '__add_new__') {
+        const newCS = prompt('Enter new code series (e.g., 1001-4096):');
+        if (newCS && newCS.trim()) {
+            const cs = newCS.trim();
+            if (!codeSeriesCache.includes(cs)) {
+                codeSeriesCache.push(cs);
+                codeSeriesCache.sort();
+            }
+            const opt = document.createElement('option');
+            opt.value = cs;
+            opt.textContent = cs;
+            sel.insertBefore(opt, sel.lastElementChild);
+            sel.value = cs;
+        } else {
+            sel.value = '';
+        }
+    }
 }
 
 function saveQuickAddVehicle() {
