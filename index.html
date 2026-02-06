@@ -5014,15 +5014,27 @@
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
-            <input type="text" class="modal-input" id="editKeyInfoKeyType" placeholder="e.g., Transponder, Remote Head">
+            <select class="modal-input" id="editKeyInfoKeyType" onchange="handleCustomDropdown(this, 'editKeyInfoKeyTypeOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoKeyTypeOther" placeholder="Enter custom key type..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Keyway / Blade</label>
-            <input type="text" class="modal-input" id="editKeyInfoKeyway" placeholder="e.g., B102, Y157">
+            <select class="modal-input" id="editKeyInfoKeyway" onchange="handleCustomDropdown(this, 'editKeyInfoKeywayOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoKeywayOther" placeholder="Enter custom keyway..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Chip Type</label>
-            <input type="text" class="modal-input" id="editKeyInfoChip" placeholder="e.g., Philips 46, Texas 4D63">
+            <select class="modal-input" id="editKeyInfoChip" onchange="handleCustomDropdown(this, 'editKeyInfoChipOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group" style="display:flex;align-items:center;gap:12px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -5032,27 +5044,51 @@
         </div>
         <div class="modal-input-group" id="editKeyInfoVATSSection" style="display:none;background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border-left:3px solid var(--accent2);">
             <label style="color:var(--accent2);">Secondary Key Part Number (Door/Trunk)</label>
-            <input type="text" class="modal-input" id="editKeyInfoSecondaryPN" placeholder="e.g., B62">
+            <select class="modal-input" id="editKeyInfoSecondaryPN" onchange="handleCustomDropdown(this, 'editKeyInfoSecondaryPNOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoSecondaryPNOther" placeholder="Enter part number..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>FCC ID</label>
-            <input type="text" class="modal-input" id="editKeyInfoFCC" placeholder="e.g., OHT01060512">
+            <select class="modal-input" id="editKeyInfoFCC" onchange="handleCustomDropdown(this, 'editKeyInfoFCCOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoFCCOther" placeholder="Enter FCC ID..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Frequency</label>
-            <input type="text" class="modal-input" id="editKeyInfoFrequency" placeholder="e.g., 315 MHz, 433 MHz">
+            <select class="modal-input" id="editKeyInfoFrequency" onchange="handleCustomDropdown(this, 'editKeyInfoFrequencyOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoFrequencyOther" placeholder="Enter custom frequency..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Buttons</label>
-            <input type="text" class="modal-input" id="editKeyInfoButtons" placeholder="e.g., 3, 4, 3+1">
+            <select class="modal-input" id="editKeyInfoButtons" onchange="handleCustomDropdown(this, 'editKeyInfoButtonsOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoButtonsOther" placeholder="Enter custom button config..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Battery</label>
-            <input type="text" class="modal-input" id="editKeyInfoBattery" placeholder="e.g., CR2032, CR1620">
+            <select class="modal-input" id="editKeyInfoBattery" onchange="handleCustomDropdown(this, 'editKeyInfoBatteryOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoBatteryOther" placeholder="Enter battery type..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Emergency Key PN</label>
-            <input type="text" class="modal-input" id="editKeyInfoEmergencyPN" placeholder="e.g., 164-R8055">
+            <select class="modal-input" id="editKeyInfoEmergencyPN" onchange="handleCustomDropdown(this, 'editKeyInfoEmergencyPNOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoEmergencyPNOther" placeholder="Enter part number..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -7679,24 +7715,65 @@ function saveKeyInfoOverrides() {
 
 let editingKeyInfoIdx = null;
 
+function populateEditKeyInfoDropdown(selectId, otherId, values, currentValue) {
+    const select = document.getElementById(selectId);
+    const otherInput = document.getElementById(otherId);
+    select.innerHTML = '<option value="">-- None --</option>';
+    values.forEach(v => {
+        select.innerHTML += '<option value="' + v.replace(/"/g, '&quot;') + '">' + v + '</option>';
+    });
+    select.innerHTML += '<option value="__other__">+ Other (custom)</option>';
+    if (currentValue) {
+        // Check if value exists in the options
+        const exists = values.some(v => v === String(currentValue));
+        if (exists) {
+            select.value = String(currentValue);
+            otherInput.style.display = 'none';
+            otherInput.value = '';
+        } else {
+            // Value not in dropdown - show as "Other"
+            select.value = '__other__';
+            otherInput.style.display = 'block';
+            otherInput.value = currentValue;
+        }
+    } else {
+        select.value = '';
+        otherInput.style.display = 'none';
+        otherInput.value = '';
+    }
+}
+
 function openEditKeyInfoModal(idx) {
     editingKeyInfoIdx = idx;
     const key = DB[idx];
 
     document.getElementById('editKeyInfoPN').value = key.pn || '';
-    document.getElementById('editKeyInfoKeyType').value = key.keyType || '';
-    document.getElementById('editKeyInfoKeyway').value = key.keyway || '';
-    document.getElementById('editKeyInfoChip').value = key.chip || '';
-    document.getElementById('editKeyInfoFCC').value = key.fccid || '';
-    document.getElementById('editKeyInfoFrequency').value = key.frequency || '';
-    document.getElementById('editKeyInfoButtons').value = key.buttons || '';
-    document.getElementById('editKeyInfoBattery').value = key.battery || '';
-    document.getElementById('editKeyInfoEmergencyPN').value = key.emergencyPN || '';
+
+    // Collect unique values from DB for fields without a dedicated category
+    const fccIds = new Set();
+    const emergencyPNs = new Set();
+    const secondaryPNs = new Set();
+    DB.forEach(k => {
+        if (k.fccid) fccIds.add(String(k.fccid));
+        if (k.emergencyPN) emergencyPNs.add(String(k.emergencyPN));
+        if (k.secondaryKeyPartNumber) secondaryPNs.add(String(k.secondaryKeyPartNumber));
+    });
+
+    // Populate all dropdowns using DB values + custom dropdown values
+    populateEditKeyInfoDropdown('editKeyInfoKeyType', 'editKeyInfoKeyTypeOther', getDropdownValuesForCategory('keyType'), key.keyType);
+    populateEditKeyInfoDropdown('editKeyInfoKeyway', 'editKeyInfoKeywayOther', getDropdownValuesForCategory('keyway'), key.keyway);
+    populateEditKeyInfoDropdown('editKeyInfoChip', 'editKeyInfoChipOther', getDropdownValuesForCategory('chip'), key.chip);
+    populateEditKeyInfoDropdown('editKeyInfoFCC', 'editKeyInfoFCCOther', Array.from(fccIds).sort(), key.fccid);
+    populateEditKeyInfoDropdown('editKeyInfoFrequency', 'editKeyInfoFrequencyOther', getDropdownValuesForCategory('frequency'), key.frequency);
+    populateEditKeyInfoDropdown('editKeyInfoButtons', 'editKeyInfoButtonsOther', getDropdownValuesForCategory('buttons'), key.buttons);
+    populateEditKeyInfoDropdown('editKeyInfoBattery', 'editKeyInfoBatteryOther', getDropdownValuesForCategory('battery'), key.battery);
+    populateEditKeyInfoDropdown('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther', Array.from(emergencyPNs).sort(), key.emergencyPN);
+    populateEditKeyInfoDropdown('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther', Array.from(secondaryPNs).sort(), key.secondaryKeyPartNumber);
+
     document.getElementById('editKeyInfoNotes').value = key.notes || '';
 
-    // VATS fields
+    // VATS checkbox
     document.getElementById('editKeyInfoIsVATS').checked = key.isVATS || false;
-    document.getElementById('editKeyInfoSecondaryPN').value = key.secondaryKeyPartNumber || '';
     toggleEditKeyInfoVATS();
 
     document.getElementById('editKeyInfoModal').classList.add('on');
@@ -7718,17 +7795,17 @@ function saveEditKeyInfo() {
     const key = DB[editingKeyInfoIdx];
     const pn = String(key.pn);
 
-    const newKeyType = document.getElementById('editKeyInfoKeyType').value.trim() || null;
-    const newKeyway = document.getElementById('editKeyInfoKeyway').value.trim() || null;
-    const newChip = document.getElementById('editKeyInfoChip').value.trim() || null;
-    const newFccid = document.getElementById('editKeyInfoFCC').value.trim() || null;
-    const newFrequency = document.getElementById('editKeyInfoFrequency').value.trim() || null;
-    const newButtons = document.getElementById('editKeyInfoButtons').value.trim() || null;
-    const newBattery = document.getElementById('editKeyInfoBattery').value.trim() || null;
-    const newEmergencyPN = document.getElementById('editKeyInfoEmergencyPN').value.trim() || null;
+    const newKeyType = getDropdownValue('editKeyInfoKeyType', 'editKeyInfoKeyTypeOther') || null;
+    const newKeyway = getDropdownValue('editKeyInfoKeyway', 'editKeyInfoKeywayOther') || null;
+    const newChip = getDropdownValue('editKeyInfoChip', 'editKeyInfoChipOther') || null;
+    const newFccid = getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || null;
+    const newFrequency = getDropdownValue('editKeyInfoFrequency', 'editKeyInfoFrequencyOther') || null;
+    const newButtons = getDropdownValue('editKeyInfoButtons', 'editKeyInfoButtonsOther') || null;
+    const newBattery = getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther') || null;
+    const newEmergencyPN = getDropdownValue('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther') || null;
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
     const newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
-    const newSecondaryPN = document.getElementById('editKeyInfoSecondaryPN').value.trim() || null;
+    const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
 
     if (key.isCustom) {
         // For custom keys, update the customKeys array directly
