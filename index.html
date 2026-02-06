@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v85</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v86</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v85</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v86</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v85<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v86<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8157,51 +8157,42 @@ let codeSeriesCache = []; // All known code series from Lishi tools
 function buildCodeSeriesCache() {
     const series = new Set();
 
+    // Helper to add a code series value (handles string, array-of-objects, or object)
+    function addCS(val) {
+        if (!val) return;
+        if (typeof val === 'string') { series.add(val); return; }
+        if (Array.isArray(val)) { val.forEach(item => addCS(item)); return; }
+        if (val.series && typeof val.series === 'string') { series.add(val.series); return; }
+    }
+
     // Collect from Lishi inventory
     for (const toolName in lishiInventory) {
         const tool = lishiInventory[toolName];
-        if (tool.codeSeries && Array.isArray(tool.codeSeries)) {
-            tool.codeSeries.forEach(cs => {
-                if (cs) series.add(cs);
-            });
-        }
+        if (tool.codeSeries) addCS(tool.codeSeries);
     }
 
     // Collect from master Lishi tools
     for (const toolName in MASTER_LISHI_TOOLS) {
         const tool = MASTER_LISHI_TOOLS[toolName];
-        if (tool.codeSeries && Array.isArray(tool.codeSeries)) {
-            tool.codeSeries.forEach(cs => {
-                if (cs) series.add(cs);
-            });
-        }
+        if (tool.codeSeries) addCS(tool.codeSeries);
     }
 
     // Collect from existing vehicle data in DB
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
-            if (v.codeSeries) series.add(v.codeSeries);
+            if (v.codeSeries) addCS(v.codeSeries);
         });
     });
 
     // Collect from user-entered vehicle data (lishiVehicleData)
     for (const key in lishiVehicleData) {
         const vehicleData = lishiVehicleData[key];
-        if (vehicleData && vehicleData.codeSeries) {
-            // Handle both string format (legacy) and array format (new)
-            if (Array.isArray(vehicleData.codeSeries)) {
-                vehicleData.codeSeries.forEach(cs => {
-                    if (cs && cs.series) series.add(cs.series);
-                });
-            } else {
-                series.add(vehicleData.codeSeries);
-            }
-        }
+        if (vehicleData && vehicleData.codeSeries) addCS(vehicleData.codeSeries);
     }
 
     // Collect from custom vehicles
     customVehicles.forEach(cv => {
-        if (cv.codeSeries) series.add(cv.codeSeries);
+        if (cv.codeSeries) addCS(cv.codeSeries);
     });
 
     codeSeriesCache = Array.from(series).sort();
@@ -17876,7 +17867,8 @@ function populatePerKeyCodeSeriesSelect(selectId, currentValue) {
     const sel = document.getElementById(selectId);
     sel.innerHTML = '<option value="">None</option>';
     codeSeriesCache.forEach(cs => {
-        sel.innerHTML += '<option value="' + cs.replace(/"/g, '&quot;') + '">' + cs + '</option>';
+        const s = String(cs);
+        sel.innerHTML += '<option value="' + s.replace(/"/g, '&quot;') + '">' + s + '</option>';
     });
     sel.innerHTML += '<option value="__add_new__">+ Add New...</option>';
     // If current value exists but isn't in cache, add it
