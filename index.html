@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v86</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v87</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v86</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v87</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v86<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v87<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5235,10 +5235,12 @@
                     </div>
                 </div>
                 <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
-                    <label>Code Series (Ignition)</label>
-                    <select class="modal-input" id="vehicleDataIgnCodeSeries" onchange="onVehicleDataPerKeyCodeSeriesChange('vehicleDataIgnCodeSeries')">
-                        <option value="">None</option>
-                    </select>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <label style="margin:0;">Code Series (Ignition)</label>
+                        <button onclick="addPerKeyCodeSeriesEntry('ignition')"
+                            style="padding:4px 10px;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
+                    </div>
+                    <div id="vehicleDataIgnCodeSeriesList" style="max-height:200px;overflow-y:auto;"></div>
                 </div>
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
@@ -5262,10 +5264,12 @@
                     </div>
                 </div>
                 <div class="modal-input-group vehicleDataPerKeyCodeSeries" style="display:none;">
-                    <label>Code Series (Door)</label>
-                    <select class="modal-input" id="vehicleDataDoorCodeSeries" onchange="onVehicleDataPerKeyCodeSeriesChange('vehicleDataDoorCodeSeries')">
-                        <option value="">None</option>
-                    </select>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <label style="margin:0;">Code Series (Door)</label>
+                        <button onclick="addPerKeyCodeSeriesEntry('door')"
+                            style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
+                    </div>
+                    <div id="vehicleDataDoorCodeSeriesList" style="max-height:200px;overflow-y:auto;"></div>
                 </div>
             </div>
             <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
@@ -8187,12 +8191,18 @@ function buildCodeSeriesCache() {
     // Collect from user-entered vehicle data (lishiVehicleData)
     for (const key in lishiVehicleData) {
         const vehicleData = lishiVehicleData[key];
-        if (vehicleData && vehicleData.codeSeries) addCS(vehicleData.codeSeries);
+        if (vehicleData) {
+            if (vehicleData.codeSeries) addCS(vehicleData.codeSeries);
+            if (vehicleData.ignition_codeSeries) addCS(vehicleData.ignition_codeSeries);
+            if (vehicleData.door_codeSeries) addCS(vehicleData.door_codeSeries);
+        }
     }
 
     // Collect from custom vehicles
     customVehicles.forEach(cv => {
         if (cv.codeSeries) addCS(cv.codeSeries);
+        if (cv.ignition_codeSeries) addCS(cv.ignition_codeSeries);
+        if (cv.door_codeSeries) addCS(cv.door_codeSeries);
     });
 
     codeSeriesCache = Array.from(series).sort();
@@ -14350,35 +14360,41 @@ function getUniqueVehicles() {
             const ignPn = cv.ignition_keyBlank || vdOverride.ignition_keyBlank || '';
             const doorPn = cv.door_keyBlank || vdOverride.door_keyBlank || '';
 
-            // Create ignition key pseudo-key if we have a part number
+            // Tag or create ignition key
             if (ignPn) {
-                const ignKey = {
-                    pn: ignPn,
-                    keyType: cv.keyType || 'Ignition Key',
-                    keyway: cv.ignition_keyway,
-                    chip: cv.ignition_chip,
-                    fccid: cv.ignition_fccid,
-                    frequency: cv.ignition_frequency,
-                    buttons: cv.ignition_buttons,
-                    isCustom: true,
-                    dualKeyRole: 'ignition'
-                };
-                const exists = vehicleMap[vehicleKey].keys.some(k => k.pn === ignPn && k.dualKeyRole === 'ignition');
-                if (!exists) vehicleMap[vehicleKey].keys.push(ignKey);
+                const existingIgn = vehicleMap[vehicleKey].keys.find(k => k.pn === ignPn);
+                if (existingIgn) {
+                    existingIgn.dualKeyRole = 'ignition';
+                } else {
+                    vehicleMap[vehicleKey].keys.push({
+                        pn: ignPn,
+                        keyType: cv.keyType || 'Ignition Key',
+                        keyway: cv.ignition_keyway,
+                        chip: cv.ignition_chip,
+                        fccid: cv.ignition_fccid,
+                        frequency: cv.ignition_frequency,
+                        buttons: cv.ignition_buttons,
+                        isCustom: true,
+                        dualKeyRole: 'ignition'
+                    });
+                }
             }
-            // Create door key pseudo-key if we have a part number
+            // Tag or create door key
             if (doorPn) {
-                const doorKey = {
-                    pn: doorPn,
-                    keyType: 'Door/Trunk/GB Key',
-                    keyway: cv.door_keyway,
-                    chip: cv.door_chip,
-                    fccid: cv.door_fccid,
-                    isCustom: true,
-                    dualKeyRole: 'door'
-                };
-                const exists = vehicleMap[vehicleKey].keys.some(k => k.pn === doorPn && k.dualKeyRole === 'door');
-                if (!exists) vehicleMap[vehicleKey].keys.push(doorKey);
+                const existingDoor = vehicleMap[vehicleKey].keys.find(k => k.pn === doorPn);
+                if (existingDoor) {
+                    existingDoor.dualKeyRole = 'door';
+                } else {
+                    vehicleMap[vehicleKey].keys.push({
+                        pn: doorPn,
+                        keyType: 'Door/Trunk/GB Key',
+                        keyway: cv.door_keyway,
+                        chip: cv.door_chip,
+                        fccid: cv.door_fccid,
+                        isCustom: true,
+                        dualKeyRole: 'door'
+                    });
+                }
             }
         } else if (cv.keyBlank || cv.keyType) {
             const pseudoKey = {
@@ -14542,14 +14558,24 @@ function openVehicleDetail(vehicleKey) {
             fccid: vehicleData.ignition_fccid || (cvForDetail && cvForDetail.ignition_fccid) || '',
             buttons: vehicleData.ignition_buttons || (cvForDetail && cvForDetail.ignition_buttons) || '',
             frequency: vehicleData.ignition_frequency || (cvForDetail && cvForDetail.ignition_frequency) || '',
-            codeSeries: vehicleData.ignition_codeSeries || (cvForDetail && cvForDetail.ignition_codeSeries) || ''
+            codeSeries: (() => {
+                const csData = vehicleData.ignition_codeSeries || (cvForDetail && cvForDetail.ignition_codeSeries) || '';
+                if (typeof csData === 'string') return csData;
+                if (Array.isArray(csData) && csData.length > 0) return csData.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).filter(Boolean).join(', ');
+                return '';
+            })()
         };
         const door = {
             keyBlank: vehicleData.door_keyBlank || (cvForDetail && cvForDetail.door_keyBlank) || '',
             chip: vehicleData.door_chip || (cvForDetail && cvForDetail.door_chip) || '',
             keyway: vehicleData.door_keyway || (cvForDetail && cvForDetail.door_keyway) || '',
             fccid: vehicleData.door_fccid || (cvForDetail && cvForDetail.door_fccid) || '',
-            codeSeries: vehicleData.door_codeSeries || (cvForDetail && cvForDetail.door_codeSeries) || ''
+            codeSeries: (() => {
+                const csData = vehicleData.door_codeSeries || (cvForDetail && cvForDetail.door_codeSeries) || '';
+                if (typeof csData === 'string') return csData;
+                if (Array.isArray(csData) && csData.length > 0) return csData.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).filter(Boolean).join(', ');
+                return '';
+            })()
         };
 
         html += `
@@ -16042,6 +16068,7 @@ let currentVehicleDataEditKey = null;
 let currentVehicleDataStartYear = null;
 let currentVehicleDataEndYear = null;
 let vehicleDataCodeSeriesEntries = []; // Array of { years, series }
+let vehicleDataPerKeyCodeSeriesEntries = { ignition: [], door: [] };
 
 // Populate a vehicle data select with known values + "Add New" option
 function populateVehicleDataSelect(selectId, category, currentValue) {
@@ -16197,11 +16224,24 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
         uniqueNonChipPNs.map(pn => `<option value="${pn}">${pn}</option>`).join('');
     secondaryKeySelect.value = vehicleData.secondaryKeyPN || '';
 
-    // Set up differentCodeSeries checkbox and per-key code series dropdowns
+    // Set up differentCodeSeries checkbox and per-key code series lists
     const hasDiffCS = vehicleData.differentCodeSeries === true;
     document.getElementById('vehicleDataDiffCodeSeries').checked = hasDiffCS;
-    populatePerKeyCodeSeriesSelect('vehicleDataIgnCodeSeries', vehicleData.ignition_codeSeries || (cv && cv.ignition_codeSeries) || '');
-    populatePerKeyCodeSeriesSelect('vehicleDataDoorCodeSeries', vehicleData.door_codeSeries || (cv && cv.door_codeSeries) || '');
+
+    // Initialize per-key code series entries (handle string legacy or array format)
+    function initPerKeyCS(data) {
+        if (!data) return [];
+        if (Array.isArray(data)) return JSON.parse(JSON.stringify(data));
+        if (typeof data === 'string' && data) {
+            return [{ years: `${startYear}-${endYear}`, series: data }];
+        }
+        return [];
+    }
+    vehicleDataPerKeyCodeSeriesEntries.ignition = initPerKeyCS(vehicleData.ignition_codeSeries || (cv && cv.ignition_codeSeries) || '');
+    vehicleDataPerKeyCodeSeriesEntries.door = initPerKeyCS(vehicleData.door_codeSeries || (cv && cv.door_codeSeries) || '');
+    renderPerKeyCodeSeriesList('ignition');
+    renderPerKeyCodeSeriesList('door');
+
     // Toggle visibility
     document.getElementById('vehicleDataSharedCodeSeriesGroup').style.display = hasDiffCS ? 'none' : 'block';
     document.querySelectorAll('.vehicleDataPerKeyCodeSeries').forEach(el => {
@@ -16295,6 +16335,7 @@ function closeVehicleDataEditModal() {
     currentVehicleDataStartYear = null;
     currentVehicleDataEndYear = null;
     vehicleDataCodeSeriesEntries = [];
+    vehicleDataPerKeyCodeSeriesEntries = { ignition: [], door: [] };
 }
 
 function saveVehicleDataEdit() {
@@ -16339,8 +16380,8 @@ function saveVehicleDataEdit() {
         const door_keyway = document.getElementById('vehicleDataDoorKeyway').value.trim();
         const door_fccid = document.getElementById('vehicleDataDoorFccid').value.trim();
         const diffCS = document.getElementById('vehicleDataDiffCodeSeries').checked;
-        const ignition_codeSeries = diffCS ? document.getElementById('vehicleDataIgnCodeSeries').value.trim() : '';
-        const door_codeSeries = diffCS ? document.getElementById('vehicleDataDoorCodeSeries').value.trim() : '';
+        const ignition_codeSeries = diffCS ? vehicleDataPerKeyCodeSeriesEntries.ignition.filter(cs => cs.series && cs.series.trim()) : [];
+        const door_codeSeries = diffCS ? vehicleDataPerKeyCodeSeriesEntries.door.filter(cs => cs.series && cs.series.trim()) : [];
 
         vd.keyType = keyType;
         vd.battery = battery;
@@ -17862,28 +17903,72 @@ function toggleVehicleDataDiffCodeSeries() {
     });
 }
 
-function populatePerKeyCodeSeriesSelect(selectId, currentValue) {
+function renderPerKeyCodeSeriesList(role) {
     if (codeSeriesCache.length === 0) buildCodeSeriesCache();
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = '<option value="">None</option>';
-    codeSeriesCache.forEach(cs => {
+    const containerId = role === 'ignition' ? 'vehicleDataIgnCodeSeriesList' : 'vehicleDataDoorCodeSeriesList';
+    const container = document.getElementById(containerId);
+    const entries = vehicleDataPerKeyCodeSeriesEntries[role];
+    const codeSeriesOptions = codeSeriesCache.map(cs => {
         const s = String(cs);
-        sel.innerHTML += '<option value="' + s.replace(/"/g, '&quot;') + '">' + s + '</option>';
-    });
-    sel.innerHTML += '<option value="__add_new__">+ Add New...</option>';
-    // If current value exists but isn't in cache, add it
-    if (currentValue && !codeSeriesCache.includes(currentValue)) {
-        const opt = document.createElement('option');
-        opt.value = currentValue;
-        opt.textContent = currentValue;
-        sel.insertBefore(opt, sel.lastElementChild);
+        return '<option value="' + s.replace(/"/g, '&quot;') + '">' + s + '</option>';
+    }).join('');
+
+    if (entries.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px;">No code series. Click "+ Add Code Series" to add.</div>';
+        return;
     }
-    sel.value = currentValue || '';
+
+    container.innerHTML = entries.map((cs, j) => `
+        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1991-1996)"
+                onchange="updatePerKeyCodeSeriesYears('${role}', ${j}, this.value)"
+                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
+            <select onchange="onPerKeyCodeSeriesEntryChange('${role}', ${j}, this.value)"
+                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                id="perKeyCS_${role}_${j}">
+                <option value="">Select Series...</option>
+                ${codeSeriesOptions}
+                <option value="__add_new__">+ Add New...</option>
+            </select>
+            <button onclick="removePerKeyCodeSeriesEntry('${role}', ${j})"
+                style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">&#10005;</button>
+        </div>
+    `).join('');
+
+    // Set selected values
+    entries.forEach((cs, j) => {
+        const csSelect = document.getElementById(`perKeyCS_${role}_${j}`);
+        if (csSelect && cs.series) {
+            if (!codeSeriesCache.includes(cs.series)) {
+                const opt = document.createElement('option');
+                opt.value = cs.series;
+                opt.text = cs.series;
+                csSelect.insertBefore(opt, csSelect.lastElementChild);
+            }
+            csSelect.value = cs.series;
+        }
+    });
 }
 
-function onVehicleDataPerKeyCodeSeriesChange(selectId) {
-    const sel = document.getElementById(selectId);
-    if (sel.value === '__add_new__') {
+function addPerKeyCodeSeriesEntry(role) {
+    const defaultYears = `${currentVehicleDataStartYear || new Date().getFullYear()}-${currentVehicleDataEndYear || new Date().getFullYear()}`;
+    vehicleDataPerKeyCodeSeriesEntries[role].push({ years: defaultYears, series: '' });
+    renderPerKeyCodeSeriesList(role);
+}
+
+function removePerKeyCodeSeriesEntry(role, idx) {
+    vehicleDataPerKeyCodeSeriesEntries[role].splice(idx, 1);
+    renderPerKeyCodeSeriesList(role);
+}
+
+function updatePerKeyCodeSeriesYears(role, idx, value) {
+    if (vehicleDataPerKeyCodeSeriesEntries[role][idx]) {
+        vehicleDataPerKeyCodeSeriesEntries[role][idx].years = value;
+    }
+}
+
+function onPerKeyCodeSeriesEntryChange(role, idx, value) {
+    if (value === '__add_new__') {
         const newCS = prompt('Enter new code series (e.g., 1001-4096):');
         if (newCS && newCS.trim()) {
             const cs = newCS.trim();
@@ -17891,14 +17976,13 @@ function onVehicleDataPerKeyCodeSeriesChange(selectId) {
                 codeSeriesCache.push(cs);
                 codeSeriesCache.sort();
             }
-            const opt = document.createElement('option');
-            opt.value = cs;
-            opt.textContent = cs;
-            sel.insertBefore(opt, sel.lastElementChild);
-            sel.value = cs;
+            vehicleDataPerKeyCodeSeriesEntries[role][idx].series = cs;
+            renderPerKeyCodeSeriesList(role);
         } else {
-            sel.value = '';
+            renderPerKeyCodeSeriesList(role);
         }
+    } else {
+        vehicleDataPerKeyCodeSeriesEntries[role][idx].series = value || '';
     }
 }
 
