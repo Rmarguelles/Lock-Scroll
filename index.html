@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v88</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v89</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v88</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v89</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v88<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v89<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7251,6 +7251,13 @@ async function downloadFromCloud() {
 function loadCustomKeysIntoDB() {
     // Remove old custom keys from DB
     DB = DB.filter(k => !k.isCustom);
+    // Filter out custom keys that duplicate base DB part numbers
+    const basePNs = new Set(DB.map(k => String(k.pn).toLowerCase()));
+    const beforeCount = customKeys.length;
+    customKeys = customKeys.filter(ck => !basePNs.has(String(ck.pn).toLowerCase()));
+    if (customKeys.length < beforeCount) {
+        saveCustomKeys();
+    }
     // Add current custom keys
     customKeys.forEach(key => {
         DB.push({ ...key, isCustom: true });
@@ -9053,8 +9060,39 @@ function saveAddSingleVehicle() {
 
     const newVehicle = { make, model, startYear, endYear, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
 
-    // Get existing vehicles and add new one
+    // Check if this vehicle application already exists on this key
     const key = DB[addingVehicleKeyIdx];
+    const alreadyOnThisKey = (key.vehicles || []).some(v =>
+        v.make === make && v.model === model &&
+        parseInt(v.startYear) === startYear && parseInt(v.endYear) === endYear
+    );
+    if (alreadyOnThisKey) {
+        toast('This vehicle application already exists on this key');
+        return;
+    }
+
+    // Check if this vehicle/year combo exists on OTHER keys
+    const otherKeys = [];
+    DB.forEach((k, idx) => {
+        if (idx === addingVehicleKeyIdx) return;
+        (k.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === model) {
+                const exStart = parseInt(v.startYear) || 0;
+                const exEnd = parseInt(v.endYear) || exStart;
+                if (startYear <= exEnd && endYear >= exStart) {
+                    otherKeys.push(String(k.pn));
+                }
+            }
+        });
+    });
+    if (otherKeys.length > 0) {
+        const uniquePNs = [...new Set(otherKeys)].join(', ');
+        if (!confirm(`This vehicle application (${make} ${model} ${startYear}-${endYear}) already exists on key(s): ${uniquePNs}\n\nAdd it to this key too?`)) {
+            return;
+        }
+    }
+
+    // Get existing vehicles and add new one
     const existingVehicles = key.vehicles || [];
     const updatedVehicles = [...existingVehicles, newVehicle];
 
@@ -17460,6 +17498,35 @@ function saveCustomKey() {
             });
         }
     });
+
+    // Check for duplicate vehicle applications across existing keys
+    const duplicateVehicles = [];
+    vehicles.forEach(newVeh => {
+        DB.forEach(existingKey => {
+            (existingKey.vehicles || []).forEach(existingVeh => {
+                if (existingVeh.make === newVeh.make && existingVeh.model === newVeh.model) {
+                    // Check if year ranges overlap
+                    const newStart = newVeh.startYear;
+                    const newEnd = newVeh.endYear;
+                    const exStart = parseInt(existingVeh.startYear) || 0;
+                    const exEnd = parseInt(existingVeh.endYear) || exStart;
+                    if (newStart <= exEnd && newEnd >= exStart) {
+                        duplicateVehicles.push({
+                            vehicle: `${newVeh.make} ${newVeh.model} ${newVeh.startYear}-${newVeh.endYear}`,
+                            existingPN: existingKey.pn
+                        });
+                    }
+                }
+            });
+        });
+    });
+
+    if (duplicateVehicles.length > 0) {
+        const dupeList = [...new Set(duplicateVehicles.map(d => `${d.vehicle} (already on PN ${d.existingPN})`))].join('\n• ');
+        if (!confirm(`Warning: The following vehicle applications already exist on other keys:\n\n• ${dupeList}\n\nAre you sure you want to add this key?`)) {
+            return;
+        }
+    }
 
     // Determine if this is a VATS key based on keyType
     const isVATS = keyType && (keyType === 'VATS' || keyType.startsWith('VATS '));
