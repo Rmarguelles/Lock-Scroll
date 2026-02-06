@@ -8558,12 +8558,15 @@ function renderEditVehiclesList() {
         return;
     }
 
-    const makeOptions = vehicleMakesCache.map(m => `<option value="${m}">${m}</option>`).join('');
-    const codeSeriesOptions = codeSeriesCache.map(cs => `<option value="${cs}">${cs}</option>`).join('');
-
     container.innerHTML = editingVehicles.map((v, i) => {
+        // Generate make options per-vehicle with selected attribute
+        const allMakes = vehicleMakesCache.includes(v.make) ? vehicleMakesCache : (v.make ? [...vehicleMakesCache, v.make].sort() : vehicleMakesCache);
+        const makeOptions = allMakes.map(m => `<option value="${m}"${m === v.make ? ' selected' : ''}>${m}</option>`).join('');
+
+        // Generate model options per-vehicle with selected attribute
         const models = v.make ? (vehicleModelsCache[v.make] || []) : [];
-        const modelOptions = models.map(m => `<option value="${m}"${m === v.model ? ' selected' : ''}>${m}</option>`).join('');
+        const allModels = (v.model && !models.includes(v.model)) ? [...models, v.model].sort() : models;
+        const modelOptions = allModels.map(m => `<option value="${m}"${m === v.model ? ' selected' : ''}>${m}</option>`).join('');
 
         // Normalize codeSeries to array format
         let codeSeriesArr = [];
@@ -8576,8 +8579,11 @@ function renderEditVehiclesList() {
             }
         }
 
-        // Render code series entries
-        const codeSeriesEntriesHtml = codeSeriesArr.map((cs, j) => `
+        // Render code series entries with selected attribute on each
+        const codeSeriesEntriesHtml = codeSeriesArr.map((cs, j) => {
+            const allSeries = (cs.series && !codeSeriesCache.includes(cs.series)) ? [...codeSeriesCache, cs.series].sort() : codeSeriesCache;
+            const csOptions = allSeries.map(s => `<option value="${s}"${s === cs.series ? ' selected' : ''}>${s}</option>`).join('');
+            return `
             <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;" data-vehicle="${i}" data-cs="${j}">
                 <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
                     onchange="updateEditVehicleCodeSeriesYears(${i}, ${j}, this.value)"
@@ -8586,13 +8592,13 @@ function renderEditVehiclesList() {
                     style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
                     id="editVehCodeSeriesEntry${i}_${j}">
                     <option value="">Select Series...</option>
-                    ${codeSeriesOptions}
+                    ${csOptions}
                     <option value="__add_new__">+ Add New...</option>
                 </select>
                 <button onclick="removeEditVehicleCodeSeriesEntry(${i}, ${j})"
                     style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
             </div>
-        `).join('');
+        `}).join('');
 
         return `
             <div style="padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
@@ -8630,57 +8636,6 @@ function renderEditVehiclesList() {
             </div>
         `;
     }).join('');
-
-    // Set the selected make values after rendering
-    editingVehicles.forEach((v, i) => {
-        const makeSelect = document.getElementById(`editVehMake${i}`);
-        if (makeSelect && v.make) {
-            // Check if make exists in options, if not add it
-            if (!vehicleMakesCache.includes(v.make)) {
-                const opt = document.createElement('option');
-                opt.value = v.make;
-                opt.text = v.make;
-                makeSelect.insertBefore(opt, makeSelect.lastElementChild);
-            }
-            makeSelect.value = v.make;
-        }
-
-        const modelSelect = document.getElementById(`editVehModel${i}`);
-        if (modelSelect && v.model) {
-            // Check if model exists in options, if not add it
-            const models = vehicleModelsCache[v.make] || [];
-            if (!models.includes(v.model)) {
-                const opt = document.createElement('option');
-                opt.value = v.model;
-                opt.text = v.model;
-                modelSelect.insertBefore(opt, modelSelect.lastElementChild);
-            }
-            modelSelect.value = v.model;
-        }
-
-        // Set code series entry values
-        let codeSeriesArr = [];
-        if (v.codeSeries) {
-            if (Array.isArray(v.codeSeries)) {
-                codeSeriesArr = v.codeSeries;
-            } else if (typeof v.codeSeries === 'string') {
-                codeSeriesArr = [{ years: `${v.startYear || ''}-${v.endYear || ''}`, series: v.codeSeries }];
-            }
-        }
-        codeSeriesArr.forEach((cs, j) => {
-            const csSelect = document.getElementById(`editVehCodeSeriesEntry${i}_${j}`);
-            if (csSelect && cs.series) {
-                // Check if series exists in options, if not add it
-                if (!codeSeriesCache.includes(cs.series)) {
-                    const opt = document.createElement('option');
-                    opt.value = cs.series;
-                    opt.text = cs.series;
-                    csSelect.insertBefore(opt, csSelect.lastElementChild);
-                }
-                csSelect.value = cs.series;
-            }
-        });
-    });
 }
 
 // Helper to ensure codeSeries is array format
