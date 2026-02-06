@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v83</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v84</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v83</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v84</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v83<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v84<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5155,37 +5155,99 @@
     <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
         <div class="modal-title">&#9999;&#65039; Edit Vehicle Data</div>
         <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
-        <div class="modal-input-group">
-            <label>Key Type</label>
-            <select class="modal-input" id="vehicleDataKeyType" onchange="onVehicleDataDropdownChange('vehicleDataKeyType','keyType')"></select>
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
+            <input type="checkbox" id="vehicleDataMultipleKeys" onchange="toggleVehicleDataMultipleKeys()" style="width:20px;height:20px;cursor:pointer;">
+            <label for="vehicleDataMultipleKeys" style="cursor:pointer;font-size:13px;margin:0;">Different keys for ignition vs. doors/trunk/glovebox</label>
         </div>
-        <div class="modal-input-group">
-            <label>Chip</label>
-            <select class="modal-input" id="vehicleDataChip" onchange="onVehicleDataDropdownChange('vehicleDataChip','chip')"></select>
+        <!-- Single key fields -->
+        <div id="vehicleDataSingleKeyFields">
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <select class="modal-input" id="vehicleDataKeyType" onchange="onVehicleDataDropdownChange('vehicleDataKeyType','keyType')"></select>
+            </div>
+            <div class="modal-input-group">
+                <label>Chip</label>
+                <select class="modal-input" id="vehicleDataChip" onchange="onVehicleDataDropdownChange('vehicleDataChip','chip')"></select>
+            </div>
+            <div class="modal-input-group" style="display:flex;gap:8px;">
+                <div style="flex:1;">
+                    <label>Keyway</label>
+                    <select class="modal-input" id="vehicleDataKeyway" onchange="onVehicleDataDropdownChange('vehicleDataKeyway','keyway')"></select>
+                </div>
+                <div style="flex:1;">
+                    <label>FCC ID</label>
+                    <select class="modal-input" id="vehicleDataFccid" onchange="onVehicleDataDropdownChange('vehicleDataFccid','fccid')"></select>
+                </div>
+            </div>
+            <div class="modal-input-group" style="display:flex;gap:8px;">
+                <div style="flex:1;">
+                    <label>Frequency</label>
+                    <select class="modal-input" id="vehicleDataFrequency" onchange="onVehicleDataDropdownChange('vehicleDataFrequency','frequency')"></select>
+                </div>
+                <div style="flex:1;">
+                    <label>Buttons</label>
+                    <select class="modal-input" id="vehicleDataButtons" onchange="onVehicleDataDropdownChange('vehicleDataButtons','buttons')"></select>
+                </div>
+            </div>
+            <div class="modal-input-group">
+                <label>Battery</label>
+                <select class="modal-input" id="vehicleDataBattery" onchange="onVehicleDataDropdownChange('vehicleDataBattery','battery')"></select>
+            </div>
         </div>
-        <div class="modal-input-group" style="display:flex;gap:8px;">
-            <div style="flex:1;">
-                <label>Keyway</label>
-                <select class="modal-input" id="vehicleDataKeyway" onchange="onVehicleDataDropdownChange('vehicleDataKeyway','keyway')"></select>
+        <!-- Dual key fields -->
+        <div id="vehicleDataDualKeyFields" style="display:none;">
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <select class="modal-input" id="vehicleDataKeyType2" onchange="onVehicleDataDropdownChange('vehicleDataKeyType2','keyType')"></select>
             </div>
-            <div style="flex:1;">
-                <label>FCC ID</label>
-                <select class="modal-input" id="vehicleDataFccid" onchange="onVehicleDataDropdownChange('vehicleDataFccid','fccid')"></select>
+            <div class="modal-input-group">
+                <label>Battery</label>
+                <select class="modal-input" id="vehicleDataBattery2" onchange="onVehicleDataDropdownChange('vehicleDataBattery2','battery')"></select>
             </div>
-        </div>
-        <div class="modal-input-group" style="display:flex;gap:8px;">
-            <div style="flex:1;">
-                <label>Frequency</label>
-                <select class="modal-input" id="vehicleDataFrequency" onchange="onVehicleDataDropdownChange('vehicleDataFrequency','frequency')"></select>
+            <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <select class="modal-input" id="vehicleDataIgnChip" onchange="onVehicleDataDropdownChange('vehicleDataIgnChip','chip')"></select>
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Keyway</label>
+                        <select class="modal-input" id="vehicleDataIgnKeyway" onchange="onVehicleDataDropdownChange('vehicleDataIgnKeyway','keyway')"></select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>FCC ID</label>
+                        <select class="modal-input" id="vehicleDataIgnFccid" onchange="onVehicleDataDropdownChange('vehicleDataIgnFccid','fccid')"></select>
+                    </div>
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Buttons</label>
+                        <select class="modal-input" id="vehicleDataIgnButtons" onchange="onVehicleDataDropdownChange('vehicleDataIgnButtons','buttons')"></select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>Frequency</label>
+                        <select class="modal-input" id="vehicleDataIgnFrequency" onchange="onVehicleDataDropdownChange('vehicleDataIgnFrequency','frequency')"></select>
+                    </div>
+                </div>
             </div>
-            <div style="flex:1;">
-                <label>Buttons</label>
-                <select class="modal-input" id="vehicleDataButtons" onchange="onVehicleDataDropdownChange('vehicleDataButtons','buttons')"></select>
+            <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <select class="modal-input" id="vehicleDataDoorChip" onchange="onVehicleDataDropdownChange('vehicleDataDoorChip','chip')"></select>
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Keyway</label>
+                        <select class="modal-input" id="vehicleDataDoorKeyway" onchange="onVehicleDataDropdownChange('vehicleDataDoorKeyway','keyway')"></select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>FCC ID</label>
+                        <select class="modal-input" id="vehicleDataDoorFccid" onchange="onVehicleDataDropdownChange('vehicleDataDoorFccid','fccid')"></select>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="modal-input-group">
-            <label>Battery</label>
-            <select class="modal-input" id="vehicleDataBattery" onchange="onVehicleDataDropdownChange('vehicleDataBattery','battery')"></select>
         </div>
         <div class="modal-input-group">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -5195,7 +5257,7 @@
             </div>
             <div id="vehicleDataCodeSeriesList" style="max-height:200px;overflow-y:auto;"></div>
         </div>
-        <div class="modal-input-group" style="background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border:1px solid var(--accent2);">
+        <div class="modal-input-group" id="vehicleDataSecondaryKeyGroup" style="background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border:1px solid var(--accent2);">
             <label style="color:var(--accent2);">Door/Trunk/GB Key (for VATS vehicles)</label>
             <select class="modal-input" id="vehicleDataSecondaryKey">
                 <option value="">None</option>
@@ -5242,37 +5304,99 @@
             </div>
         </div>
         <div id="quickVehicleSimilarSuggestion" style="display:none;margin-bottom:12px;"></div>
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
+            <input type="checkbox" id="quickVehicleMultipleKeys" onchange="toggleQuickVehicleMultipleKeys()" style="width:20px;height:20px;cursor:pointer;">
+            <label for="quickVehicleMultipleKeys" style="cursor:pointer;font-size:13px;margin:0;">Different keys for ignition vs. doors/trunk/glovebox</label>
+        </div>
         <button class="modal-btn secondary" id="quickVehicleOptionalToggle" onclick="toggleQuickVehicleOptionalFields()" style="width:100%;margin-bottom:12px;">
             + Show Optional Fields
         </button>
-        <div id="quickVehicleOptionalFields" style="display:none;">
-            <div class="modal-input-group">
-                <label>Key Type</label>
-                <input type="text" class="modal-input" id="quickVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+        <!-- Single key fields (default) -->
+        <div id="quickVehicleSingleKeyFields">
+            <div id="quickVehicleOptionalFields" style="display:none;">
+                <div class="modal-input-group">
+                    <label>Key Type</label>
+                    <input type="text" class="modal-input" id="quickVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+                </div>
+                <div class="modal-input-group">
+                    <label>Chip</label>
+                    <input type="text" class="modal-input" id="quickVehicleChip" placeholder="e.g., Hitag Pro">
+                </div>
+                <div class="modal-input-group">
+                    <label>Buttons</label>
+                    <input type="text" class="modal-input" id="quickVehicleButtons" placeholder="e.g., 4 Button">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="quickVehicleFccid" placeholder="e.g., KR5TXN7">
+                </div>
+                <div class="modal-input-group">
+                    <label>Frequency</label>
+                    <input type="text" class="modal-input" id="quickVehicleFrequency" placeholder="e.g., 433.92 MHz">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="quickVehicleKeyway" placeholder="e.g., DA34">
+                </div>
+                <div class="modal-input-group">
+                    <label>Notes</label>
+                    <textarea class="modal-input" id="quickVehicleNotes" rows="2" placeholder="Additional notes..."></textarea>
+                </div>
             </div>
-            <div class="modal-input-group">
-                <label>Chip</label>
-                <input type="text" class="modal-input" id="quickVehicleChip" placeholder="e.g., Hitag Pro">
+        </div>
+        <!-- Dual key fields (when checkbox checked) -->
+        <div id="quickVehicleDualKeyFields" style="display:none;">
+            <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="quickVehicleIgnChip" placeholder="e.g., PK3, Hitag Pro">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="quickVehicleIgnKeyway" placeholder="e.g., B99">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="quickVehicleIgnFccid" placeholder="e.g., KOBLEAR1XT">
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Buttons</label>
+                        <input type="text" class="modal-input" id="quickVehicleIgnButtons" placeholder="e.g., 4 Button">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Frequency</label>
+                        <input type="text" class="modal-input" id="quickVehicleIgnFrequency" placeholder="e.g., 315 MHz">
+                    </div>
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="quickVehicleIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                </div>
             </div>
-            <div class="modal-input-group">
-                <label>Buttons</label>
-                <input type="text" class="modal-input" id="quickVehicleButtons" placeholder="e.g., 4 Button">
-            </div>
-            <div class="modal-input-group">
-                <label>FCC ID</label>
-                <input type="text" class="modal-input" id="quickVehicleFccid" placeholder="e.g., KR5TXN7">
-            </div>
-            <div class="modal-input-group">
-                <label>Frequency</label>
-                <input type="text" class="modal-input" id="quickVehicleFrequency" placeholder="e.g., 433.92 MHz">
-            </div>
-            <div class="modal-input-group">
-                <label>Keyway</label>
-                <input type="text" class="modal-input" id="quickVehicleKeyway" placeholder="e.g., DA34">
+            <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="quickVehicleDoorChip" placeholder="e.g., No Chip">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="quickVehicleDoorKeyway" placeholder="e.g., B62">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="quickVehicleDoorFccid" placeholder="e.g., No Remote" value="No Remote">
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="quickVehicleDoorCodeSeries" placeholder="e.g., A01-D70">
+                </div>
             </div>
             <div class="modal-input-group">
                 <label>Notes</label>
-                <textarea class="modal-input" id="quickVehicleNotes" rows="2" placeholder="Additional notes..."></textarea>
+                <textarea class="modal-input" id="quickVehicleDualNotes" rows="2" placeholder="Additional notes..."></textarea>
             </div>
         </div>
         <div class="modal-btns">
@@ -5285,7 +5409,7 @@
 <!-- Edit Custom Vehicle Modal -->
 <div class="modal" id="editCustomVehicleModal">
     <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
-        <div class="modal-title">✏️ Edit Vehicle</div>
+        <div class="modal-title">&#9999;&#65039; Edit Vehicle</div>
         <input type="hidden" id="editCustomVehicleId">
         <div id="editCustomVehicleSimilarSuggestion" style="display:none;"></div>
         <div class="modal-input-group" style="display:flex;gap:8px;">
@@ -5308,29 +5432,88 @@
                 <input type="number" class="modal-input" id="editCustomVehicleYearEnd">
             </div>
         </div>
-        <div class="modal-input-group">
-            <label>Key Type</label>
-            <input type="text" class="modal-input" id="editCustomVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="editCustomVehicleMultipleKeys" onchange="toggleEditVehicleMultipleKeys()" style="width:20px;height:20px;cursor:pointer;">
+            <label for="editCustomVehicleMultipleKeys" style="cursor:pointer;font-size:13px;margin:0;">Different keys for ignition vs. doors/trunk/glovebox</label>
         </div>
-        <div class="modal-input-group">
-            <label>Chip</label>
-            <input type="text" class="modal-input" id="editCustomVehicleChip" placeholder="e.g., Hitag Pro">
+        <!-- Single key fields -->
+        <div id="editCustomVehicleSingleKeyFields">
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <input type="text" class="modal-input" id="editCustomVehicleKeyType" placeholder="e.g., Proximity, Transponder">
+            </div>
+            <div class="modal-input-group">
+                <label>Chip</label>
+                <input type="text" class="modal-input" id="editCustomVehicleChip" placeholder="e.g., Hitag Pro">
+            </div>
+            <div class="modal-input-group">
+                <label>Buttons</label>
+                <input type="text" class="modal-input" id="editCustomVehicleButtons" placeholder="e.g., 4 Button">
+            </div>
+            <div class="modal-input-group">
+                <label>FCC ID</label>
+                <input type="text" class="modal-input" id="editCustomVehicleFccid" placeholder="e.g., KR5TXN7">
+            </div>
+            <div class="modal-input-group">
+                <label>Frequency</label>
+                <input type="text" class="modal-input" id="editCustomVehicleFrequency" placeholder="e.g., 433.92 MHz">
+            </div>
+            <div class="modal-input-group">
+                <label>Keyway</label>
+                <input type="text" class="modal-input" id="editCustomVehicleKeyway" placeholder="e.g., DA34">
+            </div>
         </div>
-        <div class="modal-input-group">
-            <label>Buttons</label>
-            <input type="text" class="modal-input" id="editCustomVehicleButtons" placeholder="e.g., 4 Button">
+        <!-- Dual key fields -->
+        <div id="editCustomVehicleDualKeyFields" style="display:none;">
+            <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;margin-top:8px;">
+                <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleIgnChip" placeholder="e.g., PK3">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleIgnKeyway" placeholder="e.g., B99">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleIgnFccid" placeholder="e.g., KOBLEAR1XT">
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Buttons</label>
+                        <input type="text" class="modal-input" id="editCustomVehicleIgnButtons" placeholder="e.g., 4 Button">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Frequency</label>
+                        <input type="text" class="modal-input" id="editCustomVehicleIgnFrequency" placeholder="e.g., 315 MHz">
+                    </div>
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                </div>
+            </div>
+            <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleDoorChip" placeholder="e.g., No Chip">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleDoorKeyway" placeholder="e.g., B62">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleDoorFccid" placeholder="e.g., No Remote">
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleDoorCodeSeries" placeholder="e.g., A01-D70">
+                </div>
+            </div>
         </div>
-        <div class="modal-input-group">
-            <label>FCC ID</label>
-            <input type="text" class="modal-input" id="editCustomVehicleFccid" placeholder="e.g., KR5TXN7">
-        </div>
-        <div class="modal-input-group">
-            <label>Frequency</label>
-            <input type="text" class="modal-input" id="editCustomVehicleFrequency" placeholder="e.g., 433.92 MHz">
-        </div>
-        <div class="modal-input-group">
-            <label>Keyway</label>
-            <input type="text" class="modal-input" id="editCustomVehicleKeyway" placeholder="e.g., DA34">
         </div>
         <div class="modal-input-group">
             <label>Notes</label>
@@ -14111,21 +14294,34 @@ function getUniqueVehicles() {
         if (cv.keyType) {
             vehicleMap[vehicleKey].customKeyType = normalizeKeyType(cv.keyType);
         }
-        if (cv.keyway) vehicleMap[vehicleKey].keyways.add(cv.keyway);
-        if (cv.fccid) vehicleMap[vehicleKey].fccids.add(cv.fccid);
-        if (cv.chip) vehicleMap[vehicleKey].chips.add(cv.chip);
-        if (cv.frequency) vehicleMap[vehicleKey].frequencies.add(cv.frequency);
+
+        // Handle dual-key vehicles - add both ignition and door key data to sets
+        if (cv.multipleKeys) {
+            vehicleMap[vehicleKey].multipleKeys = true;
+            if (cv.ignition_keyway) vehicleMap[vehicleKey].keyways.add(cv.ignition_keyway);
+            if (cv.ignition_fccid) vehicleMap[vehicleKey].fccids.add(cv.ignition_fccid);
+            if (cv.ignition_chip) vehicleMap[vehicleKey].chips.add(cv.ignition_chip);
+            if (cv.ignition_frequency) vehicleMap[vehicleKey].frequencies.add(cv.ignition_frequency);
+            if (cv.door_keyway) vehicleMap[vehicleKey].keyways.add(cv.door_keyway);
+            if (cv.door_fccid) vehicleMap[vehicleKey].fccids.add(cv.door_fccid);
+            if (cv.door_chip) vehicleMap[vehicleKey].chips.add(cv.door_chip);
+        } else {
+            if (cv.keyway) vehicleMap[vehicleKey].keyways.add(cv.keyway);
+            if (cv.fccid) vehicleMap[vehicleKey].fccids.add(cv.fccid);
+            if (cv.chip) vehicleMap[vehicleKey].chips.add(cv.chip);
+            if (cv.frequency) vehicleMap[vehicleKey].frequencies.add(cv.frequency);
+        }
 
         // Create a pseudo-key object for display purposes if custom vehicle has key data
         if (cv.keyBlank || cv.keyType) {
             const pseudoKey = {
                 pn: cv.keyBlank || 'Custom',
                 keyType: cv.keyType || 'Unknown',
-                keyway: cv.keyway,
-                chip: cv.chip,
-                fccid: cv.fccid,
-                frequency: cv.frequency,
-                buttons: cv.buttons,
+                keyway: cv.multipleKeys ? cv.ignition_keyway : cv.keyway,
+                chip: cv.multipleKeys ? cv.ignition_chip : cv.chip,
+                fccid: cv.multipleKeys ? cv.ignition_fccid : cv.fccid,
+                frequency: cv.multipleKeys ? cv.ignition_frequency : cv.frequency,
+                buttons: cv.multipleKeys ? cv.ignition_buttons : cv.buttons,
                 isCustom: true
             };
             // Only add if not already in keys array
@@ -14247,6 +14443,13 @@ function openVehicleDetail(vehicleKey) {
         ? `${secondaryKeyPN} <span style="color:${secondaryKeyStock > 0 ? 'var(--success)' : 'var(--danger)'};">(${secondaryKeyStock})</span>`
         : null;
 
+    // Check if this is a dual-key vehicle (multipleKeys)
+    const cvForDetail = customVehicles.find(c =>
+        c.make === make && c.model === model &&
+        c.startYear === parseInt(startYear) && c.endYear === parseInt(endYear)
+    );
+    const isDualKey = (cvForDetail && cvForDetail.multipleKeys === true) || vehicleData.multipleKeys === true;
+
     // Build content
     let html = `
         <!-- Big Stock Indicator -->
@@ -14261,6 +14464,69 @@ function openVehicleDetail(vehicleKey) {
                 ✏️ Edit Data
             </button>
         </div>
+    `;
+
+    if (isDualKey) {
+        // Dual-key vehicle display
+        const ign = {
+            chip: vehicleData.ignition_chip || (cvForDetail && cvForDetail.ignition_chip) || '',
+            keyway: vehicleData.ignition_keyway || (cvForDetail && cvForDetail.ignition_keyway) || '',
+            fccid: vehicleData.ignition_fccid || (cvForDetail && cvForDetail.ignition_fccid) || '',
+            buttons: vehicleData.ignition_buttons || (cvForDetail && cvForDetail.ignition_buttons) || '',
+            frequency: vehicleData.ignition_frequency || (cvForDetail && cvForDetail.ignition_frequency) || '',
+            codeSeries: vehicleData.ignition_codeSeries || (cvForDetail && cvForDetail.ignition_codeSeries) || ''
+        };
+        const door = {
+            chip: vehicleData.door_chip || (cvForDetail && cvForDetail.door_chip) || '',
+            keyway: vehicleData.door_keyway || (cvForDetail && cvForDetail.door_keyway) || '',
+            fccid: vehicleData.door_fccid || (cvForDetail && cvForDetail.door_fccid) || '',
+            codeSeries: vehicleData.door_codeSeries || (cvForDetail && cvForDetail.door_codeSeries) || ''
+        };
+
+        html += `
+        <div class="vehicle-info-grid">
+            <div class="vehicle-info-item">
+                <div class="vehicle-info-label">Year Range</div>
+                <div class="vehicle-info-value">${yearDisplay}</div>
+            </div>
+            ${(() => {
+                const vdKeyType = vehicleData.keyType || '';
+                const aggKeyTypes = vehicle.keys.map(k => k.keyType).filter(Boolean);
+                const keyTypeDisplay = vdKeyType || (aggKeyTypes.length > 0 ? [...new Set(aggKeyTypes)].join(', ') : '');
+                return keyTypeDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Type</div><div class="vehicle-info-value">' + keyTypeDisplay + '</div></div>' : '';
+            })()}
+            ${fids.size > 0 ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FID' + (fids.size > 1 ? 's' : '') + '</div><div class="vehicle-info-value highlight">' + fidDisplay + '</div></div>' : ''}
+            ${vehicleData.battery ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Battery</div><div class="vehicle-info-value">' + vehicleData.battery + '</div></div>' : ''}
+        </div>
+
+        <!-- Ignition Key Section -->
+        <div style="margin:12px 16px;padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;">
+            <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
+            <div class="vehicle-info-grid" style="margin:0;padding:0;">
+                ${ign.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + ign.chip + '</div></div>' : ''}
+                ${ign.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + ign.keyway + '</div></div>' : ''}
+                ${ign.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + ign.fccid + '</div></div>' : ''}
+                ${ign.buttons ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Buttons</div><div class="vehicle-info-value">' + ign.buttons + '</div></div>' : ''}
+                ${ign.frequency ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Frequency</div><div class="vehicle-info-value">' + ign.frequency + '</div></div>' : ''}
+                ${ign.codeSeries ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series</div><div class="vehicle-info-value highlight">' + ign.codeSeries + '</div></div>' : ''}
+            </div>
+        </div>
+
+        <!-- Door/Trunk/Glovebox Key Section -->
+        <div style="margin:0 16px 12px;padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;">
+            <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+            <div class="vehicle-info-grid" style="margin:0;padding:0;">
+                ${door.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + door.chip + '</div></div>' : ''}
+                ${door.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + door.keyway + '</div></div>' : ''}
+                ${door.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + door.fccid + '</div></div>' : ''}
+                ${door.codeSeries ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series</div><div class="vehicle-info-value highlight">' + door.codeSeries + '</div></div>' : ''}
+            </div>
+        </div>
+        ${vehicleData.notes ? '<div style="margin:0 16px 12px;"><div class="vehicle-info-item" style="grid-column:1/-1;background:rgba(100,149,237,0.1);border:1px solid cornflowerblue;border-radius:6px;"><div class="vehicle-info-label" style="color:cornflowerblue;">Notes</div><div class="vehicle-info-value" style="white-space:pre-wrap;">' + vehicleData.notes + '</div></div></div>' : ''}
+        `;
+    } else {
+        // Single-key vehicle display (original)
+        html += `
         <div class="vehicle-info-grid">
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Year Range</div>
@@ -14325,6 +14591,8 @@ function openVehicleDetail(vehicleKey) {
             </div>
             ` : ''}
         </div>
+        `;
+    }
 
         ${renderYearOverridesDisplay(make, model, parseInt(startYear), parseInt(endYear))}
 
@@ -15783,7 +16051,14 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     const curButtons = vehicleData.buttons || (cv && cv.buttons ? cv.buttons : '');
     const curBattery = vehicleData.battery || '';
 
-    // Populate dropdowns with existing DB values
+    // Detect dual-key mode from custom vehicle or vehicle data override
+    const isDualKey = (cv && cv.multipleKeys === true) || vehicleData.multipleKeys === true;
+    document.getElementById('vehicleDataMultipleKeys').checked = isDualKey;
+    document.getElementById('vehicleDataSingleKeyFields').style.display = isDualKey ? 'none' : 'block';
+    document.getElementById('vehicleDataDualKeyFields').style.display = isDualKey ? 'block' : 'none';
+    document.getElementById('vehicleDataSecondaryKeyGroup').style.display = isDualKey ? 'none' : 'block';
+
+    // Populate single-key dropdowns with existing DB values
     populateVehicleDataSelect('vehicleDataKeyType', 'keyType', curKeyType);
     populateVehicleDataSelect('vehicleDataChip', 'chip', curChip);
     populateVehicleDataSelect('vehicleDataKeyway', 'keyway', curKeyway);
@@ -15791,6 +16066,27 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     populateVehicleDataSelect('vehicleDataFrequency', 'frequency', curFreq);
     populateVehicleDataSelect('vehicleDataButtons', 'buttons', curButtons);
     populateVehicleDataSelect('vehicleDataBattery', 'battery', curBattery);
+
+    // Populate dual-key dropdowns
+    const curIgnChip = vehicleData.ignition_chip || (cv && cv.ignition_chip) || '';
+    const curIgnKeyway = vehicleData.ignition_keyway || (cv && cv.ignition_keyway) || '';
+    const curIgnFccid = vehicleData.ignition_fccid || (cv && cv.ignition_fccid) || '';
+    const curIgnButtons = vehicleData.ignition_buttons || (cv && cv.ignition_buttons) || '';
+    const curIgnFreq = vehicleData.ignition_frequency || (cv && cv.ignition_frequency) || '';
+    const curDoorChip = vehicleData.door_chip || (cv && cv.door_chip) || '';
+    const curDoorKeyway = vehicleData.door_keyway || (cv && cv.door_keyway) || '';
+    const curDoorFccid = vehicleData.door_fccid || (cv && cv.door_fccid) || '';
+
+    populateVehicleDataSelect('vehicleDataKeyType2', 'keyType', curKeyType);
+    populateVehicleDataSelect('vehicleDataBattery2', 'battery', curBattery);
+    populateVehicleDataSelect('vehicleDataIgnChip', 'chip', curIgnChip);
+    populateVehicleDataSelect('vehicleDataIgnKeyway', 'keyway', curIgnKeyway);
+    populateVehicleDataSelect('vehicleDataIgnFccid', 'fccid', curIgnFccid);
+    populateVehicleDataSelect('vehicleDataIgnButtons', 'buttons', curIgnButtons);
+    populateVehicleDataSelect('vehicleDataIgnFrequency', 'frequency', curIgnFreq);
+    populateVehicleDataSelect('vehicleDataDoorChip', 'chip', curDoorChip);
+    populateVehicleDataSelect('vehicleDataDoorKeyway', 'keyway', curDoorKeyway);
+    populateVehicleDataSelect('vehicleDataDoorFccid', 'fccid', curDoorFccid);
 
     // Build code series cache if empty
     if (codeSeriesCache.length === 0) {
@@ -15929,52 +16225,130 @@ function saveVehicleDataEdit() {
 
     // Filter out empty code series entries
     const validCodeSeries = vehicleDataCodeSeriesEntries.filter(cs => cs.series && cs.series.trim());
-
-    const keyType = document.getElementById('vehicleDataKeyType').value.trim();
-    const chip = document.getElementById('vehicleDataChip').value.trim();
-    const keyway = document.getElementById('vehicleDataKeyway').value.trim();
-    const fccid = document.getElementById('vehicleDataFccid').value.trim();
-    const frequency = document.getElementById('vehicleDataFrequency').value.trim();
-    const buttons = document.getElementById('vehicleDataButtons').value.trim();
-    const battery = document.getElementById('vehicleDataBattery').value.trim();
+    const isMultipleKeys = document.getElementById('vehicleDataMultipleKeys').checked;
     const notes = document.getElementById('vehicleDataNotes').value.trim();
-    const secondaryKeyPN = document.getElementById('vehicleDataSecondaryKey').value.trim();
 
-    // Save key data fields as overrides
-    lishiVehicleData[currentVehicleDataEditKey].keyType = keyType;
-    lishiVehicleData[currentVehicleDataEditKey].chip = chip;
-    lishiVehicleData[currentVehicleDataEditKey].keyway = keyway;
-    lishiVehicleData[currentVehicleDataEditKey].fccid = fccid;
-    lishiVehicleData[currentVehicleDataEditKey].frequency = frequency;
-    lishiVehicleData[currentVehicleDataEditKey].buttons = buttons;
-    lishiVehicleData[currentVehicleDataEditKey].battery = battery;
-    lishiVehicleData[currentVehicleDataEditKey].codeSeries = validCodeSeries.length > 0 ? validCodeSeries : [];
-    lishiVehicleData[currentVehicleDataEditKey].notes = notes;
-    lishiVehicleData[currentVehicleDataEditKey].secondaryKeyPN = secondaryKeyPN || null;
-    lishiVehicleData[currentVehicleDataEditKey].lastEdited = new Date().toISOString();
-    lishiVehicleData[currentVehicleDataEditKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    const vd = lishiVehicleData[currentVehicleDataEditKey];
+    vd.multipleKeys = isMultipleKeys;
+    vd.codeSeries = validCodeSeries.length > 0 ? validCodeSeries : [];
+    vd.notes = notes;
+    vd.lastEdited = new Date().toISOString();
+    vd.lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
 
-    saveLishiVehicle();
+    if (isMultipleKeys) {
+        const keyType = document.getElementById('vehicleDataKeyType2').value.trim();
+        const battery = document.getElementById('vehicleDataBattery2').value.trim();
+        const ignition_chip = document.getElementById('vehicleDataIgnChip').value.trim();
+        const ignition_keyway = document.getElementById('vehicleDataIgnKeyway').value.trim();
+        const ignition_fccid = document.getElementById('vehicleDataIgnFccid').value.trim();
+        const ignition_buttons = document.getElementById('vehicleDataIgnButtons').value.trim();
+        const ignition_frequency = document.getElementById('vehicleDataIgnFrequency').value.trim();
+        const door_chip = document.getElementById('vehicleDataDoorChip').value.trim();
+        const door_keyway = document.getElementById('vehicleDataDoorKeyway').value.trim();
+        const door_fccid = document.getElementById('vehicleDataDoorFccid').value.trim();
 
-    // Also sync back to custom vehicle if one exists for this groupKey
-    const [make, model, sy, ey] = currentVehicleDataEditKey.split('|');
-    const cvIdx = customVehicles.findIndex(c =>
-        c.make === make && c.model === model &&
-        c.startYear === parseInt(sy) && c.endYear === parseInt(ey)
-    );
-    if (cvIdx >= 0) {
-        if (keyType) customVehicles[cvIdx].keyType = keyType;
-        if (chip) customVehicles[cvIdx].chip = chip;
-        if (keyway) customVehicles[cvIdx].keyway = keyway;
-        if (fccid) customVehicles[cvIdx].fccid = fccid;
-        if (frequency) customVehicles[cvIdx].frequency = frequency;
-        if (buttons) customVehicles[cvIdx].buttons = buttons;
-        if (notes) customVehicles[cvIdx].notes = notes;
-        customVehicles[cvIdx].dataStatus = (keyType || chip || buttons || fccid || frequency || keyway) ? 'complete' : 'partial';
-        customVehicles[cvIdx].lastEdited = new Date().toISOString();
-        saveCustomVehicles();
+        vd.keyType = keyType;
+        vd.battery = battery;
+        vd.chip = '';
+        vd.keyway = '';
+        vd.fccid = '';
+        vd.frequency = '';
+        vd.buttons = '';
+        vd.ignition_chip = ignition_chip;
+        vd.ignition_keyway = ignition_keyway;
+        vd.ignition_fccid = ignition_fccid;
+        vd.ignition_buttons = ignition_buttons;
+        vd.ignition_frequency = ignition_frequency;
+        vd.door_chip = door_chip;
+        vd.door_keyway = door_keyway;
+        vd.door_fccid = door_fccid;
+        vd.secondaryKeyPN = null;
+
+        // Sync back to custom vehicle
+        const [make, model, sy, ey] = currentVehicleDataEditKey.split('|');
+        const cvIdx = customVehicles.findIndex(c =>
+            c.make === make && c.model === model &&
+            c.startYear === parseInt(sy) && c.endYear === parseInt(ey)
+        );
+        if (cvIdx >= 0) {
+            customVehicles[cvIdx].multipleKeys = true;
+            customVehicles[cvIdx].keyType = keyType;
+            customVehicles[cvIdx].chip = '';
+            customVehicles[cvIdx].keyway = '';
+            customVehicles[cvIdx].fccid = '';
+            customVehicles[cvIdx].frequency = '';
+            customVehicles[cvIdx].buttons = '';
+            customVehicles[cvIdx].ignition_chip = ignition_chip;
+            customVehicles[cvIdx].ignition_keyway = ignition_keyway;
+            customVehicles[cvIdx].ignition_fccid = ignition_fccid;
+            customVehicles[cvIdx].ignition_buttons = ignition_buttons;
+            customVehicles[cvIdx].ignition_frequency = ignition_frequency;
+            customVehicles[cvIdx].door_chip = door_chip;
+            customVehicles[cvIdx].door_keyway = door_keyway;
+            customVehicles[cvIdx].door_fccid = door_fccid;
+            if (notes) customVehicles[cvIdx].notes = notes;
+            customVehicles[cvIdx].dataStatus = (ignition_chip || ignition_keyway || door_chip || door_keyway) ? 'complete' : 'partial';
+            customVehicles[cvIdx].lastEdited = new Date().toISOString();
+            saveCustomVehicles();
+        }
+    } else {
+        const keyType = document.getElementById('vehicleDataKeyType').value.trim();
+        const chip = document.getElementById('vehicleDataChip').value.trim();
+        const keyway = document.getElementById('vehicleDataKeyway').value.trim();
+        const fccid = document.getElementById('vehicleDataFccid').value.trim();
+        const frequency = document.getElementById('vehicleDataFrequency').value.trim();
+        const buttons = document.getElementById('vehicleDataButtons').value.trim();
+        const battery = document.getElementById('vehicleDataBattery').value.trim();
+        const secondaryKeyPN = document.getElementById('vehicleDataSecondaryKey').value.trim();
+
+        vd.keyType = keyType;
+        vd.chip = chip;
+        vd.keyway = keyway;
+        vd.fccid = fccid;
+        vd.frequency = frequency;
+        vd.buttons = buttons;
+        vd.battery = battery;
+        vd.secondaryKeyPN = secondaryKeyPN || null;
+        // Clear dual-key fields
+        vd.ignition_chip = '';
+        vd.ignition_keyway = '';
+        vd.ignition_fccid = '';
+        vd.ignition_buttons = '';
+        vd.ignition_frequency = '';
+        vd.door_chip = '';
+        vd.door_keyway = '';
+        vd.door_fccid = '';
+
+        // Sync back to custom vehicle
+        const [make, model, sy, ey] = currentVehicleDataEditKey.split('|');
+        const cvIdx = customVehicles.findIndex(c =>
+            c.make === make && c.model === model &&
+            c.startYear === parseInt(sy) && c.endYear === parseInt(ey)
+        );
+        if (cvIdx >= 0) {
+            customVehicles[cvIdx].multipleKeys = false;
+            if (keyType) customVehicles[cvIdx].keyType = keyType;
+            if (chip) customVehicles[cvIdx].chip = chip;
+            if (keyway) customVehicles[cvIdx].keyway = keyway;
+            if (fccid) customVehicles[cvIdx].fccid = fccid;
+            if (frequency) customVehicles[cvIdx].frequency = frequency;
+            if (buttons) customVehicles[cvIdx].buttons = buttons;
+            if (notes) customVehicles[cvIdx].notes = notes;
+            customVehicles[cvIdx].ignition_chip = '';
+            customVehicles[cvIdx].ignition_keyway = '';
+            customVehicles[cvIdx].ignition_fccid = '';
+            customVehicles[cvIdx].ignition_buttons = '';
+            customVehicles[cvIdx].ignition_frequency = '';
+            customVehicles[cvIdx].door_chip = '';
+            customVehicles[cvIdx].door_keyway = '';
+            customVehicles[cvIdx].door_fccid = '';
+            customVehicles[cvIdx].dataStatus = (keyType || chip || buttons || fccid || frequency || keyway) ? 'complete' : 'partial';
+            customVehicles[cvIdx].lastEdited = new Date().toISOString();
+            saveCustomVehicles();
+        }
     }
 
+    saveLishiVehicle();
     closeVehicleDataEditModal();
 
     // Refresh the vehicle detail page to show updated data
@@ -17349,6 +17723,27 @@ function toggleQuickVehicleOptionalFields() {
     }
 }
 
+function toggleQuickVehicleMultipleKeys() {
+    const checked = document.getElementById('quickVehicleMultipleKeys').checked;
+    document.getElementById('quickVehicleSingleKeyFields').style.display = checked ? 'none' : 'block';
+    document.getElementById('quickVehicleDualKeyFields').style.display = checked ? 'block' : 'none';
+    document.getElementById('quickVehicleOptionalToggle').style.display = checked ? 'none' : 'block';
+}
+
+function toggleEditVehicleMultipleKeys() {
+    const checked = document.getElementById('editCustomVehicleMultipleKeys').checked;
+    document.getElementById('editCustomVehicleSingleKeyFields').style.display = checked ? 'none' : 'block';
+    document.getElementById('editCustomVehicleDualKeyFields').style.display = checked ? 'block' : 'none';
+}
+
+function toggleVehicleDataMultipleKeys() {
+    const checked = document.getElementById('vehicleDataMultipleKeys').checked;
+    document.getElementById('vehicleDataSingleKeyFields').style.display = checked ? 'none' : 'block';
+    document.getElementById('vehicleDataDualKeyFields').style.display = checked ? 'block' : 'none';
+    // Hide secondary key picker when using dual-key mode (it's replaced by the dual-key sections)
+    document.getElementById('vehicleDataSecondaryKeyGroup').style.display = checked ? 'none' : 'block';
+}
+
 function saveQuickAddVehicle() {
     let make = document.getElementById('quickVehicleMake').value;
     if (make === '__other__') make = document.getElementById('quickVehicleNewMake').value.trim();
@@ -17369,33 +17764,61 @@ function saveQuickAddVehicle() {
         return;
     }
 
-    // Check if optional fields are filled
-    const keyType = document.getElementById('quickVehicleKeyType').value.trim();
-    const chip = document.getElementById('quickVehicleChip').value.trim();
-    const buttons = document.getElementById('quickVehicleButtons').value.trim();
-    const fccid = document.getElementById('quickVehicleFccid').value.trim();
-    const frequency = document.getElementById('quickVehicleFrequency').value.trim();
-    const keyway = document.getElementById('quickVehicleKeyway').value.trim();
-    const notes = document.getElementById('quickVehicleNotes').value.trim();
+    const isMultipleKeys = document.getElementById('quickVehicleMultipleKeys').checked;
 
-    const hasOptionalData = keyType || chip || buttons || fccid || frequency || keyway;
+    let vehicle;
 
-    const vehicle = {
-        id: 'vehicle-' + Date.now(),
-        make: make,
-        model: model,
-        startYear: startYear,
-        endYear: endYear,
-        dataStatus: hasOptionalData ? 'complete' : 'partial',
-        keyType: keyType,
-        chip: chip,
-        buttons: buttons,
-        fccid: fccid,
-        frequency: frequency,
-        keyway: keyway,
-        notes: notes,
-        createdAt: new Date().toISOString()
-    };
+    if (isMultipleKeys) {
+        const ignChip = document.getElementById('quickVehicleIgnChip').value.trim();
+        const ignKeyway = document.getElementById('quickVehicleIgnKeyway').value.trim();
+        const ignFccid = document.getElementById('quickVehicleIgnFccid').value.trim();
+        const ignButtons = document.getElementById('quickVehicleIgnButtons').value.trim();
+        const ignFrequency = document.getElementById('quickVehicleIgnFrequency').value.trim();
+        const ignCodeSeries = document.getElementById('quickVehicleIgnCodeSeries').value.trim();
+        const doorChip = document.getElementById('quickVehicleDoorChip').value.trim();
+        const doorKeyway = document.getElementById('quickVehicleDoorKeyway').value.trim();
+        const doorFccid = document.getElementById('quickVehicleDoorFccid').value.trim();
+        const doorCodeSeries = document.getElementById('quickVehicleDoorCodeSeries').value.trim();
+        const notes = document.getElementById('quickVehicleDualNotes').value.trim();
+
+        const hasData = ignChip || ignKeyway || doorKeyway;
+
+        vehicle = {
+            id: 'vehicle-' + Date.now(),
+            make: make, model: model,
+            startYear: startYear, endYear: endYear,
+            multipleKeys: true,
+            dataStatus: hasData ? 'complete' : 'partial',
+            // Ignition key
+            ignition_chip: ignChip, ignition_keyway: ignKeyway, ignition_fccid: ignFccid,
+            ignition_buttons: ignButtons, ignition_frequency: ignFrequency, ignition_codeSeries: ignCodeSeries,
+            // Door key
+            door_chip: doorChip, door_keyway: doorKeyway, door_fccid: doorFccid, door_codeSeries: doorCodeSeries,
+            notes: notes,
+            createdAt: new Date().toISOString()
+        };
+    } else {
+        const keyType = document.getElementById('quickVehicleKeyType').value.trim();
+        const chip = document.getElementById('quickVehicleChip').value.trim();
+        const buttons = document.getElementById('quickVehicleButtons').value.trim();
+        const fccid = document.getElementById('quickVehicleFccid').value.trim();
+        const frequency = document.getElementById('quickVehicleFrequency').value.trim();
+        const keyway = document.getElementById('quickVehicleKeyway').value.trim();
+        const notes = document.getElementById('quickVehicleNotes').value.trim();
+        const hasOptionalData = keyType || chip || buttons || fccid || frequency || keyway;
+
+        vehicle = {
+            id: 'vehicle-' + Date.now(),
+            make: make, model: model,
+            startYear: startYear, endYear: endYear,
+            multipleKeys: false,
+            dataStatus: hasOptionalData ? 'complete' : 'partial',
+            keyType: keyType, chip: chip, buttons: buttons,
+            fccid: fccid, frequency: frequency, keyway: keyway,
+            notes: notes,
+            createdAt: new Date().toISOString()
+        };
+    }
 
     customVehicles.push(vehicle);
     saveCustomVehicles();
@@ -17469,6 +17892,25 @@ function openEditCustomVehicle(vehicleId) {
     document.getElementById('editCustomVehicleKeyway').value = vehicle.keyway || '';
     document.getElementById('editCustomVehicleNotes').value = vehicle.notes || '';
 
+    // Handle multiple keys checkbox and dual-key fields
+    const isMultipleKeys = vehicle.multipleKeys === true;
+    document.getElementById('editCustomVehicleMultipleKeys').checked = isMultipleKeys;
+    document.getElementById('editCustomVehicleSingleKeyFields').style.display = isMultipleKeys ? 'none' : 'block';
+    document.getElementById('editCustomVehicleDualKeyFields').style.display = isMultipleKeys ? 'block' : 'none';
+
+    if (isMultipleKeys) {
+        document.getElementById('editCustomVehicleIgnChip').value = vehicle.ignition_chip || '';
+        document.getElementById('editCustomVehicleIgnKeyway').value = vehicle.ignition_keyway || '';
+        document.getElementById('editCustomVehicleIgnFccid').value = vehicle.ignition_fccid || '';
+        document.getElementById('editCustomVehicleIgnButtons').value = vehicle.ignition_buttons || '';
+        document.getElementById('editCustomVehicleIgnFrequency').value = vehicle.ignition_frequency || '';
+        document.getElementById('editCustomVehicleIgnCodeSeries').value = vehicle.ignition_codeSeries || '';
+        document.getElementById('editCustomVehicleDoorChip').value = vehicle.door_chip || '';
+        document.getElementById('editCustomVehicleDoorKeyway').value = vehicle.door_keyway || '';
+        document.getElementById('editCustomVehicleDoorFccid').value = vehicle.door_fccid || '';
+        document.getElementById('editCustomVehicleDoorCodeSeries').value = vehicle.door_codeSeries || '';
+    }
+
     // Check for similar vehicles to copy from
     const similar = findSimilarVehicles(vehicle.make, vehicle.model, vehicle.startYear);
     const suggestionDiv = document.getElementById('editCustomVehicleSimilarSuggestion');
@@ -17531,32 +17973,60 @@ function saveEditCustomVehicle() {
         return;
     }
 
-    const keyType = document.getElementById('editCustomVehicleKeyType').value.trim();
-    const chip = document.getElementById('editCustomVehicleChip').value.trim();
-    const buttons = document.getElementById('editCustomVehicleButtons').value.trim();
-    const fccid = document.getElementById('editCustomVehicleFccid').value.trim();
-    const frequency = document.getElementById('editCustomVehicleFrequency').value.trim();
-    const keyway = document.getElementById('editCustomVehicleKeyway').value.trim();
+    const isMultipleKeys = document.getElementById('editCustomVehicleMultipleKeys').checked;
     const notes = document.getElementById('editCustomVehicleNotes').value.trim();
+    const make = document.getElementById('editCustomVehicleMake').value.trim();
+    const model = document.getElementById('editCustomVehicleModel').value.trim();
+    const startYear = parseInt(document.getElementById('editCustomVehicleYearStart').value);
+    const endYear = parseInt(document.getElementById('editCustomVehicleYearEnd').value);
 
-    const hasData = keyType || chip || buttons || fccid || frequency || keyway;
+    if (isMultipleKeys) {
+        const ignition_chip = document.getElementById('editCustomVehicleIgnChip').value.trim();
+        const ignition_keyway = document.getElementById('editCustomVehicleIgnKeyway').value.trim();
+        const ignition_fccid = document.getElementById('editCustomVehicleIgnFccid').value.trim();
+        const ignition_buttons = document.getElementById('editCustomVehicleIgnButtons').value.trim();
+        const ignition_frequency = document.getElementById('editCustomVehicleIgnFrequency').value.trim();
+        const ignition_codeSeries = document.getElementById('editCustomVehicleIgnCodeSeries').value.trim();
+        const door_chip = document.getElementById('editCustomVehicleDoorChip').value.trim();
+        const door_keyway = document.getElementById('editCustomVehicleDoorKeyway').value.trim();
+        const door_fccid = document.getElementById('editCustomVehicleDoorFccid').value.trim();
+        const door_codeSeries = document.getElementById('editCustomVehicleDoorCodeSeries').value.trim();
 
-    customVehicles[idx] = {
-        ...customVehicles[idx],
-        make: document.getElementById('editCustomVehicleMake').value.trim(),
-        model: document.getElementById('editCustomVehicleModel').value.trim(),
-        startYear: parseInt(document.getElementById('editCustomVehicleYearStart').value),
-        endYear: parseInt(document.getElementById('editCustomVehicleYearEnd').value),
-        keyType: keyType,
-        chip: chip,
-        buttons: buttons,
-        fccid: fccid,
-        frequency: frequency,
-        keyway: keyway,
-        notes: notes,
-        dataStatus: hasData ? 'complete' : 'partial',
-        lastEdited: new Date().toISOString()
-    };
+        const hasData = ignition_chip || ignition_keyway || ignition_fccid || door_chip || door_keyway || door_fccid;
+
+        customVehicles[idx] = {
+            ...customVehicles[idx],
+            make, model, startYear, endYear, notes,
+            multipleKeys: true,
+            keyType: '', chip: '', buttons: '', fccid: '', frequency: '', keyway: '',
+            ignition_chip, ignition_keyway, ignition_fccid,
+            ignition_buttons, ignition_frequency, ignition_codeSeries,
+            door_chip, door_keyway, door_fccid, door_codeSeries,
+            dataStatus: hasData ? 'complete' : 'partial',
+            lastEdited: new Date().toISOString()
+        };
+    } else {
+        const keyType = document.getElementById('editCustomVehicleKeyType').value.trim();
+        const chip = document.getElementById('editCustomVehicleChip').value.trim();
+        const buttons = document.getElementById('editCustomVehicleButtons').value.trim();
+        const fccid = document.getElementById('editCustomVehicleFccid').value.trim();
+        const frequency = document.getElementById('editCustomVehicleFrequency').value.trim();
+        const keyway = document.getElementById('editCustomVehicleKeyway').value.trim();
+
+        const hasData = keyType || chip || buttons || fccid || frequency || keyway;
+
+        customVehicles[idx] = {
+            ...customVehicles[idx],
+            make, model, startYear, endYear, notes,
+            multipleKeys: false,
+            keyType, chip, buttons, fccid, frequency, keyway,
+            ignition_chip: '', ignition_keyway: '', ignition_fccid: '',
+            ignition_buttons: '', ignition_frequency: '', ignition_codeSeries: '',
+            door_chip: '', door_keyway: '', door_fccid: '', door_codeSeries: '',
+            dataStatus: hasData ? 'complete' : 'partial',
+            lastEdited: new Date().toISOString()
+        };
+    }
 
     saveCustomVehicles();
     closeEditCustomVehicleModal();
