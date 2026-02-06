@@ -5004,6 +5004,67 @@
     </div>
 </div>
 
+<!-- Edit Key Info Modal -->
+<div class="modal" id="editKeyInfoModal">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-title">Edit Key Information</div>
+        <div class="modal-input-group">
+            <label>Part Number</label>
+            <input type="text" class="modal-input" id="editKeyInfoPN" disabled style="opacity:0.7;">
+        </div>
+        <div class="modal-input-group">
+            <label>Key Type</label>
+            <input type="text" class="modal-input" id="editKeyInfoKeyType" placeholder="e.g., Transponder, Remote Head">
+        </div>
+        <div class="modal-input-group">
+            <label>Keyway / Blade</label>
+            <input type="text" class="modal-input" id="editKeyInfoKeyway" placeholder="e.g., B102, Y157">
+        </div>
+        <div class="modal-input-group">
+            <label>Chip Type</label>
+            <input type="text" class="modal-input" id="editKeyInfoChip" placeholder="e.g., Philips 46, Texas 4D63">
+        </div>
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="editKeyInfoIsVATS" onchange="toggleEditKeyInfoVATS()" style="width:18px;height:18px;cursor:pointer;">
+                <span>VATS Key</span>
+            </label>
+        </div>
+        <div class="modal-input-group" id="editKeyInfoVATSSection" style="display:none;background:rgba(255,107,53,0.1);padding:12px;border-radius:8px;border-left:3px solid var(--accent2);">
+            <label style="color:var(--accent2);">Secondary Key Part Number (Door/Trunk)</label>
+            <input type="text" class="modal-input" id="editKeyInfoSecondaryPN" placeholder="e.g., B62">
+        </div>
+        <div class="modal-input-group">
+            <label>FCC ID</label>
+            <input type="text" class="modal-input" id="editKeyInfoFCC" placeholder="e.g., OHT01060512">
+        </div>
+        <div class="modal-input-group">
+            <label>Frequency</label>
+            <input type="text" class="modal-input" id="editKeyInfoFrequency" placeholder="e.g., 315 MHz, 433 MHz">
+        </div>
+        <div class="modal-input-group">
+            <label>Buttons</label>
+            <input type="text" class="modal-input" id="editKeyInfoButtons" placeholder="e.g., 3, 4, 3+1">
+        </div>
+        <div class="modal-input-group">
+            <label>Battery</label>
+            <input type="text" class="modal-input" id="editKeyInfoBattery" placeholder="e.g., CR2032, CR1620">
+        </div>
+        <div class="modal-input-group">
+            <label>Emergency Key PN</label>
+            <input type="text" class="modal-input" id="editKeyInfoEmergencyPN" placeholder="e.g., 164-R8055">
+        </div>
+        <div class="modal-input-group">
+            <label>Notes</label>
+            <textarea class="modal-input" id="editKeyInfoNotes" style="min-height:60px;resize:vertical;" placeholder="Additional notes..."></textarea>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeEditKeyInfoModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveEditKeyInfo()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add Vendor Modal -->
 <div class="modal" id="addVendorModal">
     <div class="modal-content">
@@ -6939,6 +7000,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
+                keyInfoOverrides: keyInfoOverrides,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -6964,6 +7026,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
+                keyInfoOverrides: keyInfoOverrides,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -7122,6 +7185,11 @@ async function downloadFromCloud() {
             saveVehicleOverrides();
             applyVehicleOverridesToDB();
         }
+        if (data.keyInfoOverrides) {
+            keyInfoOverrides = { ...keyInfoOverrides, ...data.keyInfoOverrides };
+            saveKeyInfoOverrides();
+            applyKeyInfoOverridesToDB();
+        }
         if (data.customDropdownValues) {
             customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], ...data.customDropdownValues };
             saveCustomDropdownValues();
@@ -7242,6 +7310,7 @@ const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_fa
 let vendorPrices = {}; // { partNumber: { vendorName: { priceA, priceB, emergency, shell, oem } } }
 let customVendors = []; // User-added vendors
 let vehicleOverrides = {}; // { partNumber: [vehicles] } - vehicle modifications for base keys
+let keyInfoOverrides = {}; // { partNumber: { keyType, chip, keyway, fccid, frequency, buttons, battery, notes, emergencyPN, isVATS, secondaryKeyPartNumber } }
 let customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [] }; // User-added dropdown values that persist
 
 // FID System - Prefix-based tracking
@@ -7283,6 +7352,7 @@ async function init() {
     await loadKeyRelationships();
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
+    applyKeyInfoOverridesToDB();
     initializeVendorPricesFromDB();
     buildFilters();
     applyFilters();
@@ -7429,6 +7499,9 @@ async function loadLocalData() {
 
             const savedVehicleOverrides = await loadFromIndexedDB('vehicleOverrides');
             if (savedVehicleOverrides) vehicleOverrides = savedVehicleOverrides;
+
+            const savedKeyInfoOverrides = await loadFromIndexedDB('keyInfoOverrides');
+            if (savedKeyInfoOverrides) keyInfoOverrides = savedKeyInfoOverrides;
 
             const savedCustomDropdownValues = await loadFromIndexedDB('customDropdownValues');
             if (savedCustomDropdownValues) customDropdownValues = { ...customDropdownValues, ...savedCustomDropdownValues };
@@ -7582,6 +7655,142 @@ function applyVehicleOverridesToDB() {
             DB[idx].vehicles = vehicleOverrides[pn];
         }
     }
+}
+
+function applyKeyInfoOverridesToDB() {
+    // Apply saved key info overrides to base database keys
+    for (const pn in keyInfoOverrides) {
+        const idx = DB.findIndex(k => k.pn == pn && !k.isCustom);
+        if (idx >= 0) {
+            const overrides = keyInfoOverrides[pn];
+            for (const field in overrides) {
+                if (overrides[field] !== null && overrides[field] !== undefined) {
+                    DB[idx][field] = overrides[field];
+                }
+            }
+        }
+    }
+}
+
+function saveKeyInfoOverrides() {
+    saveToIndexedDB('keyInfoOverrides', keyInfoOverrides);
+    triggerAutoSync();
+}
+
+let editingKeyInfoIdx = null;
+
+function openEditKeyInfoModal(idx) {
+    editingKeyInfoIdx = idx;
+    const key = DB[idx];
+
+    document.getElementById('editKeyInfoPN').value = key.pn || '';
+    document.getElementById('editKeyInfoKeyType').value = key.keyType || '';
+    document.getElementById('editKeyInfoKeyway').value = key.keyway || '';
+    document.getElementById('editKeyInfoChip').value = key.chip || '';
+    document.getElementById('editKeyInfoFCC').value = key.fccid || '';
+    document.getElementById('editKeyInfoFrequency').value = key.frequency || '';
+    document.getElementById('editKeyInfoButtons').value = key.buttons || '';
+    document.getElementById('editKeyInfoBattery').value = key.battery || '';
+    document.getElementById('editKeyInfoEmergencyPN').value = key.emergencyPN || '';
+    document.getElementById('editKeyInfoNotes').value = key.notes || '';
+
+    // VATS fields
+    document.getElementById('editKeyInfoIsVATS').checked = key.isVATS || false;
+    document.getElementById('editKeyInfoSecondaryPN').value = key.secondaryKeyPartNumber || '';
+    toggleEditKeyInfoVATS();
+
+    document.getElementById('editKeyInfoModal').classList.add('on');
+}
+
+function toggleEditKeyInfoVATS() {
+    const isVATS = document.getElementById('editKeyInfoIsVATS').checked;
+    document.getElementById('editKeyInfoVATSSection').style.display = isVATS ? 'block' : 'none';
+}
+
+function closeEditKeyInfoModal() {
+    document.getElementById('editKeyInfoModal').classList.remove('on');
+    editingKeyInfoIdx = null;
+}
+
+function saveEditKeyInfo() {
+    if (editingKeyInfoIdx === null) return;
+
+    const key = DB[editingKeyInfoIdx];
+    const pn = String(key.pn);
+
+    const newKeyType = document.getElementById('editKeyInfoKeyType').value.trim() || null;
+    const newKeyway = document.getElementById('editKeyInfoKeyway').value.trim() || null;
+    const newChip = document.getElementById('editKeyInfoChip').value.trim() || null;
+    const newFccid = document.getElementById('editKeyInfoFCC').value.trim() || null;
+    const newFrequency = document.getElementById('editKeyInfoFrequency').value.trim() || null;
+    const newButtons = document.getElementById('editKeyInfoButtons').value.trim() || null;
+    const newBattery = document.getElementById('editKeyInfoBattery').value.trim() || null;
+    const newEmergencyPN = document.getElementById('editKeyInfoEmergencyPN').value.trim() || null;
+    const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
+    const newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
+    const newSecondaryPN = document.getElementById('editKeyInfoSecondaryPN').value.trim() || null;
+
+    if (key.isCustom) {
+        // For custom keys, update the customKeys array directly
+        const customIdx = customKeys.findIndex(ck => ck.pn == pn);
+        if (customIdx >= 0) {
+            customKeys[customIdx].keyType = newKeyType;
+            customKeys[customIdx].keyway = newKeyway;
+            customKeys[customIdx].chip = newChip;
+            customKeys[customIdx].fccid = newFccid;
+            customKeys[customIdx].frequency = newFrequency;
+            customKeys[customIdx].buttons = newButtons;
+            customKeys[customIdx].battery = newBattery;
+            customKeys[customIdx].emergencyPN = newEmergencyPN;
+            customKeys[customIdx].notes = newNotes;
+            customKeys[customIdx].isVATS = newIsVATS;
+            customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
+            saveCustomKeys();
+        }
+        // Also update DB entry in memory
+        key.keyType = newKeyType;
+        key.keyway = newKeyway;
+        key.chip = newChip;
+        key.fccid = newFccid;
+        key.frequency = newFrequency;
+        key.buttons = newButtons;
+        key.battery = newBattery;
+        key.emergencyPN = newEmergencyPN;
+        key.notes = newNotes;
+        key.isVATS = newIsVATS;
+        key.secondaryKeyPartNumber = newSecondaryPN;
+    } else {
+        // For base DB keys, save overrides
+        const overrides = {};
+        overrides.keyType = newKeyType;
+        overrides.keyway = newKeyway;
+        overrides.chip = newChip;
+        overrides.fccid = newFccid;
+        overrides.frequency = newFrequency;
+        overrides.buttons = newButtons;
+        overrides.battery = newBattery;
+        overrides.emergencyPN = newEmergencyPN;
+        overrides.notes = newNotes;
+        overrides.isVATS = newIsVATS;
+        overrides.secondaryKeyPartNumber = newSecondaryPN;
+
+        keyInfoOverrides[pn] = overrides;
+        saveKeyInfoOverrides();
+
+        // Apply to in-memory DB
+        for (const field in overrides) {
+            if (overrides[field] !== null && overrides[field] !== undefined) {
+                key[field] = overrides[field];
+            } else {
+                key[field] = overrides[field];
+            }
+        }
+    }
+
+    // Refresh the key detail page
+    openKey(editingKeyInfoIdx, cameFromFcc, cameFromFid);
+    closeEditKeyInfoModal();
+    toast('Key info updated');
 }
 
 function getAllVendors() {
@@ -8036,7 +8245,10 @@ function openKey(idx, fromFcc = false, fromFid = false) {
 
         <!-- Key Info Section (smart field hiding: only show fields with values) -->
         <div class="detail-section">
-            <h3>Key Information</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h3 style="margin:0;">Key Information</h3>
+                <button onclick="openEditKeyInfoModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+            </div>
             <div class="detail-row">
                 <span class="detail-label">Part Number</span>
                 <span class="detail-value mono">${key.pn || 'N/A'}</span>
