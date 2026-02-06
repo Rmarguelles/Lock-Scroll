@@ -5207,6 +5207,10 @@
             <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
                 <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="vehicleDataIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                </div>
+                <div class="modal-input-group">
                     <label>Chip Type</label>
                     <select class="modal-input" id="vehicleDataIgnChip" onchange="onVehicleDataDropdownChange('vehicleDataIgnChip','chip')"></select>
                 </div>
@@ -5233,6 +5237,10 @@
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="vehicleDataDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
                     <select class="modal-input" id="vehicleDataDoorChip" onchange="onVehicleDataDropdownChange('vehicleDataDoorChip','chip')"></select>
@@ -5349,6 +5357,10 @@
             <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
                 <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="quickVehicleIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                </div>
+                <div class="modal-input-group">
                     <label>Chip Type</label>
                     <input type="text" class="modal-input" id="quickVehicleIgnChip" placeholder="e.g., PK3, Hitag Pro">
                 </div>
@@ -5377,6 +5389,10 @@
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="quickVehicleDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
                     <input type="text" class="modal-input" id="quickVehicleDoorChip" placeholder="e.g., No Chip">
@@ -5468,6 +5484,10 @@
             <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;margin-top:8px;">
                 <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
                 <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                </div>
+                <div class="modal-input-group">
                     <label>Chip Type</label>
                     <input type="text" class="modal-input" id="editCustomVehicleIgnChip" placeholder="e.g., PK3">
                 </div>
@@ -5496,6 +5516,10 @@
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="editCustomVehicleDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
                     <input type="text" class="modal-input" id="editCustomVehicleDoorChip" placeholder="e.g., No Chip">
@@ -14312,19 +14336,54 @@ function getUniqueVehicles() {
             if (cv.frequency) vehicleMap[vehicleKey].frequencies.add(cv.frequency);
         }
 
-        // Create a pseudo-key object for display purposes if custom vehicle has key data
-        if (cv.keyBlank || cv.keyType) {
+        // Create pseudo-key objects for display in Compatible Keys section
+        if (cv.multipleKeys) {
+            // Also check lishiVehicleData overrides for key blanks
+            const vdOverride = lishiVehicleData[vehicleKey] || {};
+            const ignPn = cv.ignition_keyBlank || vdOverride.ignition_keyBlank || '';
+            const doorPn = cv.door_keyBlank || vdOverride.door_keyBlank || '';
+
+            // Create ignition key pseudo-key if we have a part number
+            if (ignPn) {
+                const ignKey = {
+                    pn: ignPn,
+                    keyType: cv.keyType || 'Ignition Key',
+                    keyway: cv.ignition_keyway,
+                    chip: cv.ignition_chip,
+                    fccid: cv.ignition_fccid,
+                    frequency: cv.ignition_frequency,
+                    buttons: cv.ignition_buttons,
+                    isCustom: true,
+                    dualKeyRole: 'ignition'
+                };
+                const exists = vehicleMap[vehicleKey].keys.some(k => k.pn === ignPn && k.dualKeyRole === 'ignition');
+                if (!exists) vehicleMap[vehicleKey].keys.push(ignKey);
+            }
+            // Create door key pseudo-key if we have a part number
+            if (doorPn) {
+                const doorKey = {
+                    pn: doorPn,
+                    keyType: 'Door/Trunk/GB Key',
+                    keyway: cv.door_keyway,
+                    chip: cv.door_chip,
+                    fccid: cv.door_fccid,
+                    isCustom: true,
+                    dualKeyRole: 'door'
+                };
+                const exists = vehicleMap[vehicleKey].keys.some(k => k.pn === doorPn && k.dualKeyRole === 'door');
+                if (!exists) vehicleMap[vehicleKey].keys.push(doorKey);
+            }
+        } else if (cv.keyBlank || cv.keyType) {
             const pseudoKey = {
                 pn: cv.keyBlank || 'Custom',
                 keyType: cv.keyType || 'Unknown',
-                keyway: cv.multipleKeys ? cv.ignition_keyway : cv.keyway,
-                chip: cv.multipleKeys ? cv.ignition_chip : cv.chip,
-                fccid: cv.multipleKeys ? cv.ignition_fccid : cv.fccid,
-                frequency: cv.multipleKeys ? cv.ignition_frequency : cv.frequency,
-                buttons: cv.multipleKeys ? cv.ignition_buttons : cv.buttons,
+                keyway: cv.keyway,
+                chip: cv.chip,
+                fccid: cv.fccid,
+                frequency: cv.frequency,
+                buttons: cv.buttons,
                 isCustom: true
             };
-            // Only add if not already in keys array
             const exists = vehicleMap[vehicleKey].keys.some(k =>
                 k.pn === pseudoKey.pn && k.isCustom
             );
@@ -14469,6 +14528,7 @@ function openVehicleDetail(vehicleKey) {
     if (isDualKey) {
         // Dual-key vehicle display
         const ign = {
+            keyBlank: vehicleData.ignition_keyBlank || (cvForDetail && cvForDetail.ignition_keyBlank) || '',
             chip: vehicleData.ignition_chip || (cvForDetail && cvForDetail.ignition_chip) || '',
             keyway: vehicleData.ignition_keyway || (cvForDetail && cvForDetail.ignition_keyway) || '',
             fccid: vehicleData.ignition_fccid || (cvForDetail && cvForDetail.ignition_fccid) || '',
@@ -14477,6 +14537,7 @@ function openVehicleDetail(vehicleKey) {
             codeSeries: vehicleData.ignition_codeSeries || (cvForDetail && cvForDetail.ignition_codeSeries) || ''
         };
         const door = {
+            keyBlank: vehicleData.door_keyBlank || (cvForDetail && cvForDetail.door_keyBlank) || '',
             chip: vehicleData.door_chip || (cvForDetail && cvForDetail.door_chip) || '',
             keyway: vehicleData.door_keyway || (cvForDetail && cvForDetail.door_keyway) || '',
             fccid: vehicleData.door_fccid || (cvForDetail && cvForDetail.door_fccid) || '',
@@ -14503,6 +14564,7 @@ function openVehicleDetail(vehicleKey) {
         <div style="margin:12px 16px;padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;">
             <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
             <div class="vehicle-info-grid" style="margin:0;padding:0;">
+                ${ign.keyBlank ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Blank</div><div class="vehicle-info-value highlight">' + ign.keyBlank + '</div></div>' : ''}
                 ${ign.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + ign.chip + '</div></div>' : ''}
                 ${ign.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + ign.keyway + '</div></div>' : ''}
                 ${ign.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + ign.fccid + '</div></div>' : ''}
@@ -14516,6 +14578,7 @@ function openVehicleDetail(vehicleKey) {
         <div style="margin:0 16px 12px;padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;">
             <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
             <div class="vehicle-info-grid" style="margin:0;padding:0;">
+                ${door.keyBlank ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Blank</div><div class="vehicle-info-value highlight">' + door.keyBlank + '</div></div>' : ''}
                 ${door.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + door.chip + '</div></div>' : ''}
                 ${door.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + door.keyway + '</div></div>' : ''}
                 ${door.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + door.fccid + '</div></div>' : ''}
@@ -14630,11 +14693,14 @@ function openVehicleDetail(vehicleKey) {
                 const stock = stockData[key.pn] || 0;
                 const inStock = stock > 0;
                 const keyIdx = DB.findIndex(k => k.pn === key.pn);
+                const roleLabel = key.dualKeyRole === 'ignition' ? '<span style="display:inline-block;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">IGNITION</span>'
+                    : key.dualKeyRole === 'door' ? '<span style="display:inline-block;background:var(--accent2);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">DOOR</span>'
+                    : '';
 
                 return `
                     <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
                         <div class="vehicle-key-info">
-                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}</h4>
+                            <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
                         </div>
                         <div class="vehicle-key-stock">
@@ -16068,22 +16134,26 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     populateVehicleDataSelect('vehicleDataBattery', 'battery', curBattery);
 
     // Populate dual-key dropdowns
+    const curIgnKeyBlank = vehicleData.ignition_keyBlank || (cv && cv.ignition_keyBlank) || '';
     const curIgnChip = vehicleData.ignition_chip || (cv && cv.ignition_chip) || '';
     const curIgnKeyway = vehicleData.ignition_keyway || (cv && cv.ignition_keyway) || '';
     const curIgnFccid = vehicleData.ignition_fccid || (cv && cv.ignition_fccid) || '';
     const curIgnButtons = vehicleData.ignition_buttons || (cv && cv.ignition_buttons) || '';
     const curIgnFreq = vehicleData.ignition_frequency || (cv && cv.ignition_frequency) || '';
+    const curDoorKeyBlank = vehicleData.door_keyBlank || (cv && cv.door_keyBlank) || '';
     const curDoorChip = vehicleData.door_chip || (cv && cv.door_chip) || '';
     const curDoorKeyway = vehicleData.door_keyway || (cv && cv.door_keyway) || '';
     const curDoorFccid = vehicleData.door_fccid || (cv && cv.door_fccid) || '';
 
     populateVehicleDataSelect('vehicleDataKeyType2', 'keyType', curKeyType);
     populateVehicleDataSelect('vehicleDataBattery2', 'battery', curBattery);
+    document.getElementById('vehicleDataIgnKeyBlank').value = curIgnKeyBlank;
     populateVehicleDataSelect('vehicleDataIgnChip', 'chip', curIgnChip);
     populateVehicleDataSelect('vehicleDataIgnKeyway', 'keyway', curIgnKeyway);
     populateVehicleDataSelect('vehicleDataIgnFccid', 'fccid', curIgnFccid);
     populateVehicleDataSelect('vehicleDataIgnButtons', 'buttons', curIgnButtons);
     populateVehicleDataSelect('vehicleDataIgnFrequency', 'frequency', curIgnFreq);
+    document.getElementById('vehicleDataDoorKeyBlank').value = curDoorKeyBlank;
     populateVehicleDataSelect('vehicleDataDoorChip', 'chip', curDoorChip);
     populateVehicleDataSelect('vehicleDataDoorKeyway', 'keyway', curDoorKeyway);
     populateVehicleDataSelect('vehicleDataDoorFccid', 'fccid', curDoorFccid);
@@ -16238,11 +16308,13 @@ function saveVehicleDataEdit() {
     if (isMultipleKeys) {
         const keyType = document.getElementById('vehicleDataKeyType2').value.trim();
         const battery = document.getElementById('vehicleDataBattery2').value.trim();
+        const ignition_keyBlank = document.getElementById('vehicleDataIgnKeyBlank').value.trim();
         const ignition_chip = document.getElementById('vehicleDataIgnChip').value.trim();
         const ignition_keyway = document.getElementById('vehicleDataIgnKeyway').value.trim();
         const ignition_fccid = document.getElementById('vehicleDataIgnFccid').value.trim();
         const ignition_buttons = document.getElementById('vehicleDataIgnButtons').value.trim();
         const ignition_frequency = document.getElementById('vehicleDataIgnFrequency').value.trim();
+        const door_keyBlank = document.getElementById('vehicleDataDoorKeyBlank').value.trim();
         const door_chip = document.getElementById('vehicleDataDoorChip').value.trim();
         const door_keyway = document.getElementById('vehicleDataDoorKeyway').value.trim();
         const door_fccid = document.getElementById('vehicleDataDoorFccid').value.trim();
@@ -16254,11 +16326,13 @@ function saveVehicleDataEdit() {
         vd.fccid = '';
         vd.frequency = '';
         vd.buttons = '';
+        vd.ignition_keyBlank = ignition_keyBlank;
         vd.ignition_chip = ignition_chip;
         vd.ignition_keyway = ignition_keyway;
         vd.ignition_fccid = ignition_fccid;
         vd.ignition_buttons = ignition_buttons;
         vd.ignition_frequency = ignition_frequency;
+        vd.door_keyBlank = door_keyBlank;
         vd.door_chip = door_chip;
         vd.door_keyway = door_keyway;
         vd.door_fccid = door_fccid;
@@ -16278,16 +16352,18 @@ function saveVehicleDataEdit() {
             customVehicles[cvIdx].fccid = '';
             customVehicles[cvIdx].frequency = '';
             customVehicles[cvIdx].buttons = '';
+            customVehicles[cvIdx].ignition_keyBlank = ignition_keyBlank;
             customVehicles[cvIdx].ignition_chip = ignition_chip;
             customVehicles[cvIdx].ignition_keyway = ignition_keyway;
             customVehicles[cvIdx].ignition_fccid = ignition_fccid;
             customVehicles[cvIdx].ignition_buttons = ignition_buttons;
             customVehicles[cvIdx].ignition_frequency = ignition_frequency;
+            customVehicles[cvIdx].door_keyBlank = door_keyBlank;
             customVehicles[cvIdx].door_chip = door_chip;
             customVehicles[cvIdx].door_keyway = door_keyway;
             customVehicles[cvIdx].door_fccid = door_fccid;
             if (notes) customVehicles[cvIdx].notes = notes;
-            customVehicles[cvIdx].dataStatus = (ignition_chip || ignition_keyway || door_chip || door_keyway) ? 'complete' : 'partial';
+            customVehicles[cvIdx].dataStatus = (ignition_keyBlank || ignition_chip || ignition_keyway || door_keyBlank || door_chip || door_keyway) ? 'complete' : 'partial';
             customVehicles[cvIdx].lastEdited = new Date().toISOString();
             saveCustomVehicles();
         }
@@ -17769,19 +17845,21 @@ function saveQuickAddVehicle() {
     let vehicle;
 
     if (isMultipleKeys) {
+        const ignKeyBlank = document.getElementById('quickVehicleIgnKeyBlank').value.trim();
         const ignChip = document.getElementById('quickVehicleIgnChip').value.trim();
         const ignKeyway = document.getElementById('quickVehicleIgnKeyway').value.trim();
         const ignFccid = document.getElementById('quickVehicleIgnFccid').value.trim();
         const ignButtons = document.getElementById('quickVehicleIgnButtons').value.trim();
         const ignFrequency = document.getElementById('quickVehicleIgnFrequency').value.trim();
         const ignCodeSeries = document.getElementById('quickVehicleIgnCodeSeries').value.trim();
+        const doorKeyBlank = document.getElementById('quickVehicleDoorKeyBlank').value.trim();
         const doorChip = document.getElementById('quickVehicleDoorChip').value.trim();
         const doorKeyway = document.getElementById('quickVehicleDoorKeyway').value.trim();
         const doorFccid = document.getElementById('quickVehicleDoorFccid').value.trim();
         const doorCodeSeries = document.getElementById('quickVehicleDoorCodeSeries').value.trim();
         const notes = document.getElementById('quickVehicleDualNotes').value.trim();
 
-        const hasData = ignChip || ignKeyway || doorKeyway;
+        const hasData = ignChip || ignKeyway || ignKeyBlank || doorKeyway || doorKeyBlank;
 
         vehicle = {
             id: 'vehicle-' + Date.now(),
@@ -17790,9 +17868,11 @@ function saveQuickAddVehicle() {
             multipleKeys: true,
             dataStatus: hasData ? 'complete' : 'partial',
             // Ignition key
+            ignition_keyBlank: ignKeyBlank,
             ignition_chip: ignChip, ignition_keyway: ignKeyway, ignition_fccid: ignFccid,
             ignition_buttons: ignButtons, ignition_frequency: ignFrequency, ignition_codeSeries: ignCodeSeries,
             // Door key
+            door_keyBlank: doorKeyBlank,
             door_chip: doorChip, door_keyway: doorKeyway, door_fccid: doorFccid, door_codeSeries: doorCodeSeries,
             notes: notes,
             createdAt: new Date().toISOString()
@@ -17899,12 +17979,14 @@ function openEditCustomVehicle(vehicleId) {
     document.getElementById('editCustomVehicleDualKeyFields').style.display = isMultipleKeys ? 'block' : 'none';
 
     if (isMultipleKeys) {
+        document.getElementById('editCustomVehicleIgnKeyBlank').value = vehicle.ignition_keyBlank || '';
         document.getElementById('editCustomVehicleIgnChip').value = vehicle.ignition_chip || '';
         document.getElementById('editCustomVehicleIgnKeyway').value = vehicle.ignition_keyway || '';
         document.getElementById('editCustomVehicleIgnFccid').value = vehicle.ignition_fccid || '';
         document.getElementById('editCustomVehicleIgnButtons').value = vehicle.ignition_buttons || '';
         document.getElementById('editCustomVehicleIgnFrequency').value = vehicle.ignition_frequency || '';
         document.getElementById('editCustomVehicleIgnCodeSeries').value = vehicle.ignition_codeSeries || '';
+        document.getElementById('editCustomVehicleDoorKeyBlank').value = vehicle.door_keyBlank || '';
         document.getElementById('editCustomVehicleDoorChip').value = vehicle.door_chip || '';
         document.getElementById('editCustomVehicleDoorKeyway').value = vehicle.door_keyway || '';
         document.getElementById('editCustomVehicleDoorFccid').value = vehicle.door_fccid || '';
@@ -17981,27 +18063,29 @@ function saveEditCustomVehicle() {
     const endYear = parseInt(document.getElementById('editCustomVehicleYearEnd').value);
 
     if (isMultipleKeys) {
+        const ignition_keyBlank = document.getElementById('editCustomVehicleIgnKeyBlank').value.trim();
         const ignition_chip = document.getElementById('editCustomVehicleIgnChip').value.trim();
         const ignition_keyway = document.getElementById('editCustomVehicleIgnKeyway').value.trim();
         const ignition_fccid = document.getElementById('editCustomVehicleIgnFccid').value.trim();
         const ignition_buttons = document.getElementById('editCustomVehicleIgnButtons').value.trim();
         const ignition_frequency = document.getElementById('editCustomVehicleIgnFrequency').value.trim();
         const ignition_codeSeries = document.getElementById('editCustomVehicleIgnCodeSeries').value.trim();
+        const door_keyBlank = document.getElementById('editCustomVehicleDoorKeyBlank').value.trim();
         const door_chip = document.getElementById('editCustomVehicleDoorChip').value.trim();
         const door_keyway = document.getElementById('editCustomVehicleDoorKeyway').value.trim();
         const door_fccid = document.getElementById('editCustomVehicleDoorFccid').value.trim();
         const door_codeSeries = document.getElementById('editCustomVehicleDoorCodeSeries').value.trim();
 
-        const hasData = ignition_chip || ignition_keyway || ignition_fccid || door_chip || door_keyway || door_fccid;
+        const hasData = ignition_keyBlank || ignition_chip || ignition_keyway || door_keyBlank || door_chip || door_keyway;
 
         customVehicles[idx] = {
             ...customVehicles[idx],
             make, model, startYear, endYear, notes,
             multipleKeys: true,
             keyType: '', chip: '', buttons: '', fccid: '', frequency: '', keyway: '',
-            ignition_chip, ignition_keyway, ignition_fccid,
+            ignition_keyBlank, ignition_chip, ignition_keyway, ignition_fccid,
             ignition_buttons, ignition_frequency, ignition_codeSeries,
-            door_chip, door_keyway, door_fccid, door_codeSeries,
+            door_keyBlank, door_chip, door_keyway, door_fccid, door_codeSeries,
             dataStatus: hasData ? 'complete' : 'partial',
             lastEdited: new Date().toISOString()
         };
