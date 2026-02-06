@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v81</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v82</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4701,7 +4701,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v81</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v82</p>
         </div>
 
         <div class="settings-section">
@@ -10176,6 +10176,9 @@ function goHome() {
     document.getElementById('addPlatformModal').classList.remove('on');
     document.getElementById('addCategoryModal').classList.remove('on');
     document.getElementById('wishlistPanel').classList.remove('on');
+    document.getElementById('codeSeriesSettingsPanel').classList.remove('on');
+    document.getElementById('editCodeSeriesModal').classList.remove('on');
+    document.getElementById('codeSeriesUsagesModal').classList.remove('on');
 
     // Reset vehicle state
     selectedVehicleMake = null;
@@ -11367,16 +11370,29 @@ function renderCodeSeriesList() {
         const usages = getCodeSeriesUsageDetails(cs);
         const usageCount = usages.length;
         const usageText = usageCount === 1 ? '1 usage' : `${usageCount} usages`;
+        const escapedCs = cs.replace(/'/g, "\\'");
+
+        // Build vehicle summary lines
+        let vehicleSummary = '';
+        if (usages.length > 0) {
+            const lines = usages.slice(0, 5).map(u => {
+                const icon = u.source === 'vehicle' ? '🚗' : u.source === 'lishi' ? '🔧' : u.source === 'key' ? '🔑' : '📝';
+                return `<div style="font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${icon} ${u.label}</div>`;
+            }).join('');
+            const moreText = usages.length > 5 ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;">...and ${usages.length - 5} more</div>` : '';
+            vehicleSummary = `<div style="margin-top:4px;">${lines}${moreText}</div>`;
+        }
 
         return `
-            <div class="platform-card" style="margin-bottom:8px;">
-                <div class="platform-card-info">
+            <div class="platform-card" style="margin-bottom:8px;align-items:flex-start;">
+                <div class="platform-card-info" style="min-width:0;">
                     <div class="platform-card-name" style="font-family:'JetBrains Mono',monospace;">${cs}</div>
-                    <div class="platform-card-count">${usageCount > 0 ? `<a href="#" onclick="event.preventDefault();openCodeSeriesUsagesModal('${cs.replace(/'/g, "\\'")}')" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${usageText}</a>` : usageText}</div>
+                    <div class="platform-card-count">${usageCount > 0 ? `<a href="#" onclick="event.preventDefault();openCodeSeriesUsagesModal('${escapedCs}')" style="color:var(--accent);text-decoration:underline;cursor:pointer;">${usageText}</a>` : usageText}</div>
+                    ${vehicleSummary}
                 </div>
-                <div class="platform-card-actions">
-                    <button class="platform-action-btn" onclick="openEditCodeSeriesModal('${cs.replace(/'/g, "\\'")}')">Edit</button>
-                    <button class="platform-action-btn delete" onclick="deleteCodeSeriesValue('${cs.replace(/'/g, "\\'")}')">Delete</button>
+                <div class="platform-card-actions" style="flex-shrink:0;">
+                    <button class="platform-action-btn" onclick="openEditCodeSeriesModal('${escapedCs}')">Edit</button>
+                    <button class="platform-action-btn delete" onclick="deleteCodeSeriesValue('${escapedCs}')">Delete</button>
                 </div>
             </div>
         `;
