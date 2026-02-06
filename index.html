@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v82</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v83</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v82</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v83</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v51<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v83<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5152,9 +5152,41 @@
 
 <!-- Vehicle Data Edit Modal -->
 <div class="modal" id="vehicleDataEditModal">
-    <div class="modal-content">
-        <div class="modal-title">✏️ Edit Vehicle Data</div>
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">&#9999;&#65039; Edit Vehicle Data</div>
         <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>Key Type</label>
+            <input type="text" class="modal-input" id="vehicleDataKeyType" placeholder="e.g., Proximity, Transponder, Non-Chip Key">
+        </div>
+        <div class="modal-input-group">
+            <label>Chip</label>
+            <input type="text" class="modal-input" id="vehicleDataChip" placeholder="e.g., Hitag Pro, PCF7953">
+        </div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Keyway</label>
+                <input type="text" class="modal-input" id="vehicleDataKeyway" placeholder="e.g., DA34">
+            </div>
+            <div style="flex:1;">
+                <label>FCC ID</label>
+                <input type="text" class="modal-input" id="vehicleDataFccid" placeholder="e.g., KR5TXN7">
+            </div>
+        </div>
+        <div class="modal-input-group" style="display:flex;gap:8px;">
+            <div style="flex:1;">
+                <label>Frequency</label>
+                <input type="text" class="modal-input" id="vehicleDataFrequency" placeholder="e.g., 433.92 MHz">
+            </div>
+            <div style="flex:1;">
+                <label>Buttons</label>
+                <input type="text" class="modal-input" id="vehicleDataButtons" placeholder="e.g., 4 Button">
+            </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Battery</label>
+            <input type="text" class="modal-input" id="vehicleDataBattery" placeholder="e.g., CR2032">
+        </div>
         <div class="modal-input-group">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <label style="margin:0;">Code Series</label>
@@ -14234,36 +14266,58 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-info-label">Year Range</div>
                 <div class="vehicle-info-value">${yearDisplay}</div>
             </div>
+            ${(() => {
+                const vdKeyType = vehicleData.keyType || '';
+                const aggKeyTypes = vehicle.keys.map(k => k.keyType).filter(Boolean);
+                const keyTypeDisplay = vdKeyType || (aggKeyTypes.length > 0 ? [...new Set(aggKeyTypes)].join(', ') : '');
+                return keyTypeDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Type</div><div class="vehicle-info-value">' + keyTypeDisplay + '</div></div>' : '';
+            })()}
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Code Series ${!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : ''}</div>
                 <div class="vehicle-info-value highlight">${codeSeriesDisplay}</div>
             </div>
-            <div class="vehicle-info-item">
-                <div class="vehicle-info-label">Keyway${keyways.length > 1 ? 's' : ''}</div>
-                <div class="vehicle-info-value highlight">${keyways.join(', ') || 'N/A'}</div>
-            </div>
-            <div class="vehicle-info-item">
-                <div class="vehicle-info-label">FCC ID${vehicle.fccids.size > 1 ? 's' : ''}</div>
-                <div class="vehicle-info-value highlight">${Array.from(vehicle.fccids).join(', ') || 'N/A'}</div>
-            </div>
+            ${(() => {
+                const vdKeyway = vehicleData.keyway || '';
+                const keywayDisplay = vdKeyway || keyways.join(', ');
+                return keywayDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway' + (keyways.length > 1 && !vdKeyway ? 's' : '') + '</div><div class="vehicle-info-value highlight">' + keywayDisplay + '</div></div>' : '';
+            })()}
+            ${(() => {
+                const vdFccid = vehicleData.fccid || '';
+                const fccidDisplay = vdFccid || Array.from(vehicle.fccids).join(', ');
+                return fccidDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID' + (vehicle.fccids.size > 1 && !vdFccid ? 's' : '') + '</div><div class="vehicle-info-value highlight">' + fccidDisplay + '</div></div>' : '';
+            })()}
+            ${fids.size > 0 ? `
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">FID${fids.size > 1 ? 's' : ''}</div>
                 <div class="vehicle-info-value highlight">${fidDisplay}</div>
-            </div>
-            <div class="vehicle-info-item">
-                <div class="vehicle-info-label">Chip Type${vehicle.chips.size > 1 ? 's' : ''}</div>
-                <div class="vehicle-info-value">${Array.from(vehicle.chips).join(', ') || 'N/A'}</div>
-            </div>
+            </div>` : ''}
+            ${(() => {
+                const vdChip = vehicleData.chip || '';
+                const chipDisplay = vdChip || Array.from(vehicle.chips).join(', ');
+                return chipDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type' + (vehicle.chips.size > 1 && !vdChip ? 's' : '') + '</div><div class="vehicle-info-value">' + chipDisplay + '</div></div>' : '';
+            })()}
             ${secondaryKeyPN ? `
             <div class="vehicle-info-item" style="background:rgba(255,107,53,0.1);border:1px solid var(--accent2);border-radius:6px;">
                 <div class="vehicle-info-label" style="color:var(--accent2);">Door/Trunk/GB Key</div>
                 <div class="vehicle-info-value highlight">${secondaryKeyDisplay}</div>
             </div>
             ` : ''}
+            ${(() => {
+                const vdFreq = vehicleData.frequency || '';
+                const freqDisplay = vdFreq || Array.from(vehicle.frequencies).join(', ');
+                return freqDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Frequency</div><div class="vehicle-info-value">' + freqDisplay + '</div></div>' : '';
+            })()}
+            ${(() => {
+                const vdButtons = vehicleData.buttons || '';
+                const aggButtons = vehicle.keys.map(k => k.buttons).filter(Boolean);
+                const buttonsDisplay = vdButtons || (aggButtons.length > 0 ? [...new Set(aggButtons)].join(', ') : '');
+                return buttonsDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Buttons</div><div class="vehicle-info-value">' + buttonsDisplay + '</div></div>' : '';
+            })()}
+            ${vehicleData.battery ? `
             <div class="vehicle-info-item">
-                <div class="vehicle-info-label">Frequency</div>
-                <div class="vehicle-info-value">${Array.from(vehicle.frequencies).join(', ') || 'N/A'}</div>
-            </div>
+                <div class="vehicle-info-label">Battery</div>
+                <div class="vehicle-info-value">${vehicleData.battery}</div>
+            </div>` : ''}
             ${vehicleData.notes ? `
             <div class="vehicle-info-item" style="grid-column: 1 / -1; background:rgba(100,149,237,0.1);border:1px solid cornflowerblue;border-radius:6px;">
                 <div class="vehicle-info-label" style="color:cornflowerblue;">Notes</div>
@@ -15654,6 +15708,32 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
 
     document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${startYear}-${endYear})`;
 
+    // Get aggregated data from keys for pre-filling
+    const vehicles = getUniqueVehicles();
+    const vehicle = vehicles.find(v =>
+        v.make === make && v.model === model &&
+        v.startYear === parseInt(startYear) && v.endYear === parseInt(endYear)
+    );
+    const aggChips = vehicle ? Array.from(vehicle.chips).join(', ') : '';
+    const aggKeyways = vehicle ? Array.from(vehicle.keyways).join(', ') : '';
+    const aggFccids = vehicle ? Array.from(vehicle.fccids).join(', ') : '';
+    const aggFreqs = vehicle ? Array.from(vehicle.frequencies).join(', ') : '';
+
+    // Also check if there's a custom vehicle for these fields
+    const cv = customVehicles.find(c =>
+        c.make === make && c.model === model &&
+        c.startYear === parseInt(startYear) && c.endYear === parseInt(endYear)
+    );
+
+    // Populate key data fields: prefer override > custom vehicle > aggregated from keys
+    document.getElementById('vehicleDataKeyType').value = vehicleData.keyType || (cv && cv.keyType ? cv.keyType : '');
+    document.getElementById('vehicleDataChip').value = vehicleData.chip || (cv && cv.chip ? cv.chip : aggChips);
+    document.getElementById('vehicleDataKeyway').value = vehicleData.keyway || (cv && cv.keyway ? cv.keyway : aggKeyways);
+    document.getElementById('vehicleDataFccid').value = vehicleData.fccid || (cv && cv.fccid ? cv.fccid : aggFccids);
+    document.getElementById('vehicleDataFrequency').value = vehicleData.frequency || (cv && cv.frequency ? cv.frequency : aggFreqs);
+    document.getElementById('vehicleDataButtons').value = vehicleData.buttons || (cv && cv.buttons ? cv.buttons : '');
+    document.getElementById('vehicleDataBattery').value = vehicleData.battery || '';
+
     // Build code series cache if empty
     if (codeSeriesCache.length === 0) {
         buildCodeSeriesCache();
@@ -15792,9 +15872,24 @@ function saveVehicleDataEdit() {
     // Filter out empty code series entries
     const validCodeSeries = vehicleDataCodeSeriesEntries.filter(cs => cs.series && cs.series.trim());
 
+    const keyType = document.getElementById('vehicleDataKeyType').value.trim();
+    const chip = document.getElementById('vehicleDataChip').value.trim();
+    const keyway = document.getElementById('vehicleDataKeyway').value.trim();
+    const fccid = document.getElementById('vehicleDataFccid').value.trim();
+    const frequency = document.getElementById('vehicleDataFrequency').value.trim();
+    const buttons = document.getElementById('vehicleDataButtons').value.trim();
+    const battery = document.getElementById('vehicleDataBattery').value.trim();
     const notes = document.getElementById('vehicleDataNotes').value.trim();
     const secondaryKeyPN = document.getElementById('vehicleDataSecondaryKey').value.trim();
 
+    // Save key data fields as overrides
+    lishiVehicleData[currentVehicleDataEditKey].keyType = keyType;
+    lishiVehicleData[currentVehicleDataEditKey].chip = chip;
+    lishiVehicleData[currentVehicleDataEditKey].keyway = keyway;
+    lishiVehicleData[currentVehicleDataEditKey].fccid = fccid;
+    lishiVehicleData[currentVehicleDataEditKey].frequency = frequency;
+    lishiVehicleData[currentVehicleDataEditKey].buttons = buttons;
+    lishiVehicleData[currentVehicleDataEditKey].battery = battery;
     lishiVehicleData[currentVehicleDataEditKey].codeSeries = validCodeSeries.length > 0 ? validCodeSeries : [];
     lishiVehicleData[currentVehicleDataEditKey].notes = notes;
     lishiVehicleData[currentVehicleDataEditKey].secondaryKeyPN = secondaryKeyPN || null;
@@ -15802,6 +15897,26 @@ function saveVehicleDataEdit() {
     lishiVehicleData[currentVehicleDataEditKey].lastEditedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
 
     saveLishiVehicle();
+
+    // Also sync back to custom vehicle if one exists for this groupKey
+    const [make, model, sy, ey] = currentVehicleDataEditKey.split('|');
+    const cvIdx = customVehicles.findIndex(c =>
+        c.make === make && c.model === model &&
+        c.startYear === parseInt(sy) && c.endYear === parseInt(ey)
+    );
+    if (cvIdx >= 0) {
+        if (keyType) customVehicles[cvIdx].keyType = keyType;
+        if (chip) customVehicles[cvIdx].chip = chip;
+        if (keyway) customVehicles[cvIdx].keyway = keyway;
+        if (fccid) customVehicles[cvIdx].fccid = fccid;
+        if (frequency) customVehicles[cvIdx].frequency = frequency;
+        if (buttons) customVehicles[cvIdx].buttons = buttons;
+        if (notes) customVehicles[cvIdx].notes = notes;
+        customVehicles[cvIdx].dataStatus = (keyType || chip || buttons || fccid || frequency || keyway) ? 'complete' : 'partial';
+        customVehicles[cvIdx].lastEdited = new Date().toISOString();
+        saveCustomVehicles();
+    }
+
     closeVehicleDataEditModal();
 
     // Refresh the vehicle detail page to show updated data
