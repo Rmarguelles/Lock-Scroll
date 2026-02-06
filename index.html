@@ -4685,6 +4685,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openDropdownDataPanel()">
+                    <span class="settings-nav-icon">&#128221;</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Dropdown Data</span>
+                        <span class="settings-nav-desc">Manage keyways, chips, types, frequencies &amp; more</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
             </div>
         </div>
 
@@ -4794,6 +4802,66 @@
         <input type="text" class="settings-search" id="codeSeriesSearch" placeholder="Search code series..." oninput="renderCodeSeriesList()" style="width:100%;box-sizing:border-box;">
         <div id="codeSeriesList" style="margin-top:12px;"></div>
         <button class="add-vendor-btn" onclick="addNewCodeSeriesValue()" style="margin-top:12px;width:100%;">+ Add Code Series</button>
+    </div>
+</div>
+
+<!-- Dropdown Data Management Panel -->
+<div class="panel" id="dropdownDataPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeDropdownDataPanel()">&#8592;</button>
+        <h2>&#128221; Dropdown Data</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage the values that appear in dropdown menus throughout the app. Editing a value will update all keys that use it.</p>
+        <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Category</label>
+            <select id="dropdownDataCategory" onchange="renderDropdownDataList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;">
+                <option value="keyway">Keyway / Blade</option>
+                <option value="chip">Chip Type</option>
+                <option value="keyType">Key Type</option>
+                <option value="frequency">Frequency</option>
+                <option value="buttons">Buttons</option>
+                <option value="battery">Battery</option>
+            </select>
+        </div>
+        <input type="text" id="dropdownDataSearch" placeholder="Search values..." oninput="renderDropdownDataList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;margin-bottom:12px;">
+        <div id="dropdownDataList" style="margin-top:4px;"></div>
+        <button class="add-vendor-btn" onclick="openAddDropdownValueModal()" style="margin-top:12px;width:100%;">+ Add New Value</button>
+    </div>
+</div>
+
+<!-- Edit Dropdown Value Modal -->
+<div class="modal" id="editDropdownValueModal">
+    <div class="modal-content" style="max-width:450px;">
+        <div class="modal-title" id="editDropdownValueTitle">Edit Value</div>
+        <div id="editDropdownAffectedWarning" style="display:none;background:rgba(255,193,7,0.15);border:1px solid var(--warning);border-radius:8px;padding:12px;margin-bottom:16px;">
+            <div style="font-weight:600;color:var(--warning);margin-bottom:6px;">&#9888;&#65039; This change will affect:</div>
+            <div id="editDropdownAffectedList" style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--text);"></div>
+        </div>
+        <div class="modal-input-group">
+            <label>Value</label>
+            <input type="text" class="modal-input" id="editDropdownValueInput" oninput="previewDropdownValueChange()">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeEditDropdownValueModal()">Cancel</button>
+            <button class="modal-btn" onclick="deleteDropdownValue()" style="background:#e53935;color:white;">Delete</button>
+            <button class="modal-btn primary" onclick="saveDropdownValueEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Dropdown Value Modal -->
+<div class="modal" id="addDropdownValueModal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-title" id="addDropdownValueTitle">Add Value</div>
+        <div class="modal-input-group">
+            <label>New Value</label>
+            <input type="text" class="modal-input" id="addDropdownValueInput">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeAddDropdownValueModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveNewDropdownValue()">Add</button>
+        </div>
     </div>
 </div>
 
@@ -6612,6 +6680,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
+                customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -6636,6 +6705,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
+                customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -6793,6 +6863,10 @@ async function downloadFromCloud() {
             saveVehicleOverrides();
             applyVehicleOverridesToDB();
         }
+        if (data.customDropdownValues) {
+            customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], ...data.customDropdownValues };
+            saveCustomDropdownValues();
+        }
         if (data.keyRelationships) {
             keyRelationships = { ...keyRelationships, ...data.keyRelationships };
             saveToIndexedDB('keyRelationships', keyRelationships);
@@ -6909,6 +6983,7 @@ const MASTER_LISHI_TOOLS = {"B106/GM37": {"keyways": ["GM B / GM37"], "keyway_fa
 let vendorPrices = {}; // { partNumber: { vendorName: { priceA, priceB, emergency, shell, oem } } }
 let customVendors = []; // User-added vendors
 let vehicleOverrides = {}; // { partNumber: [vehicles] } - vehicle modifications for base keys
+let customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [] }; // User-added dropdown values that persist
 
 // FID System - Prefix-based tracking
 let fidAssignments = {}; // { fccId: "N-001" }
@@ -7096,6 +7171,9 @@ async function loadLocalData() {
             const savedVehicleOverrides = await loadFromIndexedDB('vehicleOverrides');
             if (savedVehicleOverrides) vehicleOverrides = savedVehicleOverrides;
 
+            const savedCustomDropdownValues = await loadFromIndexedDB('customDropdownValues');
+            if (savedCustomDropdownValues) customDropdownValues = { ...customDropdownValues, ...savedCustomDropdownValues };
+
             // Load tools database
             await loadToolsDatabase();
         }
@@ -7230,6 +7308,11 @@ function saveVehicleOverrides() {
     triggerAutoSync();
 }
 
+function saveCustomDropdownValues() {
+    saveToIndexedDB('customDropdownValues', customDropdownValues);
+    triggerAutoSync();
+}
+
 function applyVehicleOverridesToDB() {
     // Apply saved vehicle overrides to base database keys
     for (const pn in vehicleOverrides) {
@@ -7292,6 +7375,13 @@ function populateAdvancedFilters() {
             if (match) buttonCounts.add(match[1] + ' Button');
         }
     });
+
+    // Include user-added custom dropdown values
+    if (customDropdownValues.keyway) customDropdownValues.keyway.forEach(v => keyways.add(v));
+    if (customDropdownValues.chip) customDropdownValues.chip.forEach(v => chips.add(v));
+    if (customDropdownValues.keyType) customDropdownValues.keyType.forEach(v => keyTypes.add(v));
+    if (customDropdownValues.frequency) customDropdownValues.frequency.forEach(v => frequencies.add(v));
+    if (customDropdownValues.buttons) customDropdownValues.buttons.forEach(v => { const m = v.match(/^(\d+)\s*Button/i); if (m) buttonCounts.add(m[1] + ' Button'); });
 
     // Populate Keyway dropdown
     const keywaySelect = document.getElementById('advKeywayFilter');
@@ -7683,28 +7773,28 @@ function openKey(idx, fromFcc = false, fromFid = false) {
             </div>
         </div>
 
-        <!-- Key Info Section -->
+        <!-- Key Info Section (smart field hiding: only show fields with values) -->
         <div class="detail-section">
             <h3>Key Information</h3>
             <div class="detail-row">
                 <span class="detail-label">Part Number</span>
                 <span class="detail-value mono">${key.pn || 'N/A'}</span>
             </div>
-            <div class="detail-row">
+            ${key.keyType ? `<div class="detail-row">
                 <span class="detail-label">Key Type</span>
-                <span class="detail-value">${key.keyType || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
+                <span class="detail-value">${key.keyType}</span>
+            </div>` : ''}
+            ${key.keyway ? `<div class="detail-row">
                 <span class="detail-label">Keyway / Blade</span>
-                <span class="detail-value mono">${key.keyway || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
+                <span class="detail-value mono">${key.keyway}</span>
+            </div>` : ''}
+            ${key.chip ? `<div class="detail-row">
                 <span class="detail-label">Chip Type</span>
-                <span class="detail-value">${key.chip || 'N/A'}</span>
-            </div>
+                <span class="detail-value">${key.chip}</span>
+            </div>` : ''}
             ${key.isVATS ? `
             <div class="detail-row" style="background:linear-gradient(90deg, rgba(255,107,53,0.15), transparent);border-left:3px solid var(--accent2);padding-left:12px;margin:8px 0;">
-                <span class="detail-label" style="color:var(--accent2);font-weight:600;">🔑 VATS Key</span>
+                <span class="detail-label" style="color:var(--accent2);font-weight:600;">&#128273; VATS Key</span>
                 <span class="detail-value" style="color:var(--accent2);font-weight:600;">Yes</span>
             </div>
             ${key.secondaryKeyPartNumber ? `
@@ -7714,38 +7804,38 @@ function openKey(idx, fromFcc = false, fromFid = false) {
             </div>
             ` : ''}
             ` : ''}
-            <div class="detail-row">
+            ${key.frequency ? `<div class="detail-row">
                 <span class="detail-label">Frequency</span>
-                <span class="detail-value">${key.frequency || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
+                <span class="detail-value">${key.frequency}</span>
+            </div>` : ''}
+            ${key.buttons ? `<div class="detail-row">
                 <span class="detail-label">Buttons</span>
-                <span class="detail-value">${key.buttons || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
+                <span class="detail-value">${key.buttons}</span>
+            </div>` : ''}
+            ${key.battery ? `<div class="detail-row">
                 <span class="detail-label">Battery</span>
-                <span class="detail-value">${key.battery || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
+                <span class="detail-value">${key.battery}</span>
+            </div>` : ''}
+            ${key.emergencyPN ? `<div class="detail-row">
                 <span class="detail-label">Emergency Key PN</span>
-                <span class="detail-value mono">${key.emergencyPN || 'N/A'}</span>
-            </div>
-            <div class="detail-row" style="cursor:pointer" onclick="openFccPage('${key.fccid}')">
+                <span class="detail-value mono">${key.emergencyPN}</span>
+            </div>` : ''}
+            ${key.fccid ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${key.fccid}')">
                 <span class="detail-label">FCC ID</span>
-                <span class="detail-value mono" style="color:var(--accent)">${key.fccid || 'N/A'} →</span>
-            </div>
+                <span class="detail-value mono" style="color:var(--accent)">${key.fccid} &#8594;</span>
+            </div>` : ''}
         </div>
-        
-        <!-- Lishi Section -->
+
+        ${key.keyway ? `<!-- Lishi Section -->
         <div class="detail-section lishi-section">
             <div class="lishi-header">
-                <h3>🔧 Lishi Tool</h3>
+                <h3>&#128295; Lishi Tool</h3>
                 <span class="lishi-keyway">${keyway} Keyway</span>
             </div>
             <div id="lishiContent">
                 ${renderLishiContent(keyway, lishi)}
             </div>
-        </div>
+        </div>` : ''}
         
         <!-- Pricing Section -->
         <div class="detail-section pricing-section">
@@ -11602,7 +11692,8 @@ function exportData() {
         purchaseHistory: purchaseHistory,
         customKeys: customKeys,
         customVehicles: customVehicles,
-        toolsDatabase: toolsDatabase
+        toolsDatabase: toolsDatabase,
+        customDropdownValues: customDropdownValues
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -11701,6 +11792,11 @@ function importData(event) {
                     toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
                 }
                 saveToolsDatabase();
+            }
+
+            if (data.customDropdownValues) {
+                customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], ...data.customDropdownValues };
+                saveCustomDropdownValues();
             }
 
             toast('Data imported successfully');
@@ -17378,6 +17474,296 @@ window.addEventListener('appinstalled', () => {
     dismissInstallBanner();
     deferredPrompt = null;
 });
+
+// ===================== DROPDOWN DATA MANAGEMENT =====================
+let editingDropdownOldValue = null;
+let editingDropdownCategory = null;
+
+function openDropdownDataPanel() {
+    renderDropdownDataList();
+    document.getElementById('dropdownDataPanel').classList.add('on');
+}
+
+function closeDropdownDataPanel() {
+    document.getElementById('dropdownDataPanel').classList.remove('on');
+}
+
+function getDropdownCategoryLabel(cat) {
+    const labels = { keyway: 'Keyway / Blade', chip: 'Chip Type', keyType: 'Key Type', frequency: 'Frequency', buttons: 'Buttons', battery: 'Battery' };
+    return labels[cat] || cat;
+}
+
+function getDropdownValuesForCategory(category) {
+    const values = new Set();
+    DB.forEach(key => {
+        if (category === 'keyway' && key.keyway) values.add(String(key.keyway));
+        else if (category === 'chip' && key.chip) values.add(String(key.chip));
+        else if (category === 'keyType' && key.keyType) values.add(String(key.keyType));
+        else if (category === 'frequency' && key.frequency) values.add(String(key.frequency));
+        else if (category === 'buttons' && key.buttons) values.add(String(key.buttons));
+        else if (category === 'battery' && key.battery) values.add(String(key.battery));
+    });
+    // Add user-custom values
+    if (customDropdownValues[category]) {
+        customDropdownValues[category].forEach(v => values.add(v));
+    }
+    return Array.from(values).sort();
+}
+
+function getAffectedKeysForValue(category, value) {
+    return DB.filter(key => {
+        if (category === 'keyway') return String(key.keyway || '') === value;
+        if (category === 'chip') return String(key.chip || '') === value;
+        if (category === 'keyType') return String(key.keyType || '') === value;
+        if (category === 'frequency') return String(key.frequency || '') === value;
+        if (category === 'buttons') return String(key.buttons || '') === value;
+        if (category === 'battery') return String(key.battery || '') === value;
+        return false;
+    });
+}
+
+function getAffectedVehiclesForValue(category, value) {
+    const affectedKeys = getAffectedKeysForValue(category, value);
+    const vehicles = [];
+    const seen = new Set();
+    affectedKeys.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            const id = v.make + '|' + v.model + '|' + v.startYear + '-' + v.endYear;
+            if (!seen.has(id)) {
+                seen.add(id);
+                vehicles.push({ make: v.make, model: v.model, startYear: v.startYear, endYear: v.endYear, pn: key.pn });
+            }
+        });
+    });
+    return vehicles;
+}
+
+function renderDropdownDataList() {
+    const category = document.getElementById('dropdownDataCategory').value;
+    const search = (document.getElementById('dropdownDataSearch').value || '').toLowerCase();
+    const container = document.getElementById('dropdownDataList');
+    let values = getDropdownValuesForCategory(category);
+
+    if (search) {
+        values = values.filter(v => v.toLowerCase().includes(search));
+    }
+
+    if (values.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:12px;text-align:center;">No values found</div>';
+        return;
+    }
+
+    container.innerHTML = values.map(val => {
+        const affectedKeys = getAffectedKeysForValue(category, val);
+        const keyCount = affectedKeys.length;
+        const vehicleCount = getAffectedVehiclesForValue(category, val).length;
+        const isCustomOnly = keyCount === 0 && customDropdownValues[category] && customDropdownValues[category].includes(val);
+        const escapedVal = val.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return '<div onclick="openEditDropdownValueModal(\'' + category + '\', \'' + escapedVal + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card);border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid var(--border);">' +
+            '<div>' +
+                '<div style="font-size:14px;color:var(--text);">' + val + '</div>' +
+                '<div style="font-size:11px;color:var(--dim);margin-top:2px;">' + keyCount + ' key' + (keyCount !== 1 ? 's' : '') + (vehicleCount > 0 ? ' &middot; ' + vehicleCount + ' vehicle' + (vehicleCount !== 1 ? 's' : '') : '') + (isCustomOnly ? ' &middot; Custom' : '') + '</div>' +
+            '</div>' +
+            '<span style="color:var(--dim);font-size:16px;">&#8250;</span>' +
+        '</div>';
+    }).join('');
+}
+
+function openEditDropdownValueModal(category, value) {
+    editingDropdownCategory = category;
+    editingDropdownOldValue = value;
+    document.getElementById('editDropdownValueTitle').textContent = 'Edit ' + getDropdownCategoryLabel(category);
+    document.getElementById('editDropdownValueInput').value = value;
+    previewDropdownValueChange();
+    document.getElementById('editDropdownValueModal').classList.add('on');
+}
+
+function closeEditDropdownValueModal() {
+    document.getElementById('editDropdownValueModal').classList.remove('on');
+    editingDropdownOldValue = null;
+    editingDropdownCategory = null;
+}
+
+function previewDropdownValueChange() {
+    const newValue = document.getElementById('editDropdownValueInput').value.trim();
+    const warningDiv = document.getElementById('editDropdownAffectedWarning');
+    const listDiv = document.getElementById('editDropdownAffectedList');
+
+    if (!editingDropdownOldValue || newValue === editingDropdownOldValue) {
+        warningDiv.style.display = 'none';
+        return;
+    }
+
+    const affectedVehicles = getAffectedVehiclesForValue(editingDropdownCategory, editingDropdownOldValue);
+    const affectedKeys = getAffectedKeysForValue(editingDropdownCategory, editingDropdownOldValue);
+
+    if (affectedKeys.length === 0) {
+        warningDiv.style.display = 'none';
+        return;
+    }
+
+    warningDiv.style.display = 'block';
+    let html = '<div style="margin-bottom:6px;color:var(--dim);font-size:11px;">' + affectedKeys.length + ' key' + (affectedKeys.length !== 1 ? 's' : '') + ' will be updated:</div>';
+    html += affectedKeys.slice(0, 10).map(k => '<div style="padding:3px 0;">Part #' + k.pn + '</div>').join('');
+    if (affectedKeys.length > 10) html += '<div style="color:var(--dim);padding:3px 0;">...and ' + (affectedKeys.length - 10) + ' more</div>';
+
+    if (affectedVehicles.length > 0) {
+        html += '<div style="margin-top:8px;margin-bottom:4px;color:var(--warning);font-weight:600;font-size:11px;">Affected vehicles:</div>';
+        html += affectedVehicles.slice(0, 15).map(v => '<div style="padding:2px 0;">' + v.make + ' ' + v.model + ' (' + v.startYear + '-' + v.endYear + ')</div>').join('');
+        if (affectedVehicles.length > 15) html += '<div style="color:var(--dim);padding:2px 0;">...and ' + (affectedVehicles.length - 15) + ' more</div>';
+    }
+    listDiv.innerHTML = html;
+}
+
+function saveDropdownValueEdit() {
+    const newValue = document.getElementById('editDropdownValueInput').value.trim();
+    if (!newValue) { toast('Value cannot be empty'); return; }
+    if (!editingDropdownCategory || !editingDropdownOldValue) return;
+
+    if (newValue === editingDropdownOldValue) {
+        closeEditDropdownValueModal();
+        return;
+    }
+
+    const category = editingDropdownCategory;
+    const oldValue = editingDropdownOldValue;
+
+    // Update all keys in DB
+    DB.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === oldValue) key.keyway = newValue;
+        else if (category === 'chip' && String(key.chip || '') === oldValue) key.chip = newValue;
+        else if (category === 'keyType' && String(key.keyType || '') === oldValue) key.keyType = newValue;
+        else if (category === 'frequency' && String(key.frequency || '') === oldValue) key.frequency = newValue;
+        else if (category === 'buttons' && String(key.buttons || '') === oldValue) key.buttons = newValue;
+        else if (category === 'battery' && String(key.battery || '') === oldValue) key.battery = newValue;
+    });
+
+    // Update custom keys
+    customKeys.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === oldValue) key.keyway = newValue;
+        else if (category === 'chip' && String(key.chip || '') === oldValue) key.chip = newValue;
+        else if (category === 'keyType' && String(key.keyType || '') === oldValue) key.keyType = newValue;
+        else if (category === 'frequency' && String(key.frequency || '') === oldValue) key.frequency = newValue;
+        else if (category === 'buttons' && String(key.buttons || '') === oldValue) key.buttons = newValue;
+        else if (category === 'battery' && String(key.battery || '') === oldValue) key.battery = newValue;
+    });
+
+    // Update custom dropdown values
+    if (customDropdownValues[category]) {
+        const idx = customDropdownValues[category].indexOf(oldValue);
+        if (idx >= 0) customDropdownValues[category][idx] = newValue;
+    }
+
+    // Update customKeyways if editing keyways
+    if (category === 'keyway') {
+        const kwIdx = customKeyways.indexOf(oldValue);
+        if (kwIdx >= 0) customKeyways[kwIdx] = newValue;
+        saveCustomKeyways();
+    }
+
+    // Persist
+    saveCustomKeys();
+    saveCustomDropdownValues();
+    populateAdvancedFilters();
+    applyFilters();
+
+    toast('Updated "' + oldValue + '" to "' + newValue + '"');
+    closeEditDropdownValueModal();
+    renderDropdownDataList();
+}
+
+function deleteDropdownValue() {
+    if (!editingDropdownCategory || !editingDropdownOldValue) return;
+    const category = editingDropdownCategory;
+    const value = editingDropdownOldValue;
+    const affectedKeys = getAffectedKeysForValue(category, value);
+
+    if (affectedKeys.length > 0) {
+        const affectedVehicles = getAffectedVehiclesForValue(category, value);
+        let msg = 'This will clear "' + value + '" from ' + affectedKeys.length + ' key(s).';
+        if (affectedVehicles.length > 0) {
+            msg += '\n\nAffected vehicles:\n' + affectedVehicles.slice(0, 10).map(v => '- ' + v.make + ' ' + v.model + ' (' + v.startYear + '-' + v.endYear + ')').join('\n');
+            if (affectedVehicles.length > 10) msg += '\n...and ' + (affectedVehicles.length - 10) + ' more';
+        }
+        if (!confirm(msg + '\n\nContinue?')) return;
+    }
+
+    // Clear from all keys
+    DB.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === value) key.keyway = '';
+        else if (category === 'chip' && String(key.chip || '') === value) key.chip = '';
+        else if (category === 'keyType' && String(key.keyType || '') === value) key.keyType = '';
+        else if (category === 'frequency' && String(key.frequency || '') === value) key.frequency = '';
+        else if (category === 'buttons' && String(key.buttons || '') === value) key.buttons = '';
+        else if (category === 'battery' && String(key.battery || '') === value) key.battery = '';
+    });
+    customKeys.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === value) key.keyway = '';
+        else if (category === 'chip' && String(key.chip || '') === value) key.chip = '';
+        else if (category === 'keyType' && String(key.keyType || '') === value) key.keyType = '';
+        else if (category === 'frequency' && String(key.frequency || '') === value) key.frequency = '';
+        else if (category === 'buttons' && String(key.buttons || '') === value) key.buttons = '';
+        else if (category === 'battery' && String(key.battery || '') === value) key.battery = '';
+    });
+
+    // Remove from custom values
+    if (customDropdownValues[category]) {
+        customDropdownValues[category] = customDropdownValues[category].filter(v => v !== value);
+    }
+    if (category === 'keyway') {
+        customKeyways = customKeyways.filter(kw => kw !== value);
+        saveCustomKeyways();
+    }
+
+    saveCustomKeys();
+    saveCustomDropdownValues();
+    populateAdvancedFilters();
+    applyFilters();
+
+    toast('Deleted "' + value + '"');
+    closeEditDropdownValueModal();
+    renderDropdownDataList();
+}
+
+function openAddDropdownValueModal() {
+    const category = document.getElementById('dropdownDataCategory').value;
+    document.getElementById('addDropdownValueTitle').textContent = 'Add ' + getDropdownCategoryLabel(category);
+    document.getElementById('addDropdownValueInput').value = '';
+    document.getElementById('addDropdownValueModal').classList.add('on');
+}
+
+function closeAddDropdownValueModal() {
+    document.getElementById('addDropdownValueModal').classList.remove('on');
+}
+
+function saveNewDropdownValue() {
+    const category = document.getElementById('dropdownDataCategory').value;
+    const value = document.getElementById('addDropdownValueInput').value.trim();
+    if (!value) { toast('Please enter a value'); return; }
+
+    // Check for duplicates
+    const existing = getDropdownValuesForCategory(category);
+    if (existing.includes(value)) {
+        toast('This value already exists');
+        return;
+    }
+
+    if (!customDropdownValues[category]) customDropdownValues[category] = [];
+    customDropdownValues[category].push(value);
+
+    // Also add to customKeyways if it's a keyway
+    if (category === 'keyway' && !customKeyways.includes(value)) {
+        customKeyways.push(value);
+        saveCustomKeyways();
+    }
+
+    saveCustomDropdownValues();
+    populateAdvancedFilters();
+
+    toast('Added "' + value + '"');
+    closeAddDropdownValueModal();
+    renderDropdownDataList();
+}
 
 // ===================== TOAST =====================
 function toast(msg) {
