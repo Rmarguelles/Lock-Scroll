@@ -5157,35 +5157,35 @@
         <div id="vehicleDataEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
         <div class="modal-input-group">
             <label>Key Type</label>
-            <input type="text" class="modal-input" id="vehicleDataKeyType" placeholder="e.g., Proximity, Transponder, Non-Chip Key">
+            <select class="modal-input" id="vehicleDataKeyType" onchange="onVehicleDataDropdownChange('vehicleDataKeyType','keyType')"></select>
         </div>
         <div class="modal-input-group">
             <label>Chip</label>
-            <input type="text" class="modal-input" id="vehicleDataChip" placeholder="e.g., Hitag Pro, PCF7953">
+            <select class="modal-input" id="vehicleDataChip" onchange="onVehicleDataDropdownChange('vehicleDataChip','chip')"></select>
         </div>
         <div class="modal-input-group" style="display:flex;gap:8px;">
             <div style="flex:1;">
                 <label>Keyway</label>
-                <input type="text" class="modal-input" id="vehicleDataKeyway" placeholder="e.g., DA34">
+                <select class="modal-input" id="vehicleDataKeyway" onchange="onVehicleDataDropdownChange('vehicleDataKeyway','keyway')"></select>
             </div>
             <div style="flex:1;">
                 <label>FCC ID</label>
-                <input type="text" class="modal-input" id="vehicleDataFccid" placeholder="e.g., KR5TXN7">
+                <select class="modal-input" id="vehicleDataFccid" onchange="onVehicleDataDropdownChange('vehicleDataFccid','fccid')"></select>
             </div>
         </div>
         <div class="modal-input-group" style="display:flex;gap:8px;">
             <div style="flex:1;">
                 <label>Frequency</label>
-                <input type="text" class="modal-input" id="vehicleDataFrequency" placeholder="e.g., 433.92 MHz">
+                <select class="modal-input" id="vehicleDataFrequency" onchange="onVehicleDataDropdownChange('vehicleDataFrequency','frequency')"></select>
             </div>
             <div style="flex:1;">
                 <label>Buttons</label>
-                <input type="text" class="modal-input" id="vehicleDataButtons" placeholder="e.g., 4 Button">
+                <select class="modal-input" id="vehicleDataButtons" onchange="onVehicleDataDropdownChange('vehicleDataButtons','buttons')"></select>
             </div>
         </div>
         <div class="modal-input-group">
             <label>Battery</label>
-            <input type="text" class="modal-input" id="vehicleDataBattery" placeholder="e.g., CR2032">
+            <select class="modal-input" id="vehicleDataBattery" onchange="onVehicleDataDropdownChange('vehicleDataBattery','battery')"></select>
         </div>
         <div class="modal-input-group">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -15700,6 +15700,59 @@ let currentVehicleDataStartYear = null;
 let currentVehicleDataEndYear = null;
 let vehicleDataCodeSeriesEntries = []; // Array of { years, series }
 
+// Populate a vehicle data select with known values + "Add New" option
+function populateVehicleDataSelect(selectId, category, currentValue) {
+    const sel = document.getElementById(selectId);
+    const values = getDropdownValuesForCategory(category);
+    // Also collect FCC IDs separately since they're not in dropdown categories
+    let allValues = values;
+    if (category === 'fccid') {
+        const fccids = new Set();
+        DB.forEach(k => { if (k.fccid) fccids.add(k.fccid); });
+        customVehicles.forEach(c => { if (c.fccid) fccids.add(c.fccid); });
+        allValues = Array.from(fccids).sort();
+    }
+    sel.innerHTML = '<option value="">None</option>';
+    allValues.forEach(v => {
+        sel.innerHTML += '<option value="' + v.replace(/"/g, '&quot;') + '">' + v + '</option>';
+    });
+    sel.innerHTML += '<option value="__add_new__">+ Add New...</option>';
+    // If current value exists but isn't in the list, add it
+    if (currentValue && !allValues.includes(currentValue)) {
+        const opt = document.createElement('option');
+        opt.value = currentValue;
+        opt.textContent = currentValue;
+        sel.insertBefore(opt, sel.lastElementChild);
+    }
+    sel.value = currentValue || '';
+}
+
+function onVehicleDataDropdownChange(selectId, category) {
+    const sel = document.getElementById(selectId);
+    if (sel.value === '__add_new__') {
+        const label = getDropdownCategoryLabel(category) || category;
+        const newVal = prompt('Enter new ' + label + ':');
+        if (newVal && newVal.trim()) {
+            const val = newVal.trim();
+            // Add to custom dropdown values so it persists
+            if (category !== 'fccid' && customDropdownValues[category]) {
+                if (!customDropdownValues[category].includes(val)) {
+                    customDropdownValues[category].push(val);
+                    saveCustomDropdownValues();
+                }
+            }
+            // Insert option and select it
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            sel.insertBefore(opt, sel.lastElementChild);
+            sel.value = val;
+        } else {
+            sel.value = '';
+        }
+    }
+}
+
 function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     currentVehicleDataEditKey = groupKey;
     currentVehicleDataStartYear = startYear;
@@ -15714,10 +15767,6 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
         v.make === make && v.model === model &&
         v.startYear === parseInt(startYear) && v.endYear === parseInt(endYear)
     );
-    const aggChips = vehicle ? Array.from(vehicle.chips).join(', ') : '';
-    const aggKeyways = vehicle ? Array.from(vehicle.keyways).join(', ') : '';
-    const aggFccids = vehicle ? Array.from(vehicle.fccids).join(', ') : '';
-    const aggFreqs = vehicle ? Array.from(vehicle.frequencies).join(', ') : '';
 
     // Also check if there's a custom vehicle for these fields
     const cv = customVehicles.find(c =>
@@ -15725,14 +15774,23 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
         c.startYear === parseInt(startYear) && c.endYear === parseInt(endYear)
     );
 
-    // Populate key data fields: prefer override > custom vehicle > aggregated from keys
-    document.getElementById('vehicleDataKeyType').value = vehicleData.keyType || (cv && cv.keyType ? cv.keyType : '');
-    document.getElementById('vehicleDataChip').value = vehicleData.chip || (cv && cv.chip ? cv.chip : aggChips);
-    document.getElementById('vehicleDataKeyway').value = vehicleData.keyway || (cv && cv.keyway ? cv.keyway : aggKeyways);
-    document.getElementById('vehicleDataFccid').value = vehicleData.fccid || (cv && cv.fccid ? cv.fccid : aggFccids);
-    document.getElementById('vehicleDataFrequency').value = vehicleData.frequency || (cv && cv.frequency ? cv.frequency : aggFreqs);
-    document.getElementById('vehicleDataButtons').value = vehicleData.buttons || (cv && cv.buttons ? cv.buttons : '');
-    document.getElementById('vehicleDataBattery').value = vehicleData.battery || '';
+    // Determine current values: prefer override > custom vehicle > first aggregated value
+    const curKeyType = vehicleData.keyType || (cv && cv.keyType ? cv.keyType : '');
+    const curChip = vehicleData.chip || (cv && cv.chip ? cv.chip : (vehicle && vehicle.chips.size === 1 ? Array.from(vehicle.chips)[0] : ''));
+    const curKeyway = vehicleData.keyway || (cv && cv.keyway ? cv.keyway : (vehicle && vehicle.keyways.size === 1 ? Array.from(vehicle.keyways)[0] : ''));
+    const curFccid = vehicleData.fccid || (cv && cv.fccid ? cv.fccid : (vehicle && vehicle.fccids.size === 1 ? Array.from(vehicle.fccids)[0] : ''));
+    const curFreq = vehicleData.frequency || (cv && cv.frequency ? cv.frequency : (vehicle && vehicle.frequencies.size === 1 ? Array.from(vehicle.frequencies)[0] : ''));
+    const curButtons = vehicleData.buttons || (cv && cv.buttons ? cv.buttons : '');
+    const curBattery = vehicleData.battery || '';
+
+    // Populate dropdowns with existing DB values
+    populateVehicleDataSelect('vehicleDataKeyType', 'keyType', curKeyType);
+    populateVehicleDataSelect('vehicleDataChip', 'chip', curChip);
+    populateVehicleDataSelect('vehicleDataKeyway', 'keyway', curKeyway);
+    populateVehicleDataSelect('vehicleDataFccid', 'fccid', curFccid);
+    populateVehicleDataSelect('vehicleDataFrequency', 'frequency', curFreq);
+    populateVehicleDataSelect('vehicleDataButtons', 'buttons', curButtons);
+    populateVehicleDataSelect('vehicleDataBattery', 'battery', curBattery);
 
     // Build code series cache if empty
     if (codeSeriesCache.length === 0) {
