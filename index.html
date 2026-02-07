@@ -12524,10 +12524,20 @@ function closeVehicleDetail() {
     }
 }
 
-function openKeyFromVehicle(idx) {
+function openKeyFromVehicle(idx, pn) {
     if (idx === undefined || idx === null || idx < 0) {
-        console.error('openKeyFromVehicle: invalid idx', idx);
-        return;
+        // Try to find by PN as fallback (pseudo-key may have been added to DB since render)
+        if (pn) {
+            const fallbackIdx = DB.findIndex(k => String(k.pn) === String(pn));
+            if (fallbackIdx >= 0) {
+                idx = fallbackIdx;
+            } else {
+                toast('Key "' + pn + '" is not in the database yet. Edit vehicle data to add it.');
+                return;
+            }
+        } else {
+            return;
+        }
     }
     // Track where we came from using the stored vehicle key
     cameFromVehicle = currentViewingVehicleKey;
@@ -14844,12 +14854,30 @@ function getUniqueVehicles() {
         }
     });
 
-    // Also apply dual-key role tagging from lishiVehicleData for DB-only vehicles
+    // Also apply key blank data from lishiVehicleData for DB-only vehicles
     // (vehicles that exist in DB but don't have a customVehicles entry)
     Object.entries(lishiVehicleData).forEach(([vehicleKey, vd]) => {
-        if (!vd.multipleKeys) return;
         const entry = vehicleMap[vehicleKey];
         if (!entry) return;
+
+        // Handle single-key vehicles with a keyBlank set
+        if (!vd.multipleKeys && vd.keyBlank) {
+            const exists = entry.keys.some(k => k.pn === vd.keyBlank);
+            if (!exists) {
+                entry.keys.push({
+                    pn: vd.keyBlank,
+                    keyType: vd.keyType || null,
+                    keyway: vd.keyway,
+                    chip: vd.chip,
+                    fccid: vd.fccid,
+                    frequency: vd.frequency,
+                    buttons: vd.buttons,
+                    isCustom: true
+                });
+            }
+        }
+
+        if (!vd.multipleKeys) return;
 
         const ignPn = vd.ignition_keyBlank || '';
         const doorPn = vd.door_keyBlank || '';
@@ -15214,7 +15242,7 @@ function openVehicleDetail(vehicleKey) {
                     : '';
 
                 return `
-                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx})" style="cursor:pointer;">
+                    <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${String(key.pn).replace(/'/g, "\\'")}')" style="cursor:pointer;">
                         <div class="vehicle-key-info">
                             <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}</h4>
                             <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
@@ -17011,8 +17039,29 @@ function saveVehicleDataEdit() {
     }
 
     keyBlankPNs.forEach(pn => {
-        const dbIdx = DB.findIndex(k => String(k.pn) == pn);
-        if (dbIdx < 0) return;
+        let dbIdx = DB.findIndex(k => String(k.pn) == pn);
+        if (dbIdx < 0) {
+            // Key doesn't exist in DB - create it so it appears on the key homepage
+            const vd = lishiVehicleData[currentVehicleDataEditKey] || {};
+            const newKey = {
+                pn: pn,
+                keyType: vd.keyType || null,
+                keyway: vd.keyway || vd.ignition_keyway || vd.door_keyway || null,
+                chip: vd.chip || vd.ignition_chip || vd.door_chip || null,
+                fccid: vd.fccid || vd.ignition_fccid || vd.door_fccid || null,
+                frequency: vd.frequency || vd.ignition_frequency || null,
+                buttons: vd.buttons || vd.ignition_buttons || null,
+                vehicles: [{ make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear }],
+                isCustom: true,
+                addedDate: new Date().toISOString()
+            };
+            DB.push(newKey);
+            customKeys.push(newKey);
+            saveCustomKeys();
+            buildFilters();
+            applyFilters();
+            return;
+        }
         const key = DB[dbIdx];
         const alreadyHasVehicle = (key.vehicles || []).some(v =>
             v.make === vdMake && v.model === vdModel &&
@@ -18639,6 +18688,85 @@ function saveQuickAddVehicle() {
 
     customVehicles.push(vehicle);
     saveCustomVehicles();
+
+    // Add key entries to DB/customKeys for any specified key blanks
+    const vehicleEntry = { make: make, model: model, startYear: startYear, endYear: endYear };
+    const keyBlanksToAdd = [];
+
+    if (isMultipleKeys) {
+        if (vehicle.ignition_keyBlank) {
+            keyBlanksToAdd.push({
+                pn: vehicle.ignition_keyBlank,
+                keyType: vehicle.keyType || null,
+                keyway: vehicle.ignition_keyway || null,
+                chip: vehicle.ignition_chip || null,
+                fccid: vehicle.ignition_fccid || null,
+                buttons: vehicle.ignition_buttons || null,
+                frequency: vehicle.ignition_frequency || null
+            });
+        }
+        if (vehicle.door_keyBlank) {
+            keyBlanksToAdd.push({
+                pn: vehicle.door_keyBlank,
+                keyway: vehicle.door_keyway || null,
+                chip: vehicle.door_chip || null,
+                fccid: vehicle.door_fccid || null,
+                keyType: 'Door/Trunk/GB Key'
+            });
+        }
+    } else {
+        const keyBlank = document.getElementById('quickVehicleKeyBlank')?.value?.trim();
+        if (keyBlank) {
+            keyBlanksToAdd.push({
+                pn: keyBlank,
+                keyType: vehicle.keyType || null,
+                keyway: vehicle.keyway || null,
+                chip: vehicle.chip || null,
+                fccid: vehicle.fccid || null,
+                buttons: vehicle.buttons || null,
+                frequency: vehicle.frequency || null
+            });
+        }
+    }
+
+    keyBlanksToAdd.forEach(kb => {
+        const existsInDB = DB.some(k => String(k.pn).toLowerCase() === String(kb.pn).toLowerCase());
+        if (!existsInDB) {
+            const newKey = {
+                pn: kb.pn,
+                keyType: kb.keyType || null,
+                keyway: kb.keyway || null,
+                chip: kb.chip || null,
+                fccid: kb.fccid || null,
+                buttons: kb.buttons || null,
+                frequency: kb.frequency || null,
+                vehicles: [vehicleEntry],
+                isCustom: true,
+                addedDate: new Date().toISOString()
+            };
+            DB.push(newKey);
+            customKeys.push(newKey);
+        } else {
+            // Key exists - add this vehicle to its vehicles array if not already there
+            const existingKey = DB.find(k => String(k.pn).toLowerCase() === String(kb.pn).toLowerCase());
+            if (existingKey) {
+                if (!existingKey.vehicles) existingKey.vehicles = [];
+                const alreadyLinked = existingKey.vehicles.some(v =>
+                    v.make === make && v.model === model && v.startYear === startYear && v.endYear === endYear
+                );
+                if (!alreadyLinked) {
+                    existingKey.vehicles.push(vehicleEntry);
+                }
+            }
+        }
+    });
+
+    if (keyBlanksToAdd.length > 0) {
+        saveCustomKeys();
+        buildFilters();
+        applyFilters();
+    }
+
     closeQuickAddVehicleModal();
     toast(`Vehicle added${vehicle.dataStatus === 'partial' ? ' (incomplete)' : ''}`);
 
