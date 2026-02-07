@@ -3079,7 +3079,7 @@
         .home-btn-fixed {
             position: fixed;
             top: 12px;
-            right: 12px;
+            right: 20px;
             width: 44px;
             height: 44px;
             background: var(--card);
@@ -14844,6 +14844,54 @@ function getUniqueVehicles() {
         }
     });
 
+    // Also apply dual-key role tagging from lishiVehicleData for DB-only vehicles
+    // (vehicles that exist in DB but don't have a customVehicles entry)
+    Object.entries(lishiVehicleData).forEach(([vehicleKey, vd]) => {
+        if (!vd.multipleKeys) return;
+        const entry = vehicleMap[vehicleKey];
+        if (!entry) return;
+
+        const ignPn = vd.ignition_keyBlank || '';
+        const doorPn = vd.door_keyBlank || '';
+
+        // Tag or create ignition key
+        if (ignPn) {
+            const existingIgn = entry.keys.find(k => k.pn === ignPn && !k.dualKeyRole);
+            if (existingIgn) {
+                if (!existingIgn.dualKeyRole) existingIgn.dualKeyRole = 'ignition';
+            } else if (!entry.keys.some(k => k.pn === ignPn && k.dualKeyRole === 'ignition')) {
+                entry.keys.push({
+                    pn: ignPn,
+                    keyType: vd.keyType || 'Ignition Key',
+                    keyway: vd.ignition_keyway,
+                    chip: vd.ignition_chip,
+                    fccid: vd.ignition_fccid,
+                    frequency: vd.ignition_frequency,
+                    buttons: vd.ignition_buttons,
+                    isCustom: true,
+                    dualKeyRole: 'ignition'
+                });
+            }
+        }
+        // Tag or create door key
+        if (doorPn) {
+            const existingDoor = entry.keys.find(k => k.pn === doorPn && !k.dualKeyRole);
+            if (existingDoor) {
+                if (!existingDoor.dualKeyRole) existingDoor.dualKeyRole = 'door';
+            } else if (!entry.keys.some(k => k.pn === doorPn && k.dualKeyRole === 'door')) {
+                entry.keys.push({
+                    pn: doorPn,
+                    keyType: 'Door/Trunk/GB Key',
+                    keyway: vd.door_keyway,
+                    chip: vd.door_chip,
+                    fccid: vd.door_fccid,
+                    isCustom: true,
+                    dualKeyRole: 'door'
+                });
+            }
+        }
+    });
+
     return Object.values(vehicleMap);
 }
 
@@ -16517,6 +16565,17 @@ function populateVehicleDataSelect(selectId, category, currentValue) {
     } else if (category === 'pn') {
         const pns = new Set();
         DB.forEach(k => { if (k.pn) pns.add(String(k.pn)); });
+        // Also include key blanks from lishiVehicleData and customVehicles
+        Object.values(lishiVehicleData).forEach(vd => {
+            if (vd.keyBlank) pns.add(String(vd.keyBlank));
+            if (vd.ignition_keyBlank) pns.add(String(vd.ignition_keyBlank));
+            if (vd.door_keyBlank) pns.add(String(vd.door_keyBlank));
+        });
+        customVehicles.forEach(cv => {
+            if (cv.keyBlank) pns.add(String(cv.keyBlank));
+            if (cv.ignition_keyBlank) pns.add(String(cv.ignition_keyBlank));
+            if (cv.door_keyBlank) pns.add(String(cv.door_keyBlank));
+        });
         allValues = Array.from(pns).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }
     sel.innerHTML = '<option value="">None</option>';
