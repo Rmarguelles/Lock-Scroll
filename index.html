@@ -4703,6 +4703,7 @@
                 <button class="settings-btn" onclick="document.getElementById('importInput').click()" style="flex:1;">📥 Import</button>
                 <input type="file" id="importInput" accept=".json" onchange="importData(event)" style="display:none;">
             </div>
+            <button class="settings-btn" onclick="copyOverridesToClipboard()" style="width:100%;margin-top:8px;">📋 Copy Overrides to Clipboard</button>
         </div>
 
         <div class="settings-section">
@@ -12284,6 +12285,32 @@ function exportData() {
     URL.revokeObjectURL(url);
     
     toast('Data exported');
+}
+
+function copyOverridesToClipboard() {
+    const overrides = {
+        vehicleOverrides: vehicleOverrides || {},
+        keyInfoOverrides: keyInfoOverrides || {},
+        vehicleYearNotes: vehicleYearNotes || {},
+        keyRelationships: keyRelationships || {},
+        fccRelationships: fccRelationships || {},
+        customKeys: customKeys || [],
+        customVehicles: customVehicles || [],
+        lishiVehicleData: lishiVehicleData || {}
+    };
+    const text = JSON.stringify(overrides);
+    navigator.clipboard.writeText(text).then(() => {
+        toast('Overrides copied to clipboard! Paste into chat.');
+    }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Overrides copied to clipboard! Paste into chat.');
+    });
 }
 
 function importData(event) {
