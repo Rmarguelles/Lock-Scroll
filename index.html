@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v92</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v93</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4709,7 +4709,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v92</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v93</p>
         </div>
 
         <div class="settings-section">
@@ -4721,7 +4721,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v92<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v93<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5259,6 +5259,10 @@
         <!-- Single key fields -->
         <div id="vehicleDataSingleKeyFields">
             <div class="modal-input-group">
+                <label>Part Number (Key Blank)</label>
+                <select class="modal-input" id="vehicleDataKeyBlank" onchange="onVehicleDataDropdownChange('vehicleDataKeyBlank','pn')"></select>
+            </div>
+            <div class="modal-input-group">
                 <label>Key Type</label>
                 <select class="modal-input" id="vehicleDataKeyType" onchange="onVehicleDataDropdownChange('vehicleDataKeyType','keyType')"></select>
             </div>
@@ -5305,7 +5309,7 @@
                 <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
                 <div class="modal-input-group">
                     <label>Key Blank (Part #)</label>
-                    <input type="text" class="modal-input" id="vehicleDataIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                    <select class="modal-input" id="vehicleDataIgnKeyBlank" onchange="onVehicleDataDropdownChange('vehicleDataIgnKeyBlank','pn')"></select>
                 </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
@@ -5344,7 +5348,7 @@
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
                 <div class="modal-input-group">
                     <label>Key Blank (Part #)</label>
-                    <input type="text" class="modal-input" id="vehicleDataDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                    <select class="modal-input" id="vehicleDataDoorKeyBlank" onchange="onVehicleDataDropdownChange('vehicleDataDoorKeyBlank','pn')"></select>
                 </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
@@ -16441,6 +16445,10 @@ function populateVehicleDataSelect(selectId, category, currentValue) {
         DB.forEach(k => { if (k.fccid) fccids.add(k.fccid); });
         customVehicles.forEach(c => { if (c.fccid) fccids.add(c.fccid); });
         allValues = Array.from(fccids).sort();
+    } else if (category === 'pn') {
+        const pns = new Set();
+        DB.forEach(k => { if (k.pn) pns.add(String(k.pn)); });
+        allValues = Array.from(pns).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }
     sel.innerHTML = '<option value="">None</option>';
     allValues.forEach(v => {
@@ -16521,6 +16529,8 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     document.getElementById('vehicleDataSecondaryKeyGroup').style.display = isDualKey ? 'none' : 'block';
 
     // Populate single-key dropdowns with existing DB values
+    const curKeyBlank = vehicleData.keyBlank || (cv && cv.keyBlank) || (vehicle && vehicle.keys.length === 1 ? String(vehicle.keys[0].pn) : '');
+    populateVehicleDataSelect('vehicleDataKeyBlank', 'pn', curKeyBlank);
     populateVehicleDataSelect('vehicleDataKeyType', 'keyType', curKeyType);
     populateVehicleDataSelect('vehicleDataChip', 'chip', curChip);
     populateVehicleDataSelect('vehicleDataKeyway', 'keyway', curKeyway);
@@ -16543,13 +16553,13 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
 
     populateVehicleDataSelect('vehicleDataKeyType2', 'keyType', curKeyType);
     populateVehicleDataSelect('vehicleDataBattery2', 'battery', curBattery);
-    document.getElementById('vehicleDataIgnKeyBlank').value = curIgnKeyBlank;
+    populateVehicleDataSelect('vehicleDataIgnKeyBlank', 'pn', curIgnKeyBlank);
     populateVehicleDataSelect('vehicleDataIgnChip', 'chip', curIgnChip);
     populateVehicleDataSelect('vehicleDataIgnKeyway', 'keyway', curIgnKeyway);
     populateVehicleDataSelect('vehicleDataIgnFccid', 'fccid', curIgnFccid);
     populateVehicleDataSelect('vehicleDataIgnButtons', 'buttons', curIgnButtons);
     populateVehicleDataSelect('vehicleDataIgnFrequency', 'frequency', curIgnFreq);
-    document.getElementById('vehicleDataDoorKeyBlank').value = curDoorKeyBlank;
+    populateVehicleDataSelect('vehicleDataDoorKeyBlank', 'pn', curDoorKeyBlank);
     populateVehicleDataSelect('vehicleDataDoorChip', 'chip', curDoorChip);
     populateVehicleDataSelect('vehicleDataDoorKeyway', 'keyway', curDoorKeyway);
     populateVehicleDataSelect('vehicleDataDoorFccid', 'fccid', curDoorFccid);
@@ -16797,6 +16807,7 @@ function saveVehicleDataEdit() {
             saveCustomVehicles();
         }
     } else {
+        const keyBlank = document.getElementById('vehicleDataKeyBlank').value.trim();
         const keyType = document.getElementById('vehicleDataKeyType').value.trim();
         const chip = document.getElementById('vehicleDataChip').value.trim();
         const keyway = document.getElementById('vehicleDataKeyway').value.trim();
@@ -16806,6 +16817,7 @@ function saveVehicleDataEdit() {
         const battery = document.getElementById('vehicleDataBattery').value.trim();
         const secondaryKeyPN = document.getElementById('vehicleDataSecondaryKey').value.trim();
 
+        vd.keyBlank = keyBlank || '';
         vd.keyType = keyType;
         vd.chip = chip;
         vd.keyway = keyway;
@@ -16854,6 +16866,48 @@ function saveVehicleDataEdit() {
     }
 
     saveLishiVehicle();
+
+    // Auto-add vehicle to key's vehicles array when a key blank PN is specified
+    const [vdMake, vdModel, vdSY, vdEY] = currentVehicleDataEditKey.split('|');
+    const vdStartYear = parseInt(vdSY);
+    const vdEndYear = parseInt(vdEY);
+    const keyBlankPNs = [];
+    if (isMultipleKeys) {
+        const ignPN = document.getElementById('vehicleDataIgnKeyBlank').value.trim();
+        const doorPN = document.getElementById('vehicleDataDoorKeyBlank').value.trim();
+        if (ignPN && ignPN !== '__add_new__') keyBlankPNs.push(ignPN);
+        if (doorPN && doorPN !== '__add_new__') keyBlankPNs.push(doorPN);
+    } else {
+        const singlePN = document.getElementById('vehicleDataKeyBlank').value.trim();
+        if (singlePN && singlePN !== '__add_new__') keyBlankPNs.push(singlePN);
+    }
+
+    keyBlankPNs.forEach(pn => {
+        const dbIdx = DB.findIndex(k => String(k.pn) == pn);
+        if (dbIdx < 0) return;
+        const key = DB[dbIdx];
+        const alreadyHasVehicle = (key.vehicles || []).some(v =>
+            v.make === vdMake && v.model === vdModel &&
+            parseInt(v.startYear) === vdStartYear && parseInt(v.endYear) === vdEndYear
+        );
+        if (!alreadyHasVehicle) {
+            const newVehicle = { make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear };
+            if (!key.vehicles) key.vehicles = [];
+            key.vehicles.push(newVehicle);
+            if (key.isCustom) {
+                const customIdx = customKeys.findIndex(ck => String(ck.pn) == pn);
+                if (customIdx >= 0) {
+                    if (!customKeys[customIdx].vehicles) customKeys[customIdx].vehicles = [];
+                    customKeys[customIdx].vehicles.push(newVehicle);
+                    saveCustomKeys();
+                }
+            } else {
+                vehicleOverrides[String(key.pn)] = key.vehicles;
+                saveVehicleOverrides();
+            }
+        }
+    });
+
     closeVehicleDataEditModal();
 
     // Refresh the vehicle detail page to show updated data
