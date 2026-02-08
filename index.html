@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v95</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v96</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4710,7 +4710,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v95</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v96</p>
         </div>
 
         <div class="settings-section">
@@ -4722,7 +4722,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v95<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v96<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -4775,7 +4775,66 @@
     <div style="padding:16px;">
         <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage equipment categories for organizing your tools.</p>
         <div id="categoryList"></div>
-        <button class="add-vendor-btn" onclick="openAddCategoryModal()" style="margin-top:12px;width:100%;">+ Add Category</button>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="add-vendor-btn" onclick="openAddCategoryModal()" style="flex:1;">+ Add Category</button>
+            <button class="add-vendor-btn" onclick="openSettingsAddToolPanel()" style="flex:1;">+ Add Tool</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Add Tool Panel -->
+<div class="add-tool-panel" id="settingsAddToolPanel">
+    <div class="tools-header">
+        <button class="back-btn" onclick="closeSettingsAddToolPanel()">←</button>
+        <div class="tools-title" id="settingsAddToolPanelTitle">➕ Add Tool</div>
+    </div>
+    <div class="tools-content" style="padding-bottom:100px;">
+        <div class="tool-form-section">
+            <h3>Basic Information</h3>
+            <div class="tool-form-row">
+                <label>Tool Name *</label>
+                <input type="text" id="settingsToolFormName" placeholder="e.g., BA Smart Cable">
+            </div>
+            <div class="tool-form-row">
+                <label>Category *</label>
+                <select id="settingsToolFormCategory">
+                    <!-- Dynamically populated -->
+                </select>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Platform Compatibility</h3>
+            <div class="tool-form-row">
+                <label>Compatibility Type *</label>
+                <select id="settingsToolFormCompatType" onchange="handleSettingsCompatTypeChange()">
+                    <option value="single">Single Platform</option>
+                    <option value="multiple">Multiple Platforms</option>
+                </select>
+            </div>
+            <div class="tool-form-row" id="settingsSinglePlatformSelect">
+                <label>Select Platform *</label>
+                <select id="settingsToolFormSinglePlatform">
+                    <option value="">Select platform...</option>
+                </select>
+            </div>
+            <div class="tool-form-row" id="settingsMultiplePlatformSelect" style="display:none;">
+                <label>Select Platforms *</label>
+                <div class="platform-checkbox-list" id="settingsToolFormPlatformCheckboxes">
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-form-section">
+            <h3>Vehicle Applications</h3>
+            <div class="vehicle-app-list" id="settingsToolFormVehicleApps">
+            </div>
+            <button class="add-vehicle-app-btn" onclick="addSettingsToolVehicleApp()">+ Add Vehicle Application</button>
+        </div>
+    </div>
+    <div class="tool-form-actions">
+        <button class="tool-form-cancel" onclick="closeSettingsAddToolPanel()">Cancel</button>
+        <button class="tool-form-save" onclick="saveSettingsToolForm()">Save Tool</button>
     </div>
 </div>
 
@@ -11911,6 +11970,212 @@ function openCategoriesSettingsPanel() {
 }
 function closeCategoriesSettingsPanel() {
     document.getElementById('categoriesSettingsPanel').classList.remove('on');
+}
+
+// Settings Add Tool Panel
+let settingsToolVehicleAppCount = 0;
+let editingSettingsToolId = null;
+
+function openSettingsAddToolPanel(toolId = null) {
+    editingSettingsToolId = toolId;
+    settingsToolVehicleAppCount = 0;
+
+    // Populate dropdowns
+    populateSettingsCategorySelect();
+    populateSettingsPlatformSelects();
+
+    if (toolId && toolsDatabase.tools[toolId]) {
+        const tool = toolsDatabase.tools[toolId];
+        document.getElementById('settingsAddToolPanelTitle').textContent = '✏️ Edit Tool';
+        document.getElementById('settingsToolFormName').value = tool.name;
+        document.getElementById('settingsToolFormCategory').value = tool.category;
+        document.getElementById('settingsToolFormCompatType').value = tool.platformCompatibility;
+        handleSettingsCompatTypeChange();
+
+        if (tool.platformCompatibility === 'single' && tool.compatiblePlatforms.length > 0) {
+            document.getElementById('settingsToolFormSinglePlatform').value = tool.compatiblePlatforms[0];
+        } else if (tool.platformCompatibility === 'multiple') {
+            tool.compatiblePlatforms.forEach(pid => {
+                const checkbox = document.querySelector('#settingsToolFormPlatformCheckboxes input[value="' + pid + '"]');
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+
+        const vehicleAppsContainer = document.getElementById('settingsToolFormVehicleApps');
+        vehicleAppsContainer.innerHTML = '';
+        if (tool.vehicleApplications && tool.vehicleApplications.length > 0) {
+            tool.vehicleApplications.forEach(app => {
+                addSettingsToolVehicleApp(app.make, app.model, app.yearStart, app.yearEnd);
+            });
+        }
+    } else {
+        document.getElementById('settingsAddToolPanelTitle').textContent = '➕ Add Tool';
+        document.getElementById('settingsToolFormName').value = '';
+        document.getElementById('settingsToolFormCategory').value = '';
+        document.getElementById('settingsToolFormCompatType').value = 'single';
+        handleSettingsCompatTypeChange();
+        document.getElementById('settingsToolFormSinglePlatform').value = '';
+        document.getElementById('settingsToolFormVehicleApps').innerHTML = '';
+    }
+
+    document.getElementById('settingsAddToolPanel').classList.add('on');
+}
+
+function closeSettingsAddToolPanel() {
+    document.getElementById('settingsAddToolPanel').classList.remove('on');
+    editingSettingsToolId = null;
+}
+
+function populateSettingsCategorySelect() {
+    const select = document.getElementById('settingsToolFormCategory');
+    if (!select) return;
+    select.innerHTML = '<option value="">Select category...</option>';
+    toolsDatabase.categories.forEach(category => {
+        select.innerHTML += '<option value="' + category + '">' + category + '</option>';
+    });
+}
+
+function populateSettingsPlatformSelects() {
+    const platformIds = Object.keys(toolsDatabase.platforms);
+
+    const singleSelect = document.getElementById('settingsToolFormSinglePlatform');
+    singleSelect.innerHTML = '<option value="">Select platform...</option>';
+    platformIds.forEach(id => {
+        const platform = toolsDatabase.platforms[id];
+        singleSelect.innerHTML += '<option value="' + id + '">' + platform.name + '</option>';
+    });
+
+    const checkboxContainer = document.getElementById('settingsToolFormPlatformCheckboxes');
+    checkboxContainer.innerHTML = platformIds.map(id => {
+        const platform = toolsDatabase.platforms[id];
+        return '<label class="platform-checkbox-item"><input type="checkbox" value="' + id + '"><span>' + platform.name + '</span></label>';
+    }).join('') || '<span style="color:var(--dim);">No platforms available. Add platforms first.</span>';
+}
+
+function handleSettingsCompatTypeChange() {
+    const compatType = document.getElementById('settingsToolFormCompatType').value;
+    document.getElementById('settingsSinglePlatformSelect').style.display = compatType === 'single' ? '' : 'none';
+    document.getElementById('settingsMultiplePlatformSelect').style.display = compatType === 'multiple' ? '' : 'none';
+}
+
+function addSettingsToolVehicleApp(make, model, yearStart, yearEnd) {
+    make = make || '';
+    model = model || '';
+    yearStart = yearStart || '';
+    yearEnd = yearEnd || '';
+
+    const container = document.getElementById('settingsToolFormVehicleApps');
+    const idx = settingsToolVehicleAppCount++;
+
+    const makes = [...new Set(DB.flatMap(k => k.vehicles ? k.vehicles.map(v => v.make) : []))].sort();
+
+    const div = document.createElement('div');
+    div.className = 'vehicle-app-item';
+    div.id = 'settingsVehicleApp-' + idx;
+    div.innerHTML = '<select onchange="updateSettingsVehicleAppModels(' + idx + ')" id="settingsVehicleAppMake-' + idx + '">' +
+        '<option value="">Make</option>' +
+        makes.map(m => '<option value="' + m + '"' + (m === make ? ' selected' : '') + '>' + m + '</option>').join('') +
+        '</select>' +
+        '<select id="settingsVehicleAppModel-' + idx + '">' +
+        '<option value="">Model</option>' +
+        '</select>' +
+        '<input type="number" placeholder="Start" value="' + yearStart + '" id="settingsVehicleAppYearStart-' + idx + '">' +
+        '<input type="number" placeholder="End" value="' + yearEnd + '" id="settingsVehicleAppYearEnd-' + idx + '">' +
+        '<button class="remove-vehicle-app-btn" onclick="removeSettingsVehicleApp(' + idx + ')">×</button>';
+    container.appendChild(div);
+
+    if (make) {
+        updateSettingsVehicleAppModels(idx, model);
+    }
+}
+
+function updateSettingsVehicleAppModels(idx, selectedModel) {
+    selectedModel = selectedModel || '';
+    const make = document.getElementById('settingsVehicleAppMake-' + idx).value;
+    const modelSelect = document.getElementById('settingsVehicleAppModel-' + idx);
+
+    if (!make) {
+        modelSelect.innerHTML = '<option value="">Model</option>';
+        return;
+    }
+
+    const models = [...new Set(DB.flatMap(k =>
+        (k.vehicles || []).filter(v => v.make === make).map(v => v.model)
+    ))].sort();
+
+    modelSelect.innerHTML = '<option value="">Model</option>' +
+        models.map(m => '<option value="' + m + '"' + (m === selectedModel ? ' selected' : '') + '>' + m + '</option>').join('');
+}
+
+function removeSettingsVehicleApp(idx) {
+    const elem = document.getElementById('settingsVehicleApp-' + idx);
+    if (elem) elem.remove();
+}
+
+function saveSettingsToolForm() {
+    const name = document.getElementById('settingsToolFormName').value.trim();
+    const category = document.getElementById('settingsToolFormCategory').value;
+    const compatType = document.getElementById('settingsToolFormCompatType').value;
+
+    if (!name || !category) {
+        toast('Please fill in tool name and category');
+        return;
+    }
+
+    // Get selected platforms
+    var compatiblePlatforms = [];
+    if (compatType === 'single') {
+        const singlePlatform = document.getElementById('settingsToolFormSinglePlatform').value;
+        if (singlePlatform) compatiblePlatforms = [singlePlatform];
+    } else {
+        document.querySelectorAll('#settingsToolFormPlatformCheckboxes input:checked').forEach(cb => {
+            compatiblePlatforms.push(cb.value);
+        });
+    }
+
+    // Get vehicle applications
+    const vehicleApplications = [];
+    document.querySelectorAll('#settingsToolFormVehicleApps .vehicle-app-item').forEach(item => {
+        const itemId = item.id.replace('settingsVehicleApp-', '');
+        const appMake = document.getElementById('settingsVehicleAppMake-' + itemId);
+        const appModel = document.getElementById('settingsVehicleAppModel-' + itemId);
+        const appYearStart = document.getElementById('settingsVehicleAppYearStart-' + itemId);
+        const appYearEnd = document.getElementById('settingsVehicleAppYearEnd-' + itemId);
+
+        if (appMake && appModel && appMake.value && appModel.value) {
+            vehicleApplications.push({
+                make: appMake.value,
+                model: appModel.value,
+                yearStart: parseInt(appYearStart.value) || null,
+                yearEnd: parseInt(appYearEnd.value) || null
+            });
+        }
+    });
+
+    const toolId = editingSettingsToolId || 'tool-' + Date.now();
+
+    // Preserve existing fields if editing, otherwise set defaults
+    const existingTool = editingSettingsToolId ? toolsDatabase.tools[toolId] : null;
+
+    toolsDatabase.tools[toolId] = {
+        name: name,
+        partNumber: existingTool ? existingTool.partNumber : '',
+        category: category,
+        platformCompatibility: compatType,
+        compatiblePlatforms: compatiblePlatforms,
+        vehicleApplications: vehicleApplications,
+        jobTypes: existingTool ? existingTool.jobTypes : [],
+        status: existingTool ? existingTool.status : 'owned',
+        toolNotes: existingTool ? existingTool.toolNotes : [],
+        crossReferenceNotes: existingTool ? existingTool.crossReferenceNotes : [],
+        lastEdited: new Date().toISOString()
+    };
+
+    saveToolsDatabase();
+    closeSettingsAddToolPanel();
+    renderCategoryList();
+    renderToolsList();
+    toast(editingSettingsToolId ? 'Tool updated' : 'Tool added');
 }
 
 function openPlatformsSettingsPanel() {
