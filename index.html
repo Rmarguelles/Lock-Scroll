@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v97</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v98</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4710,7 +4710,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v97</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v98</p>
         </div>
 
         <div class="settings-section">
@@ -4722,7 +4722,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v97<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v98<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14900,6 +14900,28 @@ function renderVehicleYearsForModel(make, model, keyType) {
         return false;
     });
 
+    // Suppress DB-only year ranges that are fully covered by custom sub-ranges.
+    // E.g., if DB has 1991-1996 but the user created custom entries for 1991-1992
+    // and 1993-1996, hide the 1991-1996 card since the sub-ranges replace it.
+    const customRanges = filteredVehicles
+        .filter(v => v.isCustom)
+        .map(v => ({ start: v.startYear, end: v.endYear }))
+        .sort((a, b) => a.start - b.start);
+
+    if (customRanges.length > 0) {
+        filteredVehicles = filteredVehicles.filter(v => {
+            if (v.isCustom) return true; // Always show custom entries
+
+            // Check if this DB range is fully covered by custom ranges
+            let covered = v.startYear;
+            for (const range of customRanges) {
+                if (range.start > covered) break; // Gap found
+                covered = Math.max(covered, range.end + 1);
+            }
+            return covered <= v.endYear; // Keep if NOT fully covered
+        });
+    }
+
     // Sort by year descending
     filteredVehicles.sort((a, b) => b.startYear - a.startYear);
 
@@ -15206,6 +15228,34 @@ function getUniqueVehicles() {
                 });
             }
         }
+    });
+
+    // Merge DB keys into overlapping custom vehicle sub-ranges.
+    // When a DB key covers a broad range (e.g., B45 for 1991-1996) but the user
+    // creates custom vehicle entries for narrower sub-ranges (e.g., 1991-1992 and
+    // 1993-1996), the DB keys should appear as compatible keys in those sub-ranges.
+    const allEntries = Object.values(vehicleMap);
+    allEntries.forEach(dbEntry => {
+        if (dbEntry.isCustom) return; // Only process DB-sourced entries
+
+        allEntries.forEach(customEntry => {
+            if (!customEntry.isCustom) return;
+            if (customEntry.make !== dbEntry.make || customEntry.model !== dbEntry.model) return;
+
+            // Check year overlap
+            if (customEntry.startYear > dbEntry.endYear || customEntry.endYear < dbEntry.startYear) return;
+
+            // Merge keys from DB entry into this overlapping custom entry
+            dbEntry.keys.forEach(key => {
+                if (!customEntry.keys.some(k => k.pn === key.pn)) {
+                    customEntry.keys.push(key);
+                }
+                if (key.keyway) customEntry.keyways.add(key.keyway);
+                if (key.fccid) customEntry.fccids.add(key.fccid);
+                if (key.chip) customEntry.chips.add(key.chip);
+                if (key.frequency) customEntry.frequencies.add(key.frequency);
+            });
+        });
     });
 
     return Object.values(vehicleMap);
