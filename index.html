@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v104</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v105</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v104</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v105</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v104<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v105<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7514,6 +7514,154 @@ let currentFccId = null;
 let editingVendor = null;
 let editingPartNumber = null;
 
+// ===================== FCCID MERGE MIGRATION =====================
+async function runFccidMergeMigration() {
+    const migrationDone = await loadFromIndexedDB('fccidMergeV1');
+    if (migrationDone) return;
+
+    const fccidsToMerge = [
+        'H72', 'H86', 'H92', 'H94', 'H128',
+        'B99', 'B102', 'B110', 'B111', 'B119', 'B120',
+        'Y160', 'Y164', 'Y170',
+        'TOY43AT4', 'TOY44D', 'TOY44G', 'TOY44H'
+    ];
+
+    let totalRemoved = 0;
+
+    fccidsToMerge.forEach(fccid => {
+        // Find all DB keys with this FCCID
+        const matchingKeys = DB.filter(k => k.fccid === fccid);
+        if (matchingKeys.length === 0) return;
+
+        // Find target: an existing key whose PN matches the FCCID name
+        let targetKey = DB.find(k => String(k.pn) === fccid);
+        let renamedOldPn = null;
+
+        if (!targetKey) {
+            // No key with this PN exists — rename the first matching key
+            targetKey = matchingKeys[0];
+            renamedOldPn = String(targetKey.pn);
+            targetKey.pn = fccid;
+
+            // Transfer PN-keyed data from old PN to new PN
+            if (stockData[renamedOldPn]) {
+                stockData[fccid] = (stockData[fccid] || 0) + (stockData[renamedOldPn] || 0);
+                delete stockData[renamedOldPn];
+            }
+            if (vendorPrices[renamedOldPn]) {
+                if (!vendorPrices[fccid]) vendorPrices[fccid] = {};
+                Object.assign(vendorPrices[fccid], vendorPrices[renamedOldPn]);
+                delete vendorPrices[renamedOldPn];
+            }
+            if (vehicleOverrides[renamedOldPn]) {
+                vehicleOverrides[fccid] = vehicleOverrides[renamedOldPn];
+                delete vehicleOverrides[renamedOldPn];
+            }
+            if (keyInfoOverrides[renamedOldPn]) {
+                keyInfoOverrides[fccid] = keyInfoOverrides[renamedOldPn];
+                delete keyInfoOverrides[renamedOldPn];
+            }
+            if (keyRelationships[renamedOldPn]) {
+                keyRelationships[fccid] = keyRelationships[renamedOldPn];
+                delete keyRelationships[renamedOldPn];
+            }
+
+            // Update customKeys if the renamed key was custom
+            const ckIdx = customKeys.findIndex(k => String(k.pn) === renamedOldPn);
+            if (ckIdx >= 0) customKeys[ckIdx].pn = fccid;
+
+            // Update purchase history references
+            purchaseHistory.forEach(p => {
+                if (String(p.partNumber) === renamedOldPn) p.partNumber = fccid;
+            });
+        }
+
+        if (!targetKey.vehicles) targetKey.vehicles = [];
+
+        // Store what PNs were merged for reference
+        if (!targetKey.mergedPNs) targetKey.mergedPNs = [];
+
+        // Now merge all other matching keys into the target
+        const toRemove = [];
+        matchingKeys.forEach(sourceKey => {
+            if (sourceKey === targetKey) return;
+
+            const sourcePn = String(sourceKey.pn);
+
+            // Merge vehicle associations (deduped)
+            (sourceKey.vehicles || []).forEach(v => {
+                const exists = targetKey.vehicles.some(tv =>
+                    tv.make === v.make && tv.model === v.model &&
+                    tv.startYear == v.startYear && tv.endYear == v.endYear
+                );
+                if (!exists) {
+                    targetKey.vehicles.push({ ...v });
+                }
+            });
+
+            // Track merged PNs
+            targetKey.mergedPNs.push(sourcePn);
+
+            // Transfer stock data
+            if (stockData[sourcePn]) {
+                stockData[fccid] = (stockData[fccid] || 0) + (stockData[sourcePn] || 0);
+                delete stockData[sourcePn];
+            }
+
+            // Transfer vendor prices (don't overwrite existing vendors)
+            if (vendorPrices[sourcePn]) {
+                if (!vendorPrices[fccid]) vendorPrices[fccid] = {};
+                for (const vendor in vendorPrices[sourcePn]) {
+                    if (!vendorPrices[fccid][vendor]) {
+                        vendorPrices[fccid][vendor] = vendorPrices[sourcePn][vendor];
+                    }
+                }
+                delete vendorPrices[sourcePn];
+            }
+
+            // Clean up overrides
+            delete vehicleOverrides[sourcePn];
+            delete keyInfoOverrides[sourcePn];
+            delete keyRelationships[sourcePn];
+
+            // Update purchase history references
+            purchaseHistory.forEach(p => {
+                if (String(p.partNumber) === sourcePn) p.partNumber = fccid;
+            });
+
+            // Remove from customKeys
+            const ckIdx = customKeys.findIndex(k => String(k.pn) === sourcePn);
+            if (ckIdx >= 0) customKeys.splice(ckIdx, 1);
+
+            toRemove.push(sourceKey);
+            totalRemoved++;
+        });
+
+        // Remove merged keys from DB
+        toRemove.forEach(key => {
+            const idx = DB.indexOf(key);
+            if (idx >= 0) DB.splice(idx, 1);
+        });
+    });
+
+    // Save all affected data stores
+    saveToIndexedDB('database', DB);
+    saveToIndexedDB('stock', stockData);
+    saveVendorPrices();
+    saveVehicleOverrides();
+    saveKeyInfoOverrides();
+    saveCustomKeys();
+    savePurchaseHistory();
+    saveKeyRelationships();
+
+    // Mark migration as done
+    saveToIndexedDB('fccidMergeV1', true);
+
+    if (totalRemoved > 0) {
+        console.log(`FCCID merge migration: merged ${totalRemoved} keys into their FCCID groups`);
+    }
+}
+
 // ===================== INIT =====================
 async function init() {
     // Initialize IndexedDB first
@@ -7530,6 +7678,7 @@ async function init() {
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
+    await runFccidMergeMigration();
     initializeVendorPricesFromDB();
     buildFilters();
     buildFccidDatalist();
@@ -8538,6 +8687,10 @@ function openKey(idx, fromFcc = false, fromFid = false) {
             ${key.fccid ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${key.fccid}')">
                 <span class="detail-label">FCC ID</span>
                 <span class="detail-value mono" style="color:var(--accent)">${key.fccid} &#8594;</span>
+            </div>` : ''}
+            ${key.mergedPNs && key.mergedPNs.length > 0 ? `<div class="detail-row">
+                <span class="detail-label">Includes PNs</span>
+                <span class="detail-value" style="font-size:11px;color:var(--dim);">${key.mergedPNs.join(', ')}</span>
             </div>` : ''}
         </div>
 
