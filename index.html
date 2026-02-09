@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v101</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v102</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4710,7 +4710,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v101</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v102</p>
         </div>
 
         <div class="settings-section">
@@ -4722,7 +4722,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v101<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v102<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5825,7 +5825,7 @@
 <!-- Rename Model Modal -->
 <div class="modal" id="renameModelModal">
     <div class="modal-content">
-        <div class="modal-title">✏️ Rename Model</div>
+        <div class="modal-title">✏️ Edit Model</div>
         <input type="hidden" id="renameModelMake">
         <input type="hidden" id="renameModelOldName">
         <div class="modal-input-group">
@@ -5835,12 +5835,13 @@
         <div class="modal-input-group">
             <label>New Name (or select existing to merge)</label>
             <input type="text" class="modal-input" id="renameModelNewName" placeholder="Enter new model name">
-            <select class="modal-input" id="renameModelExisting" style="margin-top:8px;" onchange="document.getElementById('renameModelNewName').value = this.value;">
+            <select class="modal-input" id="renameModelExisting" style="margin-top:8px;" onchange="document.getElementById('renameModelNewName').value = this.value; updateRenamePreview();">
                 <option value="">-- Or select existing model to merge --</option>
             </select>
         </div>
         <div id="renameModelPreview" style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--dim);"></div>
-        <div class="modal-btns">
+        <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
+            <button class="modal-btn" onclick="deleteVehicleModel()" style="background:var(--danger);color:#fff;margin-right:auto;">Delete Model</button>
             <button class="modal-btn secondary" onclick="closeRenameModelModal()">Cancel</button>
             <button class="modal-btn primary" onclick="renameVehicleModel()">Rename & Merge</button>
         </div>
@@ -13134,6 +13135,11 @@ function openRenameModelModal(make, oldName) {
             }
         });
     });
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model && v.model !== oldName) {
+            existingModels.add(v.model);
+        }
+    });
 
     const select = document.getElementById('renameModelExisting');
     select.innerHTML = '<option value="">-- Or select existing model to merge --</option>' +
@@ -13162,27 +13168,25 @@ function updateRenamePreview() {
         return;
     }
 
-    // Count keys that will be affected
-    let keysToRename = 0;
-    let keysAlreadyExist = 0;
+    // Count vehicle associations that will be affected
+    let entriesToRename = 0;
+    let entriesAlreadyExist = 0;
 
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
-            if (v.make === make && v.model === oldName) {
-                keysToRename++;
-            }
-            if (v.make === make && v.model === newName) {
-                keysAlreadyExist++;
-            }
+            if (v.make === make && v.model === oldName) entriesToRename++;
+            if (v.make === make && v.model === newName) entriesAlreadyExist++;
         });
     });
 
+    let customVehicleCount = customVehicles.filter(v => v.make === make && v.model === oldName).length;
+
     if (newName === oldName) {
         preview.innerHTML = '<span style="color:var(--dim);">No changes - same name</span>';
-    } else if (keysAlreadyExist > 0) {
-        preview.innerHTML = `<span style="color:var(--accent);">Will merge ${keysToRename} vehicle entries into existing "${newName}" (${keysAlreadyExist} entries)</span>`;
+    } else if (entriesAlreadyExist > 0) {
+        preview.innerHTML = `<span style="color:var(--accent);">Will merge ${entriesToRename} vehicle entries into existing "${newName}" (${entriesAlreadyExist} entries)${customVehicleCount ? ` + ${customVehicleCount} custom vehicle(s)` : ''}</span>`;
     } else {
-        preview.innerHTML = `<span style="color:var(--success);">Will rename ${keysToRename} vehicle entries to "${newName}"</span>`;
+        preview.innerHTML = `<span style="color:var(--success);">Will rename ${entriesToRename} vehicle entries to "${newName}"${customVehicleCount ? ` + ${customVehicleCount} custom vehicle(s)` : ''}</span>`;
     }
 }
 
@@ -13201,28 +13205,120 @@ function renameVehicleModel() {
         return;
     }
 
-    // Update all keys with this make/model
+    // Update all DB key vehicle associations
     let updatedCount = 0;
+    const affectedPNs = new Set();
     DB.forEach(key => {
         (key.vehicles || []).forEach(v => {
             if (v.make === make && v.model === oldName) {
                 v.model = newName;
                 updatedCount++;
+                affectedPNs.add(key.pn);
             }
         });
     });
 
-    // Save to IndexedDB
-    saveToIndexedDB('database', DB);
-
-    // Sync to cloud if enabled
-    if (syncEnabled) {
-        uploadToCloud();
+    // Update vehicleOverrides for affected base keys
+    for (const pn in vehicleOverrides) {
+        const vehicles = vehicleOverrides[pn];
+        if (Array.isArray(vehicles)) {
+            vehicles.forEach(v => {
+                if (v.make === make && v.model === oldName) {
+                    v.model = newName;
+                }
+            });
+        }
     }
+
+    // Update customKeys vehicle associations
+    customKeys.forEach(key => {
+        (key.vehicles || []).forEach(v => {
+            if (v.make === make && v.model === oldName) {
+                v.model = newName;
+            }
+        });
+    });
+
+    // Update customVehicles model names
+    customVehicles.forEach(v => {
+        if (v.make === make && v.model === oldName) {
+            v.model = newName;
+        }
+    });
+
+    // Save all affected stores
+    saveToIndexedDB('database', DB);
+    saveVehicleOverrides();
+    saveCustomKeys();
+    saveCustomVehicles();
 
     closeRenameModelModal();
     renderVehicleModelsForMake(make);
-    toast(`Renamed ${updatedCount} entries to "${newName}"`);
+    toast(`Renamed ${updatedCount} vehicle entries to "${newName}"`);
+}
+
+function deleteVehicleModel() {
+    const make = document.getElementById('renameModelMake').value;
+    const modelName = document.getElementById('renameModelOldName').value;
+
+    // Count what will be affected
+    let associationCount = 0;
+    let keysAffected = 0;
+    let keysLosing = 0; // keys that will lose ALL vehicles
+    DB.forEach(key => {
+        const vehicles = key.vehicles || [];
+        const matchCount = vehicles.filter(v => v.make === make && v.model === modelName).length;
+        if (matchCount > 0) {
+            associationCount += matchCount;
+            keysAffected++;
+            if (matchCount === vehicles.length) keysLosing++;
+        }
+    });
+
+    let customCount = customVehicles.filter(v => v.make === make && v.model === modelName).length;
+
+    let msg = `Delete all "${make} ${modelName}" vehicle associations?\n\n`;
+    msg += `• ${associationCount} vehicle association(s) across ${keysAffected} key(s) will be removed\n`;
+    if (customCount > 0) msg += `• ${customCount} custom vehicle entry/entries will be deleted\n`;
+    if (keysLosing > 0) msg += `• ${keysLosing} key(s) will lose all vehicle associations\n`;
+    msg += `\nThis cannot be undone.`;
+
+    if (!confirm(msg)) return;
+
+    // Remove vehicle associations from DB keys
+    DB.forEach(key => {
+        if (key.vehicles) {
+            key.vehicles = key.vehicles.filter(v => !(v.make === make && v.model === modelName));
+        }
+    });
+
+    // Remove from vehicleOverrides
+    for (const pn in vehicleOverrides) {
+        const vehicles = vehicleOverrides[pn];
+        if (Array.isArray(vehicles)) {
+            vehicleOverrides[pn] = vehicles.filter(v => !(v.make === make && v.model === modelName));
+        }
+    }
+
+    // Remove from customKeys
+    customKeys.forEach(key => {
+        if (key.vehicles) {
+            key.vehicles = key.vehicles.filter(v => !(v.make === make && v.model === modelName));
+        }
+    });
+
+    // Remove from customVehicles
+    customVehicles = customVehicles.filter(v => !(v.make === make && v.model === modelName));
+
+    // Save all affected stores
+    saveToIndexedDB('database', DB);
+    saveVehicleOverrides();
+    saveCustomKeys();
+    saveCustomVehicles();
+
+    closeRenameModelModal();
+    renderVehicleModelsForMake(make);
+    toast(`Deleted all "${modelName}" associations (${associationCount} removed)`);
 }
 
 // ==================== ADD NEW MAKE FUNCTIONS ====================
