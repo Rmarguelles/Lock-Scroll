@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v102</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v103</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4710,7 +4710,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v102</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v103</p>
         </div>
 
         <div class="settings-section">
@@ -4722,7 +4722,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v102<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v103<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -15251,10 +15251,16 @@ function getUniqueVehicles() {
                 buttons: cv.buttons,
                 isCustom: true
             };
-            const exists = vehicleMap[vehicleKey].keys.some(k =>
-                k.pn === pseudoKey.pn && k.isCustom
-            );
-            if (!exists) {
+            const existing = vehicleMap[vehicleKey].keys.find(k => k.pn === pseudoKey.pn);
+            if (existing) {
+                // Enrich existing DB key with custom data if fields are missing
+                if (!existing.keyType && pseudoKey.keyType) existing.keyType = pseudoKey.keyType;
+                if (!existing.keyway && pseudoKey.keyway) existing.keyway = pseudoKey.keyway;
+                if (!existing.chip && pseudoKey.chip) existing.chip = pseudoKey.chip;
+                if (!existing.fccid && pseudoKey.fccid) existing.fccid = pseudoKey.fccid;
+                if (!existing.frequency && pseudoKey.frequency) existing.frequency = pseudoKey.frequency;
+                if (!existing.buttons && pseudoKey.buttons) existing.buttons = pseudoKey.buttons;
+            } else {
                 vehicleMap[vehicleKey].keys.push(pseudoKey);
             }
         }
@@ -15657,8 +15663,15 @@ function openVehicleDetail(vehicleKey) {
         ` : ''}
     `;
 
-    // Compatible Keys Section - sorted by stock
-    const sortedKeys = [...vehicle.keys].sort((a, b) => {
+    // Compatible Keys Section - deduplicate by pn (prefer DB key over custom pseudo-key), then sort by stock
+    const seenPNs = new Set();
+    const dedupedKeys = vehicle.keys.filter(k => {
+        const key = `${k.pn}|${k.dualKeyRole || ''}`;
+        if (seenPNs.has(key)) return false;
+        seenPNs.add(key);
+        return true;
+    });
+    const sortedKeys = dedupedKeys.sort((a, b) => {
         const stockA = stockData[a.pn] || 0;
         const stockB = stockData[b.pn] || 0;
         return stockB - stockA; // In-stock first
