@@ -4185,7 +4185,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v96</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v97</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4710,7 +4710,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v96</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v97</p>
         </div>
 
         <div class="settings-section">
@@ -4722,7 +4722,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v96<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v97<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -4904,8 +4904,31 @@
         </div>
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeEditDropdownValueModal()">Cancel</button>
+            <button class="modal-btn" onclick="openMergeDropdownModal()" style="background:#7c4dff;color:white;">Merge</button>
             <button class="modal-btn" onclick="deleteDropdownValue()" style="background:#e53935;color:white;">Delete</button>
             <button class="modal-btn primary" onclick="saveDropdownValueEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Dropdown Value Modal -->
+<div class="modal" id="mergeDropdownValueModal">
+    <div class="modal-content" style="max-width:450px;">
+        <div class="modal-title">Merge Values</div>
+        <div style="font-size:13px;color:var(--dim);margin-bottom:12px;">
+            All keys using "<span id="mergeDropdownSource" style="color:var(--text);font-weight:600;"></span>" will be updated to the selected target value, and the source will be removed.
+        </div>
+        <div class="modal-input-group">
+            <label>Merge into</label>
+            <select class="modal-input" id="mergeDropdownTarget" onchange="previewMergeDropdown()" style="padding:10px;"></select>
+        </div>
+        <div id="mergeDropdownPreview" style="display:none;background:rgba(255,193,7,0.15);border:1px solid var(--warning);border-radius:8px;padding:12px;margin-bottom:12px;">
+            <div style="font-weight:600;color:var(--warning);margin-bottom:6px;">This merge will affect:</div>
+            <div id="mergeDropdownPreviewList" style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--text);"></div>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeMergeDropdownModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="executeMergeDropdown()" style="background:#7c4dff;">Merge</button>
         </div>
     </div>
 </div>
@@ -17666,9 +17689,22 @@ function submitInventory() {
         fccid: selectedInventoryKey.fccid || '',
         keyway: selectedInventoryKey.keyway || ''
     };
-    
+
     purchaseHistory.unshift(purchase); // Add to beginning
     savePurchaseHistory();
+
+    // Also update vendor pricing so it shows on the part number detail page
+    if (vendor && price > 0) {
+        if (!vendorPrices[pn]) vendorPrices[pn] = {};
+        if (!vendorPrices[pn][vendor]) {
+            vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
+        }
+        // Set priceA if not already set for this vendor
+        if (!vendorPrices[pn][vendor].priceA) {
+            vendorPrices[pn][vendor].priceA = price.toFixed(2);
+        }
+        saveVendorPrices();
+    }
     
     // Show success
     document.getElementById('addInvStep1').style.display = 'none';
@@ -17786,6 +17822,7 @@ function openAddCustomKey() {
     document.getElementById('customKeyFreq').value = '';
     document.getElementById('customKeyFreqOther').style.display = 'none';
     document.getElementById('customKeyFreqOther').value = '';
+    populateCustomKeyFrequencyDropdown();
 
     // Add one vehicle row by default
     addCustomKeyVehicle();
@@ -17821,6 +17858,11 @@ function populateCustomKeyDropdown(selectId, field, placeholder) {
         customKeyways.forEach(kw => values.add(kw));
     }
 
+    // Include user-added custom dropdown values
+    if (customDropdownValues[field]) {
+        customDropdownValues[field].forEach(v => values.add(v));
+    }
+
     // Sort alphabetically
     const sortedValues = Array.from(values).sort((a, b) => a.localeCompare(b));
 
@@ -17838,6 +17880,56 @@ function populateCustomKeyDropdown(selectId, field, placeholder) {
     otherOpt.value = '__other__';
     otherOpt.textContent = '+ Other (custom)';
     select.appendChild(otherOpt);
+}
+
+function populateCustomKeyFrequencyDropdown() {
+    const select = document.getElementById('customKeyFreq');
+
+    // Remove any previously added "From Database" optgroup to avoid duplicates on re-open
+    const existingDbGroup = select.querySelector('optgroup[data-dynamic="true"]');
+    if (existingDbGroup) existingDbGroup.remove();
+
+    // Collect the hardcoded frequency values so we can avoid duplicating them
+    const hardcodedFreqs = new Set([
+        '315 MHz', '314.35 MHz', '314.975 MHz', '313.85 MHz', '313.8 MHz',
+        '315-316 MHz', '314.5-315.5 MHz', '312.1-314.35 MHz',
+        '433.92 MHz', '433.4-434.4 MHz', '433.66-434.18 MHz',
+        '902.375-903.425 MHz', '923.625-924.6 MHz', 'None (Transponder Only)'
+    ]);
+
+    // Gather additional frequencies from DB and custom values
+    const extraFreqs = new Set();
+    DB.forEach(key => {
+        if (key.frequency && !hardcodedFreqs.has(key.frequency)) {
+            extraFreqs.add(key.frequency);
+        }
+    });
+    if (customDropdownValues.frequency) {
+        customDropdownValues.frequency.forEach(v => {
+            if (!hardcodedFreqs.has(v)) extraFreqs.add(v);
+        });
+    }
+
+    // If there are extra frequencies, add them as a new optgroup before the hardcoded ones
+    if (extraFreqs.size > 0) {
+        const sortedExtras = Array.from(extraFreqs).sort((a, b) => a.localeCompare(b));
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'From Database';
+        optgroup.setAttribute('data-dynamic', 'true');
+        sortedExtras.forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            optgroup.appendChild(opt);
+        });
+        // Insert after the first "Select..." option
+        const firstOptgroup = select.querySelector('optgroup');
+        if (firstOptgroup) {
+            select.insertBefore(optgroup, firstOptgroup);
+        } else {
+            select.appendChild(optgroup);
+        }
+    }
 }
 
 function handleCustomDropdown(select, otherInputId) {
@@ -19578,6 +19670,118 @@ function deleteDropdownValue() {
     applyFilters();
 
     toast('Deleted "' + value + '"');
+    closeEditDropdownValueModal();
+    renderDropdownDataList();
+}
+
+function openMergeDropdownModal() {
+    if (!editingDropdownCategory || !editingDropdownOldValue) return;
+    const category = editingDropdownCategory;
+    const sourceValue = editingDropdownOldValue;
+
+    // Get all other values in this category
+    const allValues = getDropdownValuesForCategory(category).filter(v => v !== sourceValue);
+    if (allValues.length === 0) {
+        toast('No other values to merge into');
+        return;
+    }
+
+    document.getElementById('mergeDropdownSource').textContent = sourceValue;
+
+    // Populate target dropdown
+    const select = document.getElementById('mergeDropdownTarget');
+    select.innerHTML = '<option value="">Select target value...</option>';
+    allValues.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+    });
+
+    document.getElementById('mergeDropdownPreview').style.display = 'none';
+    document.getElementById('mergeDropdownValueModal').classList.add('on');
+}
+
+function closeMergeDropdownModal() {
+    document.getElementById('mergeDropdownValueModal').classList.remove('on');
+}
+
+function previewMergeDropdown() {
+    const target = document.getElementById('mergeDropdownTarget').value;
+    const previewDiv = document.getElementById('mergeDropdownPreview');
+    const listDiv = document.getElementById('mergeDropdownPreviewList');
+
+    if (!target || !editingDropdownCategory || !editingDropdownOldValue) {
+        previewDiv.style.display = 'none';
+        return;
+    }
+
+    const sourceKeys = getAffectedKeysForValue(editingDropdownCategory, editingDropdownOldValue);
+    const sourceVehicles = getAffectedVehiclesForValue(editingDropdownCategory, editingDropdownOldValue);
+    const targetKeys = getAffectedKeysForValue(editingDropdownCategory, target);
+
+    let html = '<div style="margin-bottom:6px;">' + sourceKeys.length + ' key' + (sourceKeys.length !== 1 ? 's' : '') + ' will be changed from "' + editingDropdownOldValue + '" to "' + target + '"</div>';
+    if (sourceKeys.length > 0) {
+        html += sourceKeys.slice(0, 8).map(k => '<div style="padding:2px 0;">Part #' + k.pn + '</div>').join('');
+        if (sourceKeys.length > 8) html += '<div style="color:var(--dim);padding:2px 0;">...and ' + (sourceKeys.length - 8) + ' more</div>';
+    }
+    if (sourceVehicles.length > 0) {
+        html += '<div style="margin-top:6px;color:var(--dim);">' + sourceVehicles.length + ' vehicle' + (sourceVehicles.length !== 1 ? 's' : '') + ' affected</div>';
+    }
+    html += '<div style="margin-top:8px;color:var(--accent);font-size:11px;">Target "' + target + '" currently has ' + targetKeys.length + ' key' + (targetKeys.length !== 1 ? 's' : '') + '</div>';
+
+    listDiv.innerHTML = html;
+    previewDiv.style.display = 'block';
+}
+
+function executeMergeDropdown() {
+    const target = document.getElementById('mergeDropdownTarget').value;
+    if (!target) { toast('Please select a target value'); return; }
+    if (!editingDropdownCategory || !editingDropdownOldValue) return;
+
+    const category = editingDropdownCategory;
+    const source = editingDropdownOldValue;
+
+    const sourceKeys = getAffectedKeysForValue(category, source);
+    if (!confirm('Merge "' + source + '" into "' + target + '"?\n\n' + sourceKeys.length + ' key(s) will be updated.')) return;
+
+    // Update all DB keys from source to target
+    DB.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === source) key.keyway = target;
+        else if (category === 'chip' && String(key.chip || '') === source) key.chip = target;
+        else if (category === 'keyType' && String(key.keyType || '') === source) key.keyType = target;
+        else if (category === 'frequency' && String(key.frequency || '') === source) key.frequency = target;
+        else if (category === 'buttons' && String(key.buttons || '') === source) key.buttons = target;
+        else if (category === 'battery' && String(key.battery || '') === source) key.battery = target;
+    });
+
+    // Update custom keys
+    customKeys.forEach(key => {
+        if (category === 'keyway' && String(key.keyway || '') === source) key.keyway = target;
+        else if (category === 'chip' && String(key.chip || '') === source) key.chip = target;
+        else if (category === 'keyType' && String(key.keyType || '') === source) key.keyType = target;
+        else if (category === 'frequency' && String(key.frequency || '') === source) key.frequency = target;
+        else if (category === 'buttons' && String(key.buttons || '') === source) key.buttons = target;
+        else if (category === 'battery' && String(key.battery || '') === source) key.battery = target;
+    });
+
+    // Remove source from custom dropdown values
+    if (customDropdownValues[category]) {
+        customDropdownValues[category] = customDropdownValues[category].filter(v => v !== source);
+    }
+    if (category === 'keyway') {
+        customKeyways = customKeyways.filter(kw => kw !== source);
+        saveCustomKeyways();
+    }
+
+    // Persist
+    saveCustomKeys();
+    saveCustomDropdownValues();
+    populateAdvancedFilters();
+    applyFilters();
+
+    toast('Merged "' + source + '" into "' + target + '"');
+    closeMergeDropdownModal();
     closeEditDropdownValueModal();
     renderDropdownDataList();
 }
