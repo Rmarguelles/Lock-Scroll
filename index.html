@@ -17689,9 +17689,22 @@ function submitInventory() {
         fccid: selectedInventoryKey.fccid || '',
         keyway: selectedInventoryKey.keyway || ''
     };
-    
+
     purchaseHistory.unshift(purchase); // Add to beginning
     savePurchaseHistory();
+
+    // Also update vendor pricing so it shows on the part number detail page
+    if (vendor && price > 0) {
+        if (!vendorPrices[pn]) vendorPrices[pn] = {};
+        if (!vendorPrices[pn][vendor]) {
+            vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
+        }
+        // Set priceA if not already set for this vendor
+        if (!vendorPrices[pn][vendor].priceA) {
+            vendorPrices[pn][vendor].priceA = price.toFixed(2);
+        }
+        saveVendorPrices();
+    }
     
     // Show success
     document.getElementById('addInvStep1').style.display = 'none';
