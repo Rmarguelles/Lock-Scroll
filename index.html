@@ -8764,7 +8764,7 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                     <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
                 </div>
             </div>
-            ${(key.vehicles || []).map(v => {
+            ${(key.vehicles || []).slice().sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.startYear - b.startYear).map(v => {
                 // Handle codeSeries: can be string (old format) or array (new format)
                 let codeSeriesHtml = '';
                 if (v.codeSeries) {
