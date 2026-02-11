@@ -5042,11 +5042,21 @@
                 <option value="">Select Model...</option>
             </select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px;margin-bottom:16px;align-items:end;">
+            <div>
+                <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Month</label>
+                <select id="addVehStartMonth"
+                    style="padding:10px 4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;"></select>
+            </div>
             <div>
                 <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Start Year</label>
                 <input type="number" id="addVehStartYear" placeholder="e.g. 2015"
                     style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Month</label>
+                <select id="addVehEndMonth"
+                    style="padding:10px 4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;"></select>
             </div>
             <div>
                 <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">End Year</label>
@@ -5541,12 +5551,20 @@
             </select>
             <input type="text" class="modal-input" id="quickVehicleNewModel" placeholder="Enter new model..." style="display:none;margin-top:8px;">
         </div>
-        <div class="modal-input-group" style="display:flex;gap:8px;">
-            <div style="flex:1;">
+        <div class="modal-input-group" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="flex:0 0 72px;">
+                <label>Month</label>
+                <select class="modal-input" id="quickVehicleMonthStart" style="padding:10px 4px;font-size:13px;"></select>
+            </div>
+            <div style="flex:1;min-width:80px;">
                 <label>Year Start *</label>
                 <input type="number" class="modal-input" id="quickVehicleYear" placeholder="2024" onchange="checkForSimilarVehicles()">
             </div>
-            <div style="flex:1;">
+            <div style="flex:0 0 72px;">
+                <label>Month</label>
+                <select class="modal-input" id="quickVehicleMonthEnd" style="padding:10px 4px;font-size:13px;"></select>
+            </div>
+            <div style="flex:1;min-width:80px;">
                 <label>Year End</label>
                 <input type="number" class="modal-input" id="quickVehicleYearEnd" placeholder="2024">
             </div>
@@ -5678,12 +5696,20 @@
                 <input type="text" class="modal-input" id="editCustomVehicleModel">
             </div>
         </div>
-        <div class="modal-input-group" style="display:flex;gap:8px;">
-            <div style="flex:1;">
+        <div class="modal-input-group" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="flex:0 0 72px;">
+                <label>Month</label>
+                <select class="modal-input" id="editCustomVehicleMonthStart" style="padding:10px 4px;font-size:13px;"></select>
+            </div>
+            <div style="flex:1;min-width:80px;">
                 <label>Year Start</label>
                 <input type="number" class="modal-input" id="editCustomVehicleYearStart">
             </div>
-            <div style="flex:1;">
+            <div style="flex:0 0 72px;">
+                <label>Month</label>
+                <select class="modal-input" id="editCustomVehicleMonthEnd" style="padding:10px 4px;font-size:13px;"></select>
+            </div>
+            <div style="flex:1;min-width:80px;">
                 <label>Year End</label>
                 <input type="number" class="modal-input" id="editCustomVehicleYearEnd">
             </div>
@@ -8574,7 +8600,7 @@ function renderKeys() {
         const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
         
         const vehicles = (key.vehicles || []).slice(0, 3).map(v => 
-            `${v.make} ${v.model} (${v.startYear}-${v.endYear})`
+            `${v.make} ${v.model} (${formatYearRange(v)})`
         ).join(', ');
         
         return `
@@ -8756,7 +8782,7 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                 <div class="detail-row" style="flex-wrap:wrap;flex-direction:column;align-items:flex-start;">
                     <div style="display:flex;justify-content:space-between;width:100%;">
                         <span class="detail-label">${v.make} ${v.model}</span>
-                        <span class="detail-value">${v.startYear} - ${v.endYear}</span>
+                        <span class="detail-value">${formatYearRange(v)}</span>
                     </div>
                     ${Array.isArray(v.codeSeries) && v.codeSeries.length > 0 ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : (typeof v.codeSeries === 'string' && v.codeSeries ? codeSeriesHtml : '')}
                 </div>
@@ -9164,6 +9190,8 @@ function openAddSingleVehicleModal(keyIdx) {
     // Set default years
     document.getElementById('addVehStartYear').value = new Date().getFullYear();
     document.getElementById('addVehEndYear').value = new Date().getFullYear();
+    document.getElementById('addVehStartMonth').innerHTML = monthSelectOptions('');
+    document.getElementById('addVehEndMonth').innerHTML = monthSelectOptions('');
 
     // Render empty code series list
     renderAddVehicleCodeSeriesList();
@@ -9359,6 +9387,8 @@ function saveAddSingleVehicle() {
     const model = addingVehicle.model;
     const startYear = parseInt(document.getElementById('addVehStartYear').value);
     const endYear = parseInt(document.getElementById('addVehEndYear').value);
+    const startMonth = parseInt(document.getElementById('addVehStartMonth').value) || 0;
+    const endMonth = parseInt(document.getElementById('addVehEndMonth').value) || 0;
 
     // Filter out empty code series entries and use array format
     const codeSeries = (addingVehicle.codeSeries || []).filter(cs => cs.series && cs.series.trim());
@@ -9377,7 +9407,7 @@ function saveAddSingleVehicle() {
         return;
     }
 
-    const newVehicle = { make, model, startYear, endYear, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
+    const newVehicle = { make, model, startYear, endYear, startMonth: startMonth || undefined, endMonth: endMonth || undefined, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
 
     // Check if this vehicle application already exists on this key
     const key = DB[addingVehicleKeyIdx];
@@ -9406,7 +9436,7 @@ function saveAddSingleVehicle() {
     });
     if (otherKeys.length > 0) {
         const uniquePNs = [...new Set(otherKeys)].join(', ');
-        if (!confirm(`This vehicle application (${make} ${model} ${startYear}-${endYear}) already exists on key(s): ${uniquePNs}\n\nAdd it to this key too?`)) {
+        if (!confirm(`This vehicle application (${make} ${model} ${formatYearRange({startYear, endYear, startMonth, endMonth})}) already exists on key(s): ${uniquePNs}\n\nAdd it to this key too?`)) {
             return;
         }
     }
@@ -15043,11 +15073,30 @@ function saveNewYearRange() {
     closeAddYearRangeModal();
     renderVehicleYearsForModel(make, model, baseKeyType);
 
-    const yearDisplay = startYear === endYear ? startYear : `${startYear}-${endYear}`;
+    const yearDisplay = formatYearRange({startYear, endYear});
     toast(`Added year range: ${yearDisplay}`);
 }
 
 // ==================== UTILITY FUNCTIONS ====================
+
+const MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatYearRange(v) {
+    const sm = v.startMonth ? MONTH_ABBR[v.startMonth] + ' ' : '';
+    const em = v.endMonth ? MONTH_ABBR[v.endMonth] + ' ' : '';
+    if (v.startYear === v.endYear && !v.startMonth && !v.endMonth) return String(v.startYear);
+    if (v.startYear === v.endYear && v.startMonth && !v.endMonth) return `${sm}${v.startYear}`;
+    return `${sm}${v.startYear} - ${em}${v.endYear}`;
+}
+
+function monthSelectOptions(selectedValue) {
+    const val = selectedValue || '';
+    return '<option value=""' + (val === '' ? ' selected' : '') + '>--</option>' +
+        MONTH_ABBR.slice(1).map((m, i) => {
+            const v = String(i + 1);
+            return '<option value="' + v + '"' + (val == v ? ' selected' : '') + '>' + m + '</option>';
+        }).join('');
+}
 
 // Levenshtein distance for fuzzy matching
 function levenshteinDistance(str1, str2) {
@@ -15276,7 +15325,7 @@ function renderVehicleYearsForModel(make, model, keyType) {
         const hasStock = inStockKeys.length > 0;
         const totalStock = inStockKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
 
-        const yearDisplay = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
+        const yearDisplay = formatYearRange(v);
         const vehicleKey = `${v.make}|${v.model}|${v.startYear}|${v.endYear}`;
 
         // Build key type breakdown from filtered keys
@@ -15638,7 +15687,7 @@ function openVehicleDetail(vehicleKey) {
     }
 
     // Set header
-    const yearDisplay = vehicle.startYear === vehicle.endYear ? vehicle.startYear : `${vehicle.startYear}-${vehicle.endYear}`;
+    const yearDisplay = formatYearRange(vehicle);
     document.getElementById('vehicleDetailTitle').textContent = `${vehicle.make} ${vehicle.model}`;
     document.getElementById('vehicleDetailSubtitle').textContent = yearDisplay;
 
@@ -16763,7 +16812,7 @@ function openLishiDetail(toolName) {
                             <div class="lishi-vehicle-item">
                                 <div class="lishi-vehicle-info">
                                     <div class="lishi-vehicle-name-small">${v.make} ${v.model}</div>
-                                    <div class="lishi-vehicle-years-small">${v.startYear} - ${v.endYear}</div>
+                                    <div class="lishi-vehicle-years-small">${formatYearRange(v)}</div>
                                 </div>
                                 <span class="lishi-vehicle-direction ${dirClass}">${dirText}</span>
                             </div>
@@ -17148,7 +17197,7 @@ function filterLishiLookup() {
                 <div class="lishi-vehicle-header">
                     <div>
                         <div class="lishi-vehicle-name">${v.make} ${v.model}</div>
-                        <div class="lishi-vehicle-years">${v.startYear} - ${v.endYear}</div>
+                        <div class="lishi-vehicle-years">${formatYearRange(v)}</div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
                         ${keyways.map(kw => `<span class="lishi-keyway-badge">${kw}</span>`).join('')}
@@ -17236,7 +17285,7 @@ function filterLishiLookup() {
                 ` : ''}
                 
                 <div class="lishi-actions-row">
-                    <button class="lishi-action-btn" onclick="openLishiNotesModal('${groupKey}', '${v.make} ${v.model}', '${v.startYear}-${v.endYear}')">
+                    <button class="lishi-action-btn" onclick="openLishiNotesModal('${groupKey}', '${v.make} ${v.model}', '${formatYearRange(v)}')">
                         📝 ${vehicleData.notes ? 'Edit' : 'Add'} Notes
                     </button>
                 </div>
@@ -17415,7 +17464,7 @@ function openVehicleDataEditModal(groupKey, make, model, startYear, endYear) {
     currentVehicleDataEndYear = endYear;
     const vehicleData = lishiVehicleData[groupKey] || {};
 
-    document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${startYear}-${endYear})`;
+    document.getElementById('vehicleDataEditInfo').textContent = `${make} ${model} (${formatYearRange({startYear: parseInt(startYear), endYear: parseInt(endYear)})})`;
 
     // Get aggregated data from keys for pre-filling
     const vehicles = getUniqueVehicles();
@@ -18029,7 +18078,7 @@ function filterInventoryKeys() {
     
     document.getElementById('addInvResults').innerHTML = results.map((key, idx) => {
         const makes = [...new Set((key.vehicles || []).map(v => v.make))].slice(0, 3).join(', ');
-        const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + v.startYear + '-' + v.endYear).join(', ');
+        const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + formatYearRange(v)).join(', ');
         const currentStock = stockData[key.pn] || 0;
         
         // Determine if likely OEM or aftermarket
@@ -18066,7 +18115,7 @@ function selectInventoryKey(dbIndex) {
     const key = selectedInventoryKey;
     const pnStr = String(key.pn || 'Unknown PN');
     const makes = [...new Set((key.vehicles || []).map(v => v.make))].slice(0, 3).join(', ');
-    const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + v.startYear + '-' + v.endYear).join('<br>');
+    const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + formatYearRange(v)).join('<br>');
     const currentStock = stockData[key.pn] || 0;
     
     document.getElementById('addInvSelectedKey').innerHTML = 
@@ -18648,7 +18697,7 @@ function saveCustomKey() {
                     const exEnd = parseInt(existingVeh.endYear) || exStart;
                     if (newStart <= exEnd && newEnd >= exStart) {
                         duplicateVehicles.push({
-                            vehicle: `${newVeh.make} ${newVeh.model} ${newVeh.startYear}-${newVeh.endYear}`,
+                            vehicle: `${newVeh.make} ${newVeh.model} ${formatYearRange(newVeh)}`,
                             existingPN: existingKey.pn
                         });
                     }
@@ -19182,6 +19231,8 @@ function openQuickAddVehicleModal(prefillMake = '', prefillModel = '', prefillYe
     // Set year
     document.getElementById('quickVehicleYear').value = prefillYear || new Date().getFullYear();
     document.getElementById('quickVehicleYearEnd').value = prefillYear || new Date().getFullYear();
+    document.getElementById('quickVehicleMonthStart').innerHTML = monthSelectOptions('');
+    document.getElementById('quickVehicleMonthEnd').innerHTML = monthSelectOptions('');
 
     // Clear optional fields
     document.getElementById('quickVehicleKeyType').value = '';
@@ -19268,7 +19319,7 @@ function checkForSimilarVehicles() {
 
     if (similar.length > 0) {
         const closest = similar[0];
-        const yearRange = closest.startYear === closest.endYear ? closest.startYear : `${closest.startYear}-${closest.endYear}`;
+        const yearRange = formatYearRange(closest);
         suggestionDiv.innerHTML = `
             <div style="padding:12px;background:rgba(0,255,136,0.1);border-radius:8px;border:1px solid var(--success);">
                 <div style="font-size:13px;color:var(--text);margin-bottom:8px;">
@@ -19453,6 +19504,8 @@ function saveQuickAddVehicle() {
 
     const startYear = parseInt(document.getElementById('quickVehicleYear').value);
     const endYear = parseInt(document.getElementById('quickVehicleYearEnd').value) || startYear;
+    const startMonth = parseInt(document.getElementById('quickVehicleMonthStart').value) || 0;
+    const endMonth = parseInt(document.getElementById('quickVehicleMonthEnd').value) || 0;
 
     if (!make || !model || !startYear) {
         toast('Please fill in Make, Model, and Year');
@@ -19489,6 +19542,7 @@ function saveQuickAddVehicle() {
             id: 'vehicle-' + Date.now(),
             make: make, model: model,
             startYear: startYear, endYear: endYear,
+            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
             multipleKeys: true,
             dataStatus: hasData ? 'complete' : 'partial',
             // Ignition key
@@ -19515,6 +19569,7 @@ function saveQuickAddVehicle() {
             id: 'vehicle-' + Date.now(),
             make: make, model: model,
             startYear: startYear, endYear: endYear,
+            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
             multipleKeys: false,
             dataStatus: hasOptionalData ? 'complete' : 'partial',
             keyType: keyType, chip: chip, buttons: buttons,
@@ -19528,7 +19583,7 @@ function saveQuickAddVehicle() {
     saveCustomVehicles();
 
     // Add key entries to DB/customKeys for any specified key blanks
-    const vehicleEntry = { make: make, model: model, startYear: startYear, endYear: endYear };
+    const vehicleEntry = { make: make, model: model, startYear: startYear, endYear: endYear, startMonth: startMonth || undefined, endMonth: endMonth || undefined };
     const keyBlanksToAdd = [];
 
     if (isMultipleKeys) {
@@ -19629,7 +19684,7 @@ function openIncompleteVehiclesView() {
         html += `<div style="text-align:center;color:var(--dim);padding:40px;">No incomplete vehicles</div>`;
     } else {
         html += incomplete.map(v => {
-            const yearRange = v.startYear === v.endYear ? v.startYear : `${v.startYear}-${v.endYear}`;
+            const yearRange = formatYearRange(v);
             return `
                 <div class="vehicle-key-card" style="cursor:pointer;" onclick="openEditCustomVehicle('${v.id}')">
                     <div class="vehicle-key-info">
@@ -19667,6 +19722,8 @@ function openEditCustomVehicle(vehicleId) {
     document.getElementById('editCustomVehicleModel').value = vehicle.model;
     document.getElementById('editCustomVehicleYearStart').value = vehicle.startYear;
     document.getElementById('editCustomVehicleYearEnd').value = vehicle.endYear;
+    document.getElementById('editCustomVehicleMonthStart').innerHTML = monthSelectOptions(vehicle.startMonth || '');
+    document.getElementById('editCustomVehicleMonthEnd').innerHTML = monthSelectOptions(vehicle.endMonth || '');
     document.getElementById('editCustomVehicleKeyType').value = vehicle.keyType || '';
     document.getElementById('editCustomVehicleChip').value = vehicle.chip || '';
     document.getElementById('editCustomVehicleButtons').value = vehicle.buttons || '';
@@ -19702,7 +19759,7 @@ function openEditCustomVehicle(vehicleId) {
 
     if (similar.length > 0 && vehicle.dataStatus === 'partial') {
         const closest = similar[0];
-        const yearRange = closest.startYear === closest.endYear ? closest.startYear : `${closest.startYear}-${closest.endYear}`;
+        const yearRange = formatYearRange(closest);
         suggestionDiv.innerHTML = `
             <div style="padding:12px;background:rgba(0,255,136,0.1);border-radius:8px;border:1px solid var(--success);margin-bottom:12px;">
                 <div style="font-size:13px;color:var(--text);margin-bottom:8px;">
@@ -19764,6 +19821,8 @@ function saveEditCustomVehicle() {
     const model = document.getElementById('editCustomVehicleModel').value.trim();
     const startYear = parseInt(document.getElementById('editCustomVehicleYearStart').value);
     const endYear = parseInt(document.getElementById('editCustomVehicleYearEnd').value);
+    const startMonth = parseInt(document.getElementById('editCustomVehicleMonthStart').value) || 0;
+    const endMonth = parseInt(document.getElementById('editCustomVehicleMonthEnd').value) || 0;
 
     if (isMultipleKeys) {
         const ignition_keyBlank = document.getElementById('editCustomVehicleIgnKeyBlank').value.trim();
@@ -19784,6 +19843,7 @@ function saveEditCustomVehicle() {
         customVehicles[idx] = {
             ...customVehicles[idx],
             make, model, startYear, endYear, notes,
+            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
             multipleKeys: true,
             keyType: '', chip: '', buttons: '', fccid: '', frequency: '', keyway: '',
             ignition_keyBlank, ignition_chip, ignition_keyway, ignition_fccid,
@@ -19805,6 +19865,7 @@ function saveEditCustomVehicle() {
         customVehicles[idx] = {
             ...customVehicles[idx],
             make, model, startYear, endYear, notes,
+            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
             multipleKeys: false,
             keyType, chip, buttons, fccid, frequency, keyway,
             ignition_chip: '', ignition_keyway: '', ignition_fccid: '',
@@ -20039,7 +20100,7 @@ function previewDropdownValueChange() {
 
     if (affectedVehicles.length > 0) {
         html += '<div style="margin-top:8px;margin-bottom:4px;color:var(--warning);font-weight:600;font-size:11px;">Affected vehicles:</div>';
-        html += affectedVehicles.slice(0, 15).map(v => '<div style="padding:2px 0;">' + v.make + ' ' + v.model + ' (' + v.startYear + '-' + v.endYear + ')</div>').join('');
+        html += affectedVehicles.slice(0, 15).map(v => '<div style="padding:2px 0;">' + v.make + ' ' + v.model + ' (' + formatYearRange(v) + ')</div>').join('');
         if (affectedVehicles.length > 15) html += '<div style="color:var(--dim);padding:2px 0;">...and ' + (affectedVehicles.length - 15) + ' more</div>';
     }
     listDiv.innerHTML = html;
@@ -20112,7 +20173,7 @@ function deleteDropdownValue() {
         const affectedVehicles = getAffectedVehiclesForValue(category, value);
         let msg = 'This will clear "' + value + '" from ' + affectedKeys.length + ' key(s).';
         if (affectedVehicles.length > 0) {
-            msg += '\n\nAffected vehicles:\n' + affectedVehicles.slice(0, 10).map(v => '- ' + v.make + ' ' + v.model + ' (' + v.startYear + '-' + v.endYear + ')').join('\n');
+            msg += '\n\nAffected vehicles:\n' + affectedVehicles.slice(0, 10).map(v => '- ' + v.make + ' ' + v.model + ' (' + formatYearRange(v) + ')').join('\n');
             if (affectedVehicles.length > 10) msg += '\n...and ' + (affectedVehicles.length - 10) + ' more';
         }
         if (!confirm(msg + '\n\nContinue?')) return;
