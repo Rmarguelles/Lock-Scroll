@@ -8258,6 +8258,9 @@ function populateAdvancedFilters() {
         }
     });
 
+    // Include custom keyways (user-added keyways that persist even without keys)
+    customKeyways.forEach(kw => keyways.add(kw));
+
     // Include user-added custom dropdown values
     if (customDropdownValues.keyway) customDropdownValues.keyway.forEach(v => keyways.add(v));
     if (customDropdownValues.chip) customDropdownValues.chip.forEach(v => chips.add(v));
@@ -19983,6 +19986,10 @@ function getDropdownValuesForCategory(category) {
         else if (category === 'buttons' && key.buttons) values.add(String(key.buttons));
         else if (category === 'battery' && key.battery) values.add(String(key.battery));
     });
+    // Include custom keyways (user-added keyways that persist even without keys)
+    if (category === 'keyway') {
+        customKeyways.forEach(kw => values.add(kw));
+    }
     // Add user-custom values
     if (customDropdownValues[category]) {
         customDropdownValues[category].forEach(v => values.add(v));
