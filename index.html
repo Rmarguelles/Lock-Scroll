@@ -8258,6 +8258,9 @@ function populateAdvancedFilters() {
         }
     });
 
+    // Include custom keyways (user-added keyways that persist even without keys)
+    customKeyways.forEach(kw => keyways.add(kw));
+
     // Include user-added custom dropdown values
     if (customDropdownValues.keyway) customDropdownValues.keyway.forEach(v => keyways.add(v));
     if (customDropdownValues.chip) customDropdownValues.chip.forEach(v => chips.add(v));
@@ -8873,6 +8876,12 @@ function openEditVehiclesModal(keyIdx) {
     editingVehiclesKeyIdx = keyIdx;
     const key = DB[keyIdx];
     editingVehicles = JSON.parse(JSON.stringify(key.vehicles || [])); // Deep copy
+    // Alphabetize vehicles to make it easier to spot duplicates
+    editingVehicles.sort((a, b) =>
+        (a.make || '').localeCompare(b.make || '') ||
+        (a.model || '').localeCompare(b.model || '') ||
+        (a.startYear || 0) - (b.startYear || 0)
+    );
     buildVehicleDropdownData();
     renderEditVehiclesList();
     document.getElementById('editVehiclesModal').classList.add('on');
@@ -19977,6 +19986,10 @@ function getDropdownValuesForCategory(category) {
         else if (category === 'buttons' && key.buttons) values.add(String(key.buttons));
         else if (category === 'battery' && key.battery) values.add(String(key.battery));
     });
+    // Include custom keyways (user-added keyways that persist even without keys)
+    if (category === 'keyway') {
+        customKeyways.forEach(kw => values.add(kw));
+    }
     // Add user-custom values
     if (customDropdownValues[category]) {
         customDropdownValues[category].forEach(v => values.add(v));
