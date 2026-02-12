@@ -8873,6 +8873,12 @@ function openEditVehiclesModal(keyIdx) {
     editingVehiclesKeyIdx = keyIdx;
     const key = DB[keyIdx];
     editingVehicles = JSON.parse(JSON.stringify(key.vehicles || [])); // Deep copy
+    // Alphabetize vehicles to make it easier to spot duplicates
+    editingVehicles.sort((a, b) =>
+        (a.make || '').localeCompare(b.make || '') ||
+        (a.model || '').localeCompare(b.model || '') ||
+        (a.startYear || 0) - (b.startYear || 0)
+    );
     buildVehicleDropdownData();
     renderEditVehiclesList();
     document.getElementById('editVehiclesModal').classList.add('on');
