@@ -17830,18 +17830,23 @@ function saveVehicleDataEdit() {
     const [vdMake, vdModel, vdSY, vdEY] = currentVehicleDataEditKey.split('|');
     const vdStartYear = parseInt(vdSY);
     const vdEndYear = parseInt(vdEY);
-    const keyBlankPNs = [];
+    const diffCS = isMultipleKeys && document.getElementById('vehicleDataDiffCodeSeries').checked;
+    const keyBlankEntries = [];
     if (isMultipleKeys) {
         const ignPN = document.getElementById('vehicleDataIgnKeyBlank').value.trim();
         const doorPN = document.getElementById('vehicleDataDoorKeyBlank').value.trim();
-        if (ignPN && ignPN !== '__add_new__') keyBlankPNs.push(ignPN);
-        if (doorPN && doorPN !== '__add_new__') keyBlankPNs.push(doorPN);
+        const ignCS = diffCS ? (vd.ignition_codeSeries || []) : validCodeSeries;
+        const doorCS = diffCS ? (vd.door_codeSeries || []) : validCodeSeries;
+        if (ignPN && ignPN !== '__add_new__') keyBlankEntries.push({ pn: ignPN, codeSeries: ignCS });
+        if (doorPN && doorPN !== '__add_new__') keyBlankEntries.push({ pn: doorPN, codeSeries: doorCS });
     } else {
         const singlePN = document.getElementById('vehicleDataKeyBlank').value.trim();
-        if (singlePN && singlePN !== '__add_new__') keyBlankPNs.push(singlePN);
+        if (singlePN && singlePN !== '__add_new__') keyBlankEntries.push({ pn: singlePN, codeSeries: validCodeSeries });
     }
 
-    keyBlankPNs.forEach(pn => {
+    keyBlankEntries.forEach(entry => {
+        const pn = entry.pn;
+        const cs = entry.codeSeries && entry.codeSeries.length > 0 ? entry.codeSeries : [];
         let dbIdx = DB.findIndex(k => String(k.pn) == pn);
         if (dbIdx < 0) {
             // Key doesn't exist in DB - create it so it appears on the key homepage
@@ -17854,7 +17859,7 @@ function saveVehicleDataEdit() {
                 fccid: vd.fccid || vd.ignition_fccid || vd.door_fccid || null,
                 frequency: vd.frequency || vd.ignition_frequency || null,
                 buttons: vd.buttons || vd.ignition_buttons || null,
-                vehicles: [{ make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear }],
+                vehicles: [{ make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear, codeSeries: cs }],
                 isCustom: true,
                 addedDate: new Date().toISOString()
             };
@@ -17866,12 +17871,12 @@ function saveVehicleDataEdit() {
             return;
         }
         const key = DB[dbIdx];
-        const alreadyHasVehicle = (key.vehicles || []).some(v =>
+        const existingVehicleIdx = (key.vehicles || []).findIndex(v =>
             v.make === vdMake && v.model === vdModel &&
             parseInt(v.startYear) === vdStartYear && parseInt(v.endYear) === vdEndYear
         );
-        if (!alreadyHasVehicle) {
-            const newVehicle = { make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear };
+        if (existingVehicleIdx < 0) {
+            const newVehicle = { make: vdMake, model: vdModel, startYear: vdStartYear, endYear: vdEndYear, codeSeries: cs };
             if (!key.vehicles) key.vehicles = [];
             key.vehicles.push(newVehicle);
             if (key.isCustom) {
@@ -17879,6 +17884,19 @@ function saveVehicleDataEdit() {
                 if (customIdx >= 0) {
                     if (!customKeys[customIdx].vehicles) customKeys[customIdx].vehicles = [];
                     customKeys[customIdx].vehicles.push(newVehicle);
+                    saveCustomKeys();
+                }
+            } else {
+                vehicleOverrides[String(key.pn)] = key.vehicles;
+                saveVehicleOverrides();
+            }
+        } else {
+            // Vehicle already exists on this key - update its code series
+            key.vehicles[existingVehicleIdx].codeSeries = cs;
+            if (key.isCustom) {
+                const customIdx = customKeys.findIndex(ck => String(ck.pn) == pn);
+                if (customIdx >= 0 && customKeys[customIdx].vehicles && customKeys[customIdx].vehicles[existingVehicleIdx]) {
+                    customKeys[customIdx].vehicles[existingVehicleIdx].codeSeries = cs;
                     saveCustomKeys();
                 }
             } else {
