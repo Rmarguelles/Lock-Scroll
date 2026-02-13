@@ -8931,20 +8931,29 @@ function renderEditVehiclesList() {
         const codeSeriesEntriesHtml = codeSeriesArr.map((cs, j) => {
             const allSeries = (cs.series && !codeSeriesCache.includes(cs.series)) ? [...codeSeriesCache, cs.series].sort() : codeSeriesCache;
             const csOptions = allSeries.map(s => `<option value="${s}"${s === cs.series ? ' selected' : ''}>${s}</option>`).join('');
+            const parsed = parseCodeSeriesYears(cs.years);
+            const prefix = `editVehCS${i}_${j}`;
+            const onYC = `onchange="updateEditVehCSYearFields(${i}, ${j})"`;
             return `
-            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;" data-vehicle="${i}" data-cs="${j}">
-                <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
-                    onchange="updateEditVehicleCodeSeriesYears(${i}, ${j}, this.value)"
-                    style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
-                <select onchange="onEditVehicleCodeSeriesEntryChange(${i}, ${j}, this.value)"
-                    style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
-                    id="editVehCodeSeriesEntry${i}_${j}">
-                    <option value="">Select Series...</option>
-                    ${csOptions}
-                    <option value="__add_new__">+ Add New...</option>
-                </select>
-                <button onclick="removeEditVehicleCodeSeriesEntry(${i}, ${j})"
-                    style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;" data-vehicle="${i}" data-cs="${j}">
+                <div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;margin-bottom:6px;">
+                    <select id="${prefix}SM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.startMonth || '')}</select>
+                    <input type="number" id="${prefix}SY" value="${parsed.startYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                    <span style="color:var(--dim);font-size:10px;padding:0 2px;">to</span>
+                    <select id="${prefix}EM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.endMonth || '')}</select>
+                    <input type="number" id="${prefix}EY" value="${parsed.endYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+                    <select onchange="onEditVehicleCodeSeriesEntryChange(${i}, ${j}, this.value)"
+                        style="padding:6px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                        id="editVehCodeSeriesEntry${i}_${j}">
+                        <option value="">Select Series...</option>
+                        ${csOptions}
+                        <option value="__add_new__">+ Add New...</option>
+                    </select>
+                    <button onclick="removeEditVehicleCodeSeriesEntry(${i}, ${j})"
+                        style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+                </div>
             </div>
         `}).join('');
 
@@ -9020,6 +9029,18 @@ function updateEditVehicleCodeSeriesYears(vehicleIdx, csIdx, value) {
     ensureCodeSeriesArray(vehicleIdx);
     if (editingVehicles[vehicleIdx].codeSeries[csIdx]) {
         editingVehicles[vehicleIdx].codeSeries[csIdx].years = value;
+    }
+}
+
+function updateEditVehCSYearFields(vehicleIdx, csIdx) {
+    var prefix = 'editVehCS' + vehicleIdx + '_' + csIdx;
+    var sm = parseInt(document.getElementById(prefix + 'SM')?.value) || 0;
+    var sy = document.getElementById(prefix + 'SY')?.value || '';
+    var em = parseInt(document.getElementById(prefix + 'EM')?.value) || 0;
+    var ey = document.getElementById(prefix + 'EY')?.value || '';
+    ensureCodeSeriesArray(vehicleIdx);
+    if (editingVehicles[vehicleIdx].codeSeries[csIdx]) {
+        editingVehicles[vehicleIdx].codeSeries[csIdx].years = buildCodeSeriesYears(sm, sy, em, ey);
     }
 }
 
@@ -9210,22 +9231,32 @@ function renderAddVehicleCodeSeriesList() {
         return;
     }
 
-    container.innerHTML = addingVehicle.codeSeries.map((cs, j) => `
-        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
-                onchange="updateAddVehicleCodeSeriesYears(${j}, this.value)"
-                style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
-            <select onchange="onAddVehicleCodeSeriesEntryChange(${j}, this.value)"
-                style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
-                id="addVehCodeSeriesEntry${j}">
-                <option value="">Select Series...</option>
-                ${codeSeriesOptions}
-                <option value="__add_new__">+ Add New...</option>
-            </select>
-            <button onclick="removeAddVehicleCodeSeriesEntry(${j})"
-                style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+    container.innerHTML = addingVehicle.codeSeries.map((cs, j) => {
+        const parsed = parseCodeSeriesYears(cs.years);
+        const prefix = `addVehCS${j}`;
+        const onYC = `onchange="updateAddVehCSYearFields(${j})"`;
+        return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">
+            <div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;margin-bottom:6px;">
+                <select id="${prefix}SM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.startMonth || '')}</select>
+                <input type="number" id="${prefix}SY" value="${parsed.startYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                <span style="color:var(--dim);font-size:10px;padding:0 2px;">to</span>
+                <select id="${prefix}EM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.endMonth || '')}</select>
+                <input type="number" id="${prefix}EY" value="${parsed.endYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+                <select onchange="onAddVehicleCodeSeriesEntryChange(${j}, this.value)"
+                    style="padding:6px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                    id="addVehCodeSeriesEntry${j}">
+                    <option value="">Select Series...</option>
+                    ${codeSeriesOptions}
+                    <option value="__add_new__">+ Add New...</option>
+                </select>
+                <button onclick="removeAddVehicleCodeSeriesEntry(${j})"
+                    style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+            </div>
         </div>
-    `).join('');
+    `}).join('');
 
     // Set selected values
     addingVehicle.codeSeries.forEach((cs, j) => {
@@ -9257,6 +9288,17 @@ function removeAddVehicleCodeSeriesEntry(idx) {
 function updateAddVehicleCodeSeriesYears(idx, value) {
     if (addingVehicle.codeSeries[idx]) {
         addingVehicle.codeSeries[idx].years = value;
+    }
+}
+
+function updateAddVehCSYearFields(idx) {
+    var prefix = 'addVehCS' + idx;
+    var sm = parseInt(document.getElementById(prefix + 'SM')?.value) || 0;
+    var sy = document.getElementById(prefix + 'SY')?.value || '';
+    var em = parseInt(document.getElementById(prefix + 'EM')?.value) || 0;
+    var ey = document.getElementById(prefix + 'EY')?.value || '';
+    if (addingVehicle.codeSeries[idx]) {
+        addingVehicle.codeSeries[idx].years = buildCodeSeriesYears(sm, sy, em, ey);
     }
 }
 
@@ -15090,6 +15132,50 @@ function monthSelectOptions(selectedValue) {
         }).join('');
 }
 
+function parseCodeSeriesYears(yearsStr) {
+    if (!yearsStr) return { startMonth: 0, startYear: '', endMonth: 0, endYear: '' };
+    const parts = yearsStr.split('-').map(s => s.trim());
+    function parsePart(p) {
+        if (!p) return { month: 0, year: '' };
+        var tokens = p.split(/\s+/);
+        if (tokens.length === 2) {
+            var mi = MONTH_ABBR.indexOf(tokens[0]);
+            return { month: mi > 0 ? mi : 0, year: tokens[1] };
+        }
+        return { month: 0, year: tokens[0] };
+    }
+    if (parts.length >= 2) {
+        var start = parsePart(parts[0]);
+        var end = parsePart(parts.slice(1).join('-'));
+        return { startMonth: start.month, startYear: start.year, endMonth: end.month, endYear: end.year };
+    }
+    var single = parsePart(parts[0]);
+    return { startMonth: single.month, startYear: single.year, endMonth: 0, endYear: single.year };
+}
+
+function buildCodeSeriesYears(startMonth, startYear, endMonth, endYear) {
+    var sm = startMonth ? MONTH_ABBR[startMonth] + ' ' : '';
+    var em = endMonth ? MONTH_ABBR[endMonth] + ' ' : '';
+    var sy = startYear || '';
+    var ey = endYear || '';
+    if (!sy && !ey) return '';
+    if (sy === ey && !startMonth && !endMonth) return String(sy);
+    if (!ey) return sm + sy;
+    return sm + sy + '-' + em + ey;
+}
+
+function codeSeriesYearFieldsHtml(prefix, parsed, compactMonthStyle) {
+    var mStyle = compactMonthStyle || 'padding:4px 2px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;';
+    var yStyle = 'width:100%;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;';
+    return '<div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;">' +
+        '<select id="' + prefix + 'SM" style="' + mStyle + '">' + monthSelectOptions(parsed.startMonth || '') + '</select>' +
+        '<input type="number" id="' + prefix + 'SY" value="' + (parsed.startYear || '') + '" placeholder="Year" style="' + yStyle + '">' +
+        '<span style="color:var(--dim);font-size:10px;">to</span>' +
+        '<select id="' + prefix + 'EM" style="' + mStyle + '">' + monthSelectOptions(parsed.endMonth || '') + '</select>' +
+        '<input type="number" id="' + prefix + 'EY" value="' + (parsed.endYear || '') + '" placeholder="Year" style="' + yStyle + '">' +
+    '</div>';
+}
+
 // Levenshtein distance for fuzzy matching
 function levenshteinDistance(str1, str2) {
     const m = str1.length;
@@ -17590,22 +17676,32 @@ function renderVehicleDataCodeSeriesList() {
         return;
     }
 
-    container.innerHTML = vehicleDataCodeSeriesEntries.map((cs, j) => `
-        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1997-1999)"
-                onchange="updateVehicleDataCodeSeriesYears(${j}, this.value)"
-                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
-            <select onchange="onVehicleDataCodeSeriesEntryChange(${j}, this.value)"
-                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
-                id="vehicleDataCodeSeriesEntry${j}">
-                <option value="">Select Series...</option>
-                ${codeSeriesOptions}
-                <option value="__add_new__">+ Add New...</option>
-            </select>
-            <button onclick="removeVehicleDataCodeSeriesEntry(${j})"
-                style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
+    container.innerHTML = vehicleDataCodeSeriesEntries.map((cs, j) => {
+        const parsed = parseCodeSeriesYears(cs.years);
+        const prefix = `vdCS${j}`;
+        const onYC = `onchange="updateVDCSYearFields(${j})"`;
+        return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">
+            <div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;margin-bottom:6px;">
+                <select id="${prefix}SM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.startMonth || '')}</select>
+                <input type="number" id="${prefix}SY" value="${parsed.startYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                <span style="color:var(--dim);font-size:10px;padding:0 2px;">to</span>
+                <select id="${prefix}EM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.endMonth || '')}</select>
+                <input type="number" id="${prefix}EY" value="${parsed.endYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+                <select onchange="onVehicleDataCodeSeriesEntryChange(${j}, this.value)"
+                    style="padding:8px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                    id="vehicleDataCodeSeriesEntry${j}">
+                    <option value="">Select Series...</option>
+                    ${codeSeriesOptions}
+                    <option value="__add_new__">+ Add New...</option>
+                </select>
+                <button onclick="removeVehicleDataCodeSeriesEntry(${j})"
+                    style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
+            </div>
         </div>
-    `).join('');
+    `}).join('');
 
     // Set selected values
     vehicleDataCodeSeriesEntries.forEach((cs, j) => {
@@ -17636,6 +17732,17 @@ function removeVehicleDataCodeSeriesEntry(idx) {
 function updateVehicleDataCodeSeriesYears(idx, value) {
     if (vehicleDataCodeSeriesEntries[idx]) {
         vehicleDataCodeSeriesEntries[idx].years = value;
+    }
+}
+
+function updateVDCSYearFields(idx) {
+    var prefix = 'vdCS' + idx;
+    var sm = parseInt(document.getElementById(prefix + 'SM')?.value) || 0;
+    var sy = document.getElementById(prefix + 'SY')?.value || '';
+    var em = parseInt(document.getElementById(prefix + 'EM')?.value) || 0;
+    var ey = document.getElementById(prefix + 'EY')?.value || '';
+    if (vehicleDataCodeSeriesEntries[idx]) {
+        vehicleDataCodeSeriesEntries[idx].years = buildCodeSeriesYears(sm, sy, em, ey);
     }
 }
 
@@ -18560,19 +18667,28 @@ function renderCustomKeyCodeSeriesList(vehicleNum) {
     }
 
     container.innerHTML = entries.map(function(cs, j) {
-        return '<div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">' +
-            '<input type="text" value="' + (cs.years || '') + '" placeholder="Years (e.g., 2020-2025)"' +
-                ' onchange="updateCustomKeyCodeSeriesYears(' + vehicleNum + ', ' + j + ', this.value)"' +
-                ' style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">' +
-            '<select onchange="onCustomKeyCodeSeriesEntryChange(' + vehicleNum + ', ' + j + ', this.value)"' +
-                ' style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"' +
-                ' id="customVehCodeSeriesEntry' + vehicleNum + '_' + j + '">' +
-                '<option value="">Select Series...</option>' +
-                codeSeriesOptions +
-                '<option value="__add_new__">+ Add New...</option>' +
-            '</select>' +
-            '<button onclick="removeCustomKeyCodeSeriesEntry(' + vehicleNum + ', ' + j + ')"' +
-                ' style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>' +
+        var parsed = parseCodeSeriesYears(cs.years);
+        var prefix = 'customVehCS' + vehicleNum + '_' + j;
+        var onYearChange = 'onchange="updateCustomKeyCSYearFields(' + vehicleNum + ', ' + j + ')"';
+        return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+            '<div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;margin-bottom:6px;">' +
+                '<select id="' + prefix + 'SM" ' + onYearChange + ' style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">' + monthSelectOptions(parsed.startMonth || '') + '</select>' +
+                '<input type="number" id="' + prefix + 'SY" value="' + (parsed.startYear || '') + '" placeholder="Year" ' + onYearChange + ' style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">' +
+                '<span style="color:var(--dim);font-size:10px;padding:0 2px;">to</span>' +
+                '<select id="' + prefix + 'EM" ' + onYearChange + ' style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">' + monthSelectOptions(parsed.endMonth || '') + '</select>' +
+                '<input type="number" id="' + prefix + 'EY" value="' + (parsed.endYear || '') + '" placeholder="Year" ' + onYearChange + ' style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">' +
+                '<select onchange="onCustomKeyCodeSeriesEntryChange(' + vehicleNum + ', ' + j + ', this.value)"' +
+                    ' style="padding:6px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"' +
+                    ' id="customVehCodeSeriesEntry' + vehicleNum + '_' + j + '">' +
+                    '<option value="">Select Series...</option>' +
+                    codeSeriesOptions +
+                    '<option value="__add_new__">+ Add New...</option>' +
+                '</select>' +
+                '<button onclick="removeCustomKeyCodeSeriesEntry(' + vehicleNum + ', ' + j + ')"' +
+                    ' style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>' +
+            '</div>' +
         '</div>';
     }).join('');
 
@@ -18591,6 +18707,17 @@ function renderCustomKeyCodeSeriesList(vehicleNum) {
     });
 }
 
+function updateCustomKeyCSYearFields(vehicleNum, csIdx) {
+    var prefix = 'customVehCS' + vehicleNum + '_' + csIdx;
+    var sm = parseInt(document.getElementById(prefix + 'SM')?.value) || 0;
+    var sy = document.getElementById(prefix + 'SY')?.value || '';
+    var em = parseInt(document.getElementById(prefix + 'EM')?.value) || 0;
+    var ey = document.getElementById(prefix + 'EY')?.value || '';
+    if (customKeyVehicleCodeSeries[vehicleNum] && customKeyVehicleCodeSeries[vehicleNum][csIdx]) {
+        customKeyVehicleCodeSeries[vehicleNum][csIdx].years = buildCodeSeriesYears(sm, sy, em, ey);
+    }
+}
+
 function addCustomKeyCodeSeriesEntry(vehicleNum) {
     if (!customKeyVehicleCodeSeries[vehicleNum]) {
         customKeyVehicleCodeSeries[vehicleNum] = [];
@@ -18606,12 +18733,6 @@ function removeCustomKeyCodeSeriesEntry(vehicleNum, csIdx) {
         customKeyVehicleCodeSeries[vehicleNum].splice(csIdx, 1);
     }
     renderCustomKeyCodeSeriesList(vehicleNum);
-}
-
-function updateCustomKeyCodeSeriesYears(vehicleNum, csIdx, value) {
-    if (customKeyVehicleCodeSeries[vehicleNum] && customKeyVehicleCodeSeries[vehicleNum][csIdx]) {
-        customKeyVehicleCodeSeries[vehicleNum][csIdx].years = value;
-    }
 }
 
 function onCustomKeyCodeSeriesEntryChange(vehicleNum, csIdx, value) {
@@ -19506,22 +19627,32 @@ function renderPerKeyCodeSeriesList(role) {
         return;
     }
 
-    container.innerHTML = entries.map((cs, j) => `
-        <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <input type="text" value="${cs.years || ''}" placeholder="Years (e.g., 1991-1996)"
-                onchange="updatePerKeyCodeSeriesYears('${role}', ${j}, this.value)"
-                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
-            <select onchange="onPerKeyCodeSeriesEntryChange('${role}', ${j}, this.value)"
-                style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
-                id="perKeyCS_${role}_${j}">
-                <option value="">Select Series...</option>
-                ${codeSeriesOptions}
-                <option value="__add_new__">+ Add New...</option>
-            </select>
-            <button onclick="removePerKeyCodeSeriesEntry('${role}', ${j})"
-                style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">&#10005;</button>
+    container.innerHTML = entries.map((cs, j) => {
+        const parsed = parseCodeSeriesYears(cs.years);
+        const prefix = `pkCS_${role}_${j}`;
+        const onYC = `onchange="updatePerKeyCSYearFields('${role}', ${j})"`;
+        return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">
+            <div style="display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:3px;align-items:center;margin-bottom:6px;">
+                <select id="${prefix}SM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.startMonth || '')}</select>
+                <input type="number" id="${prefix}SY" value="${parsed.startYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                <span style="color:var(--dim);font-size:10px;padding:0 2px;">to</span>
+                <select id="${prefix}EM" ${onYC} style="padding:4px 2px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;">${monthSelectOptions(parsed.endMonth || '')}</select>
+                <input type="number" id="${prefix}EY" value="${parsed.endYear || ''}" placeholder="Year" ${onYC} style="width:100%;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;box-sizing:border-box;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+                <select onchange="onPerKeyCodeSeriesEntryChange('${role}', ${j}, this.value)"
+                    style="padding:8px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"
+                    id="perKeyCS_${role}_${j}">
+                    <option value="">Select Series...</option>
+                    ${codeSeriesOptions}
+                    <option value="__add_new__">+ Add New...</option>
+                </select>
+                <button onclick="removePerKeyCodeSeriesEntry('${role}', ${j})"
+                    style="padding:6px 10px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">&#10005;</button>
+            </div>
         </div>
-    `).join('');
+    `}).join('');
 
     // Set selected values
     entries.forEach((cs, j) => {
@@ -19552,6 +19683,17 @@ function removePerKeyCodeSeriesEntry(role, idx) {
 function updatePerKeyCodeSeriesYears(role, idx, value) {
     if (vehicleDataPerKeyCodeSeriesEntries[role][idx]) {
         vehicleDataPerKeyCodeSeriesEntries[role][idx].years = value;
+    }
+}
+
+function updatePerKeyCSYearFields(role, idx) {
+    var prefix = 'pkCS_' + role + '_' + idx;
+    var sm = parseInt(document.getElementById(prefix + 'SM')?.value) || 0;
+    var sy = document.getElementById(prefix + 'SY')?.value || '';
+    var em = parseInt(document.getElementById(prefix + 'EM')?.value) || 0;
+    var ey = document.getElementById(prefix + 'EY')?.value || '';
+    if (vehicleDataPerKeyCodeSeriesEntries[role][idx]) {
+        vehicleDataPerKeyCodeSeriesEntries[role][idx].years = buildCodeSeriesYears(sm, sy, em, ey);
     }
 }
 
