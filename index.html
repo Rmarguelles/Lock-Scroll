@@ -18332,6 +18332,7 @@ function openAddCustomKey() {
         document.getElementById('newKeyFidDisplay').style.display = 'none';
         document.getElementById('newKeyFidDisplay').textContent = '';
         customKeyVehicleCount = 0;
+        customKeyVehicleCodeSeries = {};
 
         // Populate keyway dropdown
         populateCustomKeyDropdown('customKeyKeyway', 'keyway', 'Select keyway...');
@@ -18487,6 +18488,9 @@ function closeAddCustomKey() {
     document.getElementById('addCustomKeyPanel').classList.remove('on');
 }
 
+// Track code series data for each vehicle row in the Add Custom Key form
+let customKeyVehicleCodeSeries = {};
+
 function addCustomKeyVehicle() {
     customKeyVehicleCount++;
     const container = document.getElementById('customKeyVehicles');
@@ -18496,6 +18500,9 @@ function addCustomKeyVehicle() {
         buildCodeSeriesCache();
     }
 
+    // Initialize code series array for this vehicle row
+    customKeyVehicleCodeSeries[customKeyVehicleCount] = [];
+
     // Get all makes from DB for dropdown
     const makes = new Set();
     DB.forEach(key => {
@@ -18504,9 +18511,6 @@ function addCustomKeyVehicle() {
         });
     });
     const makesOptions = Array.from(makes).sort().map(m => '<option value="' + m + '">' + m + '</option>').join('');
-
-    // Build code series options
-    const codeSeriesOptions = codeSeriesCache.map(cs => '<option value="' + cs + '">' + cs + '</option>').join('');
 
     const currentYear = new Date().getFullYear();
 
@@ -18529,48 +18533,111 @@ function addCustomKeyVehicle() {
                 '<input type="number" id="customVehicleStart' + customKeyVehicleCount + '" placeholder="Start Year" value="' + currentYear + '">' +
                 '<input type="number" id="customVehicleEnd' + customKeyVehicleCount + '" placeholder="End Year" value="' + currentYear + '">' +
             '</div>' +
-            '<div style="margin-top:8px;">' +
-                '<select id="customVehicleCodeSeries' + customKeyVehicleCount + '" onchange="handleCustomCodeSeriesChange(' + customKeyVehicleCount + ')" style="width:100%;">' +
-                    '<option value="">Code Series (optional)</option>' +
-                    codeSeriesOptions +
-                    '<option value="__add_new__">+ Add New Code Series...</option>' +
-                '</select>' +
-                '<input type="text" id="customVehicleCodeSeriesOther' + customKeyVehicleCount + '" placeholder="Enter code series (e.g., 1001-4096)" style="display:none;margin-top:4px;">' +
+            '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                    '<span style="font-size:11px;color:var(--dim);">Code Series (optional)</span>' +
+                    '<button onclick="addCustomKeyCodeSeriesEntry(' + customKeyVehicleCount + ')" style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>' +
+                '</div>' +
+                '<div id="customVehicleCodeSeriesList' + customKeyVehicleCount + '"></div>' +
             '</div>' +
         '</div>' +
     '</div>';
 
     container.insertAdjacentHTML('beforeend', html);
+    renderCustomKeyCodeSeriesList(customKeyVehicleCount);
 }
 
-function handleCustomCodeSeriesChange(num) {
-    const select = document.getElementById('customVehicleCodeSeries' + num);
-    const otherInput = document.getElementById('customVehicleCodeSeriesOther' + num);
+function renderCustomKeyCodeSeriesList(vehicleNum) {
+    const container = document.getElementById('customVehicleCodeSeriesList' + vehicleNum);
+    if (!container) return;
 
-    if (select.value === '__add_new__') {
-        const newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
+    const entries = customKeyVehicleCodeSeries[vehicleNum] || [];
+    const codeSeriesOptions = codeSeriesCache.map(cs => '<option value="' + cs + '">' + cs + '</option>').join('');
+
+    if (entries.length === 0) {
+        container.innerHTML = '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px;">No code series added</div>';
+        return;
+    }
+
+    container.innerHTML = entries.map(function(cs, j) {
+        return '<div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;align-items:center;margin-bottom:6px;">' +
+            '<input type="text" value="' + (cs.years || '') + '" placeholder="Years (e.g., 2020-2025)"' +
+                ' onchange="updateCustomKeyCodeSeriesYears(' + vehicleNum + ', ' + j + ', this.value)"' +
+                ' style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">' +
+            '<select onchange="onCustomKeyCodeSeriesEntryChange(' + vehicleNum + ', ' + j + ', this.value)"' +
+                ' style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;"' +
+                ' id="customVehCodeSeriesEntry' + vehicleNum + '_' + j + '">' +
+                '<option value="">Select Series...</option>' +
+                codeSeriesOptions +
+                '<option value="__add_new__">+ Add New...</option>' +
+            '</select>' +
+            '<button onclick="removeCustomKeyCodeSeriesEntry(' + vehicleNum + ', ' + j + ')"' +
+                ' style="padding:4px 8px;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>' +
+        '</div>';
+    }).join('');
+
+    // Set selected values after rendering
+    entries.forEach(function(cs, j) {
+        var csSelect = document.getElementById('customVehCodeSeriesEntry' + vehicleNum + '_' + j);
+        if (csSelect && cs.series) {
+            if (!codeSeriesCache.includes(cs.series)) {
+                var opt = document.createElement('option');
+                opt.value = cs.series;
+                opt.text = cs.series;
+                csSelect.insertBefore(opt, csSelect.lastElementChild);
+            }
+            csSelect.value = cs.series;
+        }
+    });
+}
+
+function addCustomKeyCodeSeriesEntry(vehicleNum) {
+    if (!customKeyVehicleCodeSeries[vehicleNum]) {
+        customKeyVehicleCodeSeries[vehicleNum] = [];
+    }
+    var startYear = document.getElementById('customVehicleStart' + vehicleNum)?.value || new Date().getFullYear();
+    var endYear = document.getElementById('customVehicleEnd' + vehicleNum)?.value || new Date().getFullYear();
+    customKeyVehicleCodeSeries[vehicleNum].push({ years: startYear + '-' + endYear, series: '' });
+    renderCustomKeyCodeSeriesList(vehicleNum);
+}
+
+function removeCustomKeyCodeSeriesEntry(vehicleNum, csIdx) {
+    if (customKeyVehicleCodeSeries[vehicleNum]) {
+        customKeyVehicleCodeSeries[vehicleNum].splice(csIdx, 1);
+    }
+    renderCustomKeyCodeSeriesList(vehicleNum);
+}
+
+function updateCustomKeyCodeSeriesYears(vehicleNum, csIdx, value) {
+    if (customKeyVehicleCodeSeries[vehicleNum] && customKeyVehicleCodeSeries[vehicleNum][csIdx]) {
+        customKeyVehicleCodeSeries[vehicleNum][csIdx].years = value;
+    }
+}
+
+function onCustomKeyCodeSeriesEntryChange(vehicleNum, csIdx, value) {
+    if (!customKeyVehicleCodeSeries[vehicleNum]) return;
+    if (value === '__add_new__') {
+        var newCodeSeries = prompt('Enter new code series (e.g., 1001-4096):');
         if (newCodeSeries && newCodeSeries.trim()) {
-            const cs = newCodeSeries.trim();
-            // Add to cache
+            var cs = newCodeSeries.trim();
             if (!codeSeriesCache.includes(cs)) {
                 codeSeriesCache.push(cs);
                 codeSeriesCache.sort();
             }
-            // Add option and select it
-            const opt = document.createElement('option');
-            opt.value = cs;
-            opt.textContent = cs;
-            select.insertBefore(opt, select.lastElementChild);
-            select.value = cs;
+            customKeyVehicleCodeSeries[vehicleNum][csIdx].series = cs;
+            renderCustomKeyCodeSeriesList(vehicleNum);
         } else {
-            select.value = '';
+            renderCustomKeyCodeSeriesList(vehicleNum);
         }
+    } else {
+        customKeyVehicleCodeSeries[vehicleNum][csIdx].series = value || '';
     }
 }
 
 function removeCustomKeyVehicle(num) {
     const el = document.getElementById('customVehicle' + num);
     if (el) el.remove();
+    delete customKeyVehicleCodeSeries[num];
 }
 
 function updateCustomVehicleModels(num) {
@@ -18679,9 +18746,10 @@ function saveCustomKey() {
         const model = (modelSelect === '__other__' ? modelOther : modelSelect)?.trim();
         const startYear = parseInt(document.getElementById('customVehicleStart' + num)?.value) || new Date().getFullYear();
         const endYear = parseInt(document.getElementById('customVehicleEnd' + num)?.value) || startYear;
-        const codeSeriesSelect = document.getElementById('customVehicleCodeSeries' + num)?.value;
-        const codeSeriesOther = document.getElementById('customVehicleCodeSeriesOther' + num)?.value?.trim();
-        const codeSeries = (codeSeriesSelect === '__add_new__' ? codeSeriesOther : codeSeriesSelect) || null;
+
+        // Gather multiple code series entries for this vehicle
+        const csEntries = (customKeyVehicleCodeSeries[num] || []).filter(cs => cs.series && cs.series.trim());
+        const codeSeries = csEntries.length > 0 ? csEntries : [];
 
         if (make && make !== '__other__') {
             vehicles.push({
@@ -18689,7 +18757,7 @@ function saveCustomKey() {
                 model: model || 'Unknown',
                 startYear: startYear,
                 endYear: endYear,
-                codeSeries: codeSeries && codeSeries !== '__add_new__' ? codeSeries : null
+                codeSeries: codeSeries.length > 0 ? codeSeries : null
             });
         }
     });
@@ -18755,18 +18823,19 @@ function saveCustomKey() {
         if (!lishiVehicleData[groupKey]) {
             lishiVehicleData[groupKey] = { direction: null, confirmCount: 0, lastConfirmed: null, lastConfirmedBy: null, notes: '' };
         }
-        // If code series was provided, add it
-        if (v.codeSeries) {
-            const existingCodeSeries = lishiVehicleData[groupKey].codeSeries;
-            if (!existingCodeSeries) {
-                lishiVehicleData[groupKey].codeSeries = [{ years: `${v.startYear}-${v.endYear}`, series: v.codeSeries }];
-            } else if (Array.isArray(existingCodeSeries)) {
-                // Check if this series already exists
-                const exists = existingCodeSeries.some(cs => cs.series === v.codeSeries);
-                if (!exists) {
-                    existingCodeSeries.push({ years: `${v.startYear}-${v.endYear}`, series: v.codeSeries });
-                }
+        // If code series was provided, add all entries
+        if (v.codeSeries && Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
+            if (!lishiVehicleData[groupKey].codeSeries) {
+                lishiVehicleData[groupKey].codeSeries = [];
             }
+            v.codeSeries.forEach(csEntry => {
+                if (csEntry.series) {
+                    const exists = lishiVehicleData[groupKey].codeSeries.some(cs => cs.series === csEntry.series && cs.years === csEntry.years);
+                    if (!exists) {
+                        lishiVehicleData[groupKey].codeSeries.push({ years: csEntry.years || `${v.startYear}-${v.endYear}`, series: csEntry.series });
+                    }
+                }
+            });
         }
     });
     saveLishiVehicle();
