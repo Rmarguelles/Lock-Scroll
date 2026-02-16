@@ -5988,7 +5988,14 @@
             </div>
         </div>
 
-        <!-- Key Information Section -->
+        <!-- Multiple Keys Checkbox -->
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
+            <input type="checkbox" id="yrfMultipleKeys" onchange="toggleYrfMultipleKeys()" style="width:20px;height:20px;cursor:pointer;">
+            <label for="yrfMultipleKeys" style="cursor:pointer;font-size:13px;margin:0;">Different keys for ignition vs. doors/trunk/glovebox</label>
+        </div>
+
+        <!-- Key Information Section (Single Key - default) -->
+        <div id="yrfSingleKeyFields">
         <div class="year-range-section">
             <div class="year-range-section-title">Key Information</div>
 
@@ -6147,6 +6154,67 @@
                             <input type="text" placeholder="Enter Keystone PN..." id="yrfKeystonePartNumNewInput">
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Dual Key Fields (when multiple keys checkbox is checked) -->
+        <div id="yrfDualKeyFields" style="display:none;">
+            <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
+                <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="yrfIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                </div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="yrfIgnChip" placeholder="e.g., PK3, Hitag Pro">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="yrfIgnKeyway" placeholder="e.g., B99">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="yrfIgnFccid" placeholder="e.g., H92, KOBLEAR1XT" list="fccidDatalist">
+                </div>
+                <div class="modal-input-group" style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label>Buttons</label>
+                        <input type="text" class="modal-input" id="yrfIgnButtons" placeholder="e.g., 4 Button">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Frequency</label>
+                        <input type="text" class="modal-input" id="yrfIgnFrequency" placeholder="e.g., 315 MHz">
+                    </div>
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="yrfIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                </div>
+            </div>
+            <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
+                <div class="modal-input-group">
+                    <label>Key Blank (Part #)</label>
+                    <input type="text" class="modal-input" id="yrfDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                </div>
+                <div class="modal-input-group">
+                    <label>Chip Type</label>
+                    <input type="text" class="modal-input" id="yrfDoorChip" placeholder="e.g., No Chip">
+                </div>
+                <div class="modal-input-group">
+                    <label>Keyway</label>
+                    <input type="text" class="modal-input" id="yrfDoorKeyway" placeholder="e.g., B62">
+                </div>
+                <div class="modal-input-group">
+                    <label>FCC ID</label>
+                    <input type="text" class="modal-input" id="yrfDoorFccid" placeholder="e.g., No Remote" value="" list="fccidDatalist">
+                </div>
+                <div class="modal-input-group">
+                    <label>Code Series</label>
+                    <input type="text" class="modal-input" id="yrfDoorCodeSeries" placeholder="e.g., A01-D70">
                 </div>
             </div>
         </div>
@@ -14543,6 +14611,17 @@ function openAddYearRangeModal(make, model, keyType) {
         hideWarning(id);
     });
 
+    // Reset multiple keys checkbox and fields
+    document.getElementById('yrfMultipleKeys').checked = false;
+    document.getElementById('yrfSingleKeyFields').style.display = 'block';
+    document.getElementById('yrfDualKeyFields').style.display = 'none';
+    // Clear dual-key inputs
+    ['yrfIgnKeyBlank', 'yrfIgnChip', 'yrfIgnKeyway', 'yrfIgnFccid', 'yrfIgnButtons', 'yrfIgnFrequency', 'yrfIgnCodeSeries',
+     'yrfDoorKeyBlank', 'yrfDoorChip', 'yrfDoorKeyway', 'yrfDoorFccid', 'yrfDoorCodeSeries'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
     // Reset save button
     document.getElementById('saveYearRangeBtn').disabled = false;
 
@@ -15023,81 +15102,166 @@ function saveNewYearRange() {
     // Get validated year overrides
     const yearOverrides = getValidatedYearOverrides();
 
-    // Collect all field values
-    const keyBlank = getYrfFieldValue('yrfKeyBlank', 'yrfKeyBlankNewInput');
-    const keyway = getYrfFieldValue('yrfKeyway', 'yrfKeywayNewInput');
-    const chipType = getYrfFieldValue('yrfChipType', 'yrfChipTypeNewInput');
-    const keyType = getYrfFieldValue('yrfKeyType', 'yrfKeyTypeNewInput') || (baseKeyType === 'Proximity' ? 'Proximity' : 'Transponder');
-    const buttonCount = getYrfFieldValue('yrfButtonCount', 'yrfButtonCountNewInput');
-    const fccId = getYrfFieldValue('yrfFccId', 'yrfFccIdNewInput');
-    const frequency = getYrfFieldValue('yrfFrequency', 'yrfFrequencyNewInput');
-    const ilcoPartNum = getYrfFieldValue('yrfIlcoPartNum', 'yrfIlcoPartNumNewInput');
-    const keystonePartNum = getYrfFieldValue('yrfKeystonePartNum', 'yrfKeystonePartNumNewInput');
-    const buttonFunctions = [...yrfSelectedButtonFunctions];
+    const isMultipleKeys = document.getElementById('yrfMultipleKeys').checked;
 
-    // Collect override notes for any verified warnings
+    // Collect override notes for any verified warnings (only for single-key mode)
     const overrideNotes = [];
-    const warnWarnings = ['overlapYearWarning', 'keywayMismatchWarning', 'chipMismatchWarning', 'noChipWarning', 'fccMismatchWarning'];
+    if (!isMultipleKeys) {
+        const warnWarnings = ['overlapYearWarning', 'keywayMismatchWarning', 'chipMismatchWarning', 'noChipWarning', 'fccMismatchWarning'];
 
-    const warningLabels = {
-        'overlapYearWarning': 'Overlap verified',
-        'keywayMismatchWarning': 'Keyway mismatch verified',
-        'chipMismatchWarning': 'Chip mismatch verified',
-        'noChipWarning': 'No chip verified',
-        'fccMismatchWarning': 'FCC mismatch verified'
-    };
+        const warningLabels = {
+            'overlapYearWarning': 'Overlap verified',
+            'keywayMismatchWarning': 'Keyway mismatch verified',
+            'chipMismatchWarning': 'Chip mismatch verified',
+            'noChipWarning': 'No chip verified',
+            'fccMismatchWarning': 'FCC mismatch verified'
+        };
 
-    for (const warningId of warnWarnings) {
-        const warning = document.getElementById(warningId);
-        if (warning && warning.classList.contains('visible')) {
-            const checkbox = warning.querySelector('input[type="checkbox"]');
+        for (const warningId of warnWarnings) {
+            const warning = document.getElementById(warningId);
+            if (warning && warning.classList.contains('visible')) {
+                const checkbox = warning.querySelector('input[type="checkbox"]');
+                if (checkbox && checkbox.checked) {
+                    const textEl = warning.querySelector('.conflict-warning-text');
+                    overrideNotes.push(`${warningLabels[warningId]}: ${textEl ? textEl.textContent : ''}`);
+                }
+            }
+        }
+    } else {
+        // Still check overlap warning in dual-key mode
+        const overlapWarning = document.getElementById('overlapYearWarning');
+        if (overlapWarning && overlapWarning.classList.contains('visible')) {
+            const checkbox = overlapWarning.querySelector('input[type="checkbox"]');
             if (checkbox && checkbox.checked) {
-                const textEl = warning.querySelector('.conflict-warning-text');
-                overrideNotes.push(`${warningLabels[warningId]}: ${textEl ? textEl.textContent : ''}`);
+                const textEl = overlapWarning.querySelector('.conflict-warning-text');
+                overrideNotes.push(`Overlap verified: ${textEl ? textEl.textContent : ''}`);
             }
         }
     }
 
-    // Determine data status based on fields filled
-    const hasKeyInfo = keyBlank || keyway || chipType || fccId;
-    const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+    let newVehicle;
 
-    // Create new custom vehicle
-    const newVehicle = {
-        id: Date.now().toString(),
-        make: make,
-        model: model,
-        startYear: startYear,
-        endYear: endYear,
-        dataStatus: dataStatus,
-        keyType: keyType,
-        keyBlank: keyBlank,
-        chip: chipType,
-        buttons: buttonCount,
-        buttonFunctions: buttonFunctions,
-        fccid: fccId,
-        frequency: frequency,
-        keyway: keyway,
-        ilcoPartNum: ilcoPartNum,
-        keystonePartNum: keystonePartNum,
-        notes: '',
-        hasOverrides: overrideNotes.length > 0,
-        overrideNotes: overrideNotes,
-        yearOverrides: yearOverrides,
-        createdAt: new Date().toISOString()
-    };
+    if (isMultipleKeys) {
+        // Collect dual-key field values
+        const ignKeyBlank = document.getElementById('yrfIgnKeyBlank').value.trim();
+        const ignChip = document.getElementById('yrfIgnChip').value.trim();
+        const ignKeyway = document.getElementById('yrfIgnKeyway').value.trim();
+        const ignFccid = document.getElementById('yrfIgnFccid').value.trim();
+        const ignButtons = document.getElementById('yrfIgnButtons').value.trim();
+        const ignFrequency = document.getElementById('yrfIgnFrequency').value.trim();
+        const ignCodeSeries = document.getElementById('yrfIgnCodeSeries').value.trim();
+        const doorKeyBlank = document.getElementById('yrfDoorKeyBlank').value.trim();
+        const doorChip = document.getElementById('yrfDoorChip').value.trim();
+        const doorKeyway = document.getElementById('yrfDoorKeyway').value.trim();
+        const doorFccid = document.getElementById('yrfDoorFccid').value.trim();
+        const doorCodeSeries = document.getElementById('yrfDoorCodeSeries').value.trim();
+
+        const hasKeyInfo = ignKeyBlank || ignKeyway || ignChip || doorKeyBlank || doorKeyway || doorChip;
+        const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+
+        newVehicle = {
+            id: Date.now().toString(),
+            make: make,
+            model: model,
+            startYear: startYear,
+            endYear: endYear,
+            dataStatus: dataStatus,
+            multipleKeys: true,
+            // Ignition key
+            ignition_keyBlank: ignKeyBlank,
+            ignition_chip: ignChip,
+            ignition_keyway: ignKeyway,
+            ignition_fccid: ignFccid,
+            ignition_buttons: ignButtons,
+            ignition_frequency: ignFrequency,
+            ignition_codeSeries: ignCodeSeries,
+            // Door key
+            door_keyBlank: doorKeyBlank,
+            door_chip: doorChip,
+            door_keyway: doorKeyway,
+            door_fccid: doorFccid,
+            door_codeSeries: doorCodeSeries,
+            notes: '',
+            hasOverrides: overrideNotes.length > 0,
+            overrideNotes: overrideNotes,
+            yearOverrides: yearOverrides,
+            createdAt: new Date().toISOString()
+        };
+    } else {
+        // Collect all single-key field values
+        const keyBlank = getYrfFieldValue('yrfKeyBlank', 'yrfKeyBlankNewInput');
+        const keyway = getYrfFieldValue('yrfKeyway', 'yrfKeywayNewInput');
+        const chipType = getYrfFieldValue('yrfChipType', 'yrfChipTypeNewInput');
+        const keyType = getYrfFieldValue('yrfKeyType', 'yrfKeyTypeNewInput') || (baseKeyType === 'Proximity' ? 'Proximity' : 'Transponder');
+        const buttonCount = getYrfFieldValue('yrfButtonCount', 'yrfButtonCountNewInput');
+        const fccId = getYrfFieldValue('yrfFccId', 'yrfFccIdNewInput');
+        const frequency = getYrfFieldValue('yrfFrequency', 'yrfFrequencyNewInput');
+        const ilcoPartNum = getYrfFieldValue('yrfIlcoPartNum', 'yrfIlcoPartNumNewInput');
+        const keystonePartNum = getYrfFieldValue('yrfKeystonePartNum', 'yrfKeystonePartNumNewInput');
+        const buttonFunctions = [...yrfSelectedButtonFunctions];
+
+        const hasKeyInfo = keyBlank || keyway || chipType || fccId;
+        const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+
+        newVehicle = {
+            id: Date.now().toString(),
+            make: make,
+            model: model,
+            startYear: startYear,
+            endYear: endYear,
+            dataStatus: dataStatus,
+            multipleKeys: false,
+            keyType: keyType,
+            keyBlank: keyBlank,
+            chip: chipType,
+            buttons: buttonCount,
+            buttonFunctions: buttonFunctions,
+            fccid: fccId,
+            frequency: frequency,
+            keyway: keyway,
+            ilcoPartNum: ilcoPartNum,
+            keystonePartNum: keystonePartNum,
+            notes: '',
+            hasOverrides: overrideNotes.length > 0,
+            overrideNotes: overrideNotes,
+            yearOverrides: yearOverrides,
+            createdAt: new Date().toISOString()
+        };
+    }
 
     customVehicles.push(newVehicle);
     saveToIndexedDB('customVehicles', customVehicles);
 
     // Update key and FCC relationships with new data
-    if (keyBlank && (keyway || chipType)) {
-        updateKeyRelationship(keyBlank, keyway, chipType);
-        saveKeyRelationships();
-    }
-    if (fccId && (buttonCount || frequency || buttonFunctions.length > 0)) {
-        updateFccRelationship(fccId, buttonCount, frequency, buttonFunctions);
-        saveKeyRelationships();
+    if (isMultipleKeys) {
+        if (newVehicle.ignition_keyBlank && (newVehicle.ignition_keyway || newVehicle.ignition_chip)) {
+            updateKeyRelationship(newVehicle.ignition_keyBlank, newVehicle.ignition_keyway, newVehicle.ignition_chip);
+            saveKeyRelationships();
+        }
+        if (newVehicle.door_keyBlank && (newVehicle.door_keyway || newVehicle.door_chip)) {
+            updateKeyRelationship(newVehicle.door_keyBlank, newVehicle.door_keyway, newVehicle.door_chip);
+            saveKeyRelationships();
+        }
+        if (newVehicle.ignition_fccid && (newVehicle.ignition_buttons || newVehicle.ignition_frequency)) {
+            updateFccRelationship(newVehicle.ignition_fccid, newVehicle.ignition_buttons, newVehicle.ignition_frequency, []);
+            saveKeyRelationships();
+        }
+    } else {
+        const keyBlank = newVehicle.keyBlank;
+        const keyway = newVehicle.keyway;
+        const chipType = newVehicle.chip;
+        const fccId = newVehicle.fccid;
+        const buttonCount = newVehicle.buttons;
+        const frequency = newVehicle.frequency;
+        const buttonFunctions = newVehicle.buttonFunctions || [];
+        if (keyBlank && (keyway || chipType)) {
+            updateKeyRelationship(keyBlank, keyway, chipType);
+            saveKeyRelationships();
+        }
+        if (fccId && (buttonCount || frequency || buttonFunctions.length > 0)) {
+            updateFccRelationship(fccId, buttonCount, frequency, buttonFunctions);
+            saveKeyRelationships();
+        }
     }
 
     if (syncEnabled) {
@@ -19575,6 +19739,12 @@ function toggleQuickVehicleOptionalFields() {
         fields.style.display = 'none';
         toggle.textContent = '+ Show Optional Fields';
     }
+}
+
+function toggleYrfMultipleKeys() {
+    const checked = document.getElementById('yrfMultipleKeys').checked;
+    document.getElementById('yrfSingleKeyFields').style.display = checked ? 'none' : 'block';
+    document.getElementById('yrfDualKeyFields').style.display = checked ? 'block' : 'none';
 }
 
 function toggleQuickVehicleMultipleKeys() {
