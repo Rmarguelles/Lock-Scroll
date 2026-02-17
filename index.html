@@ -11264,6 +11264,15 @@ function goHome() {
     document.getElementById('codeSeriesSettingsPanel').classList.remove('on');
     document.getElementById('editCodeSeriesModal').classList.remove('on');
     document.getElementById('codeSeriesUsagesModal').classList.remove('on');
+    // Close settings sub-panels
+    document.getElementById('lishiSettingsPanel').classList.remove('on');
+    document.getElementById('vendorsSettingsPanel').classList.remove('on');
+    document.getElementById('customKeysSettingsPanel').classList.remove('on');
+    document.getElementById('categoriesSettingsPanel').classList.remove('on');
+    document.getElementById('platformsSettingsPanel').classList.remove('on');
+    document.getElementById('settingsAddToolPanel').classList.remove('on');
+    document.getElementById('dropdownDataPanel').classList.remove('on');
+    document.getElementById('fccPanel').classList.remove('on');
 
     // Reset vehicle state
     selectedVehicleMake = null;
