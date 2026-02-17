@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v113</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v114</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v113</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v114</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v113<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v114<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -15918,6 +15918,88 @@ function getUniqueVehicles() {
         }
     });
 
+    // Split vehicles by code series year ranges.
+    // When a vehicle has multiple code series with different year sub-ranges
+    // (e.g., "L" for 1994-1997 and "M" for 1998-2000), create separate entries
+    // for each sub-range so they appear as distinct year groups in the search.
+    const splitKeys = [];
+    const removeKeys = [];
+    Object.entries(vehicleMap).forEach(([key, entry]) => {
+        if (!entry.codeSeries || entry.codeSeries.length < 2) return;
+
+        // Group code series by their year range
+        const yearGroups = {};
+        entry.codeSeries.forEach(cs => {
+            if (!cs.years) return;
+            if (!yearGroups[cs.years]) yearGroups[cs.years] = [];
+            yearGroups[cs.years].push(cs);
+        });
+
+        // Only split if there are multiple distinct year ranges
+        const distinctRanges = Object.keys(yearGroups);
+        if (distinctRanges.length < 2) return;
+
+        // Parse and validate all ranges before splitting
+        const parsedRanges = [];
+        let allValid = true;
+        distinctRanges.forEach(range => {
+            const parts = range.split('-').map(s => parseInt(s.trim()));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                parsedRanges.push({ range, start: parts[0], end: parts[1], series: yearGroups[range] });
+            } else if (parts.length === 1 && !isNaN(parts[0])) {
+                parsedRanges.push({ range, start: parts[0], end: parts[0], series: yearGroups[range] });
+            } else {
+                allValid = false;
+            }
+        });
+
+        if (!allValid || parsedRanges.length < 2) return;
+
+        // Create a new entry for each year sub-range
+        parsedRanges.forEach(pr => {
+            const newKey = `${entry.make}|${entry.model}|${pr.start}|${pr.end}`;
+            if (vehicleMap[newKey] && newKey !== key) {
+                // Entry already exists for this range, just merge code series
+                pr.series.forEach(cs => {
+                    if (!vehicleMap[newKey].codeSeries.some(existing => existing.series === cs.series && existing.years === cs.years)) {
+                        vehicleMap[newKey].codeSeries.push(cs);
+                    }
+                });
+                return;
+            }
+            splitKeys.push({
+                key: newKey,
+                entry: {
+                    make: entry.make,
+                    model: entry.model,
+                    startYear: pr.start,
+                    endYear: pr.end,
+                    keys: [...entry.keys],
+                    keyways: new Set(entry.keyways),
+                    fccids: new Set(entry.fccids),
+                    chips: new Set(entry.chips),
+                    frequencies: new Set(entry.frequencies),
+                    codeSeries: pr.series,
+                    isCustom: entry.isCustom,
+                    customKeyType: entry.customKeyType,
+                    multipleKeys: entry.multipleKeys,
+                    splitFromCodeSeries: true
+                }
+            });
+        });
+
+        // Mark original broad entry for removal
+        removeKeys.push(key);
+    });
+
+    // Apply splits
+    removeKeys.forEach(key => delete vehicleMap[key]);
+    splitKeys.forEach(({ key, entry }) => {
+        if (!vehicleMap[key]) {
+            vehicleMap[key] = entry;
+        }
+    });
+
     // Merge DB keys into overlapping custom vehicle sub-ranges.
     // When a DB key covers a broad range (e.g., B45 for 1991-1996) but the user
     // creates custom vehicle entries for narrower sub-ranges (e.g., 1991-1992 and
@@ -15999,24 +16081,29 @@ function openVehicleDetail(vehicleKey) {
     const groupKey = `${make}|${model}|${startYear}|${endYear}`;
     const vehicleData = lishiVehicleData[groupKey] || {};
 
-    // Get code series - use override if available, otherwise use keyway as placeholder
+    // Get code series - check lishiVehicleData, then vehicle's own codeSeries from keys, then fallback to keyway
     let codeSeriesDisplay = '';
     let isCodeSeriesOverride = false;
     if (vehicleData.codeSeries) {
         isCodeSeriesOverride = true;
         if (Array.isArray(vehicleData.codeSeries) && vehicleData.codeSeries.length > 0) {
-            // New array format: show each series with its year range
             codeSeriesDisplay = vehicleData.codeSeries.map(cs =>
                 `<div style="margin-bottom:4px;">${cs.series} <span style="color:var(--dim);font-size:11px;">(${cs.years})</span></div>`
             ).join('');
         } else if (typeof vehicleData.codeSeries === 'string' && vehicleData.codeSeries) {
-            // Old string format
             codeSeriesDisplay = vehicleData.codeSeries;
         } else {
             isCodeSeriesOverride = false;
-            codeSeriesDisplay = keyways.length > 0 ? keyways[0] : 'N/A';
         }
-    } else {
+    }
+    // Also check vehicle's own codeSeries from key data
+    if (!isCodeSeriesOverride && vehicle.codeSeries && vehicle.codeSeries.length > 0) {
+        isCodeSeriesOverride = true;
+        codeSeriesDisplay = vehicle.codeSeries.map(cs =>
+            `<div style="margin-bottom:4px;">${cs.series}${cs.years ? ` <span style="color:var(--dim);font-size:11px;">(${cs.years})</span>` : ''}</div>`
+        ).join('');
+    }
+    if (!isCodeSeriesOverride) {
         codeSeriesDisplay = keyways.length > 0 ? keyways[0] : 'N/A';
     }
 
