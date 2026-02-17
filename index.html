@@ -15622,6 +15622,7 @@ function renderVehicleYearsForModel(make, model, keyType) {
                 <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
                     <span style="color:var(--dim);">${keyCountDisplay}</span>
                     ${keyTypeBreakdown ? `<span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>` : ''}
+                    ${v.codeSeries && v.codeSeries.length > 0 ? `<span style="color:var(--accent2);font-size:11px;">📋 ${v.codeSeries.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).join(', ')}</span>` : ''}
                 </div>
             </div>
         `;
@@ -15667,8 +15668,24 @@ function getUniqueVehicles() {
                     keyways: new Set(),
                     fccids: new Set(),
                     chips: new Set(),
-                    frequencies: new Set()
+                    frequencies: new Set(),
+                    codeSeries: []
                 };
+            }
+
+            // Merge code series entries from this vehicle
+            if (v.codeSeries) {
+                if (Array.isArray(v.codeSeries)) {
+                    v.codeSeries.forEach(cs => {
+                        if (cs.series && !vehicleMap[vehicleKey].codeSeries.some(existing => existing.series === cs.series && existing.years === cs.years)) {
+                            vehicleMap[vehicleKey].codeSeries.push(cs);
+                        }
+                    });
+                } else if (typeof v.codeSeries === 'string' && v.codeSeries) {
+                    if (!vehicleMap[vehicleKey].codeSeries.some(existing => existing.series === v.codeSeries)) {
+                        vehicleMap[vehicleKey].codeSeries.push({ series: v.codeSeries, years: '' });
+                    }
+                }
             }
 
             vehicleMap[vehicleKey].keys.push(key);
@@ -15696,9 +15713,26 @@ function getUniqueVehicles() {
                 fccids: new Set(),
                 chips: new Set(),
                 frequencies: new Set(),
+                codeSeries: [],
                 isCustom: true,
                 customKeyType: cv.keyType ? normalizeKeyType(cv.keyType) : null
             };
+        }
+
+        // Merge code series from custom vehicle
+        if (cv.codeSeries) {
+            if (!vehicleMap[vehicleKey].codeSeries) vehicleMap[vehicleKey].codeSeries = [];
+            if (Array.isArray(cv.codeSeries)) {
+                cv.codeSeries.forEach(cs => {
+                    if (cs.series && !vehicleMap[vehicleKey].codeSeries.some(existing => existing.series === cs.series && existing.years === cs.years)) {
+                        vehicleMap[vehicleKey].codeSeries.push(cs);
+                    }
+                });
+            } else if (typeof cv.codeSeries === 'string' && cv.codeSeries) {
+                if (!vehicleMap[vehicleKey].codeSeries.some(existing => existing.series === cv.codeSeries)) {
+                    vehicleMap[vehicleKey].codeSeries.push({ series: cv.codeSeries, years: '' });
+                }
+            }
         }
 
         // Add custom vehicle data to the entry
