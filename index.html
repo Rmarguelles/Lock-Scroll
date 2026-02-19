@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v117</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v118</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v117</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v118</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v117<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v118<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6156,6 +6156,19 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Code Series -->
+            <div class="modal-input-group">
+                <label>Code Series</label>
+                <div class="dropdown-with-new">
+                    <select class="modal-input" id="yrfCodeSeries" onchange="onYrfDropdownChange('yrfCodeSeries')">
+                        <option value="">Select Code Series...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfCodeSeriesNew">
+                        <input type="text" placeholder="e.g., DL01-DM70" id="yrfCodeSeriesNewInput">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Alternative Ignition Keys section -->
@@ -6170,145 +6183,17 @@
 
         <!-- Dual Key Fields (when multiple keys checkbox is checked) -->
         <div id="yrfDualKeyFields" style="display:none;">
-            <div style="padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;margin-bottom:12px;">
-                <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
-                <div class="modal-input-group">
-                    <label>Key Blank (Part #)</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfIgnKeyBlank" onchange="onDualKeyDropdownChange('yrfIgnKeyBlank')">
-                            <option value="">Select Key Blank...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfIgnKeyBlankNew">
-                            <input type="text" placeholder="Enter new key blank..." id="yrfIgnKeyBlankNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Chip Type</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfIgnChip" onchange="onDualKeyDropdownChange('yrfIgnChip')">
-                            <option value="">Select Chip Type...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfIgnChipNew">
-                            <input type="text" placeholder="Enter new chip type..." id="yrfIgnChipNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Keyway</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfIgnKeyway" onchange="onDualKeyDropdownChange('yrfIgnKeyway')">
-                            <option value="">Select Keyway...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfIgnKeywayNew">
-                            <input type="text" placeholder="Enter new keyway..." id="yrfIgnKeywayNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>FCC ID</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfIgnFccid" onchange="onDualKeyDropdownChange('yrfIgnFccid')">
-                            <option value="">Select FCC ID...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfIgnFccidNew">
-                            <input type="text" placeholder="Enter new FCC ID..." id="yrfIgnFccidNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group" style="display:flex;gap:8px;">
-                    <div style="flex:1;">
-                        <label>Buttons</label>
-                        <div class="dropdown-with-new">
-                            <select class="modal-input" id="yrfIgnButtons" onchange="onDualKeyDropdownChange('yrfIgnButtons')">
-                                <option value="">Select Buttons...</option>
-                            </select>
-                            <div class="inline-add-new" id="yrfIgnButtonsNew">
-                                <input type="text" placeholder="Enter button count..." id="yrfIgnButtonsNewInput">
-                            </div>
-                        </div>
-                    </div>
-                    <div style="flex:1;">
-                        <label>Frequency</label>
-                        <div class="dropdown-with-new">
-                            <select class="modal-input" id="yrfIgnFrequency" onchange="onDualKeyDropdownChange('yrfIgnFrequency')">
-                                <option value="">Select Frequency...</option>
-                            </select>
-                            <div class="inline-add-new" id="yrfIgnFrequencyNew">
-                                <input type="text" placeholder="Enter frequency..." id="yrfIgnFrequencyNewInput">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Code Series</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfIgnCodeSeries" onchange="onDualKeyDropdownChange('yrfIgnCodeSeries')">
-                            <option value="">Select Code Series...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfIgnCodeSeriesNew">
-                            <input type="text" placeholder="e.g., DL01-DM70" id="yrfIgnCodeSeriesNewInput">
-                        </div>
-                    </div>
-                </div>
+            <!-- Ignition Keys List -->
+            <div style="margin-bottom:14px;">
+                <div style="font-weight:600;color:var(--accent);margin-bottom:8px;font-size:14px;">&#128273; Ignition Key(s)</div>
+                <div id="yrfIgnKeysList"></div>
+                <button type="button" class="add-override-btn" onclick="addYrfDualKey('ign')">+ Add Ignition Key</button>
             </div>
-            <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
-                <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
-                <div class="modal-input-group">
-                    <label>Key Blank (Part #)</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfDoorKeyBlank" onchange="onDualKeyDropdownChange('yrfDoorKeyBlank')">
-                            <option value="">Select Key Blank...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfDoorKeyBlankNew">
-                            <input type="text" placeholder="Enter new key blank..." id="yrfDoorKeyBlankNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Chip Type</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfDoorChip" onchange="onDualKeyDropdownChange('yrfDoorChip')">
-                            <option value="">Select Chip Type...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfDoorChipNew">
-                            <input type="text" placeholder="Enter new chip type..." id="yrfDoorChipNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Keyway</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfDoorKeyway" onchange="onDualKeyDropdownChange('yrfDoorKeyway')">
-                            <option value="">Select Keyway...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfDoorKeywayNew">
-                            <input type="text" placeholder="Enter new keyway..." id="yrfDoorKeywayNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>FCC ID</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfDoorFccid" onchange="onDualKeyDropdownChange('yrfDoorFccid')">
-                            <option value="">Select FCC ID...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfDoorFccidNew">
-                            <input type="text" placeholder="Enter new FCC ID..." id="yrfDoorFccidNewInput">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-input-group">
-                    <label>Code Series</label>
-                    <div class="dropdown-with-new">
-                        <select class="modal-input" id="yrfDoorCodeSeries" onchange="onDualKeyDropdownChange('yrfDoorCodeSeries')">
-                            <option value="">Select Code Series...</option>
-                        </select>
-                        <div class="inline-add-new" id="yrfDoorCodeSeriesNew">
-                            <input type="text" placeholder="e.g., A01-D70" id="yrfDoorCodeSeriesNewInput">
-                        </div>
-                    </div>
-                </div>
+            <!-- Door Keys List -->
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:600;color:var(--accent2);margin-bottom:8px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key(s)</div>
+                <div id="yrfDoorKeysList"></div>
+                <button type="button" class="add-override-btn" onclick="addYrfDualKey('door')">+ Add Door Key</button>
             </div>
         </div>
 
@@ -14170,22 +14055,9 @@ function populateYrfDropdowns() {
     // Populate button functions multi-select
     populateButtonFunctionsDropdown(options.buttonFunctions);
 
-    // Populate dual-key (multiple keys) dropdowns
+    // Populate single-key code series dropdown
     if (codeSeriesCache.length === 0) buildCodeSeriesCache();
-    // Ignition key fields
-    populateYrfDropdown('yrfIgnKeyBlank', options.keyBlanks, 'Select Key Blank...');
-    populateYrfDropdown('yrfIgnChip', options.chipTypes, 'Select Chip Type...');
-    populateYrfDropdown('yrfIgnKeyway', options.keyways, 'Select Keyway...');
-    populateYrfDropdown('yrfIgnFccid', options.fccIds, 'Select FCC ID...');
-    populateYrfDropdown('yrfIgnButtons', options.buttonCounts, 'Select Buttons...');
-    populateYrfDropdown('yrfIgnFrequency', options.frequencies, 'Select Frequency...');
-    populateYrfDropdown('yrfIgnCodeSeries', codeSeriesCache, 'Select Code Series...');
-    // Door key fields
-    populateYrfDropdown('yrfDoorKeyBlank', options.keyBlanks, 'Select Key Blank...');
-    populateYrfDropdown('yrfDoorChip', options.chipTypes, 'Select Chip Type...');
-    populateYrfDropdown('yrfDoorKeyway', options.keyways, 'Select Keyway...');
-    populateYrfDropdown('yrfDoorFccid', options.fccIds, 'Select FCC ID...');
-    populateYrfDropdown('yrfDoorCodeSeries', codeSeriesCache, 'Select Code Series...');
+    populateYrfDropdown('yrfCodeSeries', codeSeriesCache, 'Select Code Series...');
 }
 
 // Populate button functions multi-select dropdown
@@ -14403,6 +14275,145 @@ function renderYrfAltKeysList() {
         if (selects[0]) selects[0].value = alt.keyBlank || '';
         if (selects[1]) selects[1].value = alt.keyway || '';
         if (selects[2]) selects[2].value = alt.chip || '';
+    });
+}
+
+// Dual-key list state: multiple ignition keys and door keys
+let yrfIgnKeys = []; // [{keyBlank, chip, keyway, fccid, buttons, frequency, codeSeries}]
+let yrfDoorKeys = []; // [{keyBlank, chip, keyway, fccid, codeSeries}]
+
+function addYrfDualKey(type) {
+    if (type === 'ign') {
+        yrfIgnKeys.push({ keyBlank: '', chip: '', keyway: '', fccid: '', buttons: '', frequency: '', codeSeries: '' });
+        renderYrfDualKeysList('ign');
+    } else {
+        yrfDoorKeys.push({ keyBlank: '', chip: '', keyway: '', fccid: '', codeSeries: '' });
+        renderYrfDualKeysList('door');
+    }
+}
+
+function removeYrfDualKey(type, idx) {
+    if (type === 'ign') {
+        yrfIgnKeys.splice(idx, 1);
+        renderYrfDualKeysList('ign');
+    } else {
+        yrfDoorKeys.splice(idx, 1);
+        renderYrfDualKeysList('door');
+    }
+}
+
+function updateYrfDualKey(type, idx, field, value) {
+    const arr = type === 'ign' ? yrfIgnKeys : yrfDoorKeys;
+    if (arr[idx]) arr[idx][field] = value;
+}
+
+function renderYrfDualKeysList(type) {
+    const arr = type === 'ign' ? yrfIgnKeys : yrfDoorKeys;
+    const containerId = type === 'ign' ? 'yrfIgnKeysList' : 'yrfDoorKeysList';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (arr.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    if (codeSeriesCache.length === 0) buildCodeSeriesCache();
+    const options = getYrfDropdownOptions();
+
+    const kbOpts = ['', ...[...options.keyBlanks].sort()].map(v =>
+        `<option value="${v}">${v || 'Select Key Blank...'}</option>`).join('');
+    const chipOpts = ['', ...[...options.chipTypes].sort()].map(v =>
+        `<option value="${v}">${v || 'Select Chip Type...'}</option>`).join('');
+    const kwOpts = ['', ...[...options.keyways].sort()].map(v =>
+        `<option value="${v}">${v || 'Select Keyway...'}</option>`).join('');
+    const fccOpts = ['', ...[...options.fccIds].sort()].map(v =>
+        `<option value="${v}">${v || 'Select FCC ID...'}</option>`).join('');
+    const btnOpts = ['', ...[...options.buttonCounts].sort()].map(v =>
+        `<option value="${v}">${v || 'Select Buttons...'}</option>`).join('');
+    const freqOpts = ['', ...[...options.frequencies].sort()].map(v =>
+        `<option value="${v}">${v || 'Select Frequency...'}</option>`).join('');
+    const csOpts = ['', ...codeSeriesCache].map(v => {
+        const s = String(v);
+        return `<option value="${s}">${s || 'Select Code Series...'}</option>`;
+    }).join('');
+
+    const bg = type === 'ign' ? 'rgba(0,212,255,0.05)' : 'rgba(255,107,53,0.05)';
+    const borderCol = type === 'ign' ? 'var(--accent)' : 'var(--accent2)';
+    const roleColor = type === 'ign' ? 'var(--accent)' : 'var(--accent2)';
+    const roleLabel = type === 'ign' ? 'Ignition' : 'Door';
+
+    container.innerHTML = arr.map((entry, idx) => `
+        <div style="background:${bg};border:1px solid ${borderCol};border-radius:8px;padding:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:12px;font-weight:600;color:${roleColor};">${roleLabel} Key${arr.length > 1 ? ' ' + (idx + 1) : ''}</span>
+                <button type="button" onclick="removeYrfDualKey('${type}', ${idx})"
+                    style="padding:2px 8px;background:var(--danger);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;">&#10005; Remove</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Key Blank</label>
+                    <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'keyBlank', this.value)">
+                        ${kbOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Chip Type</label>
+                    <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'chip', this.value)">
+                        ${chipOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Keyway</label>
+                    <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'keyway', this.value)">
+                        ${kwOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Code Series</label>
+                    <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'codeSeries', this.value)">
+                        ${csOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">FCC ID</label>
+                    <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'fccid', this.value)">
+                        ${fccOpts}
+                    </select>
+                </div>
+                ${type === 'ign' ? `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div>
+                        <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Buttons</label>
+                        <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'buttons', this.value)">
+                            ${btnOpts}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Frequency</label>
+                        <select class="modal-input" style="font-size:12px;" onchange="updateYrfDualKey('${type}', ${idx}, 'frequency', this.value)">
+                            ${freqOpts}
+                        </select>
+                    </div>
+                </div>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // Restore selected values after innerHTML rebuild
+    arr.forEach((entry, idx) => {
+        const row = container.children[idx];
+        if (!row) return;
+        const selects = row.querySelectorAll('select');
+        if (selects[0]) selects[0].value = entry.keyBlank || '';
+        if (selects[1]) selects[1].value = entry.chip || '';
+        if (selects[2]) selects[2].value = entry.keyway || '';
+        if (selects[3]) selects[3].value = entry.codeSeries || '';
+        if (selects[4]) selects[4].value = entry.fccid || '';
+        if (type === 'ign') {
+            if (selects[5]) selects[5].value = entry.buttons || '';
+            if (selects[6]) selects[6].value = entry.frequency || '';
+        }
     });
 }
 
@@ -14865,18 +14876,18 @@ function openAddYearRangeModal(make, model, keyType) {
     document.getElementById('yrfMultipleKeys').checked = false;
     document.getElementById('yrfSingleKeyFields').style.display = 'block';
     document.getElementById('yrfDualKeyFields').style.display = 'none';
-    // Clear dual-key selects and hide any open "Add New" inputs
-    ['yrfIgnKeyBlank', 'yrfIgnChip', 'yrfIgnKeyway', 'yrfIgnFccid', 'yrfIgnButtons', 'yrfIgnFrequency', 'yrfIgnCodeSeries',
-     'yrfDoorKeyBlank', 'yrfDoorChip', 'yrfDoorKeyway', 'yrfDoorFccid', 'yrfDoorCodeSeries'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-        const newContainer = document.getElementById(id + 'New');
-        if (newContainer) {
-            newContainer.classList.remove('visible');
-            const input = newContainer.querySelector('input');
-            if (input) input.value = '';
-        }
-    });
+    // Clear dual-key lists
+    yrfIgnKeys = [];
+    yrfDoorKeys = [];
+    const yrfIgnList = document.getElementById('yrfIgnKeysList');
+    if (yrfIgnList) yrfIgnList.innerHTML = '';
+    const yrfDoorList = document.getElementById('yrfDoorKeysList');
+    if (yrfDoorList) yrfDoorList.innerHTML = '';
+    // Clear code series dropdown
+    const yrfCS = document.getElementById('yrfCodeSeries');
+    if (yrfCS) yrfCS.value = '';
+    const yrfCSNew = document.getElementById('yrfCodeSeriesNew');
+    if (yrfCSNew) { yrfCSNew.classList.remove('visible'); const inp = yrfCSNew.querySelector('input'); if (inp) inp.value = ''; }
 
     // Reset chip type visibility (show by default)
     const chipGroup = document.getElementById('yrfChipTypeGroup');
@@ -15402,22 +15413,16 @@ function saveNewYearRange() {
     let newVehicle;
 
     if (isMultipleKeys) {
-        // Collect dual-key field values (supports both select value and "Add New" text input)
-        const ignKeyBlank = getYrfFieldValue('yrfIgnKeyBlank', 'yrfIgnKeyBlankNewInput');
-        const ignChip = getYrfFieldValue('yrfIgnChip', 'yrfIgnChipNewInput');
-        const ignKeyway = getYrfFieldValue('yrfIgnKeyway', 'yrfIgnKeywayNewInput');
-        const ignFccid = getYrfFieldValue('yrfIgnFccid', 'yrfIgnFccidNewInput');
-        const ignButtons = getYrfFieldValue('yrfIgnButtons', 'yrfIgnButtonsNewInput');
-        const ignFrequency = getYrfFieldValue('yrfIgnFrequency', 'yrfIgnFrequencyNewInput');
-        const ignCodeSeries = getYrfFieldValue('yrfIgnCodeSeries', 'yrfIgnCodeSeriesNewInput');
-        const doorKeyBlank = getYrfFieldValue('yrfDoorKeyBlank', 'yrfDoorKeyBlankNewInput');
-        const doorChip = getYrfFieldValue('yrfDoorChip', 'yrfDoorChipNewInput');
-        const doorKeyway = getYrfFieldValue('yrfDoorKeyway', 'yrfDoorKeywayNewInput');
-        const doorFccid = getYrfFieldValue('yrfDoorFccid', 'yrfDoorFccidNewInput');
-        const doorCodeSeries = getYrfFieldValue('yrfDoorCodeSeries', 'yrfDoorCodeSeriesNewInput');
+        // Collect dual-key arrays (filter out completely empty entries)
+        const ignKeys = yrfIgnKeys.filter(k => k.keyBlank || k.keyway || k.chip);
+        const doorKeys = yrfDoorKeys.filter(k => k.keyBlank || k.keyway || k.chip);
 
-        const hasKeyInfo = ignKeyBlank || ignKeyway || ignChip || doorKeyBlank || doorKeyway || doorChip;
+        const hasKeyInfo = ignKeys.length > 0 || doorKeys.length > 0;
         const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+
+        // Flat legacy fields from first entries for backward compatibility
+        const ignFirst = ignKeys[0] || {};
+        const doorFirst = doorKeys[0] || {};
 
         newVehicle = {
             id: Date.now().toString(),
@@ -15427,20 +15432,22 @@ function saveNewYearRange() {
             endYear: endYear,
             dataStatus: dataStatus,
             multipleKeys: true,
-            // Ignition key
-            ignition_keyBlank: ignKeyBlank,
-            ignition_chip: ignChip,
-            ignition_keyway: ignKeyway,
-            ignition_fccid: ignFccid,
-            ignition_buttons: ignButtons,
-            ignition_frequency: ignFrequency,
-            ignition_codeSeries: ignCodeSeries,
-            // Door key
-            door_keyBlank: doorKeyBlank,
-            door_chip: doorChip,
-            door_keyway: doorKeyway,
-            door_fccid: doorFccid,
-            door_codeSeries: doorCodeSeries,
+            // Array fields (new)
+            ignition_keys: ignKeys,
+            door_keys: doorKeys,
+            // Legacy flat fields (first entry) for backward compat
+            ignition_keyBlank: ignFirst.keyBlank || '',
+            ignition_chip: ignFirst.chip || '',
+            ignition_keyway: ignFirst.keyway || '',
+            ignition_fccid: ignFirst.fccid || '',
+            ignition_buttons: ignFirst.buttons || '',
+            ignition_frequency: ignFirst.frequency || '',
+            ignition_codeSeries: ignFirst.codeSeries || '',
+            door_keyBlank: doorFirst.keyBlank || '',
+            door_chip: doorFirst.chip || '',
+            door_keyway: doorFirst.keyway || '',
+            door_fccid: doorFirst.fccid || '',
+            door_codeSeries: doorFirst.codeSeries || '',
             notes: '',
             hasOverrides: overrideNotes.length > 0,
             overrideNotes: overrideNotes,
@@ -15458,6 +15465,7 @@ function saveNewYearRange() {
         const frequency = getYrfFieldValue('yrfFrequency', 'yrfFrequencyNewInput');
         const ilcoPartNum = getYrfFieldValue('yrfIlcoPartNum', 'yrfIlcoPartNumNewInput');
         const keystonePartNum = getYrfFieldValue('yrfKeystonePartNum', 'yrfKeystonePartNumNewInput');
+        const codeSeries = getYrfFieldValue('yrfCodeSeries', 'yrfCodeSeriesNewInput');
         const buttonFunctions = [...yrfSelectedButtonFunctions];
 
         // Collect alt keys (filter out empty ones)
@@ -15467,6 +15475,9 @@ function saveNewYearRange() {
 
         const hasKeyInfo = keyBlank || keyway || chipType || fccId || altKeys.length > 0;
         const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
+
+        // Format codeSeries as array for consistency with display logic
+        const codeSeriesArr = codeSeries ? [{ series: codeSeries, years: `${startYear}${endYear && endYear !== startYear ? '-' + endYear : ''}` }] : undefined;
 
         newVehicle = {
             id: Date.now().toString(),
@@ -15486,6 +15497,7 @@ function saveNewYearRange() {
             keyway: keyway,
             ilcoPartNum: ilcoPartNum,
             keystonePartNum: keystonePartNum,
+            codeSeries: codeSeriesArr,
             altKeys: altKeys.length > 0 ? altKeys : undefined,
             notes: '',
             hasOverrides: overrideNotes.length > 0,
@@ -15500,18 +15512,17 @@ function saveNewYearRange() {
 
     // Update key and FCC relationships with new data
     if (isMultipleKeys) {
-        if (newVehicle.ignition_keyBlank && (newVehicle.ignition_keyway || newVehicle.ignition_chip)) {
-            updateKeyRelationship(newVehicle.ignition_keyBlank, newVehicle.ignition_keyway, newVehicle.ignition_chip);
-            saveKeyRelationships();
-        }
-        if (newVehicle.door_keyBlank && (newVehicle.door_keyway || newVehicle.door_chip)) {
-            updateKeyRelationship(newVehicle.door_keyBlank, newVehicle.door_keyway, newVehicle.door_chip);
-            saveKeyRelationships();
-        }
-        if (newVehicle.ignition_fccid && (newVehicle.ignition_buttons || newVehicle.ignition_frequency)) {
-            updateFccRelationship(newVehicle.ignition_fccid, newVehicle.ignition_buttons, newVehicle.ignition_frequency, []);
-            saveKeyRelationships();
-        }
+        // Iterate all ignition and door key entries
+        [...(newVehicle.ignition_keys || []), ...(newVehicle.door_keys || [])].forEach(k => {
+            if (k.keyBlank && (k.keyway || k.chip)) {
+                updateKeyRelationship(k.keyBlank, k.keyway, k.chip);
+                saveKeyRelationships();
+            }
+            if (k.fccid && (k.buttons || k.frequency)) {
+                updateFccRelationship(k.fccid, k.buttons, k.frequency, []);
+                saveKeyRelationships();
+            }
+        });
     } else {
         const keyBlank = newVehicle.keyBlank;
         const keyway = newVehicle.keyway;
@@ -16009,13 +16020,29 @@ function getUniqueVehicles() {
         // Handle dual-key vehicles - add both ignition and door key data to sets
         if (cv.multipleKeys) {
             vehicleMap[vehicleKey].multipleKeys = true;
-            if (cv.ignition_keyway) vehicleMap[vehicleKey].keyways.add(cv.ignition_keyway);
-            if (cv.ignition_fccid) vehicleMap[vehicleKey].fccids.add(cv.ignition_fccid);
-            if (cv.ignition_chip) vehicleMap[vehicleKey].chips.add(cv.ignition_chip);
-            if (cv.ignition_frequency) vehicleMap[vehicleKey].frequencies.add(cv.ignition_frequency);
-            if (cv.door_keyway) vehicleMap[vehicleKey].keyways.add(cv.door_keyway);
-            if (cv.door_fccid) vehicleMap[vehicleKey].fccids.add(cv.door_fccid);
-            if (cv.door_chip) vehicleMap[vehicleKey].chips.add(cv.door_chip);
+            // Support both new array format and legacy flat fields
+            const ignKeys = Array.isArray(cv.ignition_keys) && cv.ignition_keys.length > 0
+                ? cv.ignition_keys
+                : (cv.ignition_keyBlank || cv.ignition_keyway ? [{ keyBlank: cv.ignition_keyBlank, keyway: cv.ignition_keyway, chip: cv.ignition_chip, fccid: cv.ignition_fccid, frequency: cv.ignition_frequency, buttons: cv.ignition_buttons, codeSeries: cv.ignition_codeSeries }] : []);
+            const doorKeys = Array.isArray(cv.door_keys) && cv.door_keys.length > 0
+                ? cv.door_keys
+                : (cv.door_keyBlank || cv.door_keyway ? [{ keyBlank: cv.door_keyBlank, keyway: cv.door_keyway, chip: cv.door_chip, fccid: cv.door_fccid, codeSeries: cv.door_codeSeries }] : []);
+
+            ignKeys.forEach(ik => {
+                if (ik.keyway) vehicleMap[vehicleKey].keyways.add(ik.keyway);
+                if (ik.fccid) vehicleMap[vehicleKey].fccids.add(ik.fccid);
+                if (ik.chip) vehicleMap[vehicleKey].chips.add(ik.chip);
+                if (ik.frequency) vehicleMap[vehicleKey].frequencies.add(ik.frequency);
+            });
+            doorKeys.forEach(dk => {
+                if (dk.keyway) vehicleMap[vehicleKey].keyways.add(dk.keyway);
+                if (dk.fccid) vehicleMap[vehicleKey].fccids.add(dk.fccid);
+                if (dk.chip) vehicleMap[vehicleKey].chips.add(dk.chip);
+            });
+
+            // Store normalized arrays on the map entry for vehicle detail display
+            vehicleMap[vehicleKey].ignitionKeys = ignKeys;
+            vehicleMap[vehicleKey].doorKeys = doorKeys;
         } else {
             if (cv.keyway) vehicleMap[vehicleKey].keyways.add(cv.keyway);
             if (cv.fccid) vehicleMap[vehicleKey].fccids.add(cv.fccid);
@@ -16025,47 +16052,42 @@ function getUniqueVehicles() {
 
         // Create pseudo-key objects for display in Compatible Keys section
         if (cv.multipleKeys) {
-            // Also check lishiVehicleData overrides for key blanks
+            // Use the normalized arrays already computed above
             const vdOverride = lishiVehicleData[vehicleKey] || {};
-            const ignPn = cv.ignition_keyBlank || vdOverride.ignition_keyBlank || '';
-            const doorPn = cv.door_keyBlank || vdOverride.door_keyBlank || '';
+            const ignKeys = vehicleMap[vehicleKey].ignitionKeys || [];
+            const doorKeys = vehicleMap[vehicleKey].doorKeys || [];
 
-            // Tag or create ignition key
-            if (ignPn) {
-                const existingIgn = vehicleMap[vehicleKey].keys.find(k => k.pn === ignPn);
-                if (existingIgn) {
-                    existingIgn.dualKeyRole = 'ignition';
+            // Add all ignition keys as pseudo-keys
+            ignKeys.forEach((ik, i) => {
+                const pn = ik.keyBlank || (i === 0 ? vdOverride.ignition_keyBlank : '') || '';
+                if (!pn) return;
+                const existing = vehicleMap[vehicleKey].keys.find(k => k.pn === pn);
+                if (existing) {
+                    existing.dualKeyRole = 'ignition';
                 } else {
                     vehicleMap[vehicleKey].keys.push({
-                        pn: ignPn,
-                        keyType: cv.keyType || 'Ignition Key',
-                        keyway: cv.ignition_keyway,
-                        chip: cv.ignition_chip,
-                        fccid: cv.ignition_fccid,
-                        frequency: cv.ignition_frequency,
-                        buttons: cv.ignition_buttons,
-                        isCustom: true,
-                        dualKeyRole: 'ignition'
+                        pn, keyType: cv.keyType || 'Ignition Key',
+                        keyway: ik.keyway, chip: ik.chip, fccid: ik.fccid,
+                        frequency: ik.frequency, buttons: ik.buttons,
+                        isCustom: true, dualKeyRole: 'ignition'
                     });
                 }
-            }
-            // Tag or create door key
-            if (doorPn) {
-                const existingDoor = vehicleMap[vehicleKey].keys.find(k => k.pn === doorPn);
-                if (existingDoor) {
-                    existingDoor.dualKeyRole = 'door';
+            });
+            // Add all door keys as pseudo-keys
+            doorKeys.forEach((dk, i) => {
+                const pn = dk.keyBlank || (i === 0 ? vdOverride.door_keyBlank : '') || '';
+                if (!pn) return;
+                const existing = vehicleMap[vehicleKey].keys.find(k => k.pn === pn);
+                if (existing) {
+                    existing.dualKeyRole = 'door';
                 } else {
                     vehicleMap[vehicleKey].keys.push({
-                        pn: doorPn,
-                        keyType: 'Door/Trunk/GB Key',
-                        keyway: cv.door_keyway,
-                        chip: cv.door_chip,
-                        fccid: cv.door_fccid,
-                        isCustom: true,
-                        dualKeyRole: 'door'
+                        pn, keyType: 'Door/Trunk/GB Key',
+                        keyway: dk.keyway, chip: dk.chip, fccid: dk.fccid,
+                        isCustom: true, dualKeyRole: 'door'
                     });
                 }
-            }
+            });
         } else if (cv.keyBlank || cv.keyType) {
             const pseudoKey = {
                 pn: cv.keyBlank || 'Custom',
@@ -16452,33 +16474,60 @@ function openVehicleDetail(vehicleKey) {
     `;
 
     if (isDualKey) {
-        // Dual-key vehicle display
+        // Dual-key vehicle display — supports multiple ignition and door keys
         const hasDiffCS = vehicleData.differentCodeSeries === true;
-        const ign = {
-            keyBlank: vehicleData.ignition_keyBlank || (cvForDetail && cvForDetail.ignition_keyBlank) || '',
-            chip: vehicleData.ignition_chip || (cvForDetail && cvForDetail.ignition_chip) || '',
-            keyway: vehicleData.ignition_keyway || (cvForDetail && cvForDetail.ignition_keyway) || '',
-            fccid: vehicleData.ignition_fccid || (cvForDetail && cvForDetail.ignition_fccid) || '',
-            buttons: vehicleData.ignition_buttons || (cvForDetail && cvForDetail.ignition_buttons) || '',
-            frequency: vehicleData.ignition_frequency || (cvForDetail && cvForDetail.ignition_frequency) || '',
-            codeSeries: (() => {
-                const csData = vehicleData.ignition_codeSeries || (cvForDetail && cvForDetail.ignition_codeSeries) || '';
-                if (typeof csData === 'string') return csData;
-                if (Array.isArray(csData) && csData.length > 0) return csData.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).filter(Boolean).join(', ');
-                return '';
-            })()
-        };
-        const door = {
-            keyBlank: vehicleData.door_keyBlank || (cvForDetail && cvForDetail.door_keyBlank) || '',
-            chip: vehicleData.door_chip || (cvForDetail && cvForDetail.door_chip) || '',
-            keyway: vehicleData.door_keyway || (cvForDetail && cvForDetail.door_keyway) || '',
-            fccid: vehicleData.door_fccid || (cvForDetail && cvForDetail.door_fccid) || '',
-            codeSeries: (() => {
-                const csData = vehicleData.door_codeSeries || (cvForDetail && cvForDetail.door_codeSeries) || '';
-                if (typeof csData === 'string') return csData;
-                if (Array.isArray(csData) && csData.length > 0) return csData.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).filter(Boolean).join(', ');
-                return '';
-            })()
+
+        // Build ignition key array from cvForDetail (new arrays or legacy flat fields)
+        const ignKeysDisplay = (() => {
+            if (cvForDetail) {
+                if (Array.isArray(cvForDetail.ignition_keys) && cvForDetail.ignition_keys.length > 0) return cvForDetail.ignition_keys;
+                if (cvForDetail.ignition_keyBlank || cvForDetail.ignition_keyway) {
+                    return [{ keyBlank: cvForDetail.ignition_keyBlank, chip: cvForDetail.ignition_chip, keyway: cvForDetail.ignition_keyway, fccid: cvForDetail.ignition_fccid, buttons: cvForDetail.ignition_buttons, frequency: cvForDetail.ignition_frequency, codeSeries: cvForDetail.ignition_codeSeries }];
+                }
+            }
+            if (vehicleData.ignition_keyBlank || vehicleData.ignition_keyway) {
+                return [{ keyBlank: vehicleData.ignition_keyBlank, chip: vehicleData.ignition_chip, keyway: vehicleData.ignition_keyway, fccid: vehicleData.ignition_fccid, buttons: vehicleData.ignition_buttons, frequency: vehicleData.ignition_frequency, codeSeries: vehicleData.ignition_codeSeries }];
+            }
+            return [];
+        })();
+
+        const doorKeysDisplay = (() => {
+            if (cvForDetail) {
+                if (Array.isArray(cvForDetail.door_keys) && cvForDetail.door_keys.length > 0) return cvForDetail.door_keys;
+                if (cvForDetail.door_keyBlank || cvForDetail.door_keyway) {
+                    return [{ keyBlank: cvForDetail.door_keyBlank, chip: cvForDetail.door_chip, keyway: cvForDetail.door_keyway, fccid: cvForDetail.door_fccid, codeSeries: cvForDetail.door_codeSeries }];
+                }
+            }
+            if (vehicleData.door_keyBlank || vehicleData.door_keyway) {
+                return [{ keyBlank: vehicleData.door_keyBlank, chip: vehicleData.door_chip, keyway: vehicleData.door_keyway, fccid: vehicleData.door_fccid, codeSeries: vehicleData.door_codeSeries }];
+            }
+            return [];
+        })();
+
+        const renderKeySection = (keyEntry, idx, total, type) => {
+            const isIgn = type === 'ign';
+            const csData = keyEntry.codeSeries || '';
+            const cs = typeof csData === 'string' ? csData : (Array.isArray(csData) ? csData.map(c => c.series + (c.years ? ' (' + c.years + ')' : '')).join(', ') : '');
+            const label = isIgn
+                ? ('&#128273; Ignition Key' + (total > 1 ? ' ' + (idx + 1) : ''))
+                : ('&#128682; Door / Trunk / Glovebox Key' + (total > 1 ? ' ' + (idx + 1) : ''));
+            const bg = isIgn ? 'rgba(0,212,255,0.08)' : 'rgba(255,107,53,0.08)';
+            const borderCol = isIgn ? 'var(--accent)' : 'var(--accent2)';
+            const titleColor = isIgn ? 'var(--accent)' : 'var(--accent2)';
+            const margin = idx === 0 ? (isIgn ? '12px 16px 8px' : '0 16px 8px') : '0 16px 8px';
+            return `
+            <div style="margin:${margin};padding:12px;background:${bg};border:1px solid ${borderCol};border-radius:8px;">
+                <div style="font-weight:600;color:${titleColor};margin-bottom:10px;font-size:14px;">${label}</div>
+                <div class="vehicle-info-grid" style="margin:0;padding:0;">
+                    ${keyEntry.keyBlank ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Blank</div><div class="vehicle-info-value highlight">' + keyEntry.keyBlank + '</div></div>' : ''}
+                    ${keyEntry.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + keyEntry.chip + '</div></div>' : ''}
+                    ${keyEntry.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + keyEntry.keyway + '</div></div>' : ''}
+                    ${keyEntry.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + keyEntry.fccid + '</div></div>' : ''}
+                    ${isIgn && keyEntry.buttons ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Buttons</div><div class="vehicle-info-value">' + keyEntry.buttons + '</div></div>' : ''}
+                    ${isIgn && keyEntry.frequency ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Frequency</div><div class="vehicle-info-value">' + keyEntry.frequency + '</div></div>' : ''}
+                    ${cs ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series</div><div class="vehicle-info-value highlight">' + cs + '</div></div>' : ''}
+                </div>
+            </div>`;
         };
 
         html += `
@@ -16493,36 +16542,12 @@ function openVehicleDetail(vehicleKey) {
                 const keyTypeDisplay = vdKeyType || (aggKeyTypes.length > 0 ? [...new Set(aggKeyTypes)].join(', ') : '');
                 return keyTypeDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Type</div><div class="vehicle-info-value">' + keyTypeDisplay + '</div></div>' : '';
             })()}
-            ${!hasDiffCS ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series ' + (!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : '') + '</div><div class="vehicle-info-value highlight">' + codeSeriesDisplay + '</div></div>' : ''}
             ${fids.size > 0 ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FID' + (fids.size > 1 ? 's' : '') + '</div><div class="vehicle-info-value highlight">' + fidDisplay + '</div></div>' : ''}
             ${vehicleData.battery ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Battery</div><div class="vehicle-info-value">' + vehicleData.battery + '</div></div>' : ''}
         </div>
 
-        <!-- Ignition Key Section -->
-        <div style="margin:12px 16px;padding:12px;background:rgba(0,212,255,0.08);border:1px solid var(--accent);border-radius:8px;">
-            <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
-            <div class="vehicle-info-grid" style="margin:0;padding:0;">
-                ${ign.keyBlank ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Blank</div><div class="vehicle-info-value highlight">' + ign.keyBlank + '</div></div>' : ''}
-                ${ign.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + ign.chip + '</div></div>' : ''}
-                ${ign.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + ign.keyway + '</div></div>' : ''}
-                ${ign.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + ign.fccid + '</div></div>' : ''}
-                ${ign.buttons ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Buttons</div><div class="vehicle-info-value">' + ign.buttons + '</div></div>' : ''}
-                ${ign.frequency ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Frequency</div><div class="vehicle-info-value">' + ign.frequency + '</div></div>' : ''}
-                ${ign.codeSeries ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series</div><div class="vehicle-info-value highlight">' + ign.codeSeries + '</div></div>' : ''}
-            </div>
-        </div>
-
-        <!-- Door/Trunk/Glovebox Key Section -->
-        <div style="margin:0 16px 12px;padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;">
-            <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
-            <div class="vehicle-info-grid" style="margin:0;padding:0;">
-                ${door.keyBlank ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Blank</div><div class="vehicle-info-value highlight">' + door.keyBlank + '</div></div>' : ''}
-                ${door.chip ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Chip Type</div><div class="vehicle-info-value">' + door.chip + '</div></div>' : ''}
-                ${door.keyway ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Keyway</div><div class="vehicle-info-value highlight">' + door.keyway + '</div></div>' : ''}
-                ${door.fccid ? '<div class="vehicle-info-item"><div class="vehicle-info-label">FCC ID</div><div class="vehicle-info-value highlight">' + door.fccid + '</div></div>' : ''}
-                ${door.codeSeries ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Code Series</div><div class="vehicle-info-value highlight">' + door.codeSeries + '</div></div>' : ''}
-            </div>
-        </div>
+        ${ignKeysDisplay.map((ik, i) => renderKeySection(ik, i, ignKeysDisplay.length, 'ign')).join('')}
+        ${doorKeysDisplay.map((dk, i) => renderKeySection(dk, i, doorKeysDisplay.length, 'door')).join('')}
         ${vehicleData.notes ? '<div style="margin:0 16px 12px;"><div class="vehicle-info-item" style="grid-column:1/-1;background:rgba(100,149,237,0.1);border:1px solid cornflowerblue;border-radius:6px;"><div class="vehicle-info-label" style="color:cornflowerblue;">Notes</div><div class="vehicle-info-value" style="white-space:pre-wrap;">' + vehicleData.notes + '</div></div></div>' : ''}
         `;
     } else {
@@ -20156,6 +20181,11 @@ function toggleYrfMultipleKeys() {
     const checked = document.getElementById('yrfMultipleKeys').checked;
     document.getElementById('yrfSingleKeyFields').style.display = checked ? 'none' : 'block';
     document.getElementById('yrfDualKeyFields').style.display = checked ? 'block' : 'none';
+    if (checked) {
+        // Auto-add one entry for each role if empty
+        if (yrfIgnKeys.length === 0) addYrfDualKey('ign');
+        if (yrfDoorKeys.length === 0) addYrfDualKey('door');
+    }
 }
 
 function toggleQuickVehicleMultipleKeys() {
