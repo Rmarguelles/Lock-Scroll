@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v116</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v117</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v116</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v117</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v116<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v117<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5999,6 +5999,19 @@
         <div class="year-range-section">
             <div class="year-range-section-title">Key Information</div>
 
+            <!-- Key Type (shown first to drive chip visibility) -->
+            <div class="modal-input-group">
+                <label>Key Type</label>
+                <div class="dropdown-with-new">
+                    <select class="modal-input" id="yrfKeyType" onchange="onYrfKeyTypeChange()">
+                        <option value="">Select Key Type...</option>
+                    </select>
+                    <div class="inline-add-new" id="yrfKeyTypeNew">
+                        <input type="text" placeholder="Enter new key type..." id="yrfKeyTypeNewInput">
+                    </div>
+                </div>
+            </div>
+
             <!-- Key Blank -->
             <div class="modal-input-group">
                 <label>Key Blank</label>
@@ -6032,8 +6045,8 @@
                 </div>
             </div>
 
-            <!-- Chip Type (auto-populates from Key Blank) -->
-            <div class="modal-input-group">
+            <!-- Chip Type (hidden when Non-Chip Key type is selected) -->
+            <div class="modal-input-group" id="yrfChipTypeGroup">
                 <label>Chip Type</label>
                 <div class="dropdown-with-new" id="yrfChipContainer">
                     <select class="modal-input" id="yrfChipType" onchange="onYrfFieldChange('chip')">
@@ -6055,19 +6068,6 @@
                     <div class="conflict-verify">
                         <input type="checkbox" id="verifyNoChip" onchange="updateSaveButtonState()">
                         <label for="verifyNoChip">I've verified this is correct</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Key Type -->
-            <div class="modal-input-group">
-                <label>Key Type</label>
-                <div class="dropdown-with-new">
-                    <select class="modal-input" id="yrfKeyType" onchange="onYrfDropdownChange('yrfKeyType')">
-                        <option value="">Select Key Type...</option>
-                    </select>
-                    <div class="inline-add-new" id="yrfKeyTypeNew">
-                        <input type="text" placeholder="Enter new key type..." id="yrfKeyTypeNewInput">
                     </div>
                 </div>
             </div>
@@ -6156,6 +6156,15 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Alternative Ignition Keys section -->
+        <div class="year-range-section" id="yrfAltKeysSection">
+            <div class="year-range-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Alternative Ignition Keys <span style="font-size:10px;color:var(--dim);font-weight:400;text-transform:none;">(Optional — for vehicles with 2 possible ignition keys)</span></span>
+            </div>
+            <div id="yrfAltKeysList"></div>
+            <button type="button" class="add-override-btn" onclick="addYrfAltKey()">+ Add Alternative Key</button>
         </div>
         </div>
 
@@ -14296,6 +14305,107 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// ---- Key Type change: handle Add New + chip visibility ----
+function onYrfKeyTypeChange() {
+    onYrfDropdownChange('yrfKeyType');
+    updateYrfChipVisibility();
+}
+
+function updateYrfChipVisibility() {
+    const keyType = getYrfFieldValue('yrfKeyType', 'yrfKeyTypeNewInput');
+    const isNonChip = /non.?chip|non.?transponder|mechanical/i.test(keyType);
+    const group = document.getElementById('yrfChipTypeGroup');
+    if (!group) return;
+    group.style.display = isNonChip ? 'none' : '';
+    // Clear chip value when hidden so it doesn't get saved
+    if (isNonChip) {
+        const sel = document.getElementById('yrfChipType');
+        if (sel) sel.value = '';
+        const inp = document.getElementById('yrfChipTypeNewInput');
+        if (inp) inp.value = '';
+        const newCont = document.getElementById('yrfChipTypeNew');
+        if (newCont) newCont.classList.remove('visible');
+    }
+}
+
+// ---- Alternative Ignition Keys ----
+let yrfAltKeys = []; // [{keyBlank, keyway, chip}]
+
+function addYrfAltKey() {
+    yrfAltKeys.push({ keyBlank: '', keyway: '', chip: '' });
+    renderYrfAltKeysList();
+}
+
+function removeYrfAltKey(idx) {
+    yrfAltKeys.splice(idx, 1);
+    renderYrfAltKeysList();
+}
+
+function updateYrfAltKey(idx, field, value) {
+    if (yrfAltKeys[idx]) yrfAltKeys[idx][field] = value;
+}
+
+function renderYrfAltKeysList() {
+    const container = document.getElementById('yrfAltKeysList');
+    if (!container) return;
+
+    if (yrfAltKeys.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const options = getYrfDropdownOptions();
+    const keyBlankOpts = ['', ...options.keyBlanks].map(v =>
+        `<option value="${v}">${v || 'Select Key Blank...'}</option>`).join('');
+    const keywayOpts = ['', ...options.keyways].map(v =>
+        `<option value="${v}">${v || 'Select Keyway...'}</option>`).join('');
+    const chipOpts = ['', ...options.chipTypes].map(v =>
+        `<option value="${v}">${v || 'Select Chip Type...'}</option>`).join('');
+
+    container.innerHTML = yrfAltKeys.map((alt, idx) => `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:12px;font-weight:600;color:var(--accent);">Alternative Key ${idx + 1}</span>
+                <button type="button" onclick="removeYrfAltKey(${idx})"
+                    style="padding:2px 8px;background:var(--danger);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕ Remove</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Key Blank</label>
+                    <select class="modal-input" style="font-size:12px;"
+                        onchange="updateYrfAltKey(${idx},'keyBlank',this.value)">
+                        ${keyBlankOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Keyway</label>
+                    <select class="modal-input" style="font-size:12px;"
+                        onchange="updateYrfAltKey(${idx},'keyway',this.value)">
+                        ${keywayOpts}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Chip Type</label>
+                    <select class="modal-input" style="font-size:12px;"
+                        onchange="updateYrfAltKey(${idx},'chip',this.value)">
+                        ${chipOpts}
+                    </select>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Restore selected values (after innerHTML is set, selects are fresh)
+    yrfAltKeys.forEach((alt, idx) => {
+        const row = container.children[idx];
+        if (!row) return;
+        const selects = row.querySelectorAll('select');
+        if (selects[0]) selects[0].value = alt.keyBlank || '';
+        if (selects[1]) selects[1].value = alt.keyway || '';
+        if (selects[2]) selects[2].value = alt.chip || '';
+    });
+}
+
 // Handle "Add New" selection in dual-key dropdowns
 function onDualKeyDropdownChange(selectId) {
     const select = document.getElementById(selectId);
@@ -14708,6 +14818,8 @@ function openAddYearRangeModal(make, model, keyType) {
     yrfActiveWarnings = [];
     yrfNewValues = {};
     yrfYearOverrides = [];
+    yrfAltKeys = [];
+    renderYrfAltKeysList();
 
     // Clear year overrides list
     document.getElementById('yearOverridesList').innerHTML = '';
@@ -14765,6 +14877,10 @@ function openAddYearRangeModal(make, model, keyType) {
             if (input) input.value = '';
         }
     });
+
+    // Reset chip type visibility (show by default)
+    const chipGroup = document.getElementById('yrfChipTypeGroup');
+    if (chipGroup) chipGroup.style.display = '';
 
     // Reset save button
     document.getElementById('saveYearRangeBtn').disabled = false;
@@ -15344,7 +15460,12 @@ function saveNewYearRange() {
         const keystonePartNum = getYrfFieldValue('yrfKeystonePartNum', 'yrfKeystonePartNumNewInput');
         const buttonFunctions = [...yrfSelectedButtonFunctions];
 
-        const hasKeyInfo = keyBlank || keyway || chipType || fccId;
+        // Collect alt keys (filter out empty ones)
+        const altKeys = yrfAltKeys
+            .filter(a => a.keyBlank)
+            .map(a => ({ keyBlank: a.keyBlank, keyway: a.keyway || '', chip: a.chip || '' }));
+
+        const hasKeyInfo = keyBlank || keyway || chipType || fccId || altKeys.length > 0;
         const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
 
         newVehicle = {
@@ -15365,6 +15486,7 @@ function saveNewYearRange() {
             keyway: keyway,
             ilcoPartNum: ilcoPartNum,
             keystonePartNum: keystonePartNum,
+            altKeys: altKeys.length > 0 ? altKeys : undefined,
             notes: '',
             hasOverrides: overrideNotes.length > 0,
             overrideNotes: overrideNotes,
@@ -15406,6 +15528,13 @@ function saveNewYearRange() {
             updateFccRelationship(fccId, buttonCount, frequency, buttonFunctions);
             saveKeyRelationships();
         }
+        // Save relationships for alt keys too
+        (newVehicle.altKeys || []).forEach(alt => {
+            if (alt.keyBlank && (alt.keyway || alt.chip)) {
+                updateKeyRelationship(alt.keyBlank, alt.keyway, alt.chip);
+                saveKeyRelationships();
+            }
+        });
     }
 
     if (syncEnabled) {
@@ -15959,6 +16088,23 @@ function getUniqueVehicles() {
                 if (!existing.buttons && pseudoKey.buttons) existing.buttons = pseudoKey.buttons;
             } else {
                 vehicleMap[vehicleKey].keys.push(pseudoKey);
+            }
+            // Push alternative ignition keys as additional compatible keys
+            if (Array.isArray(cv.altKeys)) {
+                cv.altKeys.forEach(alt => {
+                    if (!alt.keyBlank) return;
+                    const altExists = vehicleMap[vehicleKey].keys.find(k => k.pn === alt.keyBlank);
+                    if (!altExists) {
+                        vehicleMap[vehicleKey].keys.push({
+                            pn: alt.keyBlank,
+                            keyType: cv.keyType || 'Unknown',
+                            keyway: alt.keyway || '',
+                            chip: alt.chip || '',
+                            isCustom: true,
+                            isAltIgnition: true
+                        });
+                    }
+                });
             }
         }
 
