@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v118</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v119</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v118</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v119</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v118<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v119<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5147,8 +5147,17 @@
     <div class="modal-content" style="max-width:500px;">
         <div class="modal-title">Edit Key Information</div>
         <div class="modal-input-group">
-            <label>Part Number</label>
-            <input type="text" class="modal-input" id="editKeyInfoPN" disabled style="opacity:0.7;">
+            <label style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Part Number</span>
+                <button type="button" id="editKeyInfoPNUnlockBtn" onclick="unlockEditKeyInfoPN()"
+                    style="display:none;font-size:11px;padding:3px 9px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--accent);cursor:pointer;">
+                    &#128274; Edit PN
+                </button>
+            </label>
+            <input type="text" class="modal-input" id="editKeyInfoPN" disabled style="opacity:0.7;font-family:monospace;">
+            <div id="editKeyInfoPNWarning" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(255,165,0,0.13);border:1px solid orange;border-radius:6px;font-size:12px;color:orange;">
+                &#9888; Changing a part number will update the key in the database and migrate any existing stock quantity. Proceed carefully.
+            </div>
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
@@ -8137,7 +8146,20 @@ function openEditKeyInfoModal(idx) {
     editingKeyInfoIdx = idx;
     const key = DB[idx];
 
-    document.getElementById('editKeyInfoPN').value = key.pn || '';
+    // Reset PN field — only custom keys can have their PN edited
+    const pnInput = document.getElementById('editKeyInfoPN');
+    pnInput.value = key.pn || '';
+    pnInput.disabled = true;
+    pnInput.style.opacity = '0.7';
+    document.getElementById('editKeyInfoPNWarning').style.display = 'none';
+    const unlockBtn = document.getElementById('editKeyInfoPNUnlockBtn');
+    if (key.isCustom) {
+        unlockBtn.style.display = '';
+        unlockBtn.textContent = '\uD83D\uDD12 Edit PN';
+        unlockBtn.style.color = 'var(--accent)';
+    } else {
+        unlockBtn.style.display = 'none';
+    }
 
     // Collect unique values from DB for fields without a dedicated category
     const fccIds = new Set();
@@ -8183,7 +8205,39 @@ function saveEditKeyInfo() {
     if (editingKeyInfoIdx === null) return;
 
     const key = DB[editingKeyInfoIdx];
-    const pn = String(key.pn);
+    const oldPn = String(key.pn);
+    const pnInput = document.getElementById('editKeyInfoPN');
+    const newPnRaw = pnInput.value.trim();
+    const pnChanged = key.isCustom && !pnInput.disabled && newPnRaw && newPnRaw !== oldPn;
+
+    if (pnChanged) {
+        const collision = DB.find(k => String(k.pn).toLowerCase() === newPnRaw.toLowerCase() && String(k.pn) !== oldPn);
+        if (collision) {
+            toast(`Part number "${newPnRaw}" already exists in the database`);
+            return;
+        }
+        const saveConfirmed = confirm(
+            `\u26A0\uFE0F Confirm Part Number Change\n\nOld: ${oldPn}\nNew: ${newPnRaw}\n\nSave this change?`
+        );
+        if (!saveConfirmed) return;
+    }
+
+    // Apply PN change before anything else
+    if (pnChanged) {
+        key.pn = newPnRaw;
+        if (stockData[oldPn] !== undefined) {
+            stockData[newPnRaw] = stockData[oldPn];
+            delete stockData[oldPn];
+            saveStock();
+        }
+        if (keyInfoOverrides[oldPn] !== undefined) {
+            keyInfoOverrides[newPnRaw] = keyInfoOverrides[oldPn];
+            delete keyInfoOverrides[oldPn];
+            saveKeyInfoOverrides();
+        }
+    }
+
+    const pn = String(key.pn); // use updated pn from here on
 
     const newKeyType = getDropdownValue('editKeyInfoKeyType', 'editKeyInfoKeyTypeOther') || null;
     const newKeyway = getDropdownValue('editKeyInfoKeyway', 'editKeyInfoKeywayOther') || null;
@@ -8199,8 +8253,11 @@ function saveEditKeyInfo() {
 
     if (key.isCustom) {
         // For custom keys, update the customKeys array directly
-        const customIdx = customKeys.findIndex(ck => ck.pn == pn);
+        // Search by old PN if it was renamed, otherwise by current pn
+        const searchPn = pnChanged ? oldPn : pn;
+        const customIdx = customKeys.findIndex(ck => String(ck.pn) === searchPn);
         if (customIdx >= 0) {
+            if (pnChanged) customKeys[customIdx].pn = newPnRaw;
             customKeys[customIdx].keyType = newKeyType;
             customKeys[customIdx].keyway = newKeyway;
             customKeys[customIdx].chip = newChip;
@@ -8257,7 +8314,11 @@ function saveEditKeyInfo() {
     // Refresh the key detail page
     openKey(editingKeyInfoIdx, cameFromFcc, cameFromFid);
     closeEditKeyInfoModal();
-    toast('Key info updated');
+    if (pnChanged) {
+        toast(`Part number changed: ${oldPn} \u2192 ${newPnRaw}`);
+    } else {
+        toast('Key info updated');
+    }
 }
 
 function getAllVendors() {
@@ -19681,6 +19742,38 @@ function unlockEditCustomKeyPN() {
     document.getElementById('editCustomKeyPNWarning').style.display = 'block';
     document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD13 Lock PN';
     document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'orange';
+}
+
+function unlockEditKeyInfoPN() {
+    const pnInput = document.getElementById('editKeyInfoPN');
+    const btn = document.getElementById('editKeyInfoPNUnlockBtn');
+    if (!pnInput.disabled) {
+        // Re-lock
+        pnInput.disabled = true;
+        pnInput.style.opacity = '0.7';
+        document.getElementById('editKeyInfoPNWarning').style.display = 'none';
+        btn.textContent = '\uD83D\uDD12 Edit PN';
+        btn.style.color = 'var(--accent)';
+        return;
+    }
+    const currentPN = pnInput.value.trim();
+    const confirmed = confirm(
+        `\u26A0\uFE0F Edit Part Number \u2014 Read Before Continuing\n\n` +
+        `You are about to change the part number "${currentPN}".\n\n` +
+        `This will:\n` +
+        `\u2022 Rename the key in the database\n` +
+        `\u2022 Migrate existing stock to the new part number\n` +
+        `\u2022 Update the in-memory DB entry\n\n` +
+        `This CANNOT be automatically undone. Are you sure you want to continue?`
+    );
+    if (!confirmed) return;
+    pnInput.disabled = false;
+    pnInput.style.opacity = '1';
+    pnInput.focus();
+    pnInput.select();
+    document.getElementById('editKeyInfoPNWarning').style.display = 'block';
+    btn.textContent = '\uD83D\uDD13 Lock PN';
+    btn.style.color = 'orange';
 }
 
 function toggleVATSFields() {
