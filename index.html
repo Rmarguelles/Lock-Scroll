@@ -14092,6 +14092,18 @@ function getYrfDropdownOptions() {
         if (v.frequency) options.frequencies.add(v.frequency);
     });
 
+    // Collect all known keyways from lishiData (keys are keyway identifiers)
+    Object.keys(lishiData).forEach(keyway => {
+        if (keyway) options.keyways.add(keyway);
+    });
+
+    // Collect all known keyways from MASTER_LISHI_TOOLS keyway arrays
+    Object.values(MASTER_LISHI_TOOLS).forEach(tool => {
+        if (Array.isArray(tool.keyways)) {
+            tool.keyways.forEach(kw => { if (kw) options.keyways.add(kw); });
+        }
+    });
+
     // Add common button functions if not present
     ['Lock', 'Unlock', 'Trunk', 'Panic', 'Remote Start', 'Hatch'].forEach(f => options.buttonFunctions.add(f));
 
