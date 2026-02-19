@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v119</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v120</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v119</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v120</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v119<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v120<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -9089,14 +9089,34 @@ function renderEditVehiclesList() {
                         <option value="__add_new__">+ Add New Model...</option>
                     </select>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">
-                    <input type="number" value="${v.startYear || ''}" placeholder="Start Year"
-                        onchange="updateEditVehicle(${i}, 'startYear', parseInt(this.value))"
-                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                    <input type="number" value="${v.endYear || ''}" placeholder="End Year"
-                        onchange="updateEditVehicle(${i}, 'endYear', parseInt(this.value))"
-                        style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
-                    <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🗑️</button>
+                <div style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px;align-items:end;margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:3px;">Month</label>
+                        <select onchange="updateEditVehicle(${i}, 'startMonth', parseInt(this.value) || undefined)"
+                            style="padding:7px 4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
+                            ${monthSelectOptions(v.startMonth || '')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:3px;">Start Year</label>
+                        <input type="number" value="${v.startYear || ''}" placeholder="e.g. 2015"
+                            onchange="updateEditVehicle(${i}, 'startYear', parseInt(this.value))"
+                            style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:3px;">Month</label>
+                        <select onchange="updateEditVehicle(${i}, 'endMonth', parseInt(this.value) || undefined)"
+                            style="padding:7px 4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
+                            ${monthSelectOptions(v.endMonth || '')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:10px;color:var(--dim);display:block;margin-bottom:3px;">End Year</label>
+                        <input type="number" value="${v.endYear || ''}" placeholder="e.g. 2020"
+                            onchange="updateEditVehicle(${i}, 'endYear', parseInt(this.value))"
+                            style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128465;</button>
                 </div>
                 <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
