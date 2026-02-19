@@ -6165,56 +6165,140 @@
                 <div style="font-weight:600;color:var(--accent);margin-bottom:10px;font-size:14px;">&#128273; Ignition Key</div>
                 <div class="modal-input-group">
                     <label>Key Blank (Part #)</label>
-                    <input type="text" class="modal-input" id="yrfIgnKeyBlank" placeholder="e.g., B44, B99-P">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIgnKeyBlank" onchange="onDualKeyDropdownChange('yrfIgnKeyBlank')">
+                            <option value="">Select Key Blank...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIgnKeyBlankNew">
+                            <input type="text" placeholder="Enter new key blank..." id="yrfIgnKeyBlankNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
-                    <input type="text" class="modal-input" id="yrfIgnChip" placeholder="e.g., PK3, Hitag Pro">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIgnChip" onchange="onDualKeyDropdownChange('yrfIgnChip')">
+                            <option value="">Select Chip Type...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIgnChipNew">
+                            <input type="text" placeholder="Enter new chip type..." id="yrfIgnChipNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Keyway</label>
-                    <input type="text" class="modal-input" id="yrfIgnKeyway" placeholder="e.g., B99">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIgnKeyway" onchange="onDualKeyDropdownChange('yrfIgnKeyway')">
+                            <option value="">Select Keyway...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIgnKeywayNew">
+                            <input type="text" placeholder="Enter new keyway..." id="yrfIgnKeywayNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>FCC ID</label>
-                    <input type="text" class="modal-input" id="yrfIgnFccid" placeholder="e.g., H92, KOBLEAR1XT" list="fccidDatalist">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIgnFccid" onchange="onDualKeyDropdownChange('yrfIgnFccid')">
+                            <option value="">Select FCC ID...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIgnFccidNew">
+                            <input type="text" placeholder="Enter new FCC ID..." id="yrfIgnFccidNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group" style="display:flex;gap:8px;">
                     <div style="flex:1;">
                         <label>Buttons</label>
-                        <input type="text" class="modal-input" id="yrfIgnButtons" placeholder="e.g., 4 Button">
+                        <div class="dropdown-with-new">
+                            <select class="modal-input" id="yrfIgnButtons" onchange="onDualKeyDropdownChange('yrfIgnButtons')">
+                                <option value="">Select Buttons...</option>
+                            </select>
+                            <div class="inline-add-new" id="yrfIgnButtonsNew">
+                                <input type="text" placeholder="Enter button count..." id="yrfIgnButtonsNewInput">
+                            </div>
+                        </div>
                     </div>
                     <div style="flex:1;">
                         <label>Frequency</label>
-                        <input type="text" class="modal-input" id="yrfIgnFrequency" placeholder="e.g., 315 MHz">
+                        <div class="dropdown-with-new">
+                            <select class="modal-input" id="yrfIgnFrequency" onchange="onDualKeyDropdownChange('yrfIgnFrequency')">
+                                <option value="">Select Frequency...</option>
+                            </select>
+                            <div class="inline-add-new" id="yrfIgnFrequencyNew">
+                                <input type="text" placeholder="Enter frequency..." id="yrfIgnFrequencyNewInput">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Code Series</label>
-                    <input type="text" class="modal-input" id="yrfIgnCodeSeries" placeholder="e.g., DL01-DM70">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfIgnCodeSeries" onchange="onDualKeyDropdownChange('yrfIgnCodeSeries')">
+                            <option value="">Select Code Series...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfIgnCodeSeriesNew">
+                            <input type="text" placeholder="e.g., DL01-DM70" id="yrfIgnCodeSeriesNewInput">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div style="padding:12px;background:rgba(255,107,53,0.08);border:1px solid var(--accent2);border-radius:8px;margin-bottom:12px;">
                 <div style="font-weight:600;color:var(--accent2);margin-bottom:10px;font-size:14px;">&#128682; Door / Trunk / Glovebox Key</div>
                 <div class="modal-input-group">
                     <label>Key Blank (Part #)</label>
-                    <input type="text" class="modal-input" id="yrfDoorKeyBlank" placeholder="e.g., B45, B62-P">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfDoorKeyBlank" onchange="onDualKeyDropdownChange('yrfDoorKeyBlank')">
+                            <option value="">Select Key Blank...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfDoorKeyBlankNew">
+                            <input type="text" placeholder="Enter new key blank..." id="yrfDoorKeyBlankNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Chip Type</label>
-                    <input type="text" class="modal-input" id="yrfDoorChip" placeholder="e.g., No Chip">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfDoorChip" onchange="onDualKeyDropdownChange('yrfDoorChip')">
+                            <option value="">Select Chip Type...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfDoorChipNew">
+                            <input type="text" placeholder="Enter new chip type..." id="yrfDoorChipNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Keyway</label>
-                    <input type="text" class="modal-input" id="yrfDoorKeyway" placeholder="e.g., B62">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfDoorKeyway" onchange="onDualKeyDropdownChange('yrfDoorKeyway')">
+                            <option value="">Select Keyway...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfDoorKeywayNew">
+                            <input type="text" placeholder="Enter new keyway..." id="yrfDoorKeywayNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>FCC ID</label>
-                    <input type="text" class="modal-input" id="yrfDoorFccid" placeholder="e.g., No Remote" value="" list="fccidDatalist">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfDoorFccid" onchange="onDualKeyDropdownChange('yrfDoorFccid')">
+                            <option value="">Select FCC ID...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfDoorFccidNew">
+                            <input type="text" placeholder="Enter new FCC ID..." id="yrfDoorFccidNewInput">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-input-group">
                     <label>Code Series</label>
-                    <input type="text" class="modal-input" id="yrfDoorCodeSeries" placeholder="e.g., A01-D70">
+                    <div class="dropdown-with-new">
+                        <select class="modal-input" id="yrfDoorCodeSeries" onchange="onDualKeyDropdownChange('yrfDoorCodeSeries')">
+                            <option value="">Select Code Series...</option>
+                        </select>
+                        <div class="inline-add-new" id="yrfDoorCodeSeriesNew">
+                            <input type="text" placeholder="e.g., A01-D70" id="yrfDoorCodeSeriesNewInput">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -14064,6 +14148,23 @@ function populateYrfDropdowns() {
 
     // Populate button functions multi-select
     populateButtonFunctionsDropdown(options.buttonFunctions);
+
+    // Populate dual-key (multiple keys) dropdowns
+    if (codeSeriesCache.length === 0) buildCodeSeriesCache();
+    // Ignition key fields
+    populateYrfDropdown('yrfIgnKeyBlank', options.keyBlanks, 'Select Key Blank...');
+    populateYrfDropdown('yrfIgnChip', options.chipTypes, 'Select Chip Type...');
+    populateYrfDropdown('yrfIgnKeyway', options.keyways, 'Select Keyway...');
+    populateYrfDropdown('yrfIgnFccid', options.fccIds, 'Select FCC ID...');
+    populateYrfDropdown('yrfIgnButtons', options.buttonCounts, 'Select Buttons...');
+    populateYrfDropdown('yrfIgnFrequency', options.frequencies, 'Select Frequency...');
+    populateYrfDropdown('yrfIgnCodeSeries', codeSeriesCache, 'Select Code Series...');
+    // Door key fields
+    populateYrfDropdown('yrfDoorKeyBlank', options.keyBlanks, 'Select Key Blank...');
+    populateYrfDropdown('yrfDoorChip', options.chipTypes, 'Select Chip Type...');
+    populateYrfDropdown('yrfDoorKeyway', options.keyways, 'Select Keyway...');
+    populateYrfDropdown('yrfDoorFccid', options.fccIds, 'Select FCC ID...');
+    populateYrfDropdown('yrfDoorCodeSeries', codeSeriesCache, 'Select Code Series...');
 }
 
 // Populate button functions multi-select dropdown
@@ -14182,6 +14283,22 @@ document.addEventListener('click', function(event) {
         dropdown.classList.remove('open');
     }
 });
+
+// Handle "Add New" selection in dual-key dropdowns
+function onDualKeyDropdownChange(selectId) {
+    const select = document.getElementById(selectId);
+    const newInputContainer = document.getElementById(selectId + 'New');
+    if (!select || !newInputContainer) return;
+
+    if (select.value === '__ADD_NEW__') {
+        newInputContainer.classList.add('visible');
+        const input = newInputContainer.querySelector('input');
+        if (input) input.focus();
+        select.value = '';
+    } else {
+        newInputContainer.classList.remove('visible');
+    }
+}
 
 // Handle "Add New" selection in dropdowns
 function onYrfDropdownChange(selectId) {
@@ -14624,11 +14741,17 @@ function openAddYearRangeModal(make, model, keyType) {
     document.getElementById('yrfMultipleKeys').checked = false;
     document.getElementById('yrfSingleKeyFields').style.display = 'block';
     document.getElementById('yrfDualKeyFields').style.display = 'none';
-    // Clear dual-key inputs
+    // Clear dual-key selects and hide any open "Add New" inputs
     ['yrfIgnKeyBlank', 'yrfIgnChip', 'yrfIgnKeyway', 'yrfIgnFccid', 'yrfIgnButtons', 'yrfIgnFrequency', 'yrfIgnCodeSeries',
      'yrfDoorKeyBlank', 'yrfDoorChip', 'yrfDoorKeyway', 'yrfDoorFccid', 'yrfDoorCodeSeries'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
+        const newContainer = document.getElementById(id + 'New');
+        if (newContainer) {
+            newContainer.classList.remove('visible');
+            const input = newContainer.querySelector('input');
+            if (input) input.value = '';
+        }
     });
 
     // Reset save button
@@ -15151,19 +15274,19 @@ function saveNewYearRange() {
     let newVehicle;
 
     if (isMultipleKeys) {
-        // Collect dual-key field values
-        const ignKeyBlank = document.getElementById('yrfIgnKeyBlank').value.trim();
-        const ignChip = document.getElementById('yrfIgnChip').value.trim();
-        const ignKeyway = document.getElementById('yrfIgnKeyway').value.trim();
-        const ignFccid = document.getElementById('yrfIgnFccid').value.trim();
-        const ignButtons = document.getElementById('yrfIgnButtons').value.trim();
-        const ignFrequency = document.getElementById('yrfIgnFrequency').value.trim();
-        const ignCodeSeries = document.getElementById('yrfIgnCodeSeries').value.trim();
-        const doorKeyBlank = document.getElementById('yrfDoorKeyBlank').value.trim();
-        const doorChip = document.getElementById('yrfDoorChip').value.trim();
-        const doorKeyway = document.getElementById('yrfDoorKeyway').value.trim();
-        const doorFccid = document.getElementById('yrfDoorFccid').value.trim();
-        const doorCodeSeries = document.getElementById('yrfDoorCodeSeries').value.trim();
+        // Collect dual-key field values (supports both select value and "Add New" text input)
+        const ignKeyBlank = getYrfFieldValue('yrfIgnKeyBlank', 'yrfIgnKeyBlankNewInput');
+        const ignChip = getYrfFieldValue('yrfIgnChip', 'yrfIgnChipNewInput');
+        const ignKeyway = getYrfFieldValue('yrfIgnKeyway', 'yrfIgnKeywayNewInput');
+        const ignFccid = getYrfFieldValue('yrfIgnFccid', 'yrfIgnFccidNewInput');
+        const ignButtons = getYrfFieldValue('yrfIgnButtons', 'yrfIgnButtonsNewInput');
+        const ignFrequency = getYrfFieldValue('yrfIgnFrequency', 'yrfIgnFrequencyNewInput');
+        const ignCodeSeries = getYrfFieldValue('yrfIgnCodeSeries', 'yrfIgnCodeSeriesNewInput');
+        const doorKeyBlank = getYrfFieldValue('yrfDoorKeyBlank', 'yrfDoorKeyBlankNewInput');
+        const doorChip = getYrfFieldValue('yrfDoorChip', 'yrfDoorChipNewInput');
+        const doorKeyway = getYrfFieldValue('yrfDoorKeyway', 'yrfDoorKeywayNewInput');
+        const doorFccid = getYrfFieldValue('yrfDoorFccid', 'yrfDoorFccidNewInput');
+        const doorCodeSeries = getYrfFieldValue('yrfDoorCodeSeries', 'yrfDoorCodeSeriesNewInput');
 
         const hasKeyInfo = ignKeyBlank || ignKeyway || ignChip || doorKeyBlank || doorKeyway || doorChip;
         const dataStatus = hasKeyInfo ? 'partial' : 'incomplete';
