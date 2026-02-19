@@ -5084,8 +5084,17 @@
     <div class="modal-content" style="max-width:500px;">
         <div class="modal-title">Edit Custom Key</div>
         <div class="modal-input-group">
-            <label>Part Number</label>
-            <input type="text" class="modal-input" id="editCustomKeyPN" disabled style="opacity:0.7;">
+            <label style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Part Number</span>
+                <button type="button" id="editCustomKeyPNUnlockBtn" onclick="unlockEditCustomKeyPN()"
+                    style="font-size:11px;padding:3px 9px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--accent);cursor:pointer;">
+                    &#128274; Edit PN
+                </button>
+            </label>
+            <input type="text" class="modal-input" id="editCustomKeyPN" disabled style="opacity:0.7;font-family:monospace;">
+            <div id="editCustomKeyPNWarning" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(255,165,0,0.13);border:1px solid orange;border-radius:6px;font-size:12px;color:orange;">
+                &#9888; Changing a part number will update the key in the database and migrate any existing stock quantity. Proceed carefully.
+            </div>
         </div>
         <div class="modal-input-group">
             <label>FCC ID</label>
@@ -19618,7 +19627,15 @@ function openEditCustomKeyModal(idx) {
     editingCustomKeyIndex = idx;
     const key = customKeys[idx];
 
-    document.getElementById('editCustomKeyPN').value = key.pn || '';
+    // Reset PN field to locked state
+    const pnInput = document.getElementById('editCustomKeyPN');
+    pnInput.value = key.pn || '';
+    pnInput.disabled = true;
+    pnInput.style.opacity = '0.7';
+    document.getElementById('editCustomKeyPNWarning').style.display = 'none';
+    document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD12 Edit PN';
+    document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'var(--accent)';
+
     document.getElementById('editCustomKeyFCC').value = key.fccid || '';
     document.getElementById('editCustomKeyKeyway').value = key.keyway || '';
     document.getElementById('editCustomKeyChip').value = key.chip || '';
@@ -19633,6 +19650,37 @@ function openEditCustomKeyModal(idx) {
     toggleVATSFields();
 
     document.getElementById('editCustomKeyModal').classList.add('on');
+}
+
+function unlockEditCustomKeyPN() {
+    const pnInput = document.getElementById('editCustomKeyPN');
+    if (!pnInput.disabled) {
+        // Already unlocked — re-lock it
+        pnInput.disabled = true;
+        pnInput.style.opacity = '0.7';
+        document.getElementById('editCustomKeyPNWarning').style.display = 'none';
+        document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD12 Edit PN';
+        document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'var(--accent)';
+        return;
+    }
+    const currentPN = pnInput.value.trim();
+    const confirmed = confirm(
+        `⚠️ Edit Part Number — Read Before Continuing\n\n` +
+        `You are about to change the part number "${currentPN}".\n\n` +
+        `This will:\n` +
+        `• Rename the key in the database\n` +
+        `• Migrate existing stock to the new part number\n` +
+        `• Update the in-memory DB entry\n\n` +
+        `This CANNOT be automatically undone. Are you sure you want to continue?`
+    );
+    if (!confirmed) return;
+    pnInput.disabled = false;
+    pnInput.style.opacity = '1';
+    pnInput.focus();
+    pnInput.select();
+    document.getElementById('editCustomKeyPNWarning').style.display = 'block';
+    document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD13 Lock PN';
+    document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'orange';
 }
 
 function toggleVATSFields() {
@@ -19650,9 +19698,51 @@ function saveEditCustomKey() {
     if (editingCustomKeyIndex === null) return;
 
     const key = customKeys[editingCustomKeyIndex];
-    const oldPn = key.pn;
+    const oldPn = String(key.pn);
+    const pnInput = document.getElementById('editCustomKeyPN');
+    const newPn = pnInput.value.trim();
 
-    // Update custom key
+    // Validate new PN if it was changed
+    const pnChanged = !pnInput.disabled && newPn && newPn !== oldPn;
+    if (pnChanged) {
+        if (!newPn) {
+            toast('Part number cannot be empty');
+            return;
+        }
+        // Check for collision with an existing different key
+        const collision = DB.find(k => String(k.pn).toLowerCase() === newPn.toLowerCase() && String(k.pn) !== oldPn);
+        if (collision) {
+            toast(`Part number "${newPn}" already exists in the database`);
+            return;
+        }
+        // Second confirmation at save time
+        const saveConfirmed = confirm(
+            `⚠️ Confirm Part Number Change\n\n` +
+            `Old: ${oldPn}\n` +
+            `New: ${newPn}\n\n` +
+            `Save this change?`
+        );
+        if (!saveConfirmed) return;
+    }
+
+    // Apply PN change if needed
+    if (pnChanged) {
+        key.pn = newPn;
+        // Migrate stock from old PN to new PN
+        if (stockData[oldPn] !== undefined) {
+            stockData[newPn] = stockData[oldPn];
+            delete stockData[oldPn];
+            saveStock();
+        }
+        // Migrate keyInfoOverrides if any
+        if (keyInfoOverrides[oldPn] !== undefined) {
+            keyInfoOverrides[newPn] = keyInfoOverrides[oldPn];
+            delete keyInfoOverrides[oldPn];
+            saveKeyInfoOverrides();
+        }
+    }
+
+    // Update all other fields
     key.fccid = document.getElementById('editCustomKeyFCC').value.trim() || null;
     key.keyway = document.getElementById('editCustomKeyKeyway').value.trim() || null;
     key.chip = document.getElementById('editCustomKeyChip').value.trim() || null;
@@ -19665,8 +19755,9 @@ function saveEditCustomKey() {
     key.isVATS = document.getElementById('editCustomKeyIsVATS').checked;
     key.secondaryKeyPartNumber = key.isVATS ? (document.getElementById('editCustomKeySecondaryPN').value.trim() || null) : null;
 
-    // Update in DB array
-    const dbIndex = DB.findIndex(k => String(k.pn) === String(oldPn) && k.isCustom);
+    // Update in DB array (search by old PN since key.pn was already updated above)
+    const searchPn = pnChanged ? oldPn : newPn || oldPn;
+    const dbIndex = DB.findIndex(k => String(k.pn) === searchPn && k.isCustom);
     if (dbIndex >= 0) {
         DB[dbIndex] = { ...key };
     }
@@ -19676,7 +19767,12 @@ function saveEditCustomKey() {
     buildFilters();
     applyFilters();
     closeEditCustomKeyModal();
-    toast('Custom key updated');
+
+    if (pnChanged) {
+        toast(`Part number changed: ${oldPn} \u2192 ${newPn}`);
+    } else {
+        toast('Custom key updated');
+    }
 }
 
 function deleteCustomKey() {
