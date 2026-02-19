@@ -4221,7 +4221,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v115</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v116</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4746,7 +4746,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v115</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v116</p>
         </div>
 
         <div class="settings-section">
@@ -4758,7 +4758,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v115<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v116<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14090,6 +14090,18 @@ function getYrfDropdownOptions() {
         if (v.buttons) options.buttonCounts.add(v.buttons);
         if (v.fccid) options.fccIds.add(v.fccid);
         if (v.frequency) options.frequencies.add(v.frequency);
+    });
+
+    // Collect all known keyways from lishiData (keys are keyway identifiers)
+    Object.keys(lishiData).forEach(keyway => {
+        if (keyway) options.keyways.add(keyway);
+    });
+
+    // Collect all known keyways from MASTER_LISHI_TOOLS keyway arrays
+    Object.values(MASTER_LISHI_TOOLS).forEach(tool => {
+        if (Array.isArray(tool.keyways)) {
+            tool.keyways.forEach(kw => { if (kw) options.keyways.add(kw); });
+        }
     });
 
     // Add common button functions if not present
