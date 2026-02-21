@@ -1843,6 +1843,221 @@
             line-height: 1.6;
         }
         
+        /* Bulk Inventory - Selected Items */
+        .bulk-selected-items {
+            margin-top: 16px;
+        }
+
+        .bulk-selected-item {
+            background: var(--card);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bulk-selected-item-info {
+            flex: 1;
+        }
+
+        .bulk-selected-item-pn {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bulk-selected-item-detail {
+            font-size: 12px;
+            color: var(--dim);
+            margin-top: 4px;
+        }
+
+        .bulk-remove-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 107, 53, 0.2);
+            border: none;
+            border-radius: 6px;
+            color: var(--accent2);
+            font-size: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        .bulk-add-more-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--card);
+            border: 1px dashed var(--accent);
+            border-radius: 10px;
+            color: var(--accent);
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .bulk-add-more-btn:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .bulk-search-box {
+            margin-top: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .bulk-search-box .add-inv-input {
+            margin-bottom: 8px;
+        }
+
+        .bulk-search-results {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .bulk-next-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--success);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        .bulk-next-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Step 2 - Detail cards */
+        .bulk-detail-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .bulk-detail-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .bulk-detail-card-pn {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bulk-detail-card-fcc {
+            font-size: 12px;
+            color: var(--dim);
+        }
+
+        /* Sub-item splitting for same FCC ID */
+        .bulk-sub-items {
+            margin-top: 12px;
+        }
+
+        .bulk-sub-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .bulk-sub-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .bulk-sub-item-pn {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bulk-sub-item-desc {
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .bulk-sub-remove {
+            background: none;
+            border: none;
+            color: var(--accent2);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .bulk-add-variant-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            color: var(--accent);
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .bulk-add-variant-btn:hover {
+            border-color: var(--accent);
+        }
+
+        .bulk-field-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .bulk-field-row > * {
+            flex: 1;
+        }
+
+        .bulk-field-row label {
+            display: block;
+            font-size: 11px;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .bulk-shared-fields {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .bulk-shared-fields-title {
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
         /* Purchase History */
         .purchase-history-filters {
             padding: 12px 16px;
@@ -6245,109 +6460,84 @@
 <div class="add-inventory-panel" id="addInventoryPanel">
     <div class="add-inv-header">
         <button class="back-btn" onclick="closeAddInventory()">←</button>
-        <div class="add-inv-title">➕ Add Inventory</div>
+        <div class="add-inv-title">Add Inventory</div>
         <div class="add-inv-header-buttons">
-            <button class="history-btn" onclick="closeAddInventory()">📦 Inventory</button>
-            <button class="history-btn" onclick="openPurchaseHistory()">📜 History</button>
+            <button class="history-btn" onclick="closeAddInventory()">Inventory</button>
+            <button class="history-btn" onclick="openPurchaseHistory()">History</button>
         </div>
     </div>
-    
+
     <div class="add-inv-content">
-        <!-- Step 1: Identify -->
+        <!-- Step 1: Select Items -->
         <div class="add-inv-step" id="addInvStep1">
-            <div class="add-inv-step-title">Step 1: Identify the Key</div>
-            
-            <div class="add-inv-section">
-                <label>Search by FCC ID or Part Number</label>
-                <input type="text" class="add-inv-input" id="addInvSearch" placeholder="Enter FCC ID, part number, or keyway..." oninput="searchInventoryKeys()">
-            </div>
-            
-            <div class="add-inv-section">
-                <label>Or filter by criteria:</label>
-                <div class="add-inv-filters">
-                    <select class="add-inv-select" id="addInvMake" onchange="updateAddInvModels(); filterInventoryKeys()">
-                        <option value="">All Makes</option>
-                    </select>
-                    <select class="add-inv-select" id="addInvKeyway" onchange="filterInventoryKeys()">
-                        <option value="">All Keyways</option>
-                    </select>
-                    <select class="add-inv-select" id="addInvChip" onchange="filterInventoryKeys()">
-                        <option value="">All Chips</option>
-                    </select>
+            <div class="add-inv-step-title">Step 1: Select Items</div>
+
+            <!-- Active search area -->
+            <div id="bulkSearchArea">
+                <div class="add-inv-section">
+                    <label>Search by Part Number, FCC ID, FID, or Keyway</label>
+                    <input type="text" class="add-inv-input" id="addInvSearch" placeholder="Enter part number, FCC ID, FID, or keyway..." oninput="bulkSearchKeys()">
+                </div>
+
+                <div class="add-inv-results" id="addInvResults">
+                    <div class="add-inv-placeholder">Enter search criteria above to find keys</div>
                 </div>
             </div>
-            
-            <div class="add-inv-section">
-                <label>Has Logo?</label>
-                <div class="add-inv-toggle-row">
-                    <button class="add-inv-toggle" id="logoYes" onclick="setLogoFilter('yes')">Yes (OEM)</button>
-                    <button class="add-inv-toggle" id="logoNo" onclick="setLogoFilter('no')">No (Aftermarket)</button>
-                    <button class="add-inv-toggle active" id="logoAny" onclick="setLogoFilter('any')">Any</button>
-                </div>
-            </div>
-            
-            <div class="add-inv-results" id="addInvResults">
-                <div class="add-inv-placeholder">Enter search criteria above to find keys</div>
-            </div>
-            
+
+            <!-- Selected items list -->
+            <div class="bulk-selected-items" id="bulkSelectedItems"></div>
+
+            <!-- Add More Inventory button -->
+            <button class="bulk-add-more-btn" id="bulkAddMoreBtn" style="display:none;" onclick="showBulkSearch()">+ Add More Inventory</button>
+
+            <!-- Next button -->
+            <button class="bulk-next-btn" id="bulkNextBtn" style="display:none;" onclick="goToBulkStep2()">Next: Enter Purchase Details</button>
+
             <div class="add-inv-section" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
                 <button onclick="openAddCustomKey()" style="width:100%;padding:14px;background:var(--card);border:1px dashed var(--accent);border-radius:10px;color:var(--accent);font-size:14px;cursor:pointer;">
-                    ➕ Add Custom Key to Database
+                    + Add Custom Key to Database
                 </button>
             </div>
         </div>
-        
-        <!-- Step 2: Details -->
+
+        <!-- Step 2: Purchase Details for All Items -->
         <div class="add-inv-step" id="addInvStep2" style="display:none;">
             <div class="add-inv-step-title">Step 2: Purchase Details</div>
-            
-            <div class="add-inv-selected-key" id="addInvSelectedKey"></div>
-            
-            <div class="add-inv-section">
-                <label>Quantity</label>
-                <div class="add-inv-qty-row">
-                    <button class="add-inv-qty-btn" onclick="adjustAddQty(-1)">−</button>
-                    <input type="number" class="add-inv-input add-inv-qty" id="addInvQty" value="1" min="0">
-                    <button class="add-inv-qty-btn" onclick="adjustAddQty(1)">+</button>
+
+            <!-- Shared purchase fields -->
+            <div class="bulk-shared-fields" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:20px;">
+                <div class="bulk-shared-fields-title">Order Information</div>
+                <div class="add-inv-section">
+                    <label>Vendor/Distributor</label>
+                    <select class="add-inv-select" id="addInvVendor">
+                        <option value="">Select vendor...</option>
+                    </select>
+                </div>
+                <div class="add-inv-section">
+                    <label>Date Purchased</label>
+                    <input type="date" class="add-inv-input" id="addInvDate">
+                </div>
+                <div class="bulk-field-row">
+                    <div>
+                        <label>Invoice/PO #</label>
+                        <input type="text" class="add-inv-input" id="addInvInvoice" placeholder="Invoice number...">
+                    </div>
+                    <div>
+                        <label>Notes</label>
+                        <input type="text" class="add-inv-input" id="addInvNotes" placeholder="Any notes...">
+                    </div>
                 </div>
             </div>
-            
-            <div class="add-inv-section">
-                <label>Vendor/Distributor</label>
-                <select class="add-inv-select" id="addInvVendor">
-                    <option value="">Select vendor...</option>
-                </select>
-            </div>
-            
-            <div class="add-inv-section">
-                <label>Price Paid (per key)</label>
-                <div class="add-inv-price-row">
-                    <span class="add-inv-currency">$</span>
-                    <input type="number" class="add-inv-input" id="addInvPrice" placeholder="0.00" step="0.01" min="0">
-                </div>
-            </div>
-            
-            <div class="add-inv-section">
-                <label>Date Purchased</label>
-                <input type="date" class="add-inv-input" id="addInvDate">
-            </div>
-            
-            <div class="add-inv-section">
-                <label>Invoice/PO # (optional)</label>
-                <input type="text" class="add-inv-input" id="addInvInvoice" placeholder="Invoice number...">
-            </div>
-            
-            <div class="add-inv-section">
-                <label>Notes (optional)</label>
-                <input type="text" class="add-inv-input" id="addInvNotes" placeholder="Any notes...">
-            </div>
-            
+
+            <!-- Per-item detail cards rendered by JS -->
+            <div id="bulkDetailCards"></div>
+
             <div class="add-inv-buttons">
-                <button class="add-inv-btn secondary" onclick="goToStep1()">← Back</button>
-                <button class="add-inv-btn primary" onclick="submitInventory()">Add to Inventory</button>
+                <button class="add-inv-btn secondary" onclick="goToStep1()">Back</button>
+                <button class="add-inv-btn primary" onclick="submitBulkInventory()">Add All to Inventory</button>
             </div>
         </div>
-        
+
         <!-- Step 3: Confirmation -->
         <div class="add-inv-step" id="addInvStep3" style="display:none;">
             <div class="add-inv-success">
@@ -6355,7 +6545,7 @@
                 <div class="add-inv-success-title">Added to Inventory!</div>
                 <div class="add-inv-success-details" id="addInvSuccessDetails"></div>
             </div>
-            
+
             <div class="add-inv-buttons">
                 <button class="add-inv-btn secondary" onclick="goToStep1()">Add Another</button>
                 <button class="add-inv-btn primary" onclick="closeAddInventory()">Done</button>
@@ -18713,80 +18903,32 @@ function saveVehicleDataEdit() {
     toast('Vehicle data saved');
 }
 
-// ===================== ADD INVENTORY =====================
+// ===================== ADD INVENTORY (BULK) =====================
 let selectedInventoryKey = null;
 let selectedInventoryKeyIndex = null;
 let logoFilter = 'any';
+let bulkSelectedItems = []; // Array of { dbIndex, key, fccId, isGroup }
+let bulkItemDetails = []; // Array of detail objects for step 2
 let customKeyVehicleCount = 0;
 let customKeys = [{"keyway":"HO01","vehicles":[{"endYear":2021,"startYear":2019,"make":"Acura","model":"RDX"}],"fccid":"KR5T21","chip":"Hitag 3","keyType":"Proximity","addedDate":"2026-02-07T03:47:22.209Z","isCustom":true,"pn":"5268","buttons":"4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)","frequency":"433.66-434.18 MHz"},{"pn":"B62","dualKeyRole":"ignition","buttons":null,"keyType":"VATS Single-Sided","chip":"VATS","vehicles":[{"endYear":1992,"model":"Reatta","make":"Buick","startYear":1990},{"model":"Regal","make":"Buick","endYear":1996,"startYear":1994},{"make":"Buick","endYear":1994,"model":"Riviera","startYear":1992},{"make":"Buick","endYear":1996,"startYear":1994,"model":"Roadmaster"},{"make":"Cadillac","endYear":1993,"startYear":1989,"model":"Allante"},{"model":"Allante","make":"Cadillac","startYear":1987,"endYear":1988},{"endYear":1996,"model":"Brougham","startYear":1993,"make":"Cadillac"},{"codeSeries":[],"model":"Concours","startYear":1990,"make":"Cadillac","endYear":1990},{"codeSeries":[],"endYear":1999,"model":"Concours","make":"Cadillac","startYear":1991},{"endYear":1999,"startYear":1991,"make":"Cadillac","model":"DeVille"},{"model":"El Dorado","startYear":1991,"make":"Cadillac","endYear":2003},{"make":"Cadillac","model":"El Dorado","endYear":1990,"startYear":1989},{"endYear":1990,"make":"Cadillac","startYear":1989,"model":"Seville","codeSeries":[]},{"startYear":1991,"codeSeries":[],"model":"Seville","make":"Cadillac","endYear":1996}],"keyway":"B62","fccid":"B62","isCustom":true,"addedDate":"2026-02-07T04:32:57.351Z","frequency":null},{"fccid":"B51","emergencyPN":null,"buttons":null,"keyType":"Non-Chip Key","keyway":"B67","notes":null,"isCustom":true,"isVATS":false,"chip":null,"dualKeyRole":"door","pn":"B51","battery":null,"secondaryKeyPartNumber":null,"addedDate":"2026-02-07T04:38:55.840Z","vehicles":[{"startYear":1990,"endYear":1992,"make":"Buick","model":"Reatta"},{"startYear":1987,"endYear":1990,"model":"Brougham","make":"Cadillac"},{"codeSeries":[],"endYear":1990,"make":"Cadillac","model":"Fleetwood","startYear":1987},{"endYear":1987,"model":"Cimarron","codeSeries":[],"startYear":1987,"make":"Cadillac"},{"startYear":1987,"make":"Cadillac","codeSeries":[],"endYear":1989,"model":"Concours"},{"model":"Concours","endYear":1990,"make":"Cadillac","codeSeries":[],"startYear":1990},{"endYear":1990,"model":"El Dorado","startYear":1989,"make":"Cadillac"},{"codeSeries":[],"endYear":1988,"make":"Cadillac","startYear":1987,"model":"Seville"},{"endYear":1990,"startYear":1989,"make":"Cadillac","model":"Seville","codeSeries":[]}],"frequency":null},{"dualKeyRole":"door","fccid":"B62","frequency":null,"isCustom":true,"vehicles":[{"startYear":1994,"make":"Buick","endYear":1996,"model":"Regal"}],"keyway":"B62","addedDate":"2026-02-07T04:43:32.720Z","chip":"VATS","keyType":null,"pn":"B79","buttons":null},{"buttons":null,"dualKeyRole":"ignition","keyType":null,"chip":"VATS","addedDate":"2026-02-07T04:46:53.917Z","frequency":null,"isCustom":true,"vehicles":[{"make":"Buick","startYear":1997,"endYear":2004,"model":"Regal"},{"make":"Buick","endYear":1999,"model":"Riviera","startYear":1995},{"startYear":1995,"make":"Buick","model":"Riviera","endYear":1999}],"keyway":"B82","pn":"B82","fccid":"B82"},{"chip":null,"addedDate":"2026-02-07T05:04:09.986Z","buttons":null,"vehicles":[{"make":"Buick","startYear":2005,"model":"Signia","endYear":2007,"codeSeries":[{"series":"G0000-G3631","years":"2005-2007"}]},{"codeSeries":[{"years":"2005-2005","series":"G0000-G3631"}],"make":"Chevrolet","startYear":2005,"endYear":2005,"model":"Cobalt"}],"keyType":"Non-Chip Key","fccid":"B106","isCustom":true,"frequency":null,"keyway":"B106","pn":"B106"},{"keyType":"Non-Chip Key","addedDate":"2026-02-07T05:09:03.208Z","keyway":"B68","dualKeyRole":"ignition","pn":"B68","chip":null,"vehicles":[{"model":"Skylark","endYear":1992,"startYear":1992,"make":"Buick"}],"buttons":null,"isCustom":true,"fccid":"B68","frequency":null},{"keyType":"Non-Chip Key","isCustom":true,"frequency":null,"fccid":"B86","buttons":null,"addedDate":"2026-02-07T05:12:56.919Z","dualKeyRole":"ignition","chip":null,"keyway":"B86","pn":"B86","vehicles":[{"endYear":1994,"startYear":1994,"make":"Buick","model":"Skylark"}]},{"chip":null,"keyType":"Non-Chip Key","keyway":"B86","vehicles":[{"model":"Skylark","make":"Buick","startYear":1995,"endYear":1998}],"frequency":null,"addedDate":"2026-02-07T05:14:45.873Z","buttons":null,"pn":"B89","isCustom":true,"fccid":"B89"},{"addedDate":"2026-02-08T02:52:23.580Z","vehicles":[{"model":"Allante","make":"Cadillac","endYear":1993,"startYear":1989},{"startYear":1987,"make":"Cadillac","model":"Allante","endYear":1988},{"model":"Allante","startYear":1987,"make":"Cadillac","endYear":1988}],"keyType":"VATS Single-Sided","frequency":null,"chip":"VATS","keyway":"B62","buttons":null,"pn":"B59","isCustom":true,"dualKeyRole":"door","fccid":"B62"},{"addedDate":"2026-02-09T16:06:47.055Z","notes":null,"frequency":"314.95 MHz","vehicles":[{"make":"Cadillac","endYear":2014,"model":"SRX","startYear":2010,"codeSeries":"Z0001-Z6000"}],"isVATS":false,"isCustom":true,"chip":"PH 46","buttons":"3 Button: L, U, P (Lock, Unlock, Panic)","fccid":"NBG009768T","keyType":"Proximity","pn":"8185","keyway":"HU100"},{"chip":"PH 46","keyway":"HU100","fccid":"NBG009768T","isVATS":false,"pn":"8426","frequency":"314.95 MHz","keyType":"Proximity","notes":null,"isCustom":true,"addedDate":"2026-02-09T16:17:02.928Z","buttons":"4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)","vehicles":[{"model":"ATS","startYear":2013,"endYear":2014,"codeSeries":"Z0001-Z6000","make":"Cadillac"}]},{"isVATS":false,"keyway":"HU100","pn":"8026","vehicles":[{"endYear":2014,"codeSeries":"Z0001-Z6000","make":"Cadillac","startYear":2010,"model":"SRX"},{"model":"ELR","codeSeries":"Z0001-Z6000","endYear":2016,"startYear":2015,"make":"Cadillac"}],"isCustom":true,"addedDate":"2026-02-09T16:25:31.334Z","buttons":"5 Button: L, U, P, H, RS (Lock, Unlock, Panic, Hatch, Remote Start)","fccid":"NBG009768T, NBGG093UCC","keyType":"Proximity","chip":"PH 46","notes":"Cadillac ELR year ranges vary from resource. ILCO says 2014-2017 while KR and others say 2015-2016.","frequency":"314.95 MHz"},{"buttons":"5 Button: L, U, P, T, RS (Lock, Unlock, Panic, Trunk, Remote Start)","addedDate":"2026-02-09T16:39:28.654Z","notes":"ILCO mentions the same OEM# for ELR 2014-2017 but KR has 2014 and 2015-2016 separated.","keyType":"Proximity","fccid":"NBG009768T, NBGG093UCC","frequency":"314.95 MHz","isVATS":false,"keyway":"HU100","chip":"PH 46","pn":"8290","vehicles":[{"startYear":2013,"make":"Cadillac","codeSeries":"Z0001-Z6000","endYear":2014,"model":"ATS"},{"startYear":2014,"endYear":2017,"codeSeries":"Z0001-Z6000","make":"Cadillac","model":"ELR"},{"codeSeries":"Z0001-Z6000","startYear":2013,"make":"Cadillac","model":"XTS","endYear":2017}],"isCustom":true},{"addedDate":"2026-02-09T17:43:38.592Z","keyway":"B63","pn":"B50","isCustom":true,"keyType":"Non-Chip Key","chip":null,"dualKeyRole":"ignition","frequency":null,"buttons":null,"vehicles":[{"model":"Brougham","startYear":1987,"make":"Cadillac","endYear":1990},{"model":"Fleetwood","endYear":1990,"make":"Cadillac","codeSeries":[],"startYear":1987},{"startYear":1987,"make":"Cadillac","codeSeries":[],"model":"Cimarron","endYear":1987},{"codeSeries":[],"endYear":1989,"startYear":1987,"make":"Cadillac","model":"Concours"},{"startYear":1987,"make":"Cadillac","model":"Seville","endYear":1988,"codeSeries":[]}],"fccid":"B50"},{"addedDate":"2026-02-09T18:04:18.984Z","frequency":null,"isCustom":true,"pn":"48239","buttons":null,"fccid":"HU46T2","keyType":"Chip Key","vehicles":[{"make":"Cadillac","model":"Catera","startYear":1997,"endYear":2001}],"chip":"PH 40 GM","keyway":"B61"},{"addedDate":"2026-02-09T18:49:08.175Z","isVATS":false,"fccid":"M3N5WY7777A","frequency":"315 MHz","keyType":"Proximity","chip":"PH 46","vehicles":[{"endYear":2014,"codeSeries":null,"make":"Cadillac","startYear":2008,"model":"CTS"},{"model":"STS","endYear":2011,"codeSeries":null,"startYear":2008,"make":"Cadillac"}],"keyway":"B106","notes":null,"buttons":"5 Button: L, U, P, T, RS (Lock, Unlock, Panic, Trunk, Remote Start)","pn":"9841","isCustom":true},{"isVATS":false,"buttons":"5 Button: L, U, P, T, RS (Lock, Unlock, Panic, Trunk, Remote Start)","chip":"PH 46","fccid":"HYQ2EB","keyType":"Proximity","notes":null,"isCustom":true,"vehicles":[{"make":"Cadillac","model":"ATS","startYear":2019,"endYear":2019,"codeSeries":"V0001-V5718"},{"endYear":2019,"startYear":2018,"codeSeries":"V0001-V5718","model":"CTS","make":"Cadillac"},{"model":"CT6","endYear":2020,"codeSeries":"V0001-V5718","make":"Cadillac","startYear":2016}],"pn":"5022","frequency":"433.92 MHz","addedDate":"2026-02-09T18:54:55.422Z","keyway":"HU100"},{"isCustom":true,"keyType":"Non-Chip Key","pn":"B102","addedDate":"2026-02-09T19:48:57.978Z","buttons":null,"frequency":"315 MHz","chip":null,"fccid":"B102","vehicles":[{"startYear":2000,"make":"Cadillac","model":"Escalade","endYear":2006}],"keyway":"B96/B102"},{"isCustom":true,"chip":null,"keyway":"B91","buttons":null,"keyType":"Non-Chip Key","fccid":"B91","vehicles":[{"startYear":1991,"model":"Escalade","endYear":1991,"make":"Cadillac"}],"frequency":null,"addedDate":"2026-02-09T19:50:32.041Z","pn":"B91"},{"addedDate":"2026-02-09T20:29:07.703Z","chip":"PH 46","buttons":"5 Button: L, U, P, H, RS (Lock, Unlock, Panic, Hatch, Remote Start)","frequency":"433.92 MHz","pn":"5172","isVATS":false,"fccid":"HYQ2ES","keyType":"Proximity","keyway":"HU100","isCustom":true,"vehicles":[{"endYear":2021,"startYear":2020,"make":"Cadillac","codeSeries":"V0001-V5718","model":"XT4"},{"endYear":2021,"codeSeries":"V0001-V5718","model":"XT5","startYear":2020,"make":"Cadillac"},{"endYear":2021,"startYear":2020,"model":"XT6","make":"Cadillac","codeSeries":"V0001-V5718"}],"notes":null},{"addedDate":"2026-02-09T20:47:39.772Z","chip":null,"isVATS":false,"frequency":null,"pn":"HY13","buttons":null,"fccid":"HY13","isCustom":true,"keyType":"Non-Chip Key","keyway":"HY13","notes":null,"vehicles":[{"endYear":2005,"startYear":1995,"make":"Hyundai","codeSeries":"R0001-R1000","model":"Accent"}]},{"addedDate":"2026-02-09T20:51:34.470Z","notes":null,"vehicles":[{"model":"Elantra","codeSeries":[{"years":"1996-2010","series":"T1-T1000"}],"startYear":1996,"endYear":2010,"make":"Hyundai"},{"endYear":2009,"make":"Kia","codeSeries":null,"startYear":2006,"model":"Rondo"},{"make":"Hyundai","codeSeries":"T1-T1000","model":"Accent","endYear":2005,"startYear":2000},{"make":"Hyundai","endYear":2009,"startYear":1996,"model":"Tiburon","codeSeries":[{"series":"T1-T1000","years":"1996-2009"}]},{"make":"Hyundai","codeSeries":[{"series":"V1-V1200","years":"2005-2010"}],"model":"Tucson","startYear":2005,"endYear":2010},{"endYear":2009,"model":"Spectra","codeSeries":[{"series":"V1-V1200","years":"2005-2009"}],"make":"Kia","startYear":2005},{"endYear":2008,"codeSeries":[{"years":"2005-2008","series":"V1-V1200"}],"model":"Sportage","startYear":2005,"make":"Kia"}],"frequency":null,"keyType":"Non-Chip Key","pn":"HY14","chip":null,"isVATS":false,"buttons":null,"fccid":"HY14","keyway":"HY14","isCustom":true},{"chip":null,"addedDate":"2026-02-09T20:58:26.517Z","buttons":null,"frequency":null,"keyway":"HY16","notes":null,"pn":"HY16","isCustom":true,"keyType":"Non-Chip Key","isVATS":false,"fccid":"HY16","vehicles":[{"model":"Accent","codeSeries":"V1-V1200","endYear":2011,"make":"Hyundai","startYear":2006},{"startYear":2006,"codeSeries":"V1-V1200","model":"Rio","make":"Kia","endYear":2010}]},{"isVATS":false,"notes":null,"buttons":null,"pn":"HY18","isCustom":true,"keyway":"HY18-R","keyType":"Non-Chip Key","frequency":null,"fccid":"HY18","chip":null,"addedDate":"2026-02-09T21:03:06.290Z","vehicles":[{"endYear":2017,"startYear":2012,"codeSeries":"T1001-T3500","model":"Accent","make":"Hyundai"},{"codeSeries":"C1001-C3500","endYear":2020,"make":"Kia","model":"Sorento","startYear":2015},{"make":"Hyundai","codeSeries":[{"series":"C1001-C3500","years":"2013-2018"}],"model":"Santa Fe","endYear":2018,"startYear":2013}]},{"frequency":null,"notes":null,"vehicles":[{"model":"Accent","codeSeries":"H1-H2500","startYear":2018,"endYear":2021,"make":"Hyundai"},{"startYear":2017,"endYear":2019,"model":"Elantra","make":"Hyundai","codeSeries":"B0001-B3000"},{"endYear":2022,"model":"Kona","codeSeries":"B0001-B3000","make":"Hyundai","startYear":2018},{"make":"Hyundai","startYear":2020,"endYear":2021,"codeSeries":"S1-S2500","model":"Santa Fe"},{"codeSeries":"B0001-B3000","model":"Veloster","make":"Hyundai","endYear":2020,"startYear":2018},{"codeSeries":"D1-D3000","model":"Forte","startYear":2019,"make":"Kia","endYear":2021},{"startYear":2017,"codeSeries":"D1-D3000","endYear":2020,"make":"Kia","model":"Optima"},{"endYear":2020,"codeSeries":"D1-D3000","model":"Rio","startYear":2018,"make":"Kia"},{"startYear":2021,"endYear":2021,"codeSeries":"D1-D3000","model":"Sportage","make":"Kia"}],"keyway":"KK12","fccid":"KK12","isVATS":false,"buttons":null,"chip":null,"isCustom":true,"addedDate":"2026-02-09T21:11:53.631Z","pn":"KK12","keyType":"Non-Chip Key"},{"pn":"H75x","fccid":"H75","frequency":null,"isCustom":true,"keyType":"Non-Chip Key","notes":null,"buttons":null,"addedDate":"2026-02-10T15:13:26.508Z","chip":null,"keyway":"H75","vehicles":[{"make":"Ford","model":"6000","endYear":1999,"codeSeries":null,"startYear":1996},{"codeSeries":null,"make":"Ford","startYear":1996,"endYear":1999,"model":"9000"},{"model":"Aerostar","startYear":1997,"endYear":1997,"make":"Ford","codeSeries":"1-1706X"},{"endYear":1997,"model":"Bronco","make":"Ford","startYear":1997,"codeSeries":"1-1706X"},{"endYear":1999,"make":"Ford","model":"CF7000","codeSeries":null,"startYear":1996},{"startYear":1997,"model":"Cobra","codeSeries":"1-1706X","make":"Ford","endYear":1997},{"startYear":1997,"codeSeries":"1-1706X","make":"Ford","model":"Crown Victoria","endYear":1997},{"codeSeries":"1-1706X","model":"E-Series/Econoline/Club Wagon Van","endYear":2006,"make":"Ford","startYear":1996},{"endYear":1998,"make":"Ford","codeSeries":"1-1706X","model":"Explorer","startYear":1996},{"make":"Ford","codeSeries":"1-1706X","startYear":1996,"endYear":1998,"model":"Explorer Sport"},{"codeSeries":"1-1706X","endYear":1998,"model":"F-Series/F150/F250 Light Duty Pickup","startYear":1996,"make":"Ford"},{"startYear":1996,"model":"Ranger","codeSeries":"1-1706X","make":"Ford","endYear":1998},{"model":"Taurus","codeSeries":"1-1706X","make":"Ford","startYear":1996,"endYear":1997},{"codeSeries":"1-1706X","make":"Ford","endYear":1997,"model":"Windstar","startYear":1996},{"startYear":1997,"endYear":1997,"model":"Continental","make":"Lincoln","codeSeries":"1-1706X"},{"codeSeries":"1-1706X","endYear":1997,"make":"Lincoln","startYear":1997,"model":"Town Car"},{"model":"B-Series","endYear":1997,"codeSeries":"1-1706X","make":"Mazda","startYear":1996},{"make":"Mercury","startYear":1997,"model":"Cougar","codeSeries":"1-1706X","endYear":1998},{"make":"Mercury","startYear":1997,"endYear":1997,"codeSeries":"1-1706X","model":"Grand Marquis"},{"startYear":1997,"codeSeries":"1-1706X","model":"Mountaineer","make":"Mercury","endYear":1997},{"make":"Mercury","startYear":1996,"codeSeries":"1-1706X","model":"Villager","endYear":2002},{"startYear":2005,"model":"Ranger","codeSeries":"1-1706X","endYear":2005,"make":"Ford"}],"isVATS":false},{"pn":"HU101","addedDate":"2026-02-10T15:43:48.819Z","fccid":"HU101","keyType":"Non-Chip Key","buttons":null,"isCustom":true,"notes":null,"frequency":null,"chip":null,"keyway":"HU101","isVATS":false,"vehicles":[]},{"addedDate":"2026-02-10T15:45:22.446Z","fccid":"DA34","vehicles":[],"isVATS":false,"pn":"DA34","chip":null,"buttons":null,"keyway":"DA34","keyType":"Non-Chip Key","notes":null,"isCustom":true,"frequency":null},{"isVATS":false,"chip":null,"keyway":"HU100","keyType":"Non-Chip Key","vehicles":[],"notes":null,"buttons":null,"frequency":null,"addedDate":"2026-02-10T15:48:47.591Z","isCustom":true,"fccid":"HU100","pn":"HU100"},{"chip":null,"isCustom":true,"buttons":null,"addedDate":"2026-02-10T15:50:18.221Z","isVATS":false,"pn":"Y157","vehicles":[],"keyway":"Y159","notes":null,"keyType":"Non-Chip Key","fccid":"Y157","frequency":null},{"keyType":"Non-Chip Key","keyway":"HY15","isCustom":true,"addedDate":"2026-02-10T15:56:09.869Z","buttons":null,"pn":"HY15","chip":null,"isVATS":false,"notes":null,"frequency":null,"fccid":"HY15","vehicles":[]},{"addedDate":"2026-02-10T15:56:55.363Z","fccid":"HY12","pn":"HY12","chip":null,"isCustom":true,"buttons":null,"vehicles":[],"keyway":"HY12","isVATS":false,"notes":null,"keyType":"Non-Chip Key","frequency":null},{"buttons":null,"keyType":"Non-Chip Key","pn":"HY17","chip":null,"vehicles":[],"isCustom":true,"addedDate":"2026-02-10T15:58:49.371Z","keyway":"HY17","frequency":null,"fccid":"HY17","notes":null,"isVATS":false},{"pn":"KK1","frequency":null,"keyway":"KK1","buttons":null,"notes":null,"chip":null,"vehicles":[],"keyType":"Non-Chip Key","fccid":"KK1","addedDate":"2026-02-10T16:00:00.657Z","isCustom":true,"isVATS":false},{"keyway":"KK2","vehicles":[],"frequency":null,"isVATS":false,"pn":"KK2","notes":null,"isCustom":true,"chip":null,"addedDate":"2026-02-10T16:00:28.637Z","keyType":"Non-Chip Key","fccid":"KK2","buttons":null},{"pn":"KK3","addedDate":"2026-02-10T16:02:10.113Z","chip":null,"keyType":"Non-Chip Key","fccid":"KK3","frequency":null,"isVATS":false,"notes":null,"isCustom":true,"buttons":null,"vehicles":[{"startYear":2001,"endYear":2005,"codeSeries":null,"make":"Kia","model":"Rio"},{"startYear":1998,"endYear":2004,"codeSeries":null,"model":"Sephia","make":"Kia"},{"endYear":2004,"codeSeries":null,"model":"Spectra","startYear":1998,"make":"Kia"}],"keyway":"KK3"},{"isVATS":false,"fccid":"KK4","pn":"KK4","keyType":"Non-Chip Key","frequency":null,"keyway":"KK4","notes":null,"vehicles":[],"addedDate":"2026-02-10T16:02:45.109Z","isCustom":true,"chip":null,"buttons":null},{"buttons":null,"addedDate":"2026-02-10T16:03:22.749Z","vehicles":[],"isCustom":true,"isVATS":false,"chip":null,"fccid":"KK5","pn":"KK5","notes":null,"keyType":"Non-Chip Key","frequency":null,"keyway":"KK5"},{"addedDate":"2026-02-10T16:04:04.251Z","vehicles":[],"frequency":null,"isVATS":false,"keyway":"KK8","notes":null,"pn":"KK8","keyType":"Non-Chip Key","chip":null,"isCustom":true,"fccid":"KK8","buttons":null},{"chip":null,"vehicles":[],"notes":null,"pn":"KK10","buttons":null,"frequency":null,"keyway":"KK10","isCustom":true,"fccid":"KK10","isVATS":false,"keyType":"Non-Chip Key","addedDate":"2026-02-10T16:06:42.146Z"}];
 
 function openAddInventory() {
-    // Populate dropdowns
-    populateAddInvFilters();
     populateVendorDropdown();
-    
-    // Reset to step 1
     goToStep1();
-    
-    // Set default date to today
     document.getElementById('addInvDate').value = new Date().toISOString().split('T')[0];
-    
     document.getElementById('addInventoryPanel').classList.add('on');
 }
 
 function closeAddInventory() {
     document.getElementById('addInventoryPanel').classList.remove('on');
-    // Reset nav
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.nav-btn').classList.add('active');
-}
-
-function populateAddInvFilters() {
-    // Makes
-    const makes = new Set();
-    const keyways = new Set();
-    const chips = new Set();
-    
-    DB.forEach(key => {
-        if (key.keyway) keyways.add(key.keyway);
-        if (key.chip) chips.add(key.chip);
-        (key.vehicles || []).forEach(v => {
-            if (v.make) makes.add(v.make);
-        });
-    });
-    
-    const makeSelect = document.getElementById('addInvMake');
-    makeSelect.innerHTML = '<option value="">All Makes</option>';
-    Array.from(makes).sort().forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        makeSelect.appendChild(opt);
-    });
-    
-    const keywaySelect = document.getElementById('addInvKeyway');
-    keywaySelect.innerHTML = '<option value="">All Keyways</option>';
-    Array.from(keyways).sort().forEach(kw => {
-        const opt = document.createElement('option');
-        opt.value = kw;
-        opt.textContent = kw;
-        keywaySelect.appendChild(opt);
-    });
-    
-    const chipSelect = document.getElementById('addInvChip');
-    chipSelect.innerHTML = '<option value="">All Chips</option>';
-    Array.from(chips).sort().forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        chipSelect.appendChild(opt);
-    });
 }
 
 function populateVendorDropdown() {
     const vendorSelect = document.getElementById('addInvVendor');
     vendorSelect.innerHTML = '<option value="">Select vendor...</option>';
-    
+
     const allVendors = [...DEFAULT_VENDORS.map(v => v.name), ...customVendors.map(v => v.name)];
     allVendors.sort().forEach(v => {
         const opt = document.createElement('option');
@@ -18794,203 +18936,403 @@ function populateVendorDropdown() {
         opt.textContent = v;
         vendorSelect.appendChild(opt);
     });
-    
-    // Add "Other" option
+
     const otherOpt = document.createElement('option');
     otherOpt.value = '__other__';
     otherOpt.textContent = '+ Other (enter manually)';
     vendorSelect.appendChild(otherOpt);
 }
 
-function setLogoFilter(value) {
-    logoFilter = value;
-    document.querySelectorAll('.add-inv-toggle').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('logo' + value.charAt(0).toUpperCase() + value.slice(1)).classList.add('active');
-    filterInventoryKeys();
-}
+// Brand options for inventory
+const BRAND_OPTIONS = ['Aftermarket', 'OEM', 'OEM Refurbished', 'Strattec', 'Atek', 'Keyless2Go', 'Ilco'];
 
-function searchInventoryKeys() {
-    filterInventoryKeys();
-}
+// ---- Step 1: Bulk item selection ----
 
-function updateAddInvModels() {
-    // Could add model filter later if needed
-}
-
-function filterInventoryKeys() {
+function bulkSearchKeys() {
     const search = document.getElementById('addInvSearch').value.toLowerCase().trim();
-    const make = document.getElementById('addInvMake').value;
-    const keyway = document.getElementById('addInvKeyway').value;
-    const chip = document.getElementById('addInvChip').value;
-    
-    if (!search && !make && !keyway && !chip) {
+    if (!search) {
         document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">Enter search criteria above to find keys</div>';
         return;
     }
-    
-    let results = DB.filter((key, idx) => {
-        // Search filter
-        if (search) {
-            const pnStr = String(key.pn || '').toLowerCase();
-            const fccStr = String(key.fccid || '').toLowerCase();
-            const kwStr = String(key.keyway || '').toLowerCase();
-            const chipStr = String(key.chip || '').toLowerCase();
-            
-            const searchMatch = 
-                pnStr.includes(search) ||
-                fccStr.includes(search) ||
-                kwStr.includes(search) ||
-                chipStr.includes(search);
-            if (!searchMatch) return false;
+
+    // Search DB by pn, fccid, keyway, or FID assignment
+    let results = [];
+    const alreadySelectedPNs = new Set(bulkSelectedItems.map(i => i.key.pn));
+
+    // Build FID reverse lookup: fid string -> fccId
+    const fidReverse = {};
+    for (const [fccId, fid] of Object.entries(fidAssignments || {})) {
+        if (fid) fidReverse[fid.toLowerCase()] = fccId;
+    }
+
+    // Check if search matches a FID
+    let fidMatchFccId = null;
+    for (const [fidLower, fccId] of Object.entries(fidReverse)) {
+        if (fidLower.includes(search)) {
+            fidMatchFccId = fccId;
+            break;
         }
-        
-        // Make filter
-        if (make) {
-            const hasMake = (key.vehicles || []).some(v => v.make === make);
-            if (!hasMake) return false;
+    }
+
+    DB.forEach((key, idx) => {
+        if (alreadySelectedPNs.has(key.pn)) return;
+
+        const pnStr = String(key.pn || '').toLowerCase();
+        const fccStr = String(key.fccid || '').toLowerCase();
+        const kwStr = String(key.keyway || '').toLowerCase();
+
+        let match = pnStr.includes(search) || fccStr.includes(search) || kwStr.includes(search);
+
+        // Also match by FID
+        if (!match && fidMatchFccId && key.fccid === fidMatchFccId) {
+            match = true;
         }
-        
-        // Keyway filter
-        if (keyway && key.keyway !== keyway) return false;
-        
-        // Chip filter
-        if (chip && key.chip !== chip) return false;
-        
-        // Logo filter - check part number patterns for OEM indicators
-        if (logoFilter === 'yes') {
-            // OEM keys often have specific patterns - this is a heuristic
-            const pnLower = String(key.pn || '').toLowerCase();
-            const isLikelyOEM = pnLower.includes('oem') || 
-                               pnLower.includes('genuine') ||
-                               /^[A-Z]{2,3}\d/.test(String(key.pn || '')); // Pattern like "GQ4..." or "HYQ..."
-            if (!isLikelyOEM) return false;
-        } else if (logoFilter === 'no') {
-            const pnLower = String(key.pn || '').toLowerCase();
-            const isLikelyOEM = pnLower.includes('oem') || 
-                               pnLower.includes('genuine') ||
-                               /^[A-Z]{2,3}\d/.test(String(key.pn || ''));
-            if (isLikelyOEM) return false;
+        // Check if the FCC ID has an assigned FID that matches
+        if (!match && key.fccid) {
+            const assignedFid = (fidAssignments || {})[key.fccid];
+            if (assignedFid && assignedFid.toLowerCase().includes(search)) {
+                match = true;
+            }
         }
-        
-        return true;
+
+        if (match) results.push({ key, idx });
     });
-    
-    // Limit results
+
     results = results.slice(0, 50);
-    
+
     if (results.length === 0) {
         document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">No keys found matching your criteria</div>';
         return;
     }
-    
-    document.getElementById('addInvResults').innerHTML = results.map((key, idx) => {
-        const makes = [...new Set((key.vehicles || []).map(v => v.make))].slice(0, 3).join(', ');
+
+    // Group results by FCC ID for display, but let users select individual PNs
+    document.getElementById('addInvResults').innerHTML = results.map(({ key, idx }) => {
         const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + formatYearRange(v)).join(', ');
         const currentStock = stockData[key.pn] || 0;
-        
-        // Determine if likely OEM or aftermarket
-        const pnStr = String(key.pn || '');
-        const pnLower = pnStr.toLowerCase();
-        const isLikelyOEM = pnLower.includes('oem') || /^[A-Z]{2,3}\d/.test(pnStr);
-        
-        return '<div class="add-inv-result-item" onclick="selectInventoryKey(' + DB.indexOf(key) + ')">' +
-            '<div class="add-inv-result-pn">' + (pnStr || 'Unknown PN') + '</div>' +
-            '<div class="add-inv-result-details">' +
-                (key.fccid ? 'FCC: ' + key.fccid + ' • ' : '') +
-                (key.keyway || 'No keyway') + ' • ' +
-                (key.chip || 'No chip') +
+        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
+
+        return '<div class="add-inv-result-item" onclick="bulkSelectItem(' + idx + ')">' +
+            '<div class="add-inv-result-pn">' + (key.pn || 'Unknown') +
+                (fid ? ' <span style="font-size:11px;color:var(--dim);">(FID: ' + fid + ')</span>' : '') +
             '</div>' +
-            '<div class="add-inv-result-vehicles">' + (vehicles || makes || 'Unknown vehicles') + '</div>' +
+            '<div class="add-inv-result-details">' +
+                (key.fccid ? 'FCC: ' + key.fccid + ' | ' : '') +
+                (key.keyway || '') +
+                (key.buttons ? ' | ' + key.buttons.split(':')[0] : '') +
+                (key.logo ? ' | ' + key.logo : '') +
+            '</div>' +
+            '<div class="add-inv-result-vehicles">' + (vehicles || 'Unknown vehicles') + '</div>' +
             '<div class="add-inv-result-tags">' +
-                '<span class="add-inv-tag ' + (isLikelyOEM ? 'oem' : 'aftermarket') + '">' + (isLikelyOEM ? 'Likely OEM' : 'Aftermarket') + '</span>' +
                 '<span class="add-inv-tag">Stock: ' + currentStock + '</span>' +
             '</div>' +
         '</div>';
     }).join('');
 }
 
-function selectInventoryKey(dbIndex) {
-    selectedInventoryKey = DB[dbIndex];
-    selectedInventoryKeyIndex = dbIndex;
-    
-    // Show step 2
-    document.getElementById('addInvStep1').style.display = 'none';
-    document.getElementById('addInvStep2').style.display = 'block';
-    document.getElementById('addInvStep3').style.display = 'none';
-    
-    // Populate selected key info
-    const key = selectedInventoryKey;
-    const pnStr = String(key.pn || 'Unknown PN');
-    const makes = [...new Set((key.vehicles || []).map(v => v.make))].slice(0, 3).join(', ');
-    const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + formatYearRange(v)).join('<br>');
-    const currentStock = stockData[key.pn] || 0;
-    
-    document.getElementById('addInvSelectedKey').innerHTML = 
-        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-            '<div class="add-inv-result-pn">' + pnStr + '</div>' +
-            '<button onclick="viewKeyFromInventory(' + dbIndex + ')" style="padding:6px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">View Details →</button>' +
-        '</div>' +
-        '<div class="add-inv-result-details" style="margin-top:8px;">' +
-            (key.fccid ? 'FCC: ' + key.fccid + ' • ' : '') +
-            (key.keyway || 'No keyway') + ' • ' +
-            (key.chip || 'No chip') +
-        '</div>' +
-        '<div style="margin-top:8px;font-size:12px;color:var(--text);">' + vehicles + '</div>' +
-        '<div style="margin-top:8px;font-size:13px;color:var(--success);">Current Stock: ' + currentStock + '</div>';
-    
-    // Reset form
-    document.getElementById('addInvQty').value = 1;
-    document.getElementById('addInvPrice').value = '';
-    document.getElementById('addInvInvoice').value = '';
-    document.getElementById('addInvNotes').value = '';
+function bulkSelectItem(dbIndex) {
+    const key = DB[dbIndex];
+    if (!key) return;
+
+    // Check if already selected
+    if (bulkSelectedItems.some(i => i.key.pn === key.pn)) {
+        toast('Already selected');
+        return;
+    }
+
+    // Determine if this FCC ID has multiple part numbers (variants)
+    const fccId = key.fccid;
+    let siblingKeys = [];
+    if (fccId) {
+        siblingKeys = DB.filter(k => k.fccid === fccId);
+    }
+
+    bulkSelectedItems.push({
+        dbIndex,
+        key,
+        fccId: fccId || null,
+        hasSiblings: siblingKeys.length > 1,
+        siblingKeys: siblingKeys
+    });
+
+    // Hide search, show selected items and Add More button
+    document.getElementById('bulkSearchArea').style.display = 'none';
+    document.getElementById('addInvSearch').value = '';
+    document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">Enter search criteria above to find keys</div>';
+    renderBulkSelectedItems();
 }
 
-function viewKeyFromInventory(dbIndex) {
-    // Close add inventory panel and show key details
-    document.getElementById('addInventoryPanel').classList.remove('on');
-    openKey(dbIndex);
+function renderBulkSelectedItems() {
+    const container = document.getElementById('bulkSelectedItems');
+    container.innerHTML = bulkSelectedItems.map((item, idx) => {
+        const key = item.key;
+        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
+        const detailParts = [];
+        if (key.fccid) detailParts.push('FCC: ' + key.fccid);
+        if (fid) detailParts.push('FID: ' + fid);
+        if (key.keyway) detailParts.push(key.keyway);
+        if (key.buttons) detailParts.push(key.buttons.split(':')[0]);
+
+        return '<div class="bulk-selected-item">' +
+            '<div class="bulk-selected-item-info">' +
+                '<div class="bulk-selected-item-pn">' + key.pn + '</div>' +
+                '<div class="bulk-selected-item-detail">' + detailParts.join(' | ') + '</div>' +
+            '</div>' +
+            '<button class="bulk-remove-btn" onclick="bulkRemoveItem(' + idx + ')">X</button>' +
+        '</div>';
+    }).join('');
+
+    // Show/hide buttons
+    document.getElementById('bulkAddMoreBtn').style.display = bulkSelectedItems.length > 0 ? 'block' : 'none';
+    document.getElementById('bulkNextBtn').style.display = bulkSelectedItems.length > 0 ? 'block' : 'none';
 }
+
+function bulkRemoveItem(idx) {
+    bulkSelectedItems.splice(idx, 1);
+    renderBulkSelectedItems();
+    if (bulkSelectedItems.length === 0) {
+        document.getElementById('bulkSearchArea').style.display = 'block';
+    }
+}
+
+function showBulkSearch() {
+    document.getElementById('bulkSearchArea').style.display = 'block';
+    document.getElementById('addInvSearch').value = '';
+    document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">Enter search criteria above to find keys</div>';
+    document.getElementById('addInvSearch').focus();
+}
+
+// ---- Step 2: Build detail cards ----
 
 function goToStep1() {
-    selectedInventoryKey = null;
+    bulkSelectedItems = [];
+    bulkItemDetails = [];
     document.getElementById('addInvStep1').style.display = 'block';
     document.getElementById('addInvStep2').style.display = 'none';
     document.getElementById('addInvStep3').style.display = 'none';
-    
-    // Clear search
+
     document.getElementById('addInvSearch').value = '';
-    document.getElementById('addInvMake').value = '';
-    document.getElementById('addInvKeyway').value = '';
-    document.getElementById('addInvChip').value = '';
-    logoFilter = 'any';
-    document.querySelectorAll('.add-inv-toggle').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('logoAny').classList.add('active');
+    document.getElementById('bulkSearchArea').style.display = 'block';
     document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">Enter search criteria above to find keys</div>';
+    document.getElementById('bulkSelectedItems').innerHTML = '';
+    document.getElementById('bulkAddMoreBtn').style.display = 'none';
+    document.getElementById('bulkNextBtn').style.display = 'none';
 }
 
-function adjustAddQty(delta) {
-    const input = document.getElementById('addInvQty');
-    let val = parseInt(input.value) || 0;
-    val += delta;
-    if (val < 0) val = 0;
-    input.value = val;
-}
-
-function submitInventory() {
-    if (!selectedInventoryKey) {
-        toast('No key selected');
+function goToBulkStep2() {
+    if (bulkSelectedItems.length === 0) {
+        toast('Select at least one item');
         return;
     }
-    
-    const qtyInput = document.getElementById('addInvQty').value;
-    const qty = qtyInput === '' ? 1 : parseInt(qtyInput) || 0;
+
+    // Build detail model for each selected item
+    bulkItemDetails = bulkSelectedItems.map(item => {
+        const key = item.key;
+        const fccId = key.fccid;
+
+        // Find all sibling part numbers under the same FCC ID
+        let siblings = [];
+        if (fccId) {
+            siblings = DB.filter(k => k.fccid === fccId);
+        }
+        if (siblings.length <= 1) siblings = [];
+
+        // Default: single line item for this key
+        const detail = {
+            key: key,
+            dbIndex: item.dbIndex,
+            fccId: fccId,
+            siblings: siblings,
+            // Sub-items: for keys with multiple variants under same FCC ID
+            subItems: [{
+                pn: key.pn,
+                buttons: key.buttons || '',
+                logo: key.logo || '',
+                qty: 1,
+                brand: '',
+                price: ''
+            }]
+        };
+
+        return detail;
+    });
+
+    document.getElementById('addInvStep1').style.display = 'none';
+    document.getElementById('addInvStep2').style.display = 'block';
+    document.getElementById('addInvStep3').style.display = 'none';
+
+    renderBulkDetailCards();
+}
+
+function renderBulkDetailCards() {
+    const container = document.getElementById('bulkDetailCards');
+
+    container.innerHTML = bulkItemDetails.map((detail, dIdx) => {
+        const key = detail.key;
+        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
+
+        let html = '<div class="bulk-detail-card">';
+        html += '<div class="bulk-detail-card-header">';
+        html += '<div>';
+        html += '<div class="bulk-detail-card-pn">' + key.pn + '</div>';
+        html += '<div class="bulk-detail-card-fcc">' +
+            (key.fccid ? key.fccid : '') +
+            (fid ? ' (FID: ' + fid + ')' : '') +
+            (key.keyway ? ' | ' + key.keyway : '') +
+            '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Sub-items (variants)
+        html += '<div class="bulk-sub-items">';
+        detail.subItems.forEach((sub, sIdx) => {
+            html += renderBulkSubItem(dIdx, sIdx, sub, detail);
+        });
+        html += '</div>';
+
+        // Add variant button (only if there are sibling keys under same FCC ID)
+        if (detail.siblings.length > 1) {
+            html += '<button class="bulk-add-variant-btn" onclick="addBulkVariant(' + dIdx + ')">+ Add variant (different buttons/logo)</button>';
+        }
+
+        html += '</div>';
+        return html;
+    }).join('');
+}
+
+function renderBulkSubItem(dIdx, sIdx, sub, detail) {
+    const showRemove = detail.subItems.length > 1;
+    const buttonsShort = sub.buttons ? sub.buttons.split(':')[0] : '';
+
+    let html = '<div class="bulk-sub-item">';
+    html += '<div class="bulk-sub-item-header">';
+
+    // If there are siblings, show a part number selector
+    if (detail.siblings.length > 1) {
+        html += '<div style="flex:1;">';
+        html += '<label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Part Number</label>';
+        html += '<select class="add-inv-select" onchange="changeBulkSubPN(' + dIdx + ',' + sIdx + ',this.value)" style="width:100%;">';
+        detail.siblings.forEach(sib => {
+            const sibButtons = sib.buttons ? sib.buttons.split(':')[0] : '';
+            const sibLogo = sib.logo || 'No logo';
+            const selected = sib.pn === sub.pn ? ' selected' : '';
+            html += '<option value="' + sib.pn + '"' + selected + '>' + sib.pn + ' - ' + sibButtons + ' - ' + sibLogo + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+    } else {
+        html += '<div>';
+        html += '<div class="bulk-sub-item-pn">' + sub.pn + '</div>';
+        if (buttonsShort) html += '<div class="bulk-sub-item-desc">' + buttonsShort + (sub.logo ? ' | ' + sub.logo : '') + '</div>';
+        html += '</div>';
+    }
+
+    if (showRemove) {
+        html += '<button class="bulk-sub-remove" onclick="removeBulkSubItem(' + dIdx + ',' + sIdx + ')">X</button>';
+    }
+    html += '</div>';
+
+    // Quantity, Brand, Price row
+    html += '<div class="bulk-field-row">';
+    html += '<div style="flex:0 0 80px;">';
+    html += '<label>Qty</label>';
+    html += '<div style="display:flex;align-items:center;gap:4px;">';
+    html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustBulkQty(' + dIdx + ',' + sIdx + ',-1)">-</button>';
+    html += '<input type="number" class="add-inv-input" style="width:50px;text-align:center;padding:8px 4px;" value="' + sub.qty + '" min="0" onchange="setBulkQty(' + dIdx + ',' + sIdx + ',this.value)">';
+    html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustBulkQty(' + dIdx + ',' + sIdx + ',1)">+</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div style="flex:1;">';
+    html += '<label>Brand</label>';
+    html += '<select class="add-inv-select" onchange="setBulkBrand(' + dIdx + ',' + sIdx + ',this.value)">';
+    html += '<option value="">Select brand...</option>';
+    BRAND_OPTIONS.forEach(b => {
+        const selected = sub.brand === b ? ' selected' : '';
+        html += '<option value="' + b + '"' + selected + '>' + b + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+
+    html += '<div style="flex:0 0 100px;">';
+    html += '<label>Price (ea)</label>';
+    html += '<div style="display:flex;align-items:center;">';
+    html += '<span style="padding:8px;background:var(--bg);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;color:var(--dim);font-size:13px;">$</span>';
+    html += '<input type="number" class="add-inv-input" style="border-radius:0 8px 8px 0;padding:8px;" placeholder="0.00" step="0.01" min="0" value="' + (sub.price || '') + '" onchange="setBulkPrice(' + dIdx + ',' + sIdx + ',this.value)">';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+}
+
+function changeBulkSubPN(dIdx, sIdx, newPN) {
+    const detail = bulkItemDetails[dIdx];
+    const sibKey = detail.siblings.find(s => String(s.pn) === String(newPN));
+    if (sibKey) {
+        detail.subItems[sIdx].pn = sibKey.pn;
+        detail.subItems[sIdx].buttons = sibKey.buttons || '';
+        detail.subItems[sIdx].logo = sibKey.logo || '';
+    }
+}
+
+function addBulkVariant(dIdx) {
+    const detail = bulkItemDetails[dIdx];
+    if (!detail.siblings.length) return;
+
+    // Find a sibling PN not yet used
+    const usedPNs = new Set(detail.subItems.map(s => s.pn));
+    let nextSib = detail.siblings.find(s => !usedPNs.has(s.pn));
+    if (!nextSib) nextSib = detail.siblings[0]; // fallback: duplicate first
+
+    detail.subItems.push({
+        pn: nextSib.pn,
+        buttons: nextSib.buttons || '',
+        logo: nextSib.logo || '',
+        qty: 1,
+        brand: '',
+        price: ''
+    });
+
+    renderBulkDetailCards();
+}
+
+function removeBulkSubItem(dIdx, sIdx) {
+    const detail = bulkItemDetails[dIdx];
+    if (detail.subItems.length <= 1) return;
+    detail.subItems.splice(sIdx, 1);
+    renderBulkDetailCards();
+}
+
+function adjustBulkQty(dIdx, sIdx, delta) {
+    const sub = bulkItemDetails[dIdx].subItems[sIdx];
+    let val = parseInt(sub.qty) || 0;
+    val += delta;
+    if (val < 0) val = 0;
+    sub.qty = val;
+    renderBulkDetailCards();
+}
+
+function setBulkQty(dIdx, sIdx, val) {
+    bulkItemDetails[dIdx].subItems[sIdx].qty = parseInt(val) || 0;
+}
+
+function setBulkBrand(dIdx, sIdx, val) {
+    bulkItemDetails[dIdx].subItems[sIdx].brand = val;
+}
+
+function setBulkPrice(dIdx, sIdx, val) {
+    bulkItemDetails[dIdx].subItems[sIdx].price = parseFloat(val) || 0;
+}
+
+// ---- Submit bulk inventory ----
+
+function submitBulkInventory() {
     let vendor = document.getElementById('addInvVendor').value;
-    const price = parseFloat(document.getElementById('addInvPrice').value) || 0;
     const date = document.getElementById('addInvDate').value || new Date().toISOString().split('T')[0];
     const invoice = document.getElementById('addInvInvoice').value.trim();
     const notes = document.getElementById('addInvNotes').value.trim();
-    
-    // Handle "Other" vendor
+
     if (vendor === '__other__') {
         vendor = prompt('Enter vendor name:');
         if (!vendor) {
@@ -18998,54 +19340,82 @@ function submitInventory() {
             return;
         }
     }
-    
-    const pn = selectedInventoryKey.pn;
-    
-    // Update stock
-    stockData[pn] = (stockData[pn] || 0) + qty;
-    saveStock();
-    
-    // Add to purchase history
-    const purchase = {
-        id: Date.now().toString(),
-        date: date,
-        vendor: vendor || 'Unknown',
-        partNumber: pn,
-        quantity: qty,
-        priceEach: price,
-        total: qty * price,
-        invoice: invoice,
-        notes: notes,
-        fccid: selectedInventoryKey.fccid || '',
-        keyway: selectedInventoryKey.keyway || ''
-    };
 
-    purchaseHistory.unshift(purchase); // Add to beginning
-    savePurchaseHistory();
+    let totalItems = 0;
+    let summaryLines = [];
 
-    // Also update vendor pricing so it shows on the part number detail page
-    if (vendor && price > 0) {
-        if (!vendorPrices[pn]) vendorPrices[pn] = {};
-        if (!vendorPrices[pn][vendor]) {
-            vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
-        }
-        // Set priceA if not already set for this vendor
-        if (!vendorPrices[pn][vendor].priceA) {
-            vendorPrices[pn][vendor].priceA = price.toFixed(2);
-        }
-        saveVendorPrices();
+    bulkItemDetails.forEach(detail => {
+        detail.subItems.forEach(sub => {
+            const pn = sub.pn;
+            const qty = parseInt(sub.qty) || 0;
+            const price = parseFloat(sub.price) || 0;
+            const brand = sub.brand || '';
+
+            if (qty <= 0) return;
+
+            // Update stock
+            stockData[pn] = (stockData[pn] || 0) + qty;
+            totalItems += qty;
+
+            // Find the key for this PN
+            const keyForPn = DB.find(k => k.pn === pn) || detail.key;
+
+            // Add to purchase history
+            const purchase = {
+                id: Date.now().toString() + '_' + pn + '_' + Math.random().toString(36).substr(2, 4),
+                date: date,
+                vendor: vendor || 'Unknown',
+                partNumber: pn,
+                quantity: qty,
+                priceEach: price,
+                total: qty * price,
+                invoice: invoice,
+                notes: (brand ? '[' + brand + '] ' : '') + notes,
+                brand: brand,
+                fccid: keyForPn.fccid || '',
+                keyway: keyForPn.keyway || ''
+            };
+
+            purchaseHistory.unshift(purchase);
+
+            // Update vendor pricing
+            if (vendor && price > 0) {
+                if (!vendorPrices[pn]) vendorPrices[pn] = {};
+                if (!vendorPrices[pn][vendor]) {
+                    vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
+                }
+                if (!vendorPrices[pn][vendor].priceA) {
+                    vendorPrices[pn][vendor].priceA = price.toFixed(2);
+                }
+            }
+
+            const buttonsShort = sub.buttons ? sub.buttons.split(':')[0] : '';
+            summaryLines.push('<strong>' + qty + 'x ' + pn + '</strong>' +
+                (brand ? ' (' + brand + ')' : '') +
+                (buttonsShort ? ' - ' + buttonsShort : '') +
+                (price > 0 ? ' @ $' + price.toFixed(2) + '/ea' : ''));
+        });
+    });
+
+    if (totalItems === 0) {
+        toast('No items with quantity > 0');
+        return;
     }
-    
+
+    saveStock();
+    savePurchaseHistory();
+    if (vendor) saveVendorPrices();
+
     // Show success
     document.getElementById('addInvStep1').style.display = 'none';
     document.getElementById('addInvStep2').style.display = 'none';
     document.getElementById('addInvStep3').style.display = 'block';
-    
-    document.getElementById('addInvSuccessDetails').innerHTML = 
-        '<strong>' + qty + 'x ' + pn + '</strong><br>' +
-        (vendor ? 'From: ' + vendor + '<br>' : '') +
-        (price > 0 ? 'Price: $' + price.toFixed(2) + '/ea ($' + (qty * price).toFixed(2) + ' total)<br>' : '') +
-        'New stock level: ' + stockData[pn];
+
+    document.getElementById('addInvSuccessDetails').innerHTML =
+        summaryLines.join('<br>') + '<br><br>' +
+        (vendor ? 'Vendor: ' + vendor + '<br>' : '') +
+        (invoice ? 'Invoice: ' + invoice + '<br>' : '') +
+        'Total items added: ' + totalItems;
 }
 
 // Purchase History
@@ -19662,7 +20032,7 @@ function saveCustomKey() {
     // Open the add inventory and pre-select this key
     setTimeout(() => {
         const newIndex = DB.length - 1;
-        selectInventoryKey(newIndex);
+        bulkSelectItem(newIndex);
     }, 100);
 }
 
