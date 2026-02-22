@@ -4436,7 +4436,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v126</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v127</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4961,7 +4961,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v126</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v127</p>
         </div>
 
         <div class="settings-section">
@@ -4973,7 +4973,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v126<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v127<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10382,6 +10382,25 @@ function getKeyTypePriority(keyType) {
     return 1;
 }
 
+function naturalSortCompare(a, b) {
+    const aParts = a.match(/(\d+|\D+)/g) || [];
+    const bParts = b.match(/(\d+|\D+)/g) || [];
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        if (i >= aParts.length) return -1;
+        if (i >= bParts.length) return 1;
+        const aIsNum = /^\d+$/.test(aParts[i]);
+        const bIsNum = /^\d+$/.test(bParts[i]);
+        if (aIsNum && bIsNum) {
+            const diff = parseInt(aParts[i]) - parseInt(bParts[i]);
+            if (diff !== 0) return diff;
+        } else {
+            const cmp = aParts[i].localeCompare(bParts[i]);
+            if (cmp !== 0) return cmp;
+        }
+    }
+    return 0;
+}
+
 function autoAssignAllFids() {
     try {
         // Get all unique FCC IDs that don't have assignments
@@ -10416,8 +10435,8 @@ function autoAssignAllFids() {
             return;
         }
 
-        // Sort by priority: Non-chip/chip first (1), then remote head/flip (2), then prox (3)
-        fccToAssign.sort((a, b) => a.priority - b.priority);
+        // Sort by priority, then alphabetically by fccid with natural number ordering
+        fccToAssign.sort((a, b) => a.priority - b.priority || naturalSortCompare(a.fccid, b.fccid));
 
         // Track the next number for each prefix during assignment
         const prefixCounters = {};
@@ -11052,8 +11071,8 @@ function executeReassignAllFids() {
         }
     });
 
-    // Sort by priority
-    fccToAssign.sort((a, b) => a.priority - b.priority);
+    // Sort by priority, then alphabetically by fccid with natural number ordering
+    fccToAssign.sort((a, b) => a.priority - b.priority || naturalSortCompare(a.fccid, b.fccid));
 
     // Track counters per prefix
     const prefixCounters = {};
