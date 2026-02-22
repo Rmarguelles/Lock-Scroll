@@ -5438,6 +5438,14 @@
             <input type="text" class="modal-input" id="editKeyInfoButtonsOther" placeholder="Enter custom button config..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
+            <label>Logo</label>
+            <select class="modal-input" id="editKeyInfoLogo" onchange="handleCustomDropdown(this, 'editKeyInfoLogoOther')">
+                <option value="">-- None --</option>
+                <option value="__other__">+ Other (custom)</option>
+            </select>
+            <input type="text" class="modal-input" id="editKeyInfoLogoOther" placeholder="Enter logo..." style="display:none;margin-top:6px;">
+        </div>
+        <div class="modal-input-group">
             <label>Battery</label>
             <select class="modal-input" id="editKeyInfoBattery" onchange="handleCustomDropdown(this, 'editKeyInfoBatteryOther')">
                 <option value="">-- None --</option>
@@ -8369,6 +8377,12 @@ function openEditKeyInfoModal(idx) {
     populateEditKeyInfoDropdown('editKeyInfoFCC', 'editKeyInfoFCCOther', Array.from(fccIds).sort(), key.fccid);
     populateEditKeyInfoDropdown('editKeyInfoFrequency', 'editKeyInfoFrequencyOther', getDropdownValuesForCategory('frequency'), key.frequency);
     populateEditKeyInfoDropdown('editKeyInfoButtons', 'editKeyInfoButtonsOther', getDropdownValuesForCategory('buttons'), key.buttons);
+
+    // Collect unique logo values from DB
+    const logos = new Set();
+    DB.forEach(k => { if (k.logo && k.logo.trim()) logos.add(k.logo.trim()); });
+    populateEditKeyInfoDropdown('editKeyInfoLogo', 'editKeyInfoLogoOther', Array.from(logos).sort(), key.logo);
+
     populateEditKeyInfoDropdown('editKeyInfoBattery', 'editKeyInfoBatteryOther', getDropdownValuesForCategory('battery'), key.battery);
     populateEditKeyInfoDropdown('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther', Array.from(emergencyPNs).sort(), key.emergencyPN);
     populateEditKeyInfoDropdown('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther', Array.from(secondaryPNs).sort(), key.secondaryKeyPartNumber);
@@ -8436,6 +8450,7 @@ function saveEditKeyInfo() {
     const newFccid = getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || null;
     const newFrequency = getDropdownValue('editKeyInfoFrequency', 'editKeyInfoFrequencyOther') || null;
     const newButtons = getDropdownValue('editKeyInfoButtons', 'editKeyInfoButtonsOther') || null;
+    const newLogo = getDropdownValue('editKeyInfoLogo', 'editKeyInfoLogoOther') || null;
     const newBattery = getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther') || null;
     const newEmergencyPN = getDropdownValue('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther') || null;
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
@@ -8455,6 +8470,7 @@ function saveEditKeyInfo() {
             customKeys[customIdx].fccid = newFccid;
             customKeys[customIdx].frequency = newFrequency;
             customKeys[customIdx].buttons = newButtons;
+            customKeys[customIdx].logo = newLogo;
             customKeys[customIdx].battery = newBattery;
             customKeys[customIdx].emergencyPN = newEmergencyPN;
             customKeys[customIdx].notes = newNotes;
@@ -8469,6 +8485,7 @@ function saveEditKeyInfo() {
         key.fccid = newFccid;
         key.frequency = newFrequency;
         key.buttons = newButtons;
+        key.logo = newLogo;
         key.battery = newBattery;
         key.emergencyPN = newEmergencyPN;
         key.notes = newNotes;
@@ -8483,6 +8500,7 @@ function saveEditKeyInfo() {
         overrides.fccid = newFccid;
         overrides.frequency = newFrequency;
         overrides.buttons = newButtons;
+        overrides.logo = newLogo;
         overrides.battery = newBattery;
         overrides.emergencyPN = newEmergencyPN;
         overrides.notes = newNotes;
@@ -9006,6 +9024,10 @@ function openKey(idx, fromFcc = false, fromFid = false) {
             ${key.buttons ? `<div class="detail-row">
                 <span class="detail-label">Buttons</span>
                 <span class="detail-value">${key.buttons}</span>
+            </div>` : ''}
+            ${key.logo ? `<div class="detail-row">
+                <span class="detail-label">Logo</span>
+                <span class="detail-value">${key.logo}</span>
             </div>` : ''}
             ${key.battery ? `<div class="detail-row">
                 <span class="detail-label">Battery</span>
