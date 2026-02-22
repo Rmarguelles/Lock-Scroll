@@ -6471,13 +6471,13 @@
     <div class="add-inv-content">
         <!-- Step 1: Select Items -->
         <div class="add-inv-step" id="addInvStep1">
-            <div class="add-inv-step-title">Step 1: Select Items</div>
+            <div class="add-inv-step-title">Step 1: Select FIDs</div>
 
             <!-- Active search area -->
             <div id="bulkSearchArea">
                 <div class="add-inv-section">
-                    <label>Search by Part Number, FCC ID, FID, or Keyway</label>
-                    <input type="text" class="add-inv-input" id="addInvSearch" placeholder="Enter part number, FCC ID, FID, or keyway..." oninput="bulkSearchKeys()">
+                    <label>Search by FCC ID, FID, or Keyway</label>
+                    <input type="text" class="add-inv-input" id="addInvSearch" placeholder="Enter FCC ID, FID, or keyway..." oninput="bulkSearchKeys()">
                 </div>
 
                 <div class="add-inv-results" id="addInvResults">
@@ -6492,7 +6492,7 @@
             <button class="bulk-add-more-btn" id="bulkAddMoreBtn" style="display:none;" onclick="showBulkSearch()">+ Add More Inventory</button>
 
             <!-- Next button -->
-            <button class="bulk-next-btn" id="bulkNextBtn" style="display:none;" onclick="goToBulkStep2()">Next: Enter Purchase Details</button>
+            <button class="bulk-next-btn" id="bulkNextBtn" style="display:none;" onclick="goToBulkStep2()">Next: Identify &amp; Add Details</button>
 
             <div class="add-inv-section" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
                 <button onclick="openAddCustomKey()" style="width:100%;padding:14px;background:var(--card);border:1px dashed var(--accent);border-radius:10px;color:var(--accent);font-size:14px;cursor:pointer;">
@@ -6503,7 +6503,7 @@
 
         <!-- Step 2: Purchase Details for All Items -->
         <div class="add-inv-step" id="addInvStep2" style="display:none;">
-            <div class="add-inv-step-title">Step 2: Purchase Details</div>
+            <div class="add-inv-step-title">Step 2: Identify & Purchase Details</div>
 
             <!-- Shared purchase fields -->
             <div class="bulk-shared-fields" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:20px;">
@@ -18955,7 +18955,69 @@ function getBrandOptions() {
     return Array.from(brands).sort();
 }
 
-// ---- Step 1: Bulk item selection ----
+// ---- FID Grouping Helpers ----
+
+// Get all FCC IDs that map to a given FID
+function getFccIdsForFid(fid) {
+    const fccIds = [];
+    for (const [fccId, assignedFid] of Object.entries(fidAssignments || {})) {
+        if (assignedFid === fid) {
+            // FCC ID keys can be comma-separated
+            fccId.split(',').map(s => s.trim()).forEach(id => {
+                if (id) fccIds.push(id);
+            });
+        }
+    }
+    return fccIds;
+}
+
+// Build FID groups from DB: { fid -> { fid, fccIds, keys, vehicles } }
+function buildFIDGroups() {
+    const groups = {};
+
+    // Build reverse map: individual fccid -> FID
+    const fccToFid = {};
+    for (const [fccKey, fid] of Object.entries(fidAssignments || {})) {
+        fccKey.split(',').map(s => s.trim()).forEach(id => {
+            if (id) fccToFid[id] = fid;
+        });
+    }
+
+    DB.forEach((key, idx) => {
+        // Determine the FCC ID(s) for this key
+        let fccIds = [];
+        if (key.fccid) {
+            fccIds = key.fccid.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        // Find FID for this key
+        let fid = null;
+        for (const fcc of fccIds) {
+            if (fccToFid[fcc]) { fid = fccToFid[fcc]; break; }
+        }
+
+        if (!fid) return; // Skip keys without FID
+
+        if (!groups[fid]) {
+            groups[fid] = { fid: fid, fccIds: new Set(), keys: [], keyIndices: [], vehicles: new Set() };
+        }
+        fccIds.forEach(id => groups[fid].fccIds.add(id));
+        groups[fid].keys.push(key);
+        groups[fid].keyIndices.push(idx);
+        (key.vehicles || []).forEach(v => {
+            groups[fid].vehicles.add(v.make + ' ' + v.model);
+        });
+    });
+
+    // Convert sets to arrays
+    for (const fid in groups) {
+        groups[fid].fccIds = Array.from(groups[fid].fccIds);
+        groups[fid].vehicles = Array.from(groups[fid].vehicles);
+    }
+    return groups;
+}
+
+// ---- Step 1: FID-based search & selection ----
 
 function bulkSearchKeys() {
     const search = document.getElementById('addInvSearch').value.toLowerCase().trim();
@@ -18964,106 +19026,94 @@ function bulkSearchKeys() {
         return;
     }
 
-    // Search DB by pn, fccid, keyway, or FID assignment
-    let results = [];
-    const alreadySelectedPNs = new Set(bulkSelectedItems.map(i => i.key.pn));
+    const fidGroups = buildFIDGroups();
+    const alreadySelectedFIDs = new Set(bulkSelectedItems.map(i => i.fid));
 
-    // Build FID reverse lookup: fid string -> fccId
-    const fidReverse = {};
-    for (const [fccId, fid] of Object.entries(fidAssignments || {})) {
-        if (fid) fidReverse[fid.toLowerCase()] = fccId;
-    }
+    // Search through FID groups
+    let matchingFids = [];
 
-    // Check if search matches a FID
-    let fidMatchFccId = null;
-    for (const [fidLower, fccId] of Object.entries(fidReverse)) {
-        if (fidLower.includes(search)) {
-            fidMatchFccId = fccId;
-            break;
-        }
-    }
+    for (const fid in fidGroups) {
+        if (alreadySelectedFIDs.has(fid)) continue;
 
-    DB.forEach((key, idx) => {
-        if (alreadySelectedPNs.has(key.pn)) return;
+        const group = fidGroups[fid];
+        let match = false;
 
-        const pnStr = String(key.pn || '').toLowerCase();
-        const fccStr = String(key.fccid || '').toLowerCase();
-        const kwStr = String(key.keyway || '').toLowerCase();
+        // Match by FID code
+        if (fid.toLowerCase().includes(search)) match = true;
 
-        let match = pnStr.includes(search) || fccStr.includes(search) || kwStr.includes(search);
-
-        // Also match by FID
-        if (!match && fidMatchFccId && key.fccid === fidMatchFccId) {
-            match = true;
-        }
-        // Check if the FCC ID has an assigned FID that matches
-        if (!match && key.fccid) {
-            const assignedFid = (fidAssignments || {})[key.fccid];
-            if (assignedFid && assignedFid.toLowerCase().includes(search)) {
-                match = true;
+        // Match by FCC ID
+        if (!match) {
+            for (const fcc of group.fccIds) {
+                if (fcc.toLowerCase().includes(search)) { match = true; break; }
             }
         }
 
-        if (match) results.push({ key, idx });
-    });
+        // Match by keyway
+        if (!match) {
+            for (const key of group.keys) {
+                if (key.keyway && String(key.keyway).toLowerCase().includes(search)) { match = true; break; }
+            }
+        }
 
-    results = results.slice(0, 50);
+        // Match by part number
+        if (!match) {
+            for (const key of group.keys) {
+                if (String(key.pn || '').toLowerCase().includes(search)) { match = true; break; }
+            }
+        }
 
-    if (results.length === 0) {
-        document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">No keys found matching your criteria</div>';
+        if (match) matchingFids.push(group);
+    }
+
+    matchingFids = matchingFids.slice(0, 30);
+
+    if (matchingFids.length === 0) {
+        document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">No FIDs found matching your criteria</div>';
         return;
     }
 
-    // Group results by FCC ID for display, but let users select individual PNs
-    document.getElementById('addInvResults').innerHTML = results.map(({ key, idx }) => {
-        const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model + ' ' + formatYearRange(v)).join(', ');
-        const currentStock = stockData[key.pn] || 0;
-        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
+    document.getElementById('addInvResults').innerHTML = matchingFids.map(group => {
+        const fccDisplay = group.fccIds.slice(0, 2).join(', ') + (group.fccIds.length > 2 ? '...' : '');
+        const vehicleDisplay = group.vehicles.slice(0, 3).join(', ') + (group.vehicles.length > 3 ? ' +' + (group.vehicles.length - 3) + ' more' : '');
+        const keyways = [...new Set(group.keys.map(k => k.keyway).filter(Boolean))];
+        const keywayDisplay = keyways.slice(0, 2).join(', ');
+        const pnCount = group.keys.length;
+        const totalStock = group.keys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+        const escapedFid = group.fid.replace(/'/g, "\\'");
 
-        return '<div class="add-inv-result-item" onclick="bulkSelectItem(' + idx + ')">' +
-            '<div class="add-inv-result-pn">' + (key.pn || 'Unknown') +
-                (fid ? ' <span style="font-size:11px;color:var(--dim);">(FID: ' + fid + ')</span>' : '') +
-            '</div>' +
+        return '<div class="add-inv-result-item" onclick="bulkSelectFID(\'' + escapedFid + '\')">' +
+            '<div class="add-inv-result-pn" style="font-size:18px;color:var(--accent);">' + group.fid + '</div>' +
             '<div class="add-inv-result-details">' +
-                (key.fccid ? 'FCC: ' + key.fccid + ' | ' : '') +
-                (key.keyway || '') +
-                (key.buttons ? ' | ' + key.buttons.split(':')[0] : '') +
-                (key.logo ? ' | ' + key.logo : '') +
+                'FCC: ' + fccDisplay +
+                (keywayDisplay ? ' | ' + keywayDisplay : '') +
             '</div>' +
-            '<div class="add-inv-result-vehicles">' + (vehicles || 'Unknown vehicles') + '</div>' +
+            '<div class="add-inv-result-vehicles">' + (vehicleDisplay || 'Unknown vehicles') + '</div>' +
             '<div class="add-inv-result-tags">' +
-                '<span class="add-inv-tag">Stock: ' + currentStock + '</span>' +
+                '<span class="add-inv-tag">' + pnCount + ' PN' + (pnCount !== 1 ? 's' : '') + '</span>' +
+                '<span class="add-inv-tag">Total Stock: ' + totalStock + '</span>' +
             '</div>' +
         '</div>';
     }).join('');
 }
 
-function bulkSelectItem(dbIndex) {
-    const key = DB[dbIndex];
-    if (!key) return;
-
-    // Check if already selected
-    if (bulkSelectedItems.some(i => i.key.pn === key.pn)) {
+function bulkSelectFID(fid) {
+    if (bulkSelectedItems.some(i => i.fid === fid)) {
         toast('Already selected');
         return;
     }
 
-    // Determine if this FCC ID has multiple part numbers (variants)
-    const fccId = key.fccid;
-    let siblingKeys = [];
-    if (fccId) {
-        siblingKeys = DB.filter(k => k.fccid === fccId);
-    }
+    const fidGroups = buildFIDGroups();
+    const group = fidGroups[fid];
+    if (!group) { toast('FID not found'); return; }
 
     bulkSelectedItems.push({
-        dbIndex,
-        key,
-        fccId: fccId || null,
-        hasSiblings: siblingKeys.length > 1,
-        siblingKeys: siblingKeys
+        fid: fid,
+        fccIds: group.fccIds,
+        keys: group.keys,
+        vehicles: group.vehicles
     });
 
-    // Hide search, show selected items and Add More button
+    // Hide search, show selected FIDs
     document.getElementById('bulkSearchArea').style.display = 'none';
     document.getElementById('addInvSearch').value = '';
     document.getElementById('addInvResults').innerHTML = '<div class="add-inv-placeholder">Enter search criteria above to find keys</div>';
@@ -19073,24 +19123,18 @@ function bulkSelectItem(dbIndex) {
 function renderBulkSelectedItems() {
     const container = document.getElementById('bulkSelectedItems');
     container.innerHTML = bulkSelectedItems.map((item, idx) => {
-        const key = item.key;
-        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
-        const detailParts = [];
-        if (key.fccid) detailParts.push('FCC: ' + key.fccid);
-        if (fid) detailParts.push('FID: ' + fid);
-        if (key.keyway) detailParts.push(key.keyway);
-        if (key.buttons) detailParts.push(key.buttons.split(':')[0]);
+        const fccDisplay = item.fccIds.slice(0, 2).join(', ');
+        const vehicleDisplay = item.vehicles.slice(0, 2).join(', ');
 
         return '<div class="bulk-selected-item">' +
             '<div class="bulk-selected-item-info">' +
-                '<div class="bulk-selected-item-pn">' + key.pn + '</div>' +
-                '<div class="bulk-selected-item-detail">' + detailParts.join(' | ') + '</div>' +
+                '<div class="bulk-selected-item-pn" style="color:var(--accent);">' + item.fid + '</div>' +
+                '<div class="bulk-selected-item-detail">' + fccDisplay + (vehicleDisplay ? ' | ' + vehicleDisplay : '') + '</div>' +
             '</div>' +
             '<button class="bulk-remove-btn" onclick="bulkRemoveItem(' + idx + ')">X</button>' +
         '</div>';
     }).join('');
 
-    // Show/hide buttons
     document.getElementById('bulkAddMoreBtn').style.display = bulkSelectedItems.length > 0 ? 'block' : 'none';
     document.getElementById('bulkNextBtn').style.display = bulkSelectedItems.length > 0 ? 'block' : 'none';
 }
@@ -19110,7 +19154,7 @@ function showBulkSearch() {
     document.getElementById('addInvSearch').focus();
 }
 
-// ---- Step 2: Build detail cards ----
+// ---- Step 2: FID Funnel ----
 
 function goToStep1() {
     bulkSelectedItems = [];
@@ -19133,37 +19177,23 @@ function goToBulkStep2() {
         return;
     }
 
-    // Build detail model for each selected item
-    bulkItemDetails = bulkSelectedItems.map(item => {
-        const key = item.key;
-        const fccId = key.fccid;
-
-        // Find all sibling part numbers under the same FCC ID
-        let siblings = [];
-        if (fccId) {
-            siblings = DB.filter(k => k.fccid === fccId);
-        }
-        if (siblings.length <= 1) siblings = [];
-
-        // Default: single line item for this key
-        const detail = {
-            key: key,
-            dbIndex: item.dbIndex,
-            fccId: fccId,
-            siblings: siblings,
-            // Sub-items: for keys with multiple variants under same FCC ID
-            subItems: [{
-                pn: key.pn,
-                buttons: key.buttons || '',
-                logo: key.logo || '',
-                qty: 1,
-                brand: '',
-                price: ''
-            }]
-        };
-
-        return detail;
-    });
+    // Build funnel model for each selected FID
+    bulkItemDetails = bulkSelectedItems.map(item => ({
+        fid: item.fid,
+        fccIds: item.fccIds,
+        allKeys: item.keys,
+        vehicles: item.vehicles,
+        // Funnel selections
+        brand: '',
+        buttons: '',
+        logo: '',
+        // Resolved PN
+        resolvedPN: null,
+        resolvedKey: null,
+        // Quantity and price
+        qty: 1,
+        price: ''
+    }));
 
     document.getElementById('addInvStep1').style.display = 'none';
     document.getElementById('addInvStep2').style.display = 'block';
@@ -19172,35 +19202,209 @@ function goToBulkStep2() {
     renderBulkDetailCards();
 }
 
+function getFunnelMatchingKeys(detail) {
+    let keys = detail.allKeys.slice();
+
+    // Filter by brand: OEM keys typically have a logo, aftermarket don't
+    if (detail.brand) {
+        const isOEM = detail.brand === 'OEM' || detail.brand === 'OEM Refurbished';
+        if (isOEM) {
+            // OEM: keys that have a logo
+            keys = keys.filter(k => k.logo && k.logo.trim());
+        } else {
+            // Aftermarket/specific brands: keys without a logo, or with brand-matching data
+            keys = keys.filter(k => !k.logo || !k.logo.trim());
+        }
+    }
+
+    // Filter by buttons
+    if (detail.buttons) {
+        keys = keys.filter(k => {
+            const kButtons = k.buttons ? k.buttons.split(':')[0].trim() : '';
+            return kButtons === detail.buttons;
+        });
+    }
+
+    // Filter by logo (only relevant for OEM)
+    if (detail.logo) {
+        keys = keys.filter(k => (k.logo || '') === detail.logo);
+    }
+
+    return keys;
+}
+
+function getUniqueButtonOptions(keys) {
+    const buttons = new Set();
+    keys.forEach(k => {
+        if (k.buttons) {
+            const short = k.buttons.split(':')[0].trim();
+            if (short) buttons.add(short);
+        }
+    });
+    return Array.from(buttons).sort((a, b) => {
+        const na = parseInt(a) || 0;
+        const nb = parseInt(b) || 0;
+        return na - nb;
+    });
+}
+
+function getUniqueLogoOptions(keys) {
+    const logos = new Set();
+    keys.forEach(k => {
+        if (k.logo && k.logo.trim()) logos.add(k.logo.trim());
+    });
+    return Array.from(logos).sort();
+}
+
 function renderBulkDetailCards() {
     const container = document.getElementById('bulkDetailCards');
 
     container.innerHTML = bulkItemDetails.map((detail, dIdx) => {
-        const key = detail.key;
-        const fid = key.fccid ? (fidAssignments || {})[key.fccid] : null;
+        const matchingKeys = getFunnelMatchingKeys(detail);
+
+        // Auto-resolve if exactly one match
+        if (matchingKeys.length === 1 && !detail.resolvedPN) {
+            detail.resolvedPN = matchingKeys[0].pn;
+            detail.resolvedKey = matchingKeys[0];
+        }
+        // Clear resolution if filters changed and multiple/zero matches
+        if (matchingKeys.length !== 1) {
+            detail.resolvedPN = null;
+            detail.resolvedKey = null;
+        }
+
+        // Determine available options based on current filters
+        // For buttons, filter keys by brand first
+        let keysForButtons = detail.allKeys.slice();
+        if (detail.brand) {
+            const isOEM = detail.brand === 'OEM' || detail.brand === 'OEM Refurbished';
+            keysForButtons = keysForButtons.filter(k => isOEM ? (k.logo && k.logo.trim()) : (!k.logo || !k.logo.trim()));
+        }
+        const buttonOptions = getUniqueButtonOptions(keysForButtons);
+
+        // For logo, filter by brand AND buttons
+        let keysForLogo = keysForButtons;
+        if (detail.buttons) {
+            keysForLogo = keysForLogo.filter(k => {
+                const kButtons = k.buttons ? k.buttons.split(':')[0].trim() : '';
+                return kButtons === detail.buttons;
+            });
+        }
+        const logoOptions = getUniqueLogoOptions(keysForLogo);
+
+        const isOEMBrand = detail.brand === 'OEM' || detail.brand === 'OEM Refurbished';
+        const fccDisplay = detail.fccIds.slice(0, 2).join(', ');
 
         let html = '<div class="bulk-detail-card">';
         html += '<div class="bulk-detail-card-header">';
         html += '<div>';
-        html += '<div class="bulk-detail-card-pn">' + key.pn + '</div>';
-        html += '<div class="bulk-detail-card-fcc">' +
-            (key.fccid ? key.fccid : '') +
-            (fid ? ' (FID: ' + fid + ')' : '') +
-            (key.keyway ? ' | ' + key.keyway : '') +
-            '</div>';
+        html += '<div class="bulk-detail-card-pn" style="color:var(--accent);">' + detail.fid + '</div>';
+        html += '<div class="bulk-detail-card-fcc">' + fccDisplay + '</div>';
         html += '</div>';
         html += '</div>';
 
-        // Sub-items (variants)
-        html += '<div class="bulk-sub-items">';
-        detail.subItems.forEach((sub, sIdx) => {
-            html += renderBulkSubItem(dIdx, sIdx, sub, detail);
+        // Progressive funnel dropdowns
+        html += '<div style="padding:0 16px 12px;">';
+
+        // Brand dropdown
+        html += '<div style="margin-bottom:10px;">';
+        html += '<label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Brand</label>';
+        html += '<select class="add-inv-select" onchange="setFunnelBrand(' + dIdx + ',this.value)">';
+        html += '<option value="">Select brand...</option>';
+        getBrandOptions().forEach(b => {
+            html += '<option value="' + b + '"' + (detail.brand === b ? ' selected' : '') + '>' + b + '</option>';
         });
+        html += '</select>';
         html += '</div>';
 
-        // Add variant button (only if there are sibling keys under same FCC ID)
-        if (detail.siblings.length > 1) {
-            html += '<button class="bulk-add-variant-btn" onclick="addBulkVariant(' + dIdx + ')">+ Add variant (different buttons/logo)</button>';
+        // Buttons dropdown (only show if brand selected and there are options)
+        if (detail.brand && buttonOptions.length > 0) {
+            html += '<div style="margin-bottom:10px;">';
+            html += '<label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Button Configuration</label>';
+            html += '<select class="add-inv-select" onchange="setFunnelButtons(' + dIdx + ',this.value)">';
+            html += '<option value="">All configurations...</option>';
+            buttonOptions.forEach(b => {
+                // Show full button info for context
+                const fullButton = keysForButtons.find(k => k.buttons && k.buttons.split(':')[0].trim() === b);
+                const fullText = fullButton ? fullButton.buttons : b;
+                html += '<option value="' + b + '"' + (detail.buttons === b ? ' selected' : '') + '>' + fullText + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+        }
+
+        // Logo dropdown (only show if OEM brand AND there are logo options)
+        if (isOEMBrand && detail.buttons && logoOptions.length > 1) {
+            html += '<div style="margin-bottom:10px;">';
+            html += '<label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Logo</label>';
+            html += '<select class="add-inv-select" onchange="setFunnelLogo(' + dIdx + ',this.value)">';
+            html += '<option value="">All logos...</option>';
+            logoOptions.forEach(l => {
+                html += '<option value="' + l.replace(/"/g, '&quot;') + '"' + (detail.logo === l ? ' selected' : '') + '>' + l + '</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        // Matching PNs list
+        html += '<div style="padding:0 16px 12px;">';
+        html += '<div style="font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:6px;">Matching Part Numbers (' + matchingKeys.length + ')</div>';
+
+        if (matchingKeys.length === 0 && detail.brand) {
+            html += '<div style="padding:12px;background:rgba(255,193,7,0.1);border:1px solid var(--warning);border-radius:8px;margin-bottom:8px;">';
+            html += '<div style="font-size:13px;color:var(--warning);font-weight:600;margin-bottom:4px;">No matching part number found</div>';
+            html += '<div style="font-size:12px;color:var(--dim);margin-bottom:8px;">A new part number will be auto-generated for this combination.</div>';
+            html += '<button class="add-inv-btn secondary" style="font-size:12px;padding:8px 12px;" onclick="previewAutoGeneratePN(' + dIdx + ')">Preview &amp; Confirm New PN</button>';
+            html += '</div>';
+        } else {
+            html += matchingKeys.map(k => {
+                const buttonsShort = k.buttons ? k.buttons.split(':')[0] : '';
+                const stock = stockData[k.pn] || 0;
+                const isResolved = detail.resolvedPN === k.pn;
+                const style = isResolved ? 'border:2px solid var(--accent);background:rgba(99,102,241,0.08);' : '';
+
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:13px;' + style + '">' +
+                    '<div>' +
+                        '<span style="font-weight:600;font-family:monospace;">' + k.pn + '</span>' +
+                        '<span style="color:var(--dim);margin-left:8px;">' +
+                            (buttonsShort ? buttonsShort : '') +
+                            (k.logo ? ' | ' + k.logo : '') +
+                        '</span>' +
+                    '</div>' +
+                    '<span style="font-size:11px;color:var(--dim);">Stock: ' + stock + '</span>' +
+                '</div>';
+            }).join('');
+        }
+        html += '</div>';
+
+        // Quantity and Price row (show when resolved or when there's exactly 1 match or user has made selections)
+        if (detail.resolvedPN || matchingKeys.length === 1) {
+            const resolvedPn = detail.resolvedPN || matchingKeys[0].pn;
+            detail.resolvedPN = resolvedPn;
+            detail.resolvedKey = matchingKeys.find(k => k.pn === resolvedPn) || matchingKeys[0];
+
+            html += '<div style="padding:0 16px 16px;">';
+            html += '<div class="bulk-field-row">';
+            html += '<div style="flex:0 0 100px;">';
+            html += '<label>Qty</label>';
+            html += '<div style="display:flex;align-items:center;gap:4px;">';
+            html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustFunnelQty(' + dIdx + ',-1)">-</button>';
+            html += '<input type="number" class="add-inv-input" style="width:50px;text-align:center;padding:8px 4px;" value="' + detail.qty + '" min="0" onchange="setFunnelQty(' + dIdx + ',this.value)">';
+            html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustFunnelQty(' + dIdx + ',1)">+</button>';
+            html += '</div>';
+            html += '</div>';
+
+            html += '<div style="flex:0 0 120px;">';
+            html += '<label>Price (ea)</label>';
+            html += '<div style="display:flex;align-items:center;">';
+            html += '<span style="padding:8px;background:var(--bg);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;color:var(--dim);font-size:13px;">$</span>';
+            html += '<input type="number" class="add-inv-input" style="border-radius:0 8px 8px 0;padding:8px;" placeholder="0.00" step="0.01" min="0" value="' + (detail.price || '') + '" onchange="setFunnelPrice(' + dIdx + ',this.value)">';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
         }
 
         html += '</div>';
@@ -19208,130 +19412,138 @@ function renderBulkDetailCards() {
     }).join('');
 }
 
-function renderBulkSubItem(dIdx, sIdx, sub, detail) {
-    const showRemove = detail.subItems.length > 1;
-    const buttonsShort = sub.buttons ? sub.buttons.split(':')[0] : '';
-
-    let html = '<div class="bulk-sub-item">';
-    html += '<div class="bulk-sub-item-header">';
-
-    // If there are siblings, show a part number selector
-    if (detail.siblings.length > 1) {
-        html += '<div style="flex:1;">';
-        html += '<label style="display:block;font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:4px;">Part Number</label>';
-        html += '<select class="add-inv-select" onchange="changeBulkSubPN(' + dIdx + ',' + sIdx + ',this.value)" style="width:100%;">';
-        detail.siblings.forEach(sib => {
-            const sibButtons = sib.buttons ? sib.buttons.split(':')[0] : '';
-            const sibLogo = sib.logo || 'No logo';
-            const selected = sib.pn === sub.pn ? ' selected' : '';
-            html += '<option value="' + sib.pn + '"' + selected + '>' + sib.pn + ' - ' + sibButtons + ' - ' + sibLogo + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-    } else {
-        html += '<div>';
-        html += '<div class="bulk-sub-item-pn">' + sub.pn + '</div>';
-        if (buttonsShort) html += '<div class="bulk-sub-item-desc">' + buttonsShort + (sub.logo ? ' | ' + sub.logo : '') + '</div>';
-        html += '</div>';
-    }
-
-    if (showRemove) {
-        html += '<button class="bulk-sub-remove" onclick="removeBulkSubItem(' + dIdx + ',' + sIdx + ')">X</button>';
-    }
-    html += '</div>';
-
-    // Quantity, Brand, Price row
-    html += '<div class="bulk-field-row">';
-    html += '<div style="flex:0 0 80px;">';
-    html += '<label>Qty</label>';
-    html += '<div style="display:flex;align-items:center;gap:4px;">';
-    html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustBulkQty(' + dIdx + ',' + sIdx + ',-1)">-</button>';
-    html += '<input type="number" class="add-inv-input" style="width:50px;text-align:center;padding:8px 4px;" value="' + sub.qty + '" min="0" onchange="setBulkQty(' + dIdx + ',' + sIdx + ',this.value)">';
-    html += '<button class="add-inv-qty-btn" style="width:32px;height:36px;font-size:16px;" onclick="adjustBulkQty(' + dIdx + ',' + sIdx + ',1)">+</button>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div style="flex:1;">';
-    html += '<label>Brand</label>';
-    html += '<select class="add-inv-select" onchange="setBulkBrand(' + dIdx + ',' + sIdx + ',this.value)">';
-    html += '<option value="">Select brand...</option>';
-    getBrandOptions().forEach(b => {
-        const selected = sub.brand === b ? ' selected' : '';
-        html += '<option value="' + b + '"' + selected + '>' + b + '</option>';
-    });
-    html += '</select>';
-    html += '</div>';
-
-    html += '<div style="flex:0 0 100px;">';
-    html += '<label>Price (ea)</label>';
-    html += '<div style="display:flex;align-items:center;">';
-    html += '<span style="padding:8px;background:var(--bg);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;color:var(--dim);font-size:13px;">$</span>';
-    html += '<input type="number" class="add-inv-input" style="border-radius:0 8px 8px 0;padding:8px;" placeholder="0.00" step="0.01" min="0" value="' + (sub.price || '') + '" onchange="setBulkPrice(' + dIdx + ',' + sIdx + ',this.value)">';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '</div>';
-    return html;
-}
-
-function changeBulkSubPN(dIdx, sIdx, newPN) {
+function setFunnelBrand(dIdx, val) {
     const detail = bulkItemDetails[dIdx];
-    const sibKey = detail.siblings.find(s => String(s.pn) === String(newPN));
-    if (sibKey) {
-        detail.subItems[sIdx].pn = sibKey.pn;
-        detail.subItems[sIdx].buttons = sibKey.buttons || '';
-        detail.subItems[sIdx].logo = sibKey.logo || '';
-    }
-}
-
-function addBulkVariant(dIdx) {
-    const detail = bulkItemDetails[dIdx];
-    if (!detail.siblings.length) return;
-
-    // Find a sibling PN not yet used
-    const usedPNs = new Set(detail.subItems.map(s => s.pn));
-    let nextSib = detail.siblings.find(s => !usedPNs.has(s.pn));
-    if (!nextSib) nextSib = detail.siblings[0]; // fallback: duplicate first
-
-    detail.subItems.push({
-        pn: nextSib.pn,
-        buttons: nextSib.buttons || '',
-        logo: nextSib.logo || '',
-        qty: 1,
-        brand: '',
-        price: ''
-    });
-
+    detail.brand = val;
+    // Reset downstream selections
+    detail.buttons = '';
+    detail.logo = '';
+    detail.resolvedPN = null;
+    detail.resolvedKey = null;
     renderBulkDetailCards();
 }
 
-function removeBulkSubItem(dIdx, sIdx) {
+function setFunnelButtons(dIdx, val) {
     const detail = bulkItemDetails[dIdx];
-    if (detail.subItems.length <= 1) return;
-    detail.subItems.splice(sIdx, 1);
+    detail.buttons = val;
+    // Reset logo if changing buttons
+    detail.logo = '';
+    detail.resolvedPN = null;
+    detail.resolvedKey = null;
     renderBulkDetailCards();
 }
 
-function adjustBulkQty(dIdx, sIdx, delta) {
-    const sub = bulkItemDetails[dIdx].subItems[sIdx];
-    let val = parseInt(sub.qty) || 0;
+function setFunnelLogo(dIdx, val) {
+    const detail = bulkItemDetails[dIdx];
+    detail.logo = val;
+    detail.resolvedPN = null;
+    detail.resolvedKey = null;
+    renderBulkDetailCards();
+}
+
+function adjustFunnelQty(dIdx, delta) {
+    const detail = bulkItemDetails[dIdx];
+    let val = parseInt(detail.qty) || 0;
     val += delta;
     if (val < 0) val = 0;
-    sub.qty = val;
+    detail.qty = val;
     renderBulkDetailCards();
 }
 
-function setBulkQty(dIdx, sIdx, val) {
-    bulkItemDetails[dIdx].subItems[sIdx].qty = parseInt(val) || 0;
+function setFunnelQty(dIdx, val) {
+    bulkItemDetails[dIdx].qty = parseInt(val) || 0;
 }
 
-function setBulkBrand(dIdx, sIdx, val) {
-    bulkItemDetails[dIdx].subItems[sIdx].brand = val;
+function setFunnelPrice(dIdx, val) {
+    bulkItemDetails[dIdx].price = parseFloat(val) || 0;
 }
 
-function setBulkPrice(dIdx, sIdx, val) {
-    bulkItemDetails[dIdx].subItems[sIdx].price = parseFloat(val) || 0;
+// ---- Auto-generate PN ----
+
+function previewAutoGeneratePN(dIdx) {
+    const detail = bulkItemDetails[dIdx];
+    const siblingPNs = detail.allKeys.map(k => k.pn);
+
+    // Try to find a numeric PN in the same range as siblings
+    const numericPNs = siblingPNs.map(pn => parseInt(pn)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+
+    let suggestedPN;
+    if (numericPNs.length > 0) {
+        // Find the next available PN near the sibling range
+        const maxPN = numericPNs[numericPNs.length - 1];
+        const minPN = numericPNs[0];
+        // Try nearby values first
+        suggestedPN = maxPN + 1;
+        // Check it doesn't already exist in DB
+        while (DB.some(k => String(k.pn) === String(suggestedPN))) {
+            suggestedPN++;
+        }
+    } else {
+        // Non-numeric PNs - generate based on FID
+        const base = detail.fid.replace('-', '') + '_';
+        let counter = 1;
+        suggestedPN = base + counter;
+        while (DB.some(k => String(k.pn) === String(suggestedPN))) {
+            counter++;
+            suggestedPN = base + counter;
+        }
+    }
+
+    // Show confirmation dialog with sibling PNs for context
+    let msg = 'Auto-generate new Part Number for ' + detail.fid + '\n\n';
+    msg += 'Combination:\n';
+    msg += '  Brand: ' + (detail.brand || 'Not selected') + '\n';
+    msg += '  Buttons: ' + (detail.buttons || 'Not selected') + '\n';
+    if (detail.logo) msg += '  Logo: ' + detail.logo + '\n';
+    msg += '\nExisting PNs under this FID:\n';
+    siblingPNs.forEach(pn => {
+        const key = detail.allKeys.find(k => k.pn === pn);
+        const btn = key && key.buttons ? key.buttons.split(':')[0] : '';
+        msg += '  ' + pn + (btn ? ' - ' + btn : '') + (key && key.logo ? ' - ' + key.logo : '') + '\n';
+    });
+    msg += '\nSuggested new PN: ' + suggestedPN;
+    msg += '\n\nEnter a different PN or click OK to use the suggested one:';
+
+    const userPN = prompt(msg, suggestedPN);
+    if (!userPN) return;
+
+    const newPN = userPN.trim();
+    if (DB.some(k => String(k.pn) === newPN)) {
+        toast('Part number ' + newPN + ' already exists in the database');
+        return;
+    }
+
+    // Create the new key entry
+    const templateKey = detail.allKeys[0]; // Use first sibling as template
+    const newKey = {
+        pn: newPN,
+        fccid: detail.fccIds[0] || '',
+        keyway: templateKey.keyway || '',
+        chip: templateKey.chip || '',
+        keyType: templateKey.keyType || '',
+        buttons: detail.buttons ? (detail.allKeys.find(k => k.buttons && k.buttons.split(':')[0].trim() === detail.buttons) || {}).buttons || detail.buttons : templateKey.buttons || '',
+        frequency: templateKey.frequency || '',
+        battery: templateKey.battery || '',
+        logo: detail.logo || '',
+        vehicles: templateKey.vehicles || [],
+        notes: 'Auto-generated from FID ' + detail.fid,
+        isCustom: true,
+        addedDate: new Date().toISOString(),
+        brand: detail.brand || ''
+    };
+
+    // Add to DB and custom keys
+    DB.push(newKey);
+    customKeys.push(newKey);
+    saveCustomKeys();
+
+    // Resolve to the new PN
+    detail.resolvedPN = newPN;
+    detail.resolvedKey = newKey;
+    detail.allKeys.push(newKey);
+
+    toast('Created part number ' + newPN);
+    renderBulkDetailCards();
 }
 
 // ---- Submit bulk inventory ----
@@ -19350,60 +19562,65 @@ function submitBulkInventory() {
         }
     }
 
+    // Validate all items have resolved PNs
+    const unresolved = bulkItemDetails.filter(d => !d.resolvedPN);
+    if (unresolved.length > 0) {
+        toast('Please complete all funnel selections. ' + unresolved.length + ' item(s) need a part number.');
+        return;
+    }
+
     let totalItems = 0;
     let summaryLines = [];
 
     bulkItemDetails.forEach(detail => {
-        detail.subItems.forEach(sub => {
-            const pn = sub.pn;
-            const qty = parseInt(sub.qty) || 0;
-            const price = parseFloat(sub.price) || 0;
-            const brand = sub.brand || '';
+        const pn = detail.resolvedPN;
+        const qty = parseInt(detail.qty) || 0;
+        const price = parseFloat(detail.price) || 0;
+        const brand = detail.brand || '';
 
-            if (qty <= 0) return;
+        if (qty <= 0) return;
 
-            // Update stock
-            stockData[pn] = (stockData[pn] || 0) + qty;
-            totalItems += qty;
+        // Update stock
+        stockData[pn] = (stockData[pn] || 0) + qty;
+        totalItems += qty;
 
-            // Find the key for this PN
-            const keyForPn = DB.find(k => k.pn === pn) || detail.key;
+        // Find the key for this PN
+        const keyForPn = detail.resolvedKey || DB.find(k => k.pn === pn);
 
-            // Add to purchase history
-            const purchase = {
-                id: Date.now().toString() + '_' + pn + '_' + Math.random().toString(36).substr(2, 4),
-                date: date,
-                vendor: vendor || 'Unknown',
-                partNumber: pn,
-                quantity: qty,
-                priceEach: price,
-                total: qty * price,
-                invoice: invoice,
-                notes: (brand ? '[' + brand + '] ' : '') + notes,
-                brand: brand,
-                fccid: keyForPn.fccid || '',
-                keyway: keyForPn.keyway || ''
-            };
+        // Add to purchase history
+        const purchase = {
+            id: Date.now().toString() + '_' + pn + '_' + Math.random().toString(36).substr(2, 4),
+            date: date,
+            vendor: vendor || 'Unknown',
+            partNumber: pn,
+            quantity: qty,
+            priceEach: price,
+            total: qty * price,
+            invoice: invoice,
+            notes: (brand ? '[' + brand + '] ' : '') + notes,
+            brand: brand,
+            fccid: keyForPn ? keyForPn.fccid || '' : '',
+            keyway: keyForPn ? keyForPn.keyway || '' : '',
+            fid: detail.fid
+        };
 
-            purchaseHistory.unshift(purchase);
+        purchaseHistory.unshift(purchase);
 
-            // Update vendor pricing
-            if (vendor && price > 0) {
-                if (!vendorPrices[pn]) vendorPrices[pn] = {};
-                if (!vendorPrices[pn][vendor]) {
-                    vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
-                }
-                if (!vendorPrices[pn][vendor].priceA) {
-                    vendorPrices[pn][vendor].priceA = price.toFixed(2);
-                }
+        // Update vendor pricing
+        if (vendor && price > 0) {
+            if (!vendorPrices[pn]) vendorPrices[pn] = {};
+            if (!vendorPrices[pn][vendor]) {
+                vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
             }
+            if (!vendorPrices[pn][vendor].priceA) {
+                vendorPrices[pn][vendor].priceA = price.toFixed(2);
+            }
+        }
 
-            const buttonsShort = sub.buttons ? sub.buttons.split(':')[0] : '';
-            summaryLines.push('<strong>' + qty + 'x ' + pn + '</strong>' +
-                (brand ? ' (' + brand + ')' : '') +
-                (buttonsShort ? ' - ' + buttonsShort : '') +
-                (price > 0 ? ' @ $' + price.toFixed(2) + '/ea' : ''));
-        });
+        summaryLines.push('<strong>' + qty + 'x ' + pn + '</strong>' +
+            ' <span style="color:var(--dim);">(' + detail.fid + ')</span>' +
+            (brand ? ' [' + brand + ']' : '') +
+            (price > 0 ? ' @ $' + price.toFixed(2) + '/ea' : ''));
     });
 
     if (totalItems === 0) {
@@ -20038,10 +20255,26 @@ function saveCustomKey() {
     closeAddCustomKey();
     toast('Key added to database');
     
-    // Open the add inventory and pre-select this key
+    // Open the add inventory and pre-select this key's FID if it has one
     setTimeout(() => {
-        const newIndex = DB.length - 1;
-        bulkSelectItem(newIndex);
+        const newKey = DB[DB.length - 1];
+        if (newKey && newKey.fccid) {
+            // Find the FID for this key's FCC ID
+            const fccIds = newKey.fccid.split(',').map(s => s.trim());
+            let fid = null;
+            for (const fcc of fccIds) {
+                for (const [fccKey, assignedFid] of Object.entries(fidAssignments || {})) {
+                    const parts = fccKey.split(',').map(s => s.trim());
+                    if (parts.includes(fcc)) { fid = assignedFid; break; }
+                }
+                if (fid) break;
+            }
+            if (fid) {
+                bulkSelectFID(fid);
+            } else {
+                toast('Key added. Assign an FID to search for it in inventory.');
+            }
+        }
     }, 100);
 }
 
