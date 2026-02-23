@@ -4436,7 +4436,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v129</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v130</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4961,7 +4961,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v129</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v130</p>
         </div>
 
         <div class="settings-section">
@@ -4973,7 +4973,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v129<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v130<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7980,7 +7980,7 @@ async function init() {
     // Register service worker for PWA (with cache-busting version)
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('service-worker.js?v=81');
+            const registration = await navigator.serviceWorker.register('service-worker.js?v=82');
             console.log('Service Worker registered:', registration.scope);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
@@ -9109,6 +9109,11 @@ function openKey(idx, fromFcc = false, fromFid = false) {
                 </div>
             `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
         </div>
+
+        <!-- Delete Part Number -->
+        <div style="margin-top:24px;padding:16px;text-align:center;">
+            <button onclick="deletePartNumber(${idx})" style="padding:10px 24px;background:transparent;border:1px solid #ff4444;border-radius:8px;color:#ff4444;font-size:13px;cursor:pointer;">Delete Part Number</button>
+        </div>
     `;
 
     document.getElementById('detailContent').innerHTML = html;
@@ -9959,6 +9964,51 @@ function closeDetail() {
 
     cameFromFcc = false;
     currentKeyIdx = null;
+}
+
+function deletePartNumber(idx) {
+    const key = DB[idx];
+    if (!key) return;
+
+    if (!confirm(`Delete part number ${key.pn}?\n\nThis will remove the key and all its associated data (stock, pricing, overrides).`)) return;
+
+    const pn = String(key.pn);
+
+    // Remove from DB
+    DB.splice(idx, 1);
+
+    // Remove from customKeys if it was custom
+    const ckIdx = customKeys.findIndex(k => String(k.pn) === pn);
+    if (ckIdx >= 0) customKeys.splice(ckIdx, 1);
+    saveCustomKeys();
+
+    // Clean up associated data
+    delete stockData[pn];
+    saveStock();
+    delete vendorPrices[pn];
+    saveVendorPrices();
+    delete vehicleOverrides[pn];
+    saveVehicleOverrides();
+    delete keyInfoOverrides[pn];
+    saveKeyInfoOverrides();
+    delete keyRelationships[pn];
+    saveKeyRelationships();
+
+    // Remove from purchase history
+    const beforePH = purchaseHistory.length;
+    purchaseHistory = purchaseHistory.filter(p => String(p.partNumber) !== pn);
+    if (purchaseHistory.length !== beforePH) savePurchaseHistory();
+
+    // Save updated DB
+    saveToIndexedDB('database', DB);
+
+    // Close detail and refresh
+    document.getElementById('detailPanel').classList.remove('on');
+    currentKeyIdx = null;
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+    toast(`Deleted ${pn}`);
 }
 
 // ===================== STOCK =====================
@@ -13199,7 +13249,7 @@ function addNewCodeSeriesValue() {
 
 function exportData() {
     const data = {
-        version: 43,
+        version: 44,
         exportDate: new Date().toISOString(),
         records: DB,
         stock: stockData,
