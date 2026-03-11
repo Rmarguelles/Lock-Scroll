@@ -16123,8 +16123,8 @@ function renderKeyTypesForModel(make, model) {
                 } else if (lowerType.includes('remote head') || lowerType.includes('flip') || lowerType.includes('fobik')) {
                     normalizedType = 'Keyed Ignition';
                 } else if (lowerType.includes('remote')) {
-                    // Remote-only keys go to Proximity
-                    normalizedType = 'Proximity';
+                    // Remote-only keys go to Keyed Ignition
+                    normalizedType = 'Keyed Ignition';
                 }
                 // normalizedType is guaranteed to be either 'Keyed Ignition' or 'Proximity'
 
@@ -16203,7 +16203,7 @@ function normalizeKeyType(keyType) {
     } else if (lowerType.includes('remote head') || lowerType.includes('flip') || lowerType.includes('fobik')) {
         return 'Keyed Ignition';
     } else if (lowerType.includes('remote')) {
-        return 'Proximity';
+        return 'Keyed Ignition';
     }
     return 'Keyed Ignition'; // Default to Keyed Ignition
 }
