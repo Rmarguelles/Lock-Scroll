@@ -9027,9 +9027,14 @@ function renderKeys() {
         return;
     }
 
-    // When FCC ID filter is active, group results by FID
+    // When FCC ID filter is active, group results by FID.
+    // Also group by FID when the main search term is matching against FCC IDs.
     const advFcc = (document.getElementById('advFccFilter')?.value || '').trim();
-    if (advFcc) {
+    const mainSearch = (document.getElementById('searchBox')?.value || '').trim().toUpperCase();
+    const isFccSearch = advFcc || (mainSearch && filteredKeys.some(k =>
+        k.fccid && k.fccid.toUpperCase().includes(mainSearch)
+    ));
+    if (isFccSearch) {
         renderKeysByFid(list, filteredKeys);
         return;
     }
