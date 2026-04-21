@@ -1069,7 +1069,111 @@
         }
         
         .fcc-key-item:hover { border-color: var(--accent); }
-        
+
+        /* FID-grouped search result cards (shown in key list when FCC filter is active) */
+        .fid-result-card {
+            background: var(--card);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: border-color 0.15s;
+        }
+        .fid-result-card:hover { border-color: var(--accent); }
+        .fid-result-badge {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            padding: 8px 14px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            white-space: nowrap;
+            min-width: 80px;
+            text-align: center;
+        }
+        .fid-result-badge.unassigned {
+            color: var(--dim);
+            background: var(--bg);
+            border-color: var(--border);
+            font-style: italic;
+            font-size: 14px;
+        }
+        .fid-result-info { flex: 1; min-width: 0; }
+        .fid-result-makes { font-size: 14px; color: var(--text); font-weight: 500; }
+        .fid-result-meta { font-size: 12px; color: var(--dim); margin-top: 4px; }
+        .fid-result-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+        /* FID Detail Panel */
+        .fid-detail-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 235;
+            overflow-y: auto;
+        }
+        .fid-detail-panel.on { display: block; }
+        .fid-detail-header {
+            background: linear-gradient(135deg, #1a2a4a 0%, var(--card) 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .fid-detail-badge {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            margin: 10px 0 6px;
+        }
+        .fid-detail-stats {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .fid-detail-stat {
+            padding: 8px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--dim);
+            text-align: center;
+        }
+        .fid-detail-stat strong {
+            display: block;
+            font-size: 20px;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .fid-detail-content { padding: 16px; }
+        .fid-detail-add-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .fid-detail-add-btn:hover { opacity: 0.9; }
+
         /* FID Manager */
         .fid-panel {
             display: none;
@@ -4538,6 +4642,16 @@
     <div class="fcc-keys-list" id="fccKeysList"></div>
 </div>
 
+<!-- FID Detail Panel -->
+<div class="fid-detail-panel" id="fidDetailPanel">
+    <div class="fid-detail-header">
+        <button class="back-btn" onclick="closeFidDetail()">←</button>
+        <div class="fid-detail-badge" id="fidDetailBadge">FID</div>
+        <div class="fid-detail-stats" id="fidDetailStats"></div>
+    </div>
+    <div class="fid-detail-content" id="fidDetailContent"></div>
+</div>
+
 <!-- Vehicle Lookup Panel - Make Selection -->
 <div class="vehicle-panel" id="vehiclePanel">
     <div class="vehicle-header">
@@ -7788,7 +7902,9 @@ let purchaseHistory = [];
 let fidPrefixes = {"N":{"makes":["Nissan","Infiniti"],"name":"Nissan/Infiniti"},"F":{"makes":["Ford","Lincoln","Mercury"],"name":"Ford/Lincoln/Mercury"},"GM":{"makes":["Chevrolet","GMC","Buick","Cadillac","Saturn","Pontiac","Oldsmobile","Hummer"],"name":"GM/Chevrolet/Buick/Cadillac/GMC"},"T":{"makes":["Toyota","Lexus","Scion"],"name":"Toyota/Lexus/Scion"},"H":{"makes":["Honda","Acura"],"name":"Honda/Acura"},"CH":{"name":"Chrysler/Dodge/Jeep/Ram","makes":["Chrysler","Dodge","Jeep","Ram","Eagle","Plymouth"]},"HY":{"name":"Hyundai/Kia/Genesis","makes":["Hyundai","Kia","Genesis"]},"MZ":{"makes":["Mazda"],"name":"Mazda"},"MT":{"makes":["Mitsubishi"],"name":"Mitsubishi"},"SB":{"name":"Subaru","makes":["Subaru"]},"VW":{"name":"Volkswagen/Audi","makes":["Volkswagen","Audi"]},"SZ":{"name":"Suzuki","makes":["Suzuki"]},"CL":{"name":"Cloneable Keys","makes":[]},"TB":{"name":"Tibbe Keys","makes":[]},"OT":{"name":"Other","makes":[]}};
 let cameFromFcc = false;
 let cameFromFid = false;
+let cameFromFidDetail = false;
 let currentFccId = null;
+let currentFidDetailCode = null;
 let editingVendor = null;
 let editingPartNumber = null;
 
@@ -8905,21 +9021,28 @@ function applyFilters() {
 function renderKeys() {
     const list = document.getElementById('keyList');
     document.getElementById('showCount').textContent = filteredKeys.length;
-    
+
     if (filteredKeys.length === 0) {
         list.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No keys found</div>';
         return;
     }
-    
+
+    // When FCC ID filter is active, group results by FID
+    const advFcc = (document.getElementById('advFccFilter')?.value || '').trim();
+    if (advFcc) {
+        renderKeysByFid(list, filteredKeys);
+        return;
+    }
+
     list.innerHTML = filteredKeys.map((key, i) => {
         const idx = DB.indexOf(key);
         const stock = stockData[key.pn] || 0;
         const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
-        
-        const vehicles = (key.vehicles || []).slice(0, 3).map(v => 
+
+        const vehicles = (key.vehicles || []).slice(0, 3).map(v =>
             `${v.make} ${v.model} (${formatYearRange(v)})`
         ).join(', ');
-        
+
         return `
             <div class="key-card" onclick="openKey(${idx})">
                 <div class="key-card-header">
@@ -8937,11 +9060,60 @@ function renderKeys() {
     }).join('');
 }
 
+function renderKeysByFid(list, keys) {
+    // Group keys by their FID assignment
+    const fidGroups = new Map();
+
+    keys.forEach(key => {
+        const fid = key.fccid ? fidAssignments[key.fccid] : null;
+        const groupKey = fid || '__no_fid__';
+        if (!fidGroups.has(groupKey)) {
+            fidGroups.set(groupKey, { fid, fccIds: new Set(), keys: [] });
+        }
+        const g = fidGroups.get(groupKey);
+        g.keys.push(key);
+        if (key.fccid) g.fccIds.add(key.fccid);
+    });
+
+    // Sort: FID-assigned groups first (alphabetically by prefix then number), unassigned last
+    const sorted = [...fidGroups.entries()].sort(([, aVal], [, bVal]) => {
+        if (aVal.fid && bVal.fid) {
+            const pA = aVal.fid.split('-')[0], pB = bVal.fid.split('-')[0];
+            if (pA !== pB) return pA.localeCompare(pB);
+            return (parseInt(aVal.fid.split('-')[1]) || 0) - (parseInt(bVal.fid.split('-')[1]) || 0);
+        }
+        if (aVal.fid) return -1;
+        if (bVal.fid) return 1;
+        return 0;
+    });
+
+    list.innerHTML = sorted.map(([, group]) => {
+        const { fid, fccIds, keys: groupKeys } = group;
+        const totalStock = groupKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+        const makes = [...new Set(groupKeys.flatMap(k => (k.vehicles || []).map(v => v.make)))].slice(0, 3);
+        const fccList = [...fccIds].slice(0, 2).join(', ') + (fccIds.size > 2 ? ` +${fccIds.size - 2} more` : '');
+        const fidJs = fid ? JSON.stringify(fid) : 'null';
+
+        return `
+            <div class="fid-result-card" onclick="openFidDetail(${fidJs})">
+                <div class="fid-result-badge${fid ? '' : ' unassigned'}">${fid || 'No FID'}</div>
+                <div class="fid-result-info">
+                    <div class="fid-result-makes">${makes.join(', ') || 'Unknown'}</div>
+                    <div class="fid-result-meta">${groupKeys.length} part${groupKeys.length !== 1 ? 's' : ''} &bull; ${totalStock} in stock</div>
+                    ${fccList ? `<div style="font-size:11px;color:var(--accent2);margin-top:3px;font-family:monospace;">${fccList}</div>` : ''}
+                </div>
+                <div class="fid-result-arrow">&#8250;</div>
+            </div>
+        `;
+    }).join('');
+}
+
 // ===================== KEY DETAIL =====================
-function openKey(idx, fromFcc = false, fromFid = false) {
+function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
     currentKeyIdx = idx;
     cameFromFcc = fromFcc;
     cameFromFid = fromFid;
+    cameFromFidDetail = fromFidDetail;
 
     // Hide FCC panel if coming from FCC list
     if (fromFcc) {
@@ -9958,6 +10130,12 @@ function closeDetail() {
         return;
     }
 
+    if (cameFromFidDetail) {
+        openFidDetail(currentFidDetailCode);
+        cameFromFidDetail = false;
+        return;
+    }
+
     if (cameFromFcc && currentFccId) {
         openFccPage(currentFccId, cameFromFid);
     }
@@ -10232,6 +10410,80 @@ function closeFcc() {
     
     cameFromFid = false;
     currentFccId = null;
+}
+
+// ===================== FID DETAIL (from keys FCC search) =====================
+function openFidDetail(fid) {
+    currentFidDetailCode = fid;
+
+    // Collect all keys (DB + custom) that belong to this FID
+    let detailKeys;
+    if (fid) {
+        detailKeys = DB.filter(k => k.fccid && fidAssignments[k.fccid] === fid);
+        const customMatches = customKeys.filter(k => k.fccid && fidAssignments[k.fccid] === fid);
+        detailKeys = detailKeys.concat(customMatches);
+    } else {
+        // No FID assigned — show filteredKeys that have no FID
+        detailKeys = filteredKeys.filter(k => !k.fccid || !fidAssignments[k.fccid]);
+    }
+
+    const totalStock = detailKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+    const uniqueFccs = [...new Set(detailKeys.filter(k => k.fccid).map(k => k.fccid))];
+    const primaryFcc = uniqueFccs[0] || '';
+
+    document.getElementById('fidDetailBadge').textContent = fid || 'No FID Assigned';
+    document.getElementById('fidDetailStats').innerHTML = `
+        <div class="fid-detail-stat"><strong>${detailKeys.length}</strong>Part Number${detailKeys.length !== 1 ? 's' : ''}</div>
+        <div class="fid-detail-stat"><strong>${totalStock}</strong>In Inventory</div>
+        ${uniqueFccs.length > 0 ? `<div class="fid-detail-stat" style="font-family:monospace;font-size:11px;color:var(--accent2);">
+            <strong style="font-size:13px;">${uniqueFccs.slice(0, 2).join(', ')}${uniqueFccs.length > 2 ? '…' : ''}</strong>FCC ID${uniqueFccs.length !== 1 ? 's' : ''}
+        </div>` : ''}
+    `;
+
+    const primaryFccJs = primaryFcc ? JSON.stringify(primaryFcc) : 'null';
+    document.getElementById('fidDetailContent').innerHTML = `
+        <button class="fid-detail-add-btn" onclick="openAddCustomKey(${primaryFccJs})">
+            + Add New Part Number
+        </button>
+        ${detailKeys.length === 0
+            ? '<div style="text-align:center;color:var(--dim);padding:40px;">No parts found for this FID</div>'
+            : detailKeys.map(key => {
+                const idx = DB.indexOf(key);
+                const stock = stockData[key.pn] || 0;
+                const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
+                const vehicles = (key.vehicles || []).slice(0, 2).map(v =>
+                    `${v.make} ${v.model} (${formatYearRange(v)})`
+                ).join(', ');
+                return `
+                    <div class="fcc-key-item" onclick="openKeyFromFidDetail(${idx})">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:18px;font-weight:700;color:var(--accent);font-family:monospace;">${key.pn}</span>
+                            <span class="stock-badge ${stockClass}">Stock: ${stock}</span>
+                        </div>
+                        <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">
+                            <span>${key.keyType || 'Unknown'}</span>
+                            ${key.keyway ? `&bull; <span>Keyway: ${key.keyway}</span>` : ''}
+                            ${key.buttons ? `&bull; <span>${key.buttons}</span>` : ''}
+                        </div>
+                        ${key.fccid ? `<div style="font-size:11px;color:var(--accent2);font-family:monospace;">${key.fccid}</div>` : ''}
+                        ${vehicles ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">${vehicles}</div>` : ''}
+                    </div>
+                `;
+            }).join('')
+        }
+    `;
+
+    document.getElementById('fidDetailPanel').classList.add('on');
+}
+
+function closeFidDetail() {
+    document.getElementById('fidDetailPanel').classList.remove('on');
+    currentFidDetailCode = null;
+}
+
+function openKeyFromFidDetail(idx) {
+    document.getElementById('fidDetailPanel').classList.remove('on');
+    openKey(idx, false, false, true);
 }
 
 // ===================== FID MANAGER =====================
@@ -19871,15 +20123,23 @@ function filterPurchaseHistory() {
 }
 
 // ===================== ADD CUSTOM KEY =====================
-function openAddCustomKey() {
+function openAddCustomKey(prefillFcc = null) {
     try {
         // Reset form
         document.getElementById('customKeyPN').value = '';
-        document.getElementById('customKeyFCC').value = '';
+        document.getElementById('customKeyFCC').value = prefillFcc || '';
         document.getElementById('customKeyNotes').value = '';
         document.getElementById('customKeyVehicles').innerHTML = '';
         document.getElementById('newKeyFidDisplay').style.display = 'none';
         document.getElementById('newKeyFidDisplay').textContent = '';
+
+        // If FCC ID is pre-filled and already has a FID, show it
+        if (prefillFcc && fidAssignments[prefillFcc.toUpperCase()]) {
+            const existingFid = fidAssignments[prefillFcc.toUpperCase()];
+            document.getElementById('newKeyFidDisplay').textContent = `✓ FID: ${existingFid}`;
+            document.getElementById('newKeyFidDisplay').style.display = 'block';
+            document.getElementById('newKeyFidDisplay').style.color = 'var(--accent)';
+        }
         customKeyVehicleCount = 0;
         customKeyVehicleCodeSeries = {};
 
