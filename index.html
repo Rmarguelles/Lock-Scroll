@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v139</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v140</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v139</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v140</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v139<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v140<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20809,6 +20809,17 @@ function applyManualFidToNewKey() {
 let customKeyVehicleCodeSeries = {};
 
 function addCustomKeyVehicle() {
+    // Capture the make from the most recent existing row (if any) so we can
+    // carry it forward — handy when entering many rows for the same make.
+    let carryMake = '';
+    const existingRows = document.querySelectorAll('#customKeyVehicles .custom-vehicle-row');
+    for (let i = existingRows.length - 1; i >= 0; i--) {
+        const num = existingRows[i].id.replace('customVehicle', '');
+        const sel = document.getElementById('customVehicleMake' + num);
+        const v = sel ? sel.value : '';
+        if (v && v !== '__other__') { carryMake = v; break; }
+    }
+
     customKeyVehicleCount++;
     const container = document.getElementById('customKeyVehicles');
 
@@ -20862,6 +20873,22 @@ function addCustomKeyVehicle() {
 
     container.insertAdjacentHTML('beforeend', html);
     renderCustomKeyCodeSeriesList(customKeyVehicleCount);
+
+    // Carry the previous row's make forward and populate its model dropdown
+    if (carryMake) {
+        const newMakeSelect = document.getElementById('customVehicleMake' + customKeyVehicleCount);
+        if (newMakeSelect) {
+            const hasOpt = Array.from(newMakeSelect.options).some(o => o.value === carryMake);
+            if (!hasOpt) {
+                const opt = document.createElement('option');
+                opt.value = carryMake;
+                opt.textContent = carryMake;
+                newMakeSelect.insertBefore(opt, newMakeSelect.lastElementChild);
+            }
+            newMakeSelect.value = carryMake;
+            updateCustomVehicleModels(customKeyVehicleCount);
+        }
+    }
 }
 
 function renderCustomKeyCodeSeriesList(vehicleNum) {
