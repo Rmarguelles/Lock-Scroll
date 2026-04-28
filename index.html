@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v140</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v141</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v140</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v141</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v140<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v141<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5610,6 +5610,31 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeEditKeyInfoModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveEditKeyInfo()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Per-Key Lishi Tool Add/Edit Modal -->
+<div class="modal" id="keyLishiToolModal">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-title" id="keyLishiToolModalTitle">Add Lishi Tool</div>
+        <div class="modal-input-group">
+            <label>Tool</label>
+            <select class="modal-input" id="keyLishiToolPick" onchange="onKeyLishiToolPickChange()">
+                <option value="">Select tool...</option>
+            </select>
+            <input type="text" class="modal-input" id="keyLishiToolCustom" placeholder="Enter tool name..." style="display:none;margin-top:8px;">
+        </div>
+        <div class="modal-input-group">
+            <label>Direction</label>
+            <select class="modal-input" id="keyLishiToolDir">
+                <option value="CW">CW</option>
+                <option value="CCW">CCW</option>
+            </select>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeKeyLishiToolModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="confirmKeyLishiToolModal()">Save</button>
         </div>
     </div>
 </div>
@@ -9414,16 +9439,16 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             </div>` : ''}
         </div>
 
-        ${key.keyway ? `<!-- Lishi Section -->
+        <!-- Lishi Section -->
         <div class="detail-section lishi-section">
             <div class="lishi-header">
                 <h3>&#128295; Lishi Tool</h3>
-                <span class="lishi-keyway">${keyway} Keyway</span>
+                ${keyway ? `<span class="lishi-keyway">${keyway} Keyway</span>` : ''}
             </div>
             <div id="lishiContent">
-                ${renderLishiContent(keyway, lishi)}
+                ${renderLishiContent(key, idx)}
             </div>
-        </div>` : ''}
+        </div>
         
         <!-- Pricing Section -->
         <div class="detail-section pricing-section">
@@ -10257,59 +10282,190 @@ function renderVendorPrices(pn) {
     }).join('');
 }
 
-function renderLishiContent(keyway, lishi) {
-    if (!keyway) {
-        return '<div style="color:var(--dim);text-align:center;padding:12px;">No keyway specified</div>';
+// ----- Per-key Lishi tool helpers -----
+// Resolve the list of Lishi tools for a key. Per-key override (key.lishiTools)
+// takes precedence; otherwise fall back to the keyway's default in lishiData.
+function getKeyLishiTools(key) {
+    if (!key) return [];
+    if (Array.isArray(key.lishiTools)) return key.lishiTools;
+    const lishi = key.keyway ? lishiData[key.keyway] : null;
+    if (lishi && lishi.tool) {
+        return [{ tool: lishi.tool, direction: lishi.direction || 'CW' }];
     }
-    
-    if (lishi.tool) {
-        const dirClass = lishi.direction === 'CCW' ? 'ccw' : 'cw';
-        return `
-            <div class="lishi-tool-display">
-                <span class="lishi-tool-name">${lishi.tool}</span>
-                <button class="lishi-direction ${dirClass}" onclick="toggleLishiDirection('${keyway}')">${lishi.direction || 'CW'}</button>
-                <button style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);padding:6px 10px;border-radius:6px;cursor:pointer" onclick="editLishi('${keyway}')">Edit</button>
-            </div>
-        `;
+    return [];
+}
+
+// Persist a per-key lishi tools array. Writes to keyInfoOverrides for base keys
+// and directly to customKeys[] for custom keys; keeps the in-memory DB entry in sync.
+function setKeyLishiTools(key, tools) {
+    if (!key) return;
+    const cleaned = (tools || []).map(t => ({
+        tool: String(t.tool || '').trim(),
+        direction: t.direction === 'CCW' ? 'CCW' : 'CW'
+    })).filter(t => t.tool);
+    key.lishiTools = cleaned;
+
+    if (key.isCustom) {
+        const ck = customKeys.find(k => String(k.pn).toLowerCase() === String(key.pn).toLowerCase());
+        if (ck) {
+            ck.lishiTools = cleaned;
+            saveCustomKeys();
+        }
     } else {
+        if (!keyInfoOverrides[key.pn]) keyInfoOverrides[key.pn] = {};
+        keyInfoOverrides[key.pn].lishiTools = cleaned;
+        saveKeyInfoOverrides();
+    }
+}
+
+function renderLishiContent(key, idx) {
+    if (!key.keyway && !Array.isArray(key.lishiTools)) {
+        return '<div style="color:var(--dim);text-align:center;padding:12px;">No keyway specified</div>'
+            + `<div style="text-align:center;margin-top:8px;"><button class="lishi-add-btn" onclick="addKeyLishiTool(${idx})">+ Add Lishi Tool</button></div>`;
+    }
+
+    const tools = getKeyLishiTools(key);
+
+    if (tools.length === 0) {
         return `
             <div style="text-align:center;">
-                <button class="lishi-add-btn" onclick="addLishi('${keyway}')">+ Add Lishi Tool</button>
+                <button class="lishi-add-btn" onclick="addKeyLishiTool(${idx})">+ Add Lishi Tool</button>
             </div>
         `;
     }
+
+    return tools.map((t, i) => {
+        const dirClass = t.direction === 'CCW' ? 'ccw' : 'cw';
+        return `
+            <div class="lishi-tool-display" style="margin-bottom:6px;">
+                <span class="lishi-tool-name">${t.tool}</span>
+                <button class="lishi-direction ${dirClass}" onclick="toggleKeyLishiToolDirection(${idx}, ${i})">${t.direction || 'CW'}</button>
+                <button style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;" onclick="editKeyLishiTool(${idx}, ${i})">Edit</button>
+                <button style="background:none;border:1px solid var(--border);color:#ff6464;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:14px;margin-left:6px;" onclick="removeKeyLishiTool(${idx}, ${i})" title="Remove">×</button>
+            </div>
+        `;
+    }).join('') + `
+        <div style="text-align:center;margin-top:8px;">
+            <button class="lishi-add-btn" onclick="addKeyLishiTool(${idx})">+ Add Another Lishi Tool</button>
+        </div>
+    `;
 }
 
-function addLishi(keyway) {
-    const tool = prompt('Enter Lishi tool name (e.g., HU66, TOY43):');
-    if (tool && tool.trim()) {
-        lishiData[keyway] = { tool: tool.trim().toUpperCase(), direction: 'CW' };
-        saveLishi();
-        openKey(currentKeyIdx, cameFromFcc, cameFromFid);
-        toast('Lishi tool added');
-    }
-}
+// Modal state
+let keyLishiToolEditCtx = null; // { idx, editIndex }
 
-function editLishi(keyway) {
-    const current = lishiData[keyway]?.tool || '';
-    const tool = prompt('Edit Lishi tool name:', current);
-    if (tool === null) return;
-    
-    if (tool.trim() === '') {
-        delete lishiData[keyway];
-        toast('Lishi tool removed');
+function populateKeyLishiToolPicker(currentTool) {
+    const select = document.getElementById('keyLishiToolPick');
+    select.innerHTML = '<option value="">Select tool...</option>';
+    const names = Object.keys(lishiInventory || {}).sort();
+    names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+    });
+    const otherOpt = document.createElement('option');
+    otherOpt.value = '__other__';
+    otherOpt.textContent = '+ Other (custom)';
+    select.appendChild(otherOpt);
+    const customInput = document.getElementById('keyLishiToolCustom');
+    customInput.value = '';
+    customInput.style.display = 'none';
+    if (currentTool) {
+        if (names.includes(currentTool)) {
+            select.value = currentTool;
+        } else {
+            select.value = '__other__';
+            customInput.value = currentTool;
+            customInput.style.display = 'block';
+        }
     } else {
-        lishiData[keyway] = { ...lishiData[keyway], tool: tool.trim().toUpperCase() };
-        toast('Lishi tool updated');
+        select.value = '';
     }
-    saveLishi();
-    openKey(currentKeyIdx, cameFromFcc, cameFromFid);
 }
 
-function toggleLishiDirection(keyway) {
-    if (!lishiData[keyway]) return;
-    lishiData[keyway].direction = lishiData[keyway].direction === 'CW' ? 'CCW' : 'CW';
-    saveLishi();
+function onKeyLishiToolPickChange() {
+    const select = document.getElementById('keyLishiToolPick');
+    const customInput = document.getElementById('keyLishiToolCustom');
+    if (select.value === '__other__') {
+        customInput.style.display = 'block';
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+        customInput.value = '';
+    }
+}
+
+function addKeyLishiTool(idx) {
+    keyLishiToolEditCtx = { idx: idx, editIndex: -1 };
+    document.getElementById('keyLishiToolModalTitle').textContent = 'Add Lishi Tool';
+    populateKeyLishiToolPicker('');
+    document.getElementById('keyLishiToolDir').value = 'CW';
+    document.getElementById('keyLishiToolModal').classList.add('on');
+}
+
+function editKeyLishiTool(idx, i) {
+    const key = DB[idx];
+    const tools = getKeyLishiTools(key);
+    const t = tools[i] || { tool: '', direction: 'CW' };
+    keyLishiToolEditCtx = { idx: idx, editIndex: i };
+    document.getElementById('keyLishiToolModalTitle').textContent = 'Edit Lishi Tool';
+    populateKeyLishiToolPicker(t.tool);
+    document.getElementById('keyLishiToolDir').value = t.direction === 'CCW' ? 'CCW' : 'CW';
+    document.getElementById('keyLishiToolModal').classList.add('on');
+}
+
+function closeKeyLishiToolModal() {
+    document.getElementById('keyLishiToolModal').classList.remove('on');
+    keyLishiToolEditCtx = null;
+}
+
+function confirmKeyLishiToolModal() {
+    if (!keyLishiToolEditCtx) return;
+    const select = document.getElementById('keyLishiToolPick');
+    const customInput = document.getElementById('keyLishiToolCustom');
+    let toolName = select.value === '__other__' ? customInput.value.trim() : select.value;
+    if (!toolName) { toast('Pick or enter a tool name'); return; }
+    toolName = toolName.toUpperCase();
+    const direction = document.getElementById('keyLishiToolDir').value === 'CCW' ? 'CCW' : 'CW';
+
+    const { idx, editIndex } = keyLishiToolEditCtx;
+    const key = DB[idx];
+    const tools = getKeyLishiTools(key).map(t => ({ tool: t.tool, direction: t.direction }));
+
+    if (editIndex >= 0 && editIndex < tools.length) {
+        tools[editIndex] = { tool: toolName, direction: direction };
+    } else {
+        if (tools.some(t => t.tool === toolName)) {
+            toast('That tool is already on this key');
+            return;
+        }
+        tools.push({ tool: toolName, direction: direction });
+    }
+
+    setKeyLishiTools(key, tools);
+    closeKeyLishiToolModal();
+    openKey(currentKeyIdx, cameFromFcc, cameFromFid);
+    toast(editIndex >= 0 ? 'Lishi tool updated' : 'Lishi tool added');
+}
+
+function removeKeyLishiTool(idx, i) {
+    const key = DB[idx];
+    const tools = getKeyLishiTools(key).map(t => ({ tool: t.tool, direction: t.direction }));
+    if (i < 0 || i >= tools.length) return;
+    if (!confirm('Remove ' + tools[i].tool + ' from this key?')) return;
+    tools.splice(i, 1);
+    setKeyLishiTools(key, tools);
+    openKey(currentKeyIdx, cameFromFcc, cameFromFid);
+    toast('Lishi tool removed');
+}
+
+function toggleKeyLishiToolDirection(idx, i) {
+    const key = DB[idx];
+    const tools = getKeyLishiTools(key).map(t => ({ tool: t.tool, direction: t.direction }));
+    if (i < 0 || i >= tools.length) return;
+    tools[i].direction = tools[i].direction === 'CW' ? 'CCW' : 'CW';
+    setKeyLishiTools(key, tools);
     openKey(currentKeyIdx, cameFromFcc, cameFromFid);
 }
 
