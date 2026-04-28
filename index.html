@@ -6702,15 +6702,60 @@
     <div class="add-inv-content">
         <div class="add-inv-section">
             <label>Part Number *</label>
-            <input type="text" class="add-inv-input" id="customKeyPN" placeholder="e.g., B111-PT, HYQ14FBA">
+            <div style="display:flex;gap:8px;">
+                <input type="text" class="add-inv-input" id="customKeyPN" placeholder="e.g., OEM-289, B111-PT" style="flex:2;">
+                <select class="add-inv-select" id="customKeyBrand" onchange="handleCustomDropdown(this, 'customKeyBrandOther')" style="flex:1;min-width:0;">
+                    <option value="">Brand...</option>
+                </select>
+            </div>
+            <input type="text" class="add-inv-input" id="customKeyBrandOther" placeholder="Enter brand..." style="display:none;margin-top:8px;">
         </div>
-        
+
+        <div class="add-inv-section">
+            <label>Additional Part Numbers</label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Each can have its own brand.
+            </div>
+            <div id="customKeyAltParts"></div>
+            <button type="button" onclick="addCustomKeyAltPart()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Part Number
+            </button>
+        </div>
+
         <div class="add-inv-section">
             <label>FCC ID</label>
-            <div style="display:flex;gap:8px;">
-                <input type="text" class="add-inv-input" id="customKeyFCC" placeholder="e.g., HYQ14FBA, KR5TXN7" style="flex:1;">
-                <button type="button" onclick="autoAssignFidForNewKey()" style="padding:8px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">🏷️ Assign FID</button>
+            <input type="text" class="add-inv-input" id="customKeyFCC" placeholder="e.g., HYQ14FBA, KR5TXN7">
+
+            <div style="margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+                <div style="font-size:11px;color:var(--dim);text-transform:uppercase;font-weight:600;margin-bottom:10px;">FID Assignment</div>
+
+                <button type="button" onclick="autoAssignFidForNewKey()" style="width:100%;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                    🏷️ Auto-Assign from Vehicle Makes
+                </button>
+
+                <div style="margin-top:12px;">
+                    <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Or use an existing FID:</div>
+                    <div style="display:flex;gap:8px;">
+                        <select class="add-inv-select" id="customKeyExistingFid" style="flex:1;min-width:0;">
+                            <option value="">Select existing FID...</option>
+                        </select>
+                        <button type="button" onclick="applyExistingFidToNewKey()" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Or create new FID manually:</div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <select class="add-inv-select" id="customKeyManualPrefix" onchange="suggestManualFidNumber()" style="flex:1;min-width:0;">
+                            <option value="">Prefix...</option>
+                        </select>
+                        <span style="color:var(--dim);font-weight:600;">-</span>
+                        <input type="text" class="add-inv-input" id="customKeyManualNumber" placeholder="042" style="width:80px;text-align:center;">
+                        <button type="button" onclick="applyManualFidToNewKey()" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
+                    </div>
+                </div>
             </div>
+
             <div id="newKeyFidDisplay" style="margin-top:6px;font-size:12px;color:var(--dim);display:none;"></div>
         </div>
         
@@ -9170,8 +9215,14 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             </div>
             <div class="detail-row">
                 <span class="detail-label">Part Number</span>
-                <span class="detail-value mono">${key.pn || 'N/A'}</span>
+                <span class="detail-value mono">${key.pn || 'N/A'}${key.brand ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">[${key.brand}]</span>` : ''}</span>
             </div>
+            ${Array.isArray(key.altParts) && key.altParts.length > 0 ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;">
+                <span class="detail-label" style="margin-bottom:4px;">Alt Part Numbers</span>
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
+                    ${key.altParts.map(ap => `<span class="detail-value mono" style="font-size:13px;">${ap.pn}${ap.brand ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">[${ap.brand}]</span>` : ''}</span>`).join('')}
+                </div>
+            </div>` : ''}
             ${key.keyType ? `<div class="detail-row">
                 <span class="detail-label">Key Type</span>
                 <span class="detail-value">${key.keyType}</span>
@@ -20138,6 +20189,25 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('newKeyFidDisplay').style.display = 'none';
         document.getElementById('newKeyFidDisplay').textContent = '';
 
+        // Reset brand for primary part number
+        populateBrandSelect('customKeyBrand');
+        document.getElementById('customKeyBrand').value = '';
+        document.getElementById('customKeyBrandOther').style.display = 'none';
+        document.getElementById('customKeyBrandOther').value = '';
+
+        // Reset additional part numbers
+        document.getElementById('customKeyAltParts').innerHTML = '';
+        customKeyAltPartCount = 0;
+
+        // Reset FID assignment controls
+        populateCustomKeyFidOptions();
+        const manualNumEl = document.getElementById('customKeyManualNumber');
+        if (manualNumEl) manualNumEl.value = '';
+        const manualPrefixEl = document.getElementById('customKeyManualPrefix');
+        if (manualPrefixEl) manualPrefixEl.value = '';
+        const existingFidEl = document.getElementById('customKeyExistingFid');
+        if (existingFidEl) existingFidEl.value = '';
+
         // If FCC ID is pre-filled and already has a FID, show it
         if (prefillFcc && fidAssignments[prefillFcc.toUpperCase()]) {
             const existingFid = fidAssignments[prefillFcc.toUpperCase()];
@@ -20300,6 +20370,179 @@ function handleCustomDropdown(select, otherInputId) {
 
 function closeAddCustomKey() {
     document.getElementById('addCustomKeyPanel').classList.remove('on');
+}
+
+// ===== Add Custom Key: Brand, Alt Parts, FID assignment helpers =====
+let customKeyAltPartCount = 0;
+
+function populateBrandSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">Brand...</option>';
+    getBrandOptions().forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b;
+        opt.textContent = b;
+        select.appendChild(opt);
+    });
+    const otherOpt = document.createElement('option');
+    otherOpt.value = '__other__';
+    otherOpt.textContent = '+ Other (custom)';
+    select.appendChild(otherOpt);
+    if (current) select.value = current;
+}
+
+function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
+    customKeyAltPartCount++;
+    const idx = customKeyAltPartCount;
+    const container = document.getElementById('customKeyAltParts');
+    const row = document.createElement('div');
+    row.className = 'custom-altpart-row';
+    row.id = 'customAltPart' + idx;
+    row.style.cssText = 'margin-bottom:10px;';
+    row.innerHTML =
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+            '<input type="text" class="add-inv-input" id="customAltPartPN' + idx + '" placeholder="Part Number (e.g., 164-R8370)" style="flex:2;min-width:0;">' +
+            '<select class="add-inv-select" id="customAltPartBrand' + idx + '" onchange="handleCustomDropdown(this, \'customAltPartBrandOther' + idx + '\')" style="flex:1;min-width:0;"></select>' +
+            '<button type="button" onclick="removeCustomKeyAltPart(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>' +
+        '</div>' +
+        '<input type="text" class="add-inv-input" id="customAltPartBrandOther' + idx + '" placeholder="Enter brand..." style="display:none;margin-top:8px;">';
+    container.appendChild(row);
+
+    populateBrandSelect('customAltPartBrand' + idx);
+    if (prefillPn) document.getElementById('customAltPartPN' + idx).value = prefillPn;
+    if (prefillBrand) {
+        const brandSelect = document.getElementById('customAltPartBrand' + idx);
+        const hasOption = Array.from(brandSelect.options).some(o => o.value === prefillBrand);
+        if (hasOption) {
+            brandSelect.value = prefillBrand;
+        } else {
+            brandSelect.value = '__other__';
+            const other = document.getElementById('customAltPartBrandOther' + idx);
+            other.style.display = 'block';
+            other.value = prefillBrand;
+        }
+    }
+}
+
+function removeCustomKeyAltPart(idx) {
+    const row = document.getElementById('customAltPart' + idx);
+    if (row) row.remove();
+}
+
+function gatherCustomKeyAltParts() {
+    const altParts = [];
+    document.querySelectorAll('.custom-altpart-row').forEach(row => {
+        const idx = row.id.replace('customAltPart', '');
+        if (!idx) return;
+        const pnEl = document.getElementById('customAltPartPN' + idx);
+        const brandEl = document.getElementById('customAltPartBrand' + idx);
+        const brandOtherEl = document.getElementById('customAltPartBrandOther' + idx);
+        if (!pnEl) return;
+        const pn = pnEl.value.trim();
+        if (!pn) return;
+        let brand = brandEl ? brandEl.value : '';
+        if (brand === '__other__') brand = brandOtherEl ? brandOtherEl.value.trim() : '';
+        altParts.push({ pn: pn, brand: brand || null });
+    });
+    return altParts;
+}
+
+function populateCustomKeyFidOptions() {
+    const existingSelect = document.getElementById('customKeyExistingFid');
+    if (existingSelect) {
+        existingSelect.innerHTML = '<option value="">Select existing FID...</option>';
+        const seen = new Set();
+        const items = [];
+        Object.entries(fidAssignments || {}).forEach(([fcc, fid]) => {
+            if (!fid || seen.has(fid)) return;
+            seen.add(fid);
+            items.push({ fid: fid, fcc: fcc });
+        });
+        items.sort((a, b) => {
+            const [pa, na] = a.fid.split('-');
+            const [pb, nb] = b.fid.split('-');
+            if (pa !== pb) return pa.localeCompare(pb);
+            return (parseInt(na) || 0) - (parseInt(nb) || 0);
+        });
+        items.forEach(({ fid, fcc }) => {
+            const opt = document.createElement('option');
+            opt.value = fid;
+            opt.textContent = fid + ' (' + fcc + ')';
+            existingSelect.appendChild(opt);
+        });
+    }
+
+    const prefixSelect = document.getElementById('customKeyManualPrefix');
+    if (prefixSelect) {
+        prefixSelect.innerHTML = '<option value="">Prefix...</option>';
+        Object.entries(fidPrefixes).sort((a, b) => a[0].localeCompare(b[0])).forEach(([code, data]) => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = code + '- ' + (data.name || code);
+            prefixSelect.appendChild(opt);
+        });
+    }
+}
+
+function suggestManualFidNumber() {
+    const prefix = document.getElementById('customKeyManualPrefix').value;
+    const numInput = document.getElementById('customKeyManualNumber');
+    if (!prefix || !numInput) return;
+    if (!numInput.value.trim()) {
+        numInput.value = formatFidNumber(getNextFidNumber(prefix));
+    }
+}
+
+function showAssignedFidOnNewKey(fid, color) {
+    const display = document.getElementById('newKeyFidDisplay');
+    if (!display) return;
+    display.innerHTML = '✓ Assigned: <strong>' + fid + '</strong>';
+    display.style.display = 'block';
+    display.style.color = color || 'var(--green)';
+}
+
+function applyExistingFidToNewKey() {
+    const fccId = document.getElementById('customKeyFCC').value.trim().toUpperCase();
+    if (!fccId) { toast('Enter an FCC ID first'); return; }
+    const selectedFid = document.getElementById('customKeyExistingFid').value;
+    if (!selectedFid) { toast('Select an existing FID'); return; }
+
+    const current = fidAssignments[fccId];
+    if (current && current !== selectedFid) {
+        if (!confirm('This FCC ID is currently assigned to ' + current + '. Reassign to ' + selectedFid + '?')) return;
+    }
+
+    fidAssignments[fccId] = selectedFid;
+    saveFidAssignments();
+    showAssignedFidOnNewKey(selectedFid);
+    toast('Assigned FID: ' + selectedFid);
+}
+
+function applyManualFidToNewKey() {
+    const fccId = document.getElementById('customKeyFCC').value.trim().toUpperCase();
+    if (!fccId) { toast('Enter an FCC ID first'); return; }
+
+    const prefix = document.getElementById('customKeyManualPrefix').value;
+    const numRaw = document.getElementById('customKeyManualNumber').value.trim();
+    if (!prefix) { toast('Pick a prefix'); return; }
+    if (!numRaw) { toast('Enter a number'); return; }
+
+    const num = parseInt(numRaw, 10);
+    if (isNaN(num) || num < 1) { toast('Invalid number'); return; }
+
+    const newFid = prefix + '-' + formatFidNumber(num);
+
+    const collision = Object.entries(fidAssignments).find(([fcc, fid]) => fid === newFid && fcc !== fccId);
+    if (collision) {
+        if (!confirm('FID ' + newFid + ' is already assigned to ' + collision[0] + '. Use it anyway? Both FCC IDs will share this FID.')) return;
+    }
+
+    fidAssignments[fccId] = newFid;
+    saveFidAssignments();
+    showAssignedFidOnNewKey(newFid);
+    toast('Assigned FID: ' + newFid);
 }
 
 // Track code series data for each vehicle row in the Add Custom Key form
@@ -20541,20 +20784,34 @@ function handleCustomModelChange(num) {
 
 function saveCustomKey() {
     const pn = document.getElementById('customKeyPN').value.trim();
-    
+
     if (!pn) {
         toast('Please enter a Part Number');
         return;
     }
-    
+
     // Check if PN already exists
     const exists = DB.some(k => String(k.pn).toLowerCase() === pn.toLowerCase());
     if (exists) {
         toast('Part number already exists in database');
         return;
     }
-    
+
     // Get values, handling "Other" options
+    const brand = getDropdownValue('customKeyBrand', 'customKeyBrandOther');
+    const altParts = gatherCustomKeyAltParts();
+
+    // Validate alt parts don't collide with existing PNs in DB or with each other / primary
+    const seenPns = new Set([pn.toLowerCase()]);
+    for (const alt of altParts) {
+        const altLower = alt.pn.toLowerCase();
+        if (seenPns.has(altLower)) {
+            toast('Duplicate part number: ' + alt.pn);
+            return;
+        }
+        seenPns.add(altLower);
+    }
+
     const keyway = getDropdownValue('customKeyKeyway', 'customKeyKeywayOther');
     const chip = getDropdownValue('customKeyChip', 'customKeyChipOther');
     const keyType = getDropdownValue('customKeyType', 'customKeyTypeOther');
@@ -20625,6 +20882,8 @@ function saveCustomKey() {
     // Create the new key object
     const newKey = {
         pn: pn,
+        brand: brand || null,
+        altParts: altParts.length > 0 ? altParts : null,
         fccid: document.getElementById('customKeyFCC').value.trim() || null,
         keyway: keyway || null,
         chip: chip || null,
