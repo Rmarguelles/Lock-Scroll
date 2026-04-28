@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v137</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v138</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5018,6 +5018,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openPnSupersessionsPanel()">
+                    <span class="settings-nav-icon">🔄</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Replaced Part Numbers</span>
+                        <span class="settings-nav-desc">Map old PNs to their replacement</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openCategoriesSettingsPanel()">
                     <span class="settings-nav-icon">🏷️</span>
                     <div class="settings-nav-info">
@@ -5075,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v137</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v138</p>
         </div>
 
         <div class="settings-section">
@@ -5087,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v137<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v138<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5128,6 +5136,26 @@
         <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Manage keys you've added to the database.</p>
         <div id="customKeysList"></div>
         <button class="add-vendor-btn" onclick="openAddCustomKey(); closeCustomKeysSettingsPanel(); closeSettings();" style="margin-top:12px;width:100%;">+ Add Custom Key</button>
+    </div>
+</div>
+
+<!-- Replaced (Superseded) Part Numbers Settings Panel -->
+<div class="panel" id="pnSupersessionsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closePnSupersessionsPanel()">←</button>
+        <h2>🔄 Replaced Part Numbers</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">
+            Map old/discontinued part numbers to their replacement. Searching the old PN will redirect to the new key.
+        </p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" class="add-inv-input" id="pnSupersessionOldInput" placeholder="Old part number" style="flex:1;min-width:0;">
+            <span style="align-self:center;color:var(--dim);font-weight:600;">→</span>
+            <input type="text" class="add-inv-input" id="pnSupersessionNewInput" placeholder="Replacement part number" style="flex:1;min-width:0;">
+            <button class="add-vendor-btn" onclick="addPnSupersessionFromInputs()" style="white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="pnSupersessionsList"></div>
     </div>
 </div>
 
@@ -6723,6 +6751,17 @@
         </div>
 
         <div class="add-inv-section">
+            <label>Replaces Old Part Numbers</label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Old PNs that have been discontinued in favor of this key. Searching the old PN will redirect to this one.
+            </div>
+            <div id="customKeyOldPns"></div>
+            <button type="button" onclick="addCustomKeyOldPn()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Old Part Number
+            </button>
+        </div>
+
+        <div class="add-inv-section">
             <label>FCC ID</label>
             <input type="text" class="add-inv-input" id="customKeyFCC" placeholder="e.g., HYQ14FBA, KR5TXN7">
 
@@ -7607,6 +7646,7 @@ async function uploadToCloud() {
                 customVendors: customVendors,
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
+                pnSupersessions: pnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
@@ -7634,6 +7674,7 @@ async function uploadToCloud() {
                 customVendors: customVendors,
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
+                pnSupersessions: pnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 toolsDatabase: toolsDatabase,
@@ -7768,6 +7809,10 @@ async function downloadFromCloud() {
         if (data.fidMerges) {
             fidMerges = { ...fidMerges, ...data.fidMerges };
             saveFidMerges();
+        }
+        if (data.pnSupersessions) {
+            pnSupersessions = { ...pnSupersessions, ...data.pnSupersessions };
+            savePnSupersessions();
         }
         if (data.fidPrefixes) {
             fidPrefixes = { ...fidPrefixes, ...data.fidPrefixes };
@@ -7941,6 +7986,8 @@ let vehicleYearNotes = {"Buick|Encore":"Conflicting information from ILCO guide 
 // FID System - Prefix-based tracking
 let fidAssignments = {"SY5KHFNA433":"HY-015","KBRASTU15, CWTWB1U733, CWTWB1U821":"N-007","CWTWB1U751, CWTWB1U816":"N-018","M3N-A2C31243800, A2C87115400":"F-017","H73":"F-003","TQ8-FOB-4F08":"HY-012","KPU41788":"MZ-003","MOZB52TH":"T-015","WAZSKE13D03":"MZ-001","KR55WK49622":"N-006","OUCG8D-399H-A":"H-025","KPU41846":"OT-011","HYQ14ACX":"T-004","ACJ932HK1210A":"H-010","KR5TXN7":"N-001","SV3-VQTXNA13":"HY-036","TOY44H":"T-025","SY5JFRGE04":"HY-023","TQ8-RKE-4F25, TQ8-RKE-4F16":"HY-019","TQ8-RKE-4F14":"HY-032","HYQ14FBF":"T-002","H72":"F-002","M3N-A2C31243300":"F-018","OUCG8D-380H-A":"H-023","P4O9MK74946931, OHT05918179":"GM-022","SV3HMTX":"HY-034","CWTWB1U722":"F-025","MLBHLIK6-1T":"H-019","OSLOKA-630T":"HY-028","OSOKA-674T, OKA-674T":"HY-030","KR55WY8404":"HY-035","B120":"GM-012","OSLOKA-360T":"HY-026","KOBGT04A":"GM-036","DWO5":"OT-009","OUC003M":"MT-002","LHJ011":"GM-043","HYQ2AB":"GM-019","OSLOKA-674T":"HY-029","KR55WK47899":"F-026","DWO5R":"OT-008","ACJ932HK1310A":"H-014","KR5S180144014":"N-005","TOY57-PT":"T-023","HD101":"H-002","N5F-A08TAA":"F-021","CWTWB1G767":"N-016","HO05":"H-007","V2T01080514, OHT05918179":"GM-023","CWT72147KA3":"H-029","TQ8-RKE-4F16, TQ8-RKE-4F25":"HY-021","Y159":"CH-001","B115":"GM-010","WAZSKE13D01":"T-001","HYQ4EA":"GM-018","CQOFN00100":"HY-013","A269ZUA101":"H-027","H74/H86":"F-004","KR5V1X":"H-012","KR5S180144203":"N-003","OSLOKA-450T":"HY-017","KR5995364":"H-009","M3N-A2C93142300":"F-011","OSLOKA-310T":"HY-025","TOY50-PT-M":"T-022","TPX3":"OT-002","H128":"F-009","GQ4-54T":"CH-011","CWTWB1U821":"N-011","HYQ12BBY":"SB-004","BGBX1T478SKE125-01":"MZ-004","CWTWB1U811":"SB-003","OHT05918179":"GM-025","TQ8-FOB-4F16":"HY-002","TQ8-FOB-4F32, TQ8-FOB-4F19":"HY-005","HYQ12ABA":"CH-022","HO03":"H-006","OHT01060512":"GM-027","SY5YPFGE06":"HY-014","KR5434760":"H-013","A269ZUA106":"H-026","TQ8-FOB-4F17":"HY-011","KR5S180144106":"N-004","DWO4":"GM-014","GQ43VT5T":"CH-021","KR55WK49308":"H-017","TQ8-FOB-4F11":"HY-007","CWTWB1U322, CWTWB1U331, GQ43VT11T":"F-028","V2T01060514, P4O9MK74946931, OHT05918179":"GM-024","OUCD6000022":"F-023","HYQ14ADR":"T-009","CWTWB1U212, CWTWB1U331, GQ43VT11T":"F-029","H84":"F-005","B114R":"GM-009","M3N-32337100":"GM-033","CWTWB1U789":"N-012","GQ4-29T":"T-017","HD92":"H-001","CWTWB1U840":"N-010","CWTWB1G0090":"H-015","KR55WK48801":"F-020","M3N65981772, M3N5WY72XX":"CH-014","NBGG09C04":"GM-021","SY5HIFGE04":"HY-001","NHVWB1U521, NHVWB1U523":"H-024","TQ8-FOB-4F35":"HY-003","OUC60221":"GM-034","MLBHLIK6-1TA":"H-020","MARK8":"F-010","L2C0005T":"GM-038","CWTWB1U793":"F-024","M3N5WY8145":"H-008","TOY48BT4":"T-020","OHT692427AA":"CH-016","TOY40BT4":"T-019","HYQ14FBE":"T-006","CWTWB1U818":"N-017","CWTWB1U751":"N-014","OHT-4882056":"CH-008","MYT3X6898B":"GM-037","OHT1130261":"CH-010","HYQ14AHC":"SB-002","HD103":"H-003","SY5DMFNA433":"HY-010","OUCJ166N":"MT-003","MLBHLIK-1T":"H-018","OHT692427AB":"CH-018","Y170":"CH-004","CWTWBU624":"N-009","KOBUT1BT":"GM-045","B112":"GM-007","GQ43VT14T":"GM-046","KR55WK50073":"GM-029","HYQ12BDM":"T-014","B45":"GM-002","GQ4-53T":"CH-006","OHT692714AA, M3N5WY72XX":"CH-015","HYQ4AA":"GM-017","H94":"F-008","M3N-40821302":"CH-012","HD106":"H-004","TOY44G":"T-024","B100":"OT-007","OUCG8D-625M-A":"MT-004","TPX2":"OT-001","TOY43AT4":"T-026","MOZBR1ET":"T-005","M3N-A2C931426":"F-014","HU46":"OT-010","GQ43VT17T":"CH-020","H91":"F-006","CWTWB1U313, CWTWB1U343":"F-027","HYQ12BFA":"T-011","GQ43VT4T":"F-032","M3N-A2C931426, M3N-A2C93142600":"F-013","S30FDP":"OT-005","TK60":"OT-003","AVL-B01T1AC":"GM-026","ABO0204T":"GM-040","TQ8-FOB-4F27":"HY-008","OUC644M-KEY-N":"MT-001","HYQ12BEL":"T-016","B97":"GM-003","V2T0106512, OHT01060512":"GM-028","TQ8-FOB-4F36":"HY-004","HYQ12BGF, HYQ12BFB":"T-012","CWTWB1U429":"N-015","TOY57":"OT-012","CWTWB1U816, CWTWB1U751":"N-019","KOBLEAR1XT":"GM-044","M3M-40821302, M3N-XXXXXXXX":"CH-013","Y164":"CH-003","HYQ14FLA":"T-007","M3N5WY8609":"F-019","N5F-S0084A":"H-021","HYQ14AHK":"SB-001","Y160":"CH-002","KR5V2X":"H-016","HYQ12BFB, HYQ12BFA":"T-010","B114":"GM-008","HYQ1EA":"GM-015","B99":"GM-004","OSLOKA-875T, OSLOKA-910T":"HY-024","CQOFD00120":"HY-006","B119":"GM-011","TQ8-RKE-4F39":"HY-018","HYQ14FBC":"T-008","GQ43VT9T":"CH-019","TQ8-RKE-3F05":"HY-022","TOY48H-PT":"T-021","M3N-97395900":"CH-009","GQ43VT20T":"T-018","KR5TXN4":"N-002","TPX1":"OT-004","TQ8-RKE-3F04":"HY-020","HYQ2EB":"GM-020","NHVWB1U711":"SB-005","KR580399900":"H-011","OHT01060512, V2T0106512":"GM-030","TOY44D":"T-027","N5F-A08TDA":"F-022","M3N5WY783X":"CH-007","PT04":"GM-013","CWTWB1U331, CWTWB1U322, CWTWB1U343":"F-030","M3N-A2C931423, M3N-A2C93142300":"F-012","CWTWB1U331, CWTWB1U345":"F-031","M3N-A2C940780, M3N-A2C94078000":"F-016","CWTWBU729":"N-008","N5F736566-A":"GM-041","KOBUTAH2T":"H-028","OUC60270":"GM-035","WAZSKE11D01":"MZ-002","CQOTD00660":"HY-016","PINHA-T008":"HY-033","P4O9MK74946931, OHT01060512":"GM-031","HYQ1AA":"GM-016","JAG2":"OT-006","HYQ12BDP, HYQ12BEL":"T-013","OUCG8D-525M-A":"MT-005","PLNHM-T011":"HY-031","N5F-S0084A, N5F-A05TAA":"H-022","M3N-A2C940780":"F-015","OHT692427AA,OHT692713AA":"CH-017","B103":"GM-005","IYZ-C01C":"CH-005","VQQRK960NAT":"GM-032","L2C0007T":"GM-039","HD111":"H-005","H75":"F-001","HYQ14FBA":"T-003","CWTWB1U787":"N-013","LHJ009":"GM-042","H92":"F-007","B44":"GM-001","OSLOKA-423T":"HY-027","B111":"GM-006","SY5DMFNA04":"HY-009"};
 let fidMerges = {};
+// Map of obsolete part number -> replacement part number (case-insensitive lookup)
+let pnSupersessions = {};
 // Feature flags — set to true to re-enable
 let ENABLE_QUICK_MOVE_TO_GROUP = false;
 let purchaseHistory = [];
@@ -8264,6 +8311,9 @@ async function loadLocalData() {
             
             const savedFidMerges = await loadFromIndexedDB('fidMerges');
             if (savedFidMerges) fidMerges = savedFidMerges;
+
+            const savedPnSupersessions = await loadFromIndexedDB('pnSupersessions');
+            if (savedPnSupersessions) pnSupersessions = savedPnSupersessions;
             
             const savedPurchaseHistory = await loadFromIndexedDB('purchaseHistory');
             if (savedPurchaseHistory) purchaseHistory = savedPurchaseHistory;
@@ -8399,6 +8449,11 @@ function saveFidAssignments() {
 
 function saveFidMerges() {
     saveToIndexedDB('fidMerges', fidMerges);
+    triggerAutoSync();
+}
+
+function savePnSupersessions() {
+    saveToIndexedDB('pnSupersessions', pnSupersessions);
     triggerAutoSync();
 }
 
@@ -8993,11 +9048,59 @@ function resetFilters() {
     applyFilters();
 }
 
+// Look up a replacement PN for an obsolete part number (case-insensitive).
+// Follows chains (A->B->C returns C) and guards against cycles.
+function resolvePnSupersession(pn) {
+    if (!pn) return null;
+    const lookup = String(pn).toLowerCase();
+    let matchedKey = null;
+    for (const k of Object.keys(pnSupersessions || {})) {
+        if (k.toLowerCase() === lookup) { matchedKey = k; break; }
+    }
+    if (!matchedKey) return null;
+    let current = pnSupersessions[matchedKey];
+    const seen = new Set([matchedKey.toLowerCase()]);
+    while (current) {
+        const lc = String(current).toLowerCase();
+        if (seen.has(lc)) break;
+        seen.add(lc);
+        const next = Object.keys(pnSupersessions).find(k => k.toLowerCase() === lc);
+        if (!next) break;
+        current = pnSupersessions[next];
+    }
+    return current || null;
+}
+
+// All old PNs that resolve to the given current PN (one hop only)
+function getSupersededByPn(currentPn) {
+    if (!currentPn) return [];
+    const lc = String(currentPn).toLowerCase();
+    return Object.keys(pnSupersessions || {})
+        .filter(oldPn => String(pnSupersessions[oldPn] || '').toLowerCase() === lc);
+}
+
+// Holds banner info between applyFilters and renderKeys
+let currentSupersessionMatch = null;
+
 function applyFilters() {
     const year = document.getElementById('fYear').value;
     const make = document.getElementById('fMake').value;
     const model = document.getElementById('fModel').value;
     const search = document.getElementById('searchBox').value.toLowerCase().trim();
+
+    // If search exactly matches an obsolete PN, surface its replacement.
+    currentSupersessionMatch = null;
+    if (search) {
+        const replacementPn = resolvePnSupersession(search);
+        if (replacementPn) {
+            const matchedOldPn = Object.keys(pnSupersessions).find(k => k.toLowerCase() === search);
+            currentSupersessionMatch = {
+                oldPn: matchedOldPn,
+                newPn: replacementPn,
+                replacementKey: DB.find(k => String(k.pn).toLowerCase() === String(replacementPn).toLowerCase()) || null
+            };
+        }
+    }
 
     // Advanced filters
     const advKeyway = document.getElementById('advKeywayFilter')?.value || '';
@@ -9014,6 +9117,7 @@ function applyFilters() {
 
     filteredKeys = DB.filter((key, idx) => {
         if (search) {
+            const altPartStrings = (key.altParts || []).map(ap => ap && ap.pn).filter(Boolean);
             const searchStr = [
                 key.pn,
                 key.fccid,
@@ -9022,10 +9126,16 @@ function applyFilters() {
                 key.keyType,
                 key.buttons,
                 key.frequency,
+                ...altPartStrings,
                 ...(key.vehicles || []).map(v => `${v.make} ${v.model}`)
             ].join(' ').toLowerCase();
 
-            if (!searchStr.includes(search)) return false;
+            // Also let the search match obsolete PNs that resolve to this key
+            const supersededOldPns = getSupersededByPn(key.pn).map(s => s.toLowerCase()).join(' ');
+            const matches = searchStr.includes(search) ||
+                (supersededOldPns && supersededOldPns.split(' ').some(p => p && p === search));
+
+            if (!matches) return false;
         }
 
         if (year || make || model) {
@@ -9067,8 +9177,28 @@ function renderKeys() {
     const list = document.getElementById('keyList');
     document.getElementById('showCount').textContent = filteredKeys.length;
 
+    // Build optional supersession banner if search matched an obsolete PN
+    let supersessionBanner = '';
+    if (currentSupersessionMatch) {
+        const m = currentSupersessionMatch;
+        const replacementIdx = m.replacementKey ? DB.indexOf(m.replacementKey) : -1;
+        const action = replacementIdx >= 0
+            ? `onclick="openKey(${replacementIdx})"`
+            : 'onclick="toast(\'Replacement key not in database yet\')"';
+        supersessionBanner =
+            '<div class="supersession-banner" ' + action + ' style="cursor:pointer;margin:8px 0 12px;padding:12px 14px;border:1px solid var(--accent);border-radius:10px;background:rgba(255,107,53,0.08);color:var(--text);">' +
+                '<div style="font-size:11px;color:var(--accent2);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Part Replaced</div>' +
+                '<div style="font-size:14px;line-height:1.4;">' +
+                    '<span class="mono" style="text-decoration:line-through;color:var(--dim);">' + m.oldPn + '</span>' +
+                    ' <span style="color:var(--dim);">→</span> ' +
+                    '<span class="mono" style="color:var(--accent);font-weight:700;">' + m.newPn + '</span>' +
+                    (replacementIdx >= 0 ? ' <span style="color:var(--dim);font-size:12px;">(tap to open)</span>' : ' <span style="color:var(--dim);font-size:12px;">(not in database)</span>') +
+                '</div>' +
+            '</div>';
+    }
+
     if (filteredKeys.length === 0) {
-        list.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">No keys found</div>';
+        list.innerHTML = supersessionBanner + '<div style="text-align:center;color:var(--dim);padding:40px;">No keys found</div>';
         return;
     }
 
@@ -9080,11 +9210,11 @@ function renderKeys() {
         k.fccid && k.fccid.toUpperCase().includes(mainSearch)
     ));
     if (isFccSearch) {
-        renderKeysByFid(list, filteredKeys);
+        renderKeysByFid(list, filteredKeys, supersessionBanner);
         return;
     }
 
-    list.innerHTML = filteredKeys.map((key, i) => {
+    list.innerHTML = supersessionBanner + filteredKeys.map((key, i) => {
         const idx = DB.indexOf(key);
         const stock = stockData[key.pn] || 0;
         const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
@@ -9110,7 +9240,7 @@ function renderKeys() {
     }).join('');
 }
 
-function renderKeysByFid(list, keys) {
+function renderKeysByFid(list, keys, prefixHtml = '') {
     // Group keys by their FID assignment
     const fidGroups = new Map();
 
@@ -9137,7 +9267,7 @@ function renderKeysByFid(list, keys) {
         return 0;
     });
 
-    list.innerHTML = sorted.map(([, group]) => {
+    list.innerHTML = (prefixHtml || '') + sorted.map(([, group]) => {
         const { fid, fccIds, keys: groupKeys } = group;
         const totalStock = groupKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
         const makes = [...new Set(groupKeys.flatMap(k => (k.vehicles || []).map(v => v.make)))].slice(0, 3);
@@ -9175,6 +9305,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
     const assignedFid = key.fccid ? fidAssignments[key.fccid] : null;
+    const replacedOldPns = getSupersededByPn(key.pn);
 
     document.getElementById('detailTitle').textContent = `Part #${key.pn}`;
 
@@ -9221,6 +9352,12 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 <span class="detail-label" style="margin-bottom:4px;">Alt Part Numbers</span>
                 <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
                     ${key.altParts.map(ap => `<span class="detail-value mono" style="font-size:13px;">${ap.pn}${ap.brand ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">[${ap.brand}]</span>` : ''}</span>`).join('')}
+                </div>
+            </div>` : ''}
+            ${replacedOldPns.length > 0 ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;">
+                <span class="detail-label" style="margin-bottom:4px;">Replaces</span>
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
+                    ${replacedOldPns.map(p => `<span class="detail-value mono" style="font-size:13px;text-decoration:line-through;color:var(--dim);">${p}</span>`).join('')}
                 </div>
             </div>` : ''}
             ${key.keyType ? `<div class="detail-row">
@@ -13002,6 +13139,84 @@ function openCustomKeysSettingsPanel() {
 }
 function closeCustomKeysSettingsPanel() {
     document.getElementById('customKeysSettingsPanel').classList.remove('on');
+}
+
+function openPnSupersessionsPanel() {
+    renderPnSupersessionsList();
+    document.getElementById('pnSupersessionsPanel').classList.add('on');
+}
+function closePnSupersessionsPanel() {
+    document.getElementById('pnSupersessionsPanel').classList.remove('on');
+}
+
+function renderPnSupersessionsList() {
+    const container = document.getElementById('pnSupersessionsList');
+    if (!container) return;
+    const entries = Object.entries(pnSupersessions || {})
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+
+    if (entries.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">No replaced part numbers yet. Add one above.</div>';
+        return;
+    }
+
+    container.innerHTML = entries.map(([oldPn, newPn]) => {
+        const replacement = DB.find(k => String(k.pn).toLowerCase() === String(newPn).toLowerCase());
+        const replacementIdx = replacement ? DB.indexOf(replacement) : -1;
+        const replacementInDb = replacementIdx >= 0;
+        const oldEsc = String(oldPn).replace(/'/g, "\\'");
+        const openAction = replacementInDb
+            ? `onclick="closePnSupersessionsPanel(); closeSettings(); openKey(${replacementIdx});"`
+            : '';
+        return (
+            '<div style="display:flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--card);">' +
+                '<div style="flex:1;min-width:0;">' +
+                    '<div class="mono" style="font-size:13px;text-decoration:line-through;color:var(--dim);">' + oldPn + '</div>' +
+                    '<div style="font-size:11px;color:var(--dim);margin:2px 0;">replaced by</div>' +
+                    '<div class="mono" style="font-size:14px;font-weight:600;color:var(--accent);' + (replacementInDb ? 'cursor:pointer;' : '') + '" ' + openAction + '>' + newPn + (replacementInDb ? ' →' : ' <span style="color:var(--dim);font-size:11px;font-weight:400;">(not in DB)</span>') + '</div>' +
+                '</div>' +
+                '<button onclick="removePnSupersession(\'' + oldEsc + '\')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>' +
+            '</div>'
+        );
+    }).join('');
+}
+
+function addPnSupersessionFromInputs() {
+    const oldEl = document.getElementById('pnSupersessionOldInput');
+    const newEl = document.getElementById('pnSupersessionNewInput');
+    const oldPn = (oldEl.value || '').trim();
+    const newPn = (newEl.value || '').trim();
+
+    if (!oldPn || !newPn) { toast('Enter both an old PN and a replacement PN'); return; }
+    if (oldPn.toLowerCase() === newPn.toLowerCase()) { toast('Old and replacement PNs cannot be the same'); return; }
+
+    const existing = Object.keys(pnSupersessions).find(k => k.toLowerCase() === oldPn.toLowerCase());
+    if (existing && pnSupersessions[existing] !== newPn) {
+        if (!confirm(`${oldPn} is already mapped to ${pnSupersessions[existing]}. Overwrite to ${newPn}?`)) return;
+        delete pnSupersessions[existing];
+    }
+
+    pnSupersessions[oldPn] = newPn;
+    savePnSupersessions();
+    oldEl.value = '';
+    newEl.value = '';
+    renderPnSupersessionsList();
+    if (!DB.some(k => String(k.pn).toLowerCase() === newPn.toLowerCase())) {
+        toast('Saved. Note: ' + newPn + ' is not in the database yet.');
+    } else {
+        toast('Saved');
+    }
+}
+
+function removePnSupersession(oldPn) {
+    if (!confirm('Remove the supersession for ' + oldPn + '?')) return;
+    const matchedKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === String(oldPn).toLowerCase());
+    if (matchedKey) {
+        delete pnSupersessions[matchedKey];
+        savePnSupersessions();
+        renderPnSupersessionsList();
+        toast('Removed');
+    }
 }
 
 function openCategoriesSettingsPanel() {
@@ -20199,6 +20414,11 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyAltParts').innerHTML = '';
         customKeyAltPartCount = 0;
 
+        // Reset old part numbers (supersessions)
+        const oldPnContainer = document.getElementById('customKeyOldPns');
+        if (oldPnContainer) oldPnContainer.innerHTML = '';
+        customKeyOldPnCount = 0;
+
         // Reset FID assignment controls
         populateCustomKeyFidOptions();
         const manualNumEl = document.getElementById('customKeyManualNumber');
@@ -20429,6 +20649,40 @@ function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
 function removeCustomKeyAltPart(idx) {
     const row = document.getElementById('customAltPart' + idx);
     if (row) row.remove();
+}
+
+let customKeyOldPnCount = 0;
+
+function addCustomKeyOldPn(prefillPn = '') {
+    customKeyOldPnCount++;
+    const idx = customKeyOldPnCount;
+    const container = document.getElementById('customKeyOldPns');
+    const row = document.createElement('div');
+    row.className = 'custom-oldpn-row';
+    row.id = 'customOldPn' + idx;
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    row.innerHTML =
+        '<input type="text" class="add-inv-input" id="customOldPnInput' + idx + '" placeholder="Old part number (e.g., 5915392)" style="flex:1;min-width:0;">' +
+        '<button type="button" onclick="removeCustomKeyOldPn(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>';
+    container.appendChild(row);
+    if (prefillPn) document.getElementById('customOldPnInput' + idx).value = prefillPn;
+}
+
+function removeCustomKeyOldPn(idx) {
+    const row = document.getElementById('customOldPn' + idx);
+    if (row) row.remove();
+}
+
+function gatherCustomKeyOldPns() {
+    const oldPns = [];
+    document.querySelectorAll('.custom-oldpn-row').forEach(row => {
+        const idx = row.id.replace('customOldPn', '');
+        const input = document.getElementById('customOldPnInput' + idx);
+        if (!input) return;
+        const v = input.value.trim();
+        if (v) oldPns.push(v);
+    });
+    return oldPns;
 }
 
 function gatherCustomKeyAltParts() {
@@ -20800,6 +21054,7 @@ function saveCustomKey() {
     // Get values, handling "Other" options
     const brand = getDropdownValue('customKeyBrand', 'customKeyBrandOther');
     const altParts = gatherCustomKeyAltParts();
+    const oldPns = gatherCustomKeyOldPns();
 
     // Validate alt parts don't collide with existing PNs in DB or with each other / primary
     const seenPns = new Set([pn.toLowerCase()]);
@@ -20903,6 +21158,25 @@ function saveCustomKey() {
     // Save to custom keys storage
     customKeys.push(newKey);
     saveCustomKeys();
+
+    // Record any old part numbers this key supersedes
+    if (oldPns.length > 0) {
+        let supersessionsChanged = false;
+        oldPns.forEach(op => {
+            if (op.toLowerCase() === pn.toLowerCase()) return; // skip self-reference
+            // Don't overwrite an existing mapping silently if it points elsewhere
+            const existingKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === op.toLowerCase());
+            if (existingKey && pnSupersessions[existingKey] && pnSupersessions[existingKey] !== pn) {
+                if (!confirm(`${op} is already marked as replaced by ${pnSupersessions[existingKey]}. Overwrite to point at ${pn}?`)) {
+                    return;
+                }
+                delete pnSupersessions[existingKey];
+            }
+            pnSupersessions[op] = pn;
+            supersessionsChanged = true;
+        });
+        if (supersessionsChanged) savePnSupersessions();
+    }
 
     // Also save vehicle entries to lishiVehicleData for Vehicle search page
     vehicles.forEach(v => {
