@@ -6765,6 +6765,17 @@
         </div>
 
         <div class="add-inv-section">
+            <label>Distributor Pricing</label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Optionally add distributor/vendor pricing for this part number now. You can add more later from the key detail screen.
+            </div>
+            <div id="customKeyVendorPrices"></div>
+            <button type="button" onclick="addCustomKeyVendorPrice()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Distributor Pricing
+            </button>
+        </div>
+
+        <div class="add-inv-section">
             <label>Additional Part Numbers</label>
             <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
                 Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Each can have its own brand.
@@ -6936,6 +6947,13 @@
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="add-inv-input" id="customKeyFreqOther" placeholder="Enter custom frequency..." style="display:none;margin-top:8px;">
+        </div>
+
+        <div class="add-inv-section">
+            <label>Battery</label>
+            <select class="add-inv-select" id="customKeyBattery" onchange="handleCustomDropdown(this, 'customKeyBatteryOther')">
+            </select>
+            <input type="text" class="add-inv-input" id="customKeyBatteryOther" placeholder="e.g., CR2032 qty 1" style="display:none;margin-top:8px;">
         </div>
 
         <div class="add-inv-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
@@ -20625,6 +20643,15 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyFreqOther').value = '';
         populateCustomKeyFrequencyDropdown();
 
+        // Populate battery dropdown
+        populateCustomKeyDropdown('customKeyBattery', 'battery', 'Select battery...');
+        document.getElementById('customKeyBatteryOther').style.display = 'none';
+        document.getElementById('customKeyBatteryOther').value = '';
+
+        // Reset distributor/vendor pricing rows
+        document.getElementById('customKeyVendorPrices').innerHTML = '';
+        customKeyVendorPriceCount = 0;
+
         // Add one vehicle row by default
         addCustomKeyVehicle();
 
@@ -20863,6 +20890,87 @@ function gatherCustomKeyAltParts() {
         altParts.push({ pn: pn, brand: brand || null });
     });
     return altParts;
+}
+
+let customKeyVendorPriceCount = 0;
+
+function populateCustomKeyVendorSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const usedVendors = new Set();
+    document.querySelectorAll('.custom-vendor-price-row').forEach(row => {
+        const idx = row.id.replace('customVendorPrice', '');
+        const otherSel = document.getElementById('customVendorPriceVendor' + idx);
+        if (otherSel && otherSel !== select && otherSel.value && otherSel.value !== '__other__') {
+            usedVendors.add(otherSel.value);
+        }
+    });
+    select.innerHTML = '<option value="">Select distributor...</option>';
+    getAllVendors().forEach(v => {
+        if (usedVendors.has(v.name)) return;
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = v.name + (v.type === 'distributor' ? '' : ' (' + v.type + ')');
+        select.appendChild(opt);
+    });
+    const otherOpt = document.createElement('option');
+    otherOpt.value = '__other__';
+    otherOpt.textContent = '+ Other (custom)';
+    select.appendChild(otherOpt);
+}
+
+function addCustomKeyVendorPrice() {
+    customKeyVendorPriceCount++;
+    const idx = customKeyVendorPriceCount;
+    const container = document.getElementById('customKeyVendorPrices');
+    const row = document.createElement('div');
+    row.className = 'custom-vendor-price-row';
+    row.id = 'customVendorPrice' + idx;
+    row.style.cssText = 'margin-bottom:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;';
+    row.innerHTML =
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">' +
+            '<select class="add-inv-select" id="customVendorPriceVendor' + idx + '" onchange="handleCustomDropdown(this, \'customVendorPriceVendorOther' + idx + '\')" style="flex:1;min-width:0;"></select>' +
+            '<button type="button" onclick="removeCustomKeyVendorPrice(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>' +
+        '</div>' +
+        '<input type="text" class="add-inv-input" id="customVendorPriceVendorOther' + idx + '" placeholder="Enter distributor name..." style="display:none;margin-bottom:8px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+            '<input type="text" class="add-inv-input" id="customVendorPriceA' + idx + '" placeholder="Price A (Primary)">' +
+            '<input type="text" class="add-inv-input" id="customVendorPriceB' + idx + '" placeholder="Price B (Secondary)">' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">' +
+            '<input type="text" class="add-inv-input" id="customVendorPriceEmergency' + idx + '" placeholder="Emergency">' +
+            '<input type="text" class="add-inv-input" id="customVendorPriceShell' + idx + '" placeholder="Shell">' +
+            '<input type="text" class="add-inv-input" id="customVendorPriceOem' + idx + '" placeholder="OEM">' +
+        '</div>';
+    container.appendChild(row);
+    populateCustomKeyVendorSelect('customVendorPriceVendor' + idx);
+}
+
+function removeCustomKeyVendorPrice(idx) {
+    const row = document.getElementById('customVendorPrice' + idx);
+    if (row) row.remove();
+}
+
+function gatherCustomKeyVendorPrices() {
+    const entries = [];
+    document.querySelectorAll('.custom-vendor-price-row').forEach(row => {
+        const idx = row.id.replace('customVendorPrice', '');
+        if (!idx) return;
+        const vendorSel = document.getElementById('customVendorPriceVendor' + idx);
+        const vendorOther = document.getElementById('customVendorPriceVendorOther' + idx);
+        if (!vendorSel) return;
+        let vendor = vendorSel.value;
+        if (vendor === '__other__') vendor = vendorOther ? vendorOther.value.trim() : '';
+        if (!vendor) return;
+        const priceA = (document.getElementById('customVendorPriceA' + idx)?.value || '').trim();
+        const priceB = (document.getElementById('customVendorPriceB' + idx)?.value || '').trim();
+        const emergency = (document.getElementById('customVendorPriceEmergency' + idx)?.value || '').trim();
+        const shell = (document.getElementById('customVendorPriceShell' + idx)?.value || '').trim();
+        const oem = (document.getElementById('customVendorPriceOem' + idx)?.value || '').trim();
+        if (!priceA && !priceB && !emergency && !shell && !oem) return;
+        entries.push({ vendor, priceA, priceB, emergency, shell, oem });
+    });
+    return entries;
 }
 
 function populateCustomKeyFidOptions() {
@@ -21261,6 +21369,8 @@ function saveCustomKey() {
     const keyType = getDropdownValue('customKeyType', 'customKeyTypeOther');
     const buttons = getDropdownValue('customKeyButtons', 'customKeyButtonsOther');
     const frequency = getDropdownValue('customKeyFreq', 'customKeyFreqOther');
+    const battery = getDropdownValue('customKeyBattery', 'customKeyBatteryOther');
+    const vendorPriceEntries = gatherCustomKeyVendorPrices();
     
     // Gather vehicle data
     const vehicles = [];
@@ -21334,6 +21444,7 @@ function saveCustomKey() {
         keyType: keyType || null,
         buttons: buttons || null,
         frequency: frequency || null,
+        battery: battery || null,
         notes: document.getElementById('customKeyNotes').value.trim() || null,
         vehicles: vehicles,
         isCustom: true,
@@ -21347,6 +21458,21 @@ function saveCustomKey() {
     // Save to custom keys storage
     customKeys.push(newKey);
     saveCustomKeys();
+
+    // Persist any distributor/vendor pricing entered on the form
+    if (vendorPriceEntries.length > 0) {
+        if (!vendorPrices[pn]) vendorPrices[pn] = {};
+        vendorPriceEntries.forEach(entry => {
+            vendorPrices[pn][entry.vendor] = {
+                priceA: entry.priceA,
+                priceB: entry.priceB,
+                emergency: entry.emergency,
+                shell: entry.shell,
+                oem: entry.oem
+            };
+        });
+        saveVendorPrices();
+    }
 
     // Record any old part numbers this key supersedes
     if (oldPns.length > 0) {
