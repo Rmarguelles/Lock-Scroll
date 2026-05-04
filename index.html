@@ -10819,6 +10819,7 @@ function openFidDetail(fid) {
                             <span>${key.keyType || 'Unknown'}</span>
                             ${key.keyway ? `&bull; <span>Keyway: ${key.keyway}</span>` : ''}
                             ${key.buttons ? `&bull; <span>${key.buttons}</span>` : ''}
+                            ${key.logo ? `&bull; <span>Logo: ${key.logo}</span>` : ''}
                         </div>
                         ${key.fccid ? `<div style="font-size:11px;color:var(--accent2);font-family:monospace;">${key.fccid}</div>` : ''}
                         ${vehicles ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">${vehicles}</div>` : ''}
