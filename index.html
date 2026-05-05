@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v141</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v142</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v141</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v142</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v141<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v142<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5556,12 +5556,20 @@
             <input type="text" class="modal-input" id="editKeyInfoSecondaryPNOther" placeholder="Enter part number..." style="display:none;margin-top:6px;">
         </div>
         <div class="modal-input-group">
-            <label>FCC ID</label>
+            <label>FCC ID <span style="font-size:11px;color:var(--dim);font-weight:normal;">(primary)</span></label>
             <select class="modal-input" id="editKeyInfoFCC" onchange="handleCustomDropdown(this, 'editKeyInfoFCCOther')">
                 <option value="">-- None --</option>
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="modal-input" id="editKeyInfoFCCOther" placeholder="Enter FCC ID..." style="display:none;margin-top:6px;">
+        </div>
+        <div class="modal-input-group">
+            <label>Additional FCC IDs <span style="font-size:11px;color:var(--dim);font-weight:normal;">(for cross-compatible keys)</span></label>
+            <div id="editKeyInfoExtraFccList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+            <div style="display:flex;gap:6px;">
+                <input type="text" class="modal-input" id="editKeyInfoExtraFccInput" placeholder="Enter another FCC ID..." list="fccidDatalist" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addExtraFccId();}">
+                <button type="button" onclick="addExtraFccId()" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
+            </div>
         </div>
         <div class="modal-input-group">
             <label>Frequency</label>
@@ -8584,9 +8592,55 @@ function populateEditKeyInfoDropdown(selectId, otherId, values, currentValue) {
     }
 }
 
+// Working state for the multi-FCC ID input in the edit modal
+let editKeyInfoExtraFccs = [];
+
+function renderEditKeyInfoExtraFccs() {
+    const container = document.getElementById('editKeyInfoExtraFccList');
+    if (!container) return;
+    if (editKeyInfoExtraFccs.length === 0) {
+        container.innerHTML = '<span style="font-size:12px;color:var(--dim);">No additional FCC IDs</span>';
+        return;
+    }
+    container.innerHTML = editKeyInfoExtraFccs.map((f, i) =>
+        `<span class="keyway-tag" style="background:var(--accent2);">${f}<span class="keyway-tag-remove" onclick="removeExtraFccId(${i})">&times;</span></span>`
+    ).join('');
+}
+
+function addExtraFccId() {
+    const input = document.getElementById('editKeyInfoExtraFccInput');
+    const raw = (input.value || '').trim();
+    if (!raw) return;
+    const primary = (getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || '').trim().toUpperCase();
+    const upper = raw.toUpperCase();
+    if (primary && upper === primary) {
+        toast('That FCC ID is already set as the primary');
+        return;
+    }
+    if (editKeyInfoExtraFccs.some(f => f.toUpperCase() === upper)) {
+        toast('FCC ID already added');
+        return;
+    }
+    editKeyInfoExtraFccs.push(raw);
+    input.value = '';
+    renderEditKeyInfoExtraFccs();
+}
+
+function removeExtraFccId(idx) {
+    editKeyInfoExtraFccs.splice(idx, 1);
+    renderEditKeyInfoExtraFccs();
+}
+
 function openEditKeyInfoModal(idx) {
     editingKeyInfoIdx = idx;
     const key = DB[idx];
+
+    // Initialize extra FCC IDs list (everything beyond the primary)
+    const allFccs = getKeyFccIds(key);
+    editKeyInfoExtraFccs = allFccs.slice(1);
+    const extraInput = document.getElementById('editKeyInfoExtraFccInput');
+    if (extraInput) extraInput.value = '';
+    renderEditKeyInfoExtraFccs();
 
     // Reset PN field — only custom keys can have their PN edited
     const pnInput = document.getElementById('editKeyInfoPN');
@@ -8608,7 +8662,7 @@ function openEditKeyInfoModal(idx) {
     const emergencyPNs = new Set();
     const secondaryPNs = new Set();
     DB.forEach(k => {
-        if (k.fccid) fccIds.add(String(k.fccid));
+        getKeyFccIds(k).forEach(f => fccIds.add(f));
         if (k.emergencyPN) emergencyPNs.add(String(k.emergencyPN));
         if (k.secondaryKeyPartNumber) secondaryPNs.add(String(k.secondaryKeyPartNumber));
     });
@@ -8700,6 +8754,20 @@ function saveEditKeyInfo() {
     const newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
     const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
 
+    // Build the multi-FCC ID array. Primary first, then any extras the user added.
+    let newFccids = null;
+    const extras = (editKeyInfoExtraFccs || []).map(f => String(f).trim()).filter(Boolean);
+    if (extras.length > 0) {
+        const seen = new Set();
+        const list = [];
+        if (newFccid) { list.push(newFccid); seen.add(newFccid.toUpperCase()); }
+        extras.forEach(f => {
+            const u = f.toUpperCase();
+            if (!seen.has(u)) { seen.add(u); list.push(f); }
+        });
+        newFccids = list;
+    }
+
     if (key.isCustom) {
         // For custom keys, update the customKeys array directly
         // Search by old PN if it was renamed, otherwise by current pn
@@ -8711,6 +8779,8 @@ function saveEditKeyInfo() {
             customKeys[customIdx].keyway = newKeyway;
             customKeys[customIdx].chip = newChip;
             customKeys[customIdx].fccid = newFccid;
+            if (newFccids) customKeys[customIdx].fccids = newFccids;
+            else delete customKeys[customIdx].fccids;
             customKeys[customIdx].frequency = newFrequency;
             customKeys[customIdx].buttons = newButtons;
             customKeys[customIdx].logo = newLogo;
@@ -8726,6 +8796,8 @@ function saveEditKeyInfo() {
         key.keyway = newKeyway;
         key.chip = newChip;
         key.fccid = newFccid;
+        if (newFccids) key.fccids = newFccids;
+        else delete key.fccids;
         key.frequency = newFrequency;
         key.buttons = newButtons;
         key.logo = newLogo;
@@ -8741,6 +8813,7 @@ function saveEditKeyInfo() {
         overrides.keyway = newKeyway;
         overrides.chip = newChip;
         overrides.fccid = newFccid;
+        overrides.fccids = newFccids;
         overrides.frequency = newFrequency;
         overrides.buttons = newButtons;
         overrides.logo = newLogo;
@@ -8761,6 +8834,8 @@ function saveEditKeyInfo() {
                 key[field] = overrides[field];
             }
         }
+        // fccids should be removed from the key when null so getKeyFccIds falls back to fccid alone
+        if (overrides.fccids === null || overrides.fccids === undefined) delete key.fccids;
     }
 
     // Refresh the key detail page
@@ -9096,6 +9171,42 @@ function resolvePnSupersession(pn) {
     return current || null;
 }
 
+// Returns all FCC IDs for a key as an array (handles legacy single-string and multi-FCC array)
+function getKeyFccIds(key) {
+    if (!key) return [];
+    const out = [];
+    const seen = new Set();
+    const push = v => {
+        if (v === null || v === undefined) return;
+        const s = String(v).trim();
+        if (!s) return;
+        const k = s.toUpperCase();
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(s);
+    };
+    if (key.fccid) push(key.fccid);
+    if (Array.isArray(key.fccids)) key.fccids.forEach(push);
+    return out;
+}
+
+// Returns all FIDs that any of the key's FCC IDs map to
+function getKeyFids(key) {
+    const fids = new Set();
+    getKeyFccIds(key).forEach(f => {
+        const fid = fidAssignments[f];
+        if (fid) fids.add(fid);
+    });
+    return [...fids];
+}
+
+// Does the key have the given FCC ID (case-insensitive, checks all FCC IDs)?
+function keyHasFccId(key, fccId) {
+    if (!fccId) return false;
+    const target = String(fccId).toUpperCase();
+    return getKeyFccIds(key).some(f => f.toUpperCase() === target);
+}
+
 // All old PNs that resolve to the given current PN (one hop only)
 function getSupersededByPn(currentPn) {
     if (!currentPn) return [];
@@ -9145,7 +9256,7 @@ function applyFilters() {
             const altPartStrings = (key.altParts || []).map(ap => ap && ap.pn).filter(Boolean);
             const searchStr = [
                 key.pn,
-                key.fccid,
+                ...getKeyFccIds(key),
                 key.keyway,
                 key.chip,
                 key.keyType,
@@ -9183,7 +9294,7 @@ function applyFilters() {
         if (advKeyType && String(key.keyType || '').toLowerCase().trim() !== advKeyType.toLowerCase().trim()) return false;
         if (advFrequency && String(key.frequency || '').toLowerCase().trim() !== advFrequency.toLowerCase().trim()) return false;
         if (advButtons && !String(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
-        if (advFcc && !String(key.fccid || '').toUpperCase().includes(advFcc)) return false;
+        if (advFcc && !getKeyFccIds(key).some(f => f.toUpperCase().includes(advFcc))) return false;
 
         return true;
     });
@@ -9232,7 +9343,7 @@ function renderKeys() {
     const advFcc = (document.getElementById('advFccFilter')?.value || '').trim();
     const mainSearch = (document.getElementById('searchBox')?.value || '').trim().toUpperCase();
     const isFccSearch = advFcc || (mainSearch && filteredKeys.some(k =>
-        k.fccid && k.fccid.toUpperCase().includes(mainSearch)
+        getKeyFccIds(k).some(f => f.toUpperCase().includes(mainSearch))
     ));
     if (isFccSearch) {
         renderKeysByFid(list, filteredKeys, supersessionBanner);
@@ -9270,14 +9381,29 @@ function renderKeysByFid(list, keys, prefixHtml = '') {
     const fidGroups = new Map();
 
     keys.forEach(key => {
-        const fid = key.fccid ? fidAssignments[key.fccid] : null;
-        const groupKey = fid || '__no_fid__';
-        if (!fidGroups.has(groupKey)) {
-            fidGroups.set(groupKey, { fid, fccIds: new Set(), keys: [] });
-        }
-        const g = fidGroups.get(groupKey);
-        g.keys.push(key);
-        if (key.fccid) g.fccIds.add(key.fccid);
+        const allFccs = getKeyFccIds(key);
+        // Map each FCC ID to its FID; group entries by FID. A key with FCCs in multiple
+        // FIDs appears once under each FID. FCCs without an FID assignment fall into
+        // a single shared "no FID" group.
+        const fidsForKey = new Set();
+        allFccs.forEach(f => {
+            const fid = fidAssignments[f] || null;
+            fidsForKey.add(fid);
+        });
+        if (fidsForKey.size === 0) fidsForKey.add(null);
+
+        fidsForKey.forEach(fid => {
+            const groupKey = fid || '__no_fid__';
+            if (!fidGroups.has(groupKey)) {
+                fidGroups.set(groupKey, { fid, fccIds: new Set(), keys: [] });
+            }
+            const g = fidGroups.get(groupKey);
+            g.keys.push(key);
+            // Only show FCC IDs in the group preview that actually belong to this FID
+            allFccs.forEach(f => {
+                if ((fidAssignments[f] || null) === fid) g.fccIds.add(f);
+            });
+        });
     });
 
     // Sort: FID-assigned groups first (alphabetically by prefix then number), unassigned last
@@ -9329,19 +9455,22 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
     const stock = stockData[key.pn] || 0;
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
-    const assignedFid = key.fccid ? fidAssignments[key.fccid] : null;
+    const allKeyFccs = getKeyFccIds(key);
+    const assignedFids = getKeyFids(key);
     const replacedOldPns = getSupersededByPn(key.pn);
 
     document.getElementById('detailTitle').textContent = `Part #${key.pn}`;
 
-    // Build FID display if assigned
-    const fidHtml = assignedFid ? `
-        <div style="text-align:center;margin-bottom:16px;">
-            <span onclick="openFid()" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">
-                FID: ${assignedFid} →
-            </span>
+    // Build FID display — one badge per assigned FID (a key with multiple FCC IDs may belong to multiple FIDs)
+    const fidHtml = assignedFids.length > 0 ? `
+        <div style="text-align:center;margin-bottom:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;">
+            ${assignedFids.map(f => `
+                <span onclick="openFid()" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">
+                    FID: ${f} →
+                </span>
+            `).join('')}
         </div>
-    ` : (key.fccid ? `
+    ` : (allKeyFccs.length > 0 ? `
         <div style="text-align:center;margin-bottom:16px;">
             <span onclick="openFid()" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">
                 No FID assigned - Click to assign →
@@ -9429,9 +9558,15 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 <span class="detail-label">Emergency Key PN</span>
                 <span class="detail-value mono">${key.emergencyPN}</span>
             </div>` : ''}
-            ${key.fccid ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${key.fccid}')">
+            ${allKeyFccs.length === 1 ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${allKeyFccs[0]}')">
                 <span class="detail-label">FCC ID</span>
-                <span class="detail-value mono" style="color:var(--accent)">${key.fccid} &#8594;</span>
+                <span class="detail-value mono" style="color:var(--accent)">${allKeyFccs[0]} &#8594;</span>
+            </div>` : ''}
+            ${allKeyFccs.length > 1 ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;">
+                <span class="detail-label" style="margin-bottom:4px;">FCC IDs</span>
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
+                    ${allKeyFccs.map(f => `<span class="detail-value mono" style="color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();openFccPage('${f}')">${f}${fidAssignments[f] ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">(FID: ${fidAssignments[f]})</span>` : ''} &#8594;</span>`).join('')}
+                </div>
             </div>` : ''}
             ${key.mergedPNs && key.mergedPNs.length > 0 ? `<div class="detail-row">
                 <span class="detail-label">Includes PNs</span>
@@ -10723,7 +10858,7 @@ function openFccPage(fccId, fromFid = false) {
     currentFccId = fccId;
     cameFromFid = fromFid;
     
-    const keys = DB.filter(k => k.fccid === fccId);
+    const keys = DB.filter(k => keyHasFccId(k, fccId));
     
     document.getElementById('fccIdDisplay').textContent = fccId;
     document.getElementById('fccKeyCount').textContent = `${keys.length} key${keys.length !== 1 ? 's' : ''} with this FCC ID`;
@@ -10765,25 +10900,29 @@ function closeFcc() {
 function openFidDetail(fid) {
     currentFidDetailCode = fid;
 
-    // Collect all keys (DB + custom) that belong to this FID
+    // Collect all keys (DB + custom) that belong to this FID. A key qualifies if any
+    // of its FCC IDs maps to this FID — supporting cross-compatible keys with multiple FCC IDs.
     let detailKeys;
     if (fid) {
-        detailKeys = DB.filter(k => k.fccid && fidAssignments[k.fccid] === fid);
+        detailKeys = DB.filter(k => getKeyFids(k).includes(fid));
         const seenPns = new Set(detailKeys.map(k => String(k.pn).toLowerCase()));
         customKeys.forEach(k => {
-            if (!k.fccid || fidAssignments[k.fccid] !== fid) return;
+            if (!getKeyFids(k).includes(fid)) return;
             const lc = String(k.pn).toLowerCase();
             if (seenPns.has(lc)) return;
             seenPns.add(lc);
             detailKeys.push(k);
         });
     } else {
-        // No FID assigned — show filteredKeys that have no FID
-        detailKeys = filteredKeys.filter(k => !k.fccid || !fidAssignments[k.fccid]);
+        // No FID assigned — show filteredKeys whose FCC IDs all lack FID assignments
+        detailKeys = filteredKeys.filter(k => getKeyFids(k).length === 0);
     }
 
     const totalStock = detailKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
-    const uniqueFccs = [...new Set(detailKeys.filter(k => k.fccid).map(k => k.fccid))];
+    // Only show FCC IDs that actually belong to this FID (a multi-FCC key may have other FCCs in different FIDs)
+    const uniqueFccs = [...new Set(detailKeys.flatMap(k =>
+        fid ? getKeyFccIds(k).filter(f => fidAssignments[f] === fid) : getKeyFccIds(k)
+    ))];
     const primaryFcc = uniqueFccs[0] || '';
 
     document.getElementById('fidDetailBadge').textContent = fid || 'No FID Assigned';
@@ -10809,6 +10948,13 @@ function openFidDetail(fid) {
                 const vehicles = (key.vehicles || []).slice(0, 2).map(v =>
                     `${v.make} ${v.model} (${formatYearRange(v)})`
                 ).join(', ');
+                const keyFccs = getKeyFccIds(key);
+                const fccDisplay = keyFccs.length > 1
+                    ? keyFccs.map(f => {
+                        const isCurrent = fid && fidAssignments[f] === fid;
+                        return `<span style="${isCurrent ? 'color:var(--accent2);font-weight:600;' : 'color:var(--dim);'}">${f}</span>`;
+                      }).join(' &bull; ')
+                    : (keyFccs[0] ? `<span style="color:var(--accent2);">${keyFccs[0]}</span>` : '');
                 return `
                     <div class="fcc-key-item" onclick="openKeyFromFidDetail(${idx})">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -10819,8 +10965,9 @@ function openFidDetail(fid) {
                             <span>${key.keyType || 'Unknown'}</span>
                             ${key.keyway ? `&bull; <span>Keyway: ${key.keyway}</span>` : ''}
                             ${key.buttons ? `&bull; <span>${key.buttons}</span>` : ''}
+                            ${key.logo ? `&bull; <span>Logo: ${key.logo}</span>` : ''}
                         </div>
-                        ${key.fccid ? `<div style="font-size:11px;color:var(--accent2);font-family:monospace;">${key.fccid}</div>` : ''}
+                        ${fccDisplay ? `<div style="font-size:11px;font-family:monospace;">${fccDisplay}</div>` : ''}
                         ${vehicles ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">${vehicles}</div>` : ''}
                     </div>
                 `;
@@ -14718,11 +14865,11 @@ function deleteVehicleModel() {
 
 function buildFccidDatalist() {
     const fccids = new Set();
-    DB.forEach(k => { if (k.fccid && k.fccid !== 'N/A') fccids.add(k.fccid); });
+    DB.forEach(k => getKeyFccIds(k).forEach(f => { if (f !== 'N/A') fccids.add(f); }));
     const datalist = document.getElementById('fccidDatalist');
     if (!datalist) return;
     datalist.innerHTML = Array.from(fccids).sort().map(f => {
-        const count = DB.filter(k => k.fccid === f).length;
+        const count = DB.filter(k => keyHasFccId(k, f)).length;
         return `<option value="${f}">${f} (${count} key${count !== 1 ? 's' : ''})</option>`;
     }).join('');
 }
