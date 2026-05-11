@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v143</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v144</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v143</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v144</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v143<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v144<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6775,7 +6775,7 @@
         <div class="add-inv-section">
             <label>Additional Part Numbers</label>
             <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
-                Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Each can have its own brand. Tip: paste a comma-separated list into any part number field to add them all at once.
+                Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Tip: paste a comma-separated list into any part number field to add them all at once.
             </div>
             <div id="customKeyAltParts"></div>
             <button type="button" onclick="addCustomKeyAltPart()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
@@ -8221,7 +8221,7 @@ async function init() {
     // Register service worker for PWA (with cache-busting version)
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('service-worker.js?v=84');
+            const registration = await navigator.serviceWorker.register('service-worker.js?v=85');
             console.log('Service Worker registered:', registration.scope);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
@@ -20922,7 +20922,7 @@ function populateBrandSelect(selectId) {
     if (current) select.value = current;
 }
 
-function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
+function addCustomKeyAltPart(prefillPn = '') {
     customKeyAltPartCount++;
     const idx = customKeyAltPartCount;
     const container = document.getElementById('customKeyAltParts');
@@ -20932,29 +20932,14 @@ function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
     row.style.cssText = 'margin-bottom:10px;';
     row.innerHTML =
         '<div style="display:flex;gap:8px;align-items:center;">' +
-            '<input type="text" class="add-inv-input" id="customAltPartPN' + idx + '" placeholder="Part Number (e.g., 164-R8370)" style="flex:2;min-width:0;">' +
-            '<select class="add-inv-select" id="customAltPartBrand' + idx + '" onchange="handleCustomDropdown(this, \'customAltPartBrandOther' + idx + '\')" style="flex:1;min-width:0;"></select>' +
+            '<input type="text" class="add-inv-input" id="customAltPartPN' + idx + '" placeholder="Part Number (e.g., 164-R8370)" style="flex:1;min-width:0;">' +
             '<button type="button" onclick="removeCustomKeyAltPart(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>' +
-        '</div>' +
-        '<input type="text" class="add-inv-input" id="customAltPartBrandOther' + idx + '" placeholder="Enter brand..." style="display:none;margin-top:8px;">';
+        '</div>';
     container.appendChild(row);
 
-    populateBrandSelect('customAltPartBrand' + idx);
     const pnInput = document.getElementById('customAltPartPN' + idx);
     pnInput.addEventListener('paste', handleAltPartBulkPaste);
     if (prefillPn) pnInput.value = prefillPn;
-    if (prefillBrand) {
-        const brandSelect = document.getElementById('customAltPartBrand' + idx);
-        const hasOption = Array.from(brandSelect.options).some(o => o.value === prefillBrand);
-        if (hasOption) {
-            brandSelect.value = prefillBrand;
-        } else {
-            brandSelect.value = '__other__';
-            const other = document.getElementById('customAltPartBrandOther' + idx);
-            other.style.display = 'block';
-            other.value = prefillBrand;
-        }
-    }
 }
 
 function removeCustomKeyAltPart(idx) {
@@ -20973,7 +20958,7 @@ function handleAltPartBulkPaste(e) {
     if (!existing) {
         target.value = parts.shift();
     }
-    parts.forEach(pn => addCustomKeyAltPart(pn, ''));
+    parts.forEach(pn => addCustomKeyAltPart(pn));
 }
 
 let customKeyOldPnCount = 0;
@@ -21016,14 +21001,10 @@ function gatherCustomKeyAltParts() {
         const idx = row.id.replace('customAltPart', '');
         if (!idx) return;
         const pnEl = document.getElementById('customAltPartPN' + idx);
-        const brandEl = document.getElementById('customAltPartBrand' + idx);
-        const brandOtherEl = document.getElementById('customAltPartBrandOther' + idx);
         if (!pnEl) return;
         const pn = pnEl.value.trim();
         if (!pn) return;
-        let brand = brandEl ? brandEl.value : '';
-        if (brand === '__other__') brand = brandOtherEl ? brandOtherEl.value.trim() : '';
-        altParts.push({ pn: pn, brand: brand || null });
+        altParts.push({ pn: pn, brand: null });
     });
     return altParts;
 }
