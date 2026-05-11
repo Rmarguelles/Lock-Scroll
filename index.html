@@ -6775,7 +6775,7 @@
         <div class="add-inv-section">
             <label>Additional Part Numbers</label>
             <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
-                Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Each can have its own brand.
+                Cross-references (e.g., the OEM Ford PN <span class="mono">164-R8370</span> for an aftermarket key). Each can have its own brand. Tip: paste a comma-separated list into any part number field to add them all at once.
             </div>
             <div id="customKeyAltParts"></div>
             <button type="button" onclick="addCustomKeyAltPart()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
@@ -20940,7 +20940,9 @@ function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
     container.appendChild(row);
 
     populateBrandSelect('customAltPartBrand' + idx);
-    if (prefillPn) document.getElementById('customAltPartPN' + idx).value = prefillPn;
+    const pnInput = document.getElementById('customAltPartPN' + idx);
+    pnInput.addEventListener('paste', handleAltPartBulkPaste);
+    if (prefillPn) pnInput.value = prefillPn;
     if (prefillBrand) {
         const brandSelect = document.getElementById('customAltPartBrand' + idx);
         const hasOption = Array.from(brandSelect.options).some(o => o.value === prefillBrand);
@@ -20958,6 +20960,20 @@ function addCustomKeyAltPart(prefillPn = '', prefillBrand = '') {
 function removeCustomKeyAltPart(idx) {
     const row = document.getElementById('customAltPart' + idx);
     if (row) row.remove();
+}
+
+function handleAltPartBulkPaste(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text || text.indexOf(',') === -1) return;
+    const parts = text.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return;
+    e.preventDefault();
+    const target = e.target;
+    const existing = target.value.trim();
+    if (!existing) {
+        target.value = parts.shift();
+    }
+    parts.forEach(pn => addCustomKeyAltPart(pn, ''));
 }
 
 let customKeyOldPnCount = 0;
