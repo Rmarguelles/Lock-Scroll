@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v148</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v149</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v148</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v149</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v148<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v149<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6764,7 +6764,7 @@
         <div class="add-inv-section">
             <label>Part Number *</label>
             <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
-                Each part number belongs to a specific distributor (e.g., <span class="mono">GM-127</span> from Keyless City). Pick the distributor below and enter their price for this part.
+                Each part number belongs to a specific distributor (e.g., <span class="mono">GM-127</span> from Keyless City). Use the section below to seed catalog pricing and optionally record initial stock at the same time.
             </div>
             <div style="display:flex;gap:8px;">
                 <input type="text" class="add-inv-input" id="customKeyPN" placeholder="e.g., OEM-289, B111-PT" style="flex:2;">
@@ -6773,11 +6773,23 @@
                 </select>
             </div>
             <input type="text" class="add-inv-input" id="customKeyBrandOther" placeholder="Enter brand..." style="display:none;margin-top:8px;">
+        </div>
+
+        <div class="add-inv-section">
+            <label>Initial Stock & Pricing <span style="color:var(--dim);font-weight:normal;font-size:12px;">(optional)</span></label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Set the distributor and price to seed catalog pricing. Add a quantity to also record an initial purchase in inventory — saves you from running Add Inventory afterward.
+            </div>
+            <select class="add-inv-select" id="customKeyDistributor" style="width:100%;">
+                <option value="">Distributor / Vendor...</option>
+            </select>
             <div style="display:flex;gap:8px;margin-top:8px;">
-                <select class="add-inv-select" id="customKeyDistributor" style="flex:2;min-width:0;">
-                    <option value="">Distributor (optional)...</option>
-                </select>
-                <input type="text" class="add-inv-input" id="customKeyDistributorPrice" placeholder="Price (e.g., 24.99)" inputmode="decimal" style="flex:1;min-width:0;">
+                <input type="number" class="add-inv-input" id="customKeyDistributorPrice" placeholder="Price (ea)" inputmode="decimal" step="0.01" min="0" style="flex:1;min-width:0;">
+                <input type="number" class="add-inv-input" id="customKeyQty" placeholder="Qty (0 = catalog only)" min="0" step="1" style="flex:1;min-width:0;">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <input type="date" class="add-inv-input" id="customKeyPurchaseDate" style="flex:1;min-width:0;">
+                <input type="text" class="add-inv-input" id="customKeyInvoice" placeholder="Invoice / PO # (optional)" style="flex:1;min-width:0;">
             </div>
         </div>
 
@@ -8248,7 +8260,7 @@ async function init() {
     // Register service worker for PWA (with cache-busting version)
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('service-worker.js?v=89');
+            const registration = await navigator.serviceWorker.register('service-worker.js?v=90');
             console.log('Service Worker registered:', registration.scope);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
@@ -20770,16 +20782,22 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyBrandOther').style.display = 'none';
         document.getElementById('customKeyBrandOther').value = '';
 
-        // Reset distributor + price for primary part number
+        // Reset Initial Stock & Pricing fields
         const distSel = document.getElementById('customKeyDistributor');
         if (distSel) {
-            const distributors = getAllVendors().filter(v => v.type === 'distributor');
-            distSel.innerHTML = '<option value="">Distributor (optional)...</option>' +
-                distributors.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            const allVendors = getAllVendors().slice().sort((a, b) => a.name.localeCompare(b.name));
+            distSel.innerHTML = '<option value="">Distributor / Vendor...</option>' +
+                allVendors.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
             distSel.value = '';
         }
         const distPriceEl = document.getElementById('customKeyDistributorPrice');
         if (distPriceEl) distPriceEl.value = '';
+        const qtyEl = document.getElementById('customKeyQty');
+        if (qtyEl) qtyEl.value = '';
+        const dateEl = document.getElementById('customKeyPurchaseDate');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        const invoiceEl = document.getElementById('customKeyInvoice');
+        if (invoiceEl) invoiceEl.value = '';
 
         // Reset battery
         const batteryTypeEl = document.getElementById('customKeyBatteryType');
@@ -21572,9 +21590,13 @@ function saveCustomKey() {
     customKeys.push(newKey);
     saveCustomKeys();
 
-    // Record initial distributor pricing for this PN (if both provided)
+    // Initial Stock & Pricing: seed catalog price and/or record an initial purchase
     const distributor = document.getElementById('customKeyDistributor')?.value || '';
     const distributorPrice = (document.getElementById('customKeyDistributorPrice')?.value || '').trim();
+    const initialQty = parseInt(document.getElementById('customKeyQty')?.value, 10) || 0;
+    const purchaseDate = document.getElementById('customKeyPurchaseDate')?.value || new Date().toISOString().split('T')[0];
+    const purchaseInvoice = (document.getElementById('customKeyInvoice')?.value || '').trim();
+
     if (distributor && distributorPrice) {
         if (!vendorPrices[pn]) vendorPrices[pn] = {};
         vendorPrices[pn][distributor] = {
@@ -21585,6 +21607,29 @@ function saveCustomKey() {
             oem: ''
         };
         saveVendorPrices();
+    }
+
+    if (distributor && initialQty > 0) {
+        const priceEach = parseFloat(distributorPrice) || 0;
+        stockData[pn] = (stockData[pn] || 0) + initialQty;
+        const newKeyFids = getKeyFids(newKey);
+        purchaseHistory.unshift({
+            id: Date.now().toString() + '_' + pn + '_' + Math.random().toString(36).substr(2, 4),
+            date: purchaseDate,
+            vendor: distributor,
+            partNumber: pn,
+            quantity: initialQty,
+            priceEach: priceEach,
+            total: initialQty * priceEach,
+            invoice: purchaseInvoice,
+            notes: brand ? '[' + brand + '] ' : '',
+            brand: brand || '',
+            fccid: newKey.fccid || '',
+            keyway: newKey.keyway || '',
+            fid: newKeyFids[0] || ''
+        });
+        saveStock();
+        savePurchaseHistory();
     }
 
     // Record any old part numbers this key supersedes
