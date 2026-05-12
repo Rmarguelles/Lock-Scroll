@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v146</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v147</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5083,7 +5083,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v146</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v147</p>
         </div>
 
         <div class="settings-section">
@@ -5095,7 +5095,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v146<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v147<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8248,7 +8248,7 @@ async function init() {
     // Register service worker for PWA (with cache-busting version)
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('service-worker.js?v=87');
+            const registration = await navigator.serviceWorker.register('service-worker.js?v=88');
             console.log('Service Worker registered:', registration.scope);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
@@ -9227,11 +9227,19 @@ function getKeyFids(key) {
     return [...fids];
 }
 
-// Does the key have the given FCC ID (case-insensitive, checks all FCC IDs)?
+// Normalize an FCC ID for forgiving comparison: strip hyphens/whitespace, uppercase.
+// Use this on both sides of any FCC comparison so "OHT-01060512", "oht 01060512",
+// and "OHT01060512" all collapse to the same canonical form.
+function normalizeFccId(s) {
+    return String(s == null ? '' : s).replace(/[-\s]/g, '').toUpperCase();
+}
+
+// Does the key have the given FCC ID (hyphen/space/case-insensitive, checks all FCC IDs)?
 function keyHasFccId(key, fccId) {
     if (!fccId) return false;
-    const target = String(fccId).toUpperCase();
-    return getKeyFccIds(key).some(f => f.toUpperCase() === target);
+    const target = normalizeFccId(fccId);
+    if (!target) return false;
+    return getKeyFccIds(key).some(f => normalizeFccId(f) === target);
 }
 
 // All old PNs that resolve to the given current PN (one hop only)
@@ -9271,7 +9279,7 @@ function applyFilters() {
     const advKeyType = document.getElementById('advKeyTypeFilter')?.value || '';
     const advFrequency = document.getElementById('advFrequencyFilter')?.value || '';
     const advButtons = document.getElementById('advButtonsFilter')?.value || '';
-    const advFcc = (document.getElementById('advFccFilter')?.value || '').toUpperCase().trim();
+    const advFcc = normalizeFccId(document.getElementById('advFccFilter')?.value || '');
 
     // Debug logging
     if (advFrequency) {
@@ -9295,7 +9303,11 @@ function applyFilters() {
 
             // Also let the search match obsolete PNs that resolve to this key
             const supersededOldPns = getSupersededByPn(key.pn).map(s => s.toLowerCase()).join(' ');
+            // FCC ID match is hyphen/space/case-insensitive so users don't have to remember formatting
+            const searchFccNorm = normalizeFccId(search);
+            const fccMatches = searchFccNorm && getKeyFccIds(key).some(f => normalizeFccId(f).includes(searchFccNorm));
             const matches = searchStr.includes(search) ||
+                fccMatches ||
                 (supersededOldPns && supersededOldPns.split(' ').some(p => p && p === search));
 
             if (!matches) return false;
@@ -9321,7 +9333,7 @@ function applyFilters() {
         if (advKeyType && String(key.keyType || '').toLowerCase().trim() !== advKeyType.toLowerCase().trim()) return false;
         if (advFrequency && String(key.frequency || '').toLowerCase().trim() !== advFrequency.toLowerCase().trim()) return false;
         if (advButtons && !String(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
-        if (advFcc && !getKeyFccIds(key).some(f => f.toUpperCase().includes(advFcc))) return false;
+        if (advFcc && !getKeyFccIds(key).some(f => normalizeFccId(f).includes(advFcc))) return false;
 
         return true;
     });
@@ -9368,9 +9380,9 @@ function renderKeys() {
     // When FCC ID filter is active, group results by FID.
     // Also group by FID when the main search term is matching against FCC IDs.
     const advFcc = (document.getElementById('advFccFilter')?.value || '').trim();
-    const mainSearch = (document.getElementById('searchBox')?.value || '').trim().toUpperCase();
-    const isFccSearch = advFcc || (mainSearch && filteredKeys.some(k =>
-        getKeyFccIds(k).some(f => f.toUpperCase().includes(mainSearch))
+    const mainSearchNorm = normalizeFccId(document.getElementById('searchBox')?.value || '');
+    const isFccSearch = advFcc || (mainSearchNorm && filteredKeys.some(k =>
+        getKeyFccIds(k).some(f => normalizeFccId(f).includes(mainSearchNorm))
     ));
     if (isFccSearch) {
         renderKeysByFid(list, filteredKeys, supersessionBanner);
@@ -11128,20 +11140,24 @@ function quickMoveToGroup(fccId, newPrefix) {
 }
 
 function filterFids() {
-    const search = document.getElementById('fidSearch').value.toLowerCase();
+    const searchRaw = document.getElementById('fidSearch').value;
+    const search = searchRaw.toLowerCase();
+    const searchFccNorm = normalizeFccId(searchRaw);
     const prefixFilter = document.getElementById('fidPrefixFilter').value;
     const cards = document.querySelectorAll('#fidList .fid-card');
-    
+
     cards.forEach(card => {
         const fccId = card.dataset.fccid.toLowerCase();
+        const fccIdNorm = normalizeFccId(card.dataset.fccid);
         const fid = card.dataset.fid.toLowerCase();
         const makes = card.dataset.makes.toLowerCase();
-        
+
         let show = true;
-        
-        // Search filter
+
+        // Search filter — FCC match ignores hyphens/spaces/case
         if (search) {
-            const matchesSearch = fccId.includes(search) || fid.includes(search) || makes.includes(search);
+            const matchesSearch = fccId.includes(search) || fid.includes(search) || makes.includes(search) ||
+                (searchFccNorm && fccIdNorm.includes(searchFccNorm));
             if (!matchesSearch) show = false;
         }
         
@@ -11738,7 +11754,9 @@ function populateFidManagerPrefixFilter() {
 
 function renderFidManagerList() {
     const container = document.getElementById('fidManagerList');
-    const search = (document.getElementById('fidManagerSearch').value || '').toLowerCase();
+    const searchRaw = document.getElementById('fidManagerSearch').value || '';
+    const search = searchRaw.toLowerCase();
+    const searchFccNorm = normalizeFccId(searchRaw);
     const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
 
     // Get all FCC IDs with their assignments
@@ -11781,10 +11799,15 @@ function renderFidManagerList() {
         return a.fccid.localeCompare(b.fccid);
     });
 
-    // Filter
+    // Filter — FCC match ignores hyphens/spaces/case
     const filtered = allFccs.filter(item => {
-        if (search && !item.fccid.toLowerCase().includes(search) && !(item.fid || '').toLowerCase().includes(search)) {
-            return false;
+        if (search) {
+            const fccLower = item.fccid.toLowerCase();
+            const fidLower = (item.fid || '').toLowerCase();
+            const fccNorm = normalizeFccId(item.fccid);
+            const matches = fccLower.includes(search) || fidLower.includes(search) ||
+                (searchFccNorm && fccNorm.includes(searchFccNorm));
+            if (!matches) return false;
         }
         if (prefixFilter && (!item.fid || !item.fid.startsWith(prefixFilter + '-'))) {
             return false;
