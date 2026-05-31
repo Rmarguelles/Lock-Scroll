@@ -4862,6 +4862,9 @@
                 <button class="settings-btn" onclick="fidManagerReassignAll()" style="background:var(--accent2);color:var(--bg);">
                     🔄 Reassign All FIDs (Fresh Start)
                 </button>
+                <button class="settings-btn" onclick="fidManagerCleanOrphans()" style="background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    🧹 Clean Orphan Assignments
+                </button>
                 <button class="settings-btn danger" onclick="fidManagerClearAll()">
                     🗑️ Remove All FID Assignments
                 </button>
@@ -11897,6 +11900,35 @@ function fidManagerAutoAssignAll() {
     autoAssignAllFids();
     renderFidManagerStats();
     renderFidManagerList();
+}
+
+function fidManagerCleanOrphans() {
+    const dbFccs = new Set();
+    DB.forEach(k => getKeyFccIds(k).forEach(f => dbFccs.add(f.toUpperCase())));
+
+    const orphans = [];
+    Object.keys(fidAssignments).forEach(key => {
+        const fccs = key.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        if (fccs.length === 0 || !fccs.some(f => dbFccs.has(f))) {
+            orphans.push({ key, fid: fidAssignments[key] });
+        }
+    });
+
+    if (orphans.length === 0) {
+        toast('No orphan FID assignments found');
+        return;
+    }
+
+    const preview = orphans.slice(0, 10).map(o => `• ${o.key} → ${o.fid || '(no FID)'}`).join('\n');
+    const more = orphans.length > 10 ? `\n…and ${orphans.length - 10} more` : '';
+    const msg = `Found ${orphans.length} orphan FID assignment${orphans.length !== 1 ? 's' : ''} (no matching FCC ID on any key):\n\n${preview}${more}\n\nDelete them?`;
+    if (!confirm(msg)) return;
+
+    orphans.forEach(o => delete fidAssignments[o.key]);
+    saveFidAssignments();
+    renderFidManagerStats();
+    renderFidManagerList();
+    toast(`Removed ${orphans.length} orphan FID assignment${orphans.length !== 1 ? 's' : ''}`);
 }
 
 function fidManagerReassignAll() {
