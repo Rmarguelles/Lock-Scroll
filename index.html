@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v155</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v156</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5498,6 +5498,24 @@
             <button class="modal-btn secondary" onclick="copyEditingCustomKey()">📋 Copy to New Key</button>
             <button class="modal-btn secondary" onclick="closeEditCustomKeyModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveEditCustomKey()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Vehicles From Key Modal -->
+<div class="modal" id="importVehiclesFromKeyModal">
+    <div class="modal-content" style="max-width:500px;max-height:85vh;display:flex;flex-direction:column;">
+        <div class="modal-title">📥 Import Vehicles from Another Key</div>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">
+            Pick a known key and append its compatible-vehicle list to this new key. Search by Part Number, FCC ID, or keyway.
+        </p>
+        <input type="text" class="modal-input" id="importVehiclesKeySearch"
+            placeholder="Search keys..."
+            oninput="filterImportVehiclesKeyList()"
+            style="margin-bottom:12px;">
+        <div id="importVehiclesKeyResults" style="flex:1;overflow-y:auto;min-height:200px;max-height:50vh;"></div>
+        <div class="modal-btns" style="margin-top:12px;">
+            <button class="modal-btn secondary" onclick="closeImportVehiclesFromKeyModal()">Cancel</button>
         </div>
     </div>
 </div>
@@ -6990,9 +7008,14 @@
         <div class="add-inv-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
             <label>Vehicle Applications</label>
             <div id="customKeyVehicles"></div>
-            <button onclick="addCustomKeyVehicle()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
-                + Add Vehicle
-            </button>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button onclick="addCustomKeyVehicle()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;">
+                    + Add Vehicle
+                </button>
+                <button onclick="openImportVehiclesFromKeyModal()" title="Copy the vehicle list from another known key" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">
+                    📥 Import from Key
+                </button>
+            </div>
         </div>
         
         <div class="add-inv-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
@@ -21100,51 +21123,7 @@ function copyCustomKey(idx) {
     customKeyVehicleCount = 0;
     customKeyVehicleCodeSeries = {};
 
-    (source.vehicles || []).forEach(v => {
-        addCustomKeyVehicle();
-        const num = customKeyVehicleCount;
-
-        const makeSel = document.getElementById('customVehicleMake' + num);
-        if (v.make && makeSel) {
-            const hasMake = Array.from(makeSel.options).some(o => o.value === v.make);
-            if (!hasMake) {
-                const opt = document.createElement('option');
-                opt.value = v.make;
-                opt.textContent = v.make;
-                // Insert before the trailing "+ Other" option.
-                makeSel.insertBefore(opt, makeSel.lastElementChild);
-            }
-            makeSel.value = v.make;
-
-            const modelSel = document.getElementById('customVehicleModel' + num);
-            if (modelSel) {
-                populateModelDropdown(modelSel, v.make);
-                if (v.model) {
-                    const hasModel = Array.from(modelSel.options).some(o => o.value === v.model);
-                    if (hasModel) {
-                        modelSel.value = v.model;
-                    } else {
-                        modelSel.value = '__other__';
-                        const modelOther = document.getElementById('customVehicleModelOther' + num);
-                        if (modelOther) { modelOther.style.display = ''; modelOther.value = v.model; }
-                    }
-                }
-            }
-        }
-
-        const startEl = document.getElementById('customVehicleStart' + num);
-        const endEl = document.getElementById('customVehicleEnd' + num);
-        if (startEl && v.startYear != null) startEl.value = v.startYear;
-        if (endEl && v.endYear != null) endEl.value = v.endYear;
-
-        if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
-            customKeyVehicleCodeSeries[num] = v.codeSeries.map(cs => ({
-                years: cs.years || '',
-                series: cs.series || ''
-            }));
-            renderCustomKeyCodeSeriesList(num);
-        }
-    });
+    (source.vehicles || []).forEach(v => addCustomKeyVehicleFromData(v));
 
     // If the source had no vehicles, leave one blank row (matches the default form state).
     if (!source.vehicles || source.vehicles.length === 0) {
@@ -21152,6 +21131,156 @@ function copyCustomKey(idx) {
     }
 
     toast('Copied from ' + source.pn + ' — enter a new Part Number');
+}
+
+// Add a vehicle row to the Add Custom Key form and populate it from a stored
+// vehicle object ({ make, model, startYear, endYear, codeSeries }).
+function addCustomKeyVehicleFromData(v) {
+    addCustomKeyVehicle();
+    const num = customKeyVehicleCount;
+
+    const makeSel = document.getElementById('customVehicleMake' + num);
+    if (v && v.make && makeSel) {
+        const hasMake = Array.from(makeSel.options).some(o => o.value === v.make);
+        if (!hasMake) {
+            const opt = document.createElement('option');
+            opt.value = v.make;
+            opt.textContent = v.make;
+            makeSel.insertBefore(opt, makeSel.lastElementChild);
+        }
+        makeSel.value = v.make;
+
+        const modelSel = document.getElementById('customVehicleModel' + num);
+        if (modelSel) {
+            populateModelDropdown(modelSel, v.make);
+            if (v.model) {
+                const hasModel = Array.from(modelSel.options).some(o => o.value === v.model);
+                if (hasModel) {
+                    modelSel.value = v.model;
+                } else {
+                    modelSel.value = '__other__';
+                    const modelOther = document.getElementById('customVehicleModelOther' + num);
+                    if (modelOther) { modelOther.style.display = ''; modelOther.value = v.model; }
+                }
+            }
+        }
+    }
+
+    const startEl = document.getElementById('customVehicleStart' + num);
+    const endEl = document.getElementById('customVehicleEnd' + num);
+    if (startEl && v && v.startYear != null) startEl.value = v.startYear;
+    if (endEl && v && v.endYear != null) endEl.value = v.endYear;
+
+    if (v && Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
+        customKeyVehicleCodeSeries[num] = v.codeSeries.map(cs => ({
+            years: cs.years || '',
+            series: cs.series || ''
+        }));
+        renderCustomKeyCodeSeriesList(num);
+    }
+}
+
+// ===== Import Vehicles From Another Key =====
+
+function openImportVehiclesFromKeyModal() {
+    const inp = document.getElementById('importVehiclesKeySearch');
+    if (inp) inp.value = '';
+    renderImportVehiclesKeyList('');
+    document.getElementById('importVehiclesFromKeyModal').classList.add('on');
+}
+
+function closeImportVehiclesFromKeyModal() {
+    document.getElementById('importVehiclesFromKeyModal').classList.remove('on');
+}
+
+function filterImportVehiclesKeyList() {
+    const inp = document.getElementById('importVehiclesKeySearch');
+    const q = (inp ? inp.value : '').toLowerCase().trim();
+    renderImportVehiclesKeyList(q);
+}
+
+function renderImportVehiclesKeyList(search) {
+    const container = document.getElementById('importVehiclesKeyResults');
+    if (!container) return;
+
+    const matches = [];
+    DB.forEach((key, idx) => {
+        const vCount = (key.vehicles || []).length;
+        if (vCount === 0) return;
+        if (search) {
+            const altPnStr = Array.isArray(key.altParts)
+                ? key.altParts.map(a => a && a.pn ? a.pn : '').join(' ')
+                : '';
+            const haystack = [
+                String(key.pn || ''),
+                getKeyFccIds(key).join(' '),
+                String(key.keyway || ''),
+                String(key.keyType || ''),
+                altPnStr
+            ].join(' ').toLowerCase();
+            if (!haystack.includes(search)) return;
+        }
+        matches.push({ key, idx, vCount });
+    });
+
+    matches.sort((a, b) => String(a.key.pn || '').localeCompare(String(b.key.pn || '')));
+    const capped = matches.slice(0, 50);
+
+    if (capped.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">'
+            + (search ? 'No keys match your search' : 'No keys with vehicles found')
+            + '</div>';
+        return;
+    }
+
+    const truncatedNote = matches.length > capped.length
+        ? `<div style="text-align:center;color:var(--dim);padding:8px;font-size:11px;">Showing first ${capped.length} of ${matches.length} matches — refine your search to narrow.</div>`
+        : '';
+
+    container.innerHTML = capped.map(({ key, idx, vCount }) => {
+        const fcc = getKeyFccIds(key)[0] || '';
+        const preview = (key.vehicles || []).slice(0, 2)
+            .map(v => `${v.make || '?'} ${v.model || '?'}`).join(', ')
+            + (vCount > 2 ? ` +${vCount - 2} more` : '');
+        const pnStr = String(key.pn || 'Unknown').replace(/</g, '&lt;');
+        return `
+            <div onclick="importVehiclesFromKey(${idx})"
+                style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent);font-size:14px;">${pnStr}</div>
+                    <div style="font-size:11px;color:var(--accent2);background:rgba(255,107,53,0.1);padding:3px 8px;border-radius:10px;white-space:nowrap;">${vCount} vehicle${vCount !== 1 ? 's' : ''}</div>
+                </div>
+                ${fcc ? `<div style="font-size:11px;color:var(--dim);font-family:monospace;margin-top:2px;">${fcc.replace(/</g, '&lt;')}</div>` : ''}
+                <div style="font-size:11px;color:var(--text);margin-top:4px;">${preview.replace(/</g, '&lt;')}</div>
+            </div>
+        `;
+    }).join('') + truncatedNote;
+}
+
+function importVehiclesFromKey(idx) {
+    const source = DB[idx];
+    if (!source || !Array.isArray(source.vehicles) || source.vehicles.length === 0) {
+        toast('No vehicles to import');
+        return;
+    }
+
+    // If the form currently has a single empty vehicle row (the default seeded
+    // by openAddCustomKey), drop it so the imported list isn't padded with a blank.
+    const existingRows = document.querySelectorAll('#customKeyVehicles .custom-vehicle-row');
+    if (existingRows.length === 1) {
+        const num = existingRows[0].id.replace('customVehicle', '');
+        const makeSel = document.getElementById('customVehicleMake' + num);
+        const modelOther = document.getElementById('customVehicleModelOther' + num);
+        const isEmpty = (!makeSel || !makeSel.value) && (!modelOther || !modelOther.value);
+        if (isEmpty) {
+            existingRows[0].remove();
+            delete customKeyVehicleCodeSeries[num];
+        }
+    }
+
+    source.vehicles.forEach(v => addCustomKeyVehicleFromData(v));
+    closeImportVehiclesFromKeyModal();
+    toast(`Imported ${source.vehicles.length} vehicle${source.vehicles.length !== 1 ? 's' : ''} from ${source.pn}`);
 }
 
 // Copy from inside the Edit Custom Key modal — closes the modal, then runs copyCustomKey.
