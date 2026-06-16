@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v152</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v153</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5495,6 +5495,7 @@
         </div>
         <div class="modal-btns">
             <button class="modal-btn" style="background:#ff4444;color:white;" onclick="deleteCustomKey()">🗑️ Delete</button>
+            <button class="modal-btn secondary" onclick="copyEditingCustomKey()">📋 Copy to New Key</button>
             <button class="modal-btn secondary" onclick="closeEditCustomKeyModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveEditCustomKey()">Save Changes</button>
         </div>
@@ -21027,6 +21028,133 @@ function closeAddCustomKey() {
     document.getElementById('addCustomKeyPanel').classList.remove('on');
 }
 
+// Copy data from an existing custom key into the Add Custom Key form.
+// The user still has to enter a new (unique) Part Number.
+function copyCustomKey(idx) {
+    const source = customKeys[idx];
+    if (!source) { toast('Key not found'); return; }
+
+    // Close any open settings panels so the Add Custom Key panel is visible.
+    if (typeof closeCustomKeysSettingsPanel === 'function') closeCustomKeysSettingsPanel();
+    if (typeof closeSettings === 'function') closeSettings();
+
+    openAddCustomKey();
+
+    // Helper: set a dropdown to a value, or fall back to "+ Other" + the custom text input.
+    const setDropdownOrOther = (selectId, otherInputId, value) => {
+        if (value === undefined || value === null || value === '') return;
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const other = otherInputId ? document.getElementById(otherInputId) : null;
+        const has = Array.from(sel.options).some(o => o.value === value);
+        if (has) {
+            sel.value = value;
+            if (other) { other.style.display = 'none'; other.value = ''; }
+        } else if (other) {
+            sel.value = '__other__';
+            other.style.display = 'block';
+            other.value = value;
+        }
+    };
+
+    // Leave PN blank — user must enter a unique one — and focus it.
+    const pnInput = document.getElementById('customKeyPN');
+    if (pnInput) { pnInput.value = ''; setTimeout(() => pnInput.focus(), 50); }
+
+    document.getElementById('customKeyFCC').value = source.fccid || '';
+    document.getElementById('customKeyNotes').value = source.notes || '';
+
+    setDropdownOrOther('customKeyBrand', 'customKeyBrandOther', source.brand);
+    setDropdownOrOther('customKeyKeyway', 'customKeyKeywayOther', source.keyway);
+
+    // Key Type controls chip section visibility, so set it first.
+    setDropdownOrOther('customKeyType', 'customKeyTypeOther', source.keyType);
+    if (typeof toggleCustomKeyChipType === 'function') toggleCustomKeyChipType();
+
+    setDropdownOrOther('customKeyChip', 'customKeyChipOther', source.chip);
+    setDropdownOrOther('customKeyButtons', 'customKeyButtonsOther', source.buttons);
+    setDropdownOrOther('customKeyFreq', 'customKeyFreqOther', source.frequency);
+
+    // Battery is stored as "<type> qty <n>"
+    if (source.battery) {
+        const m = String(source.battery).match(/^(.*?)\s+qty\s+(\d+)$/i);
+        const batteryType = m ? m[1].trim() : String(source.battery).trim();
+        const batteryQty = m ? parseInt(m[2], 10) : 1;
+        setDropdownOrOther('customKeyBatteryType', 'customKeyBatteryTypeOther', batteryType);
+        const qtyEl = document.getElementById('customKeyBatteryQty');
+        if (qtyEl) qtyEl.value = batteryQty;
+    }
+
+    // Vehicles: drop the default empty row, then add one row per source vehicle.
+    document.getElementById('customKeyVehicles').innerHTML = '';
+    customKeyVehicleCount = 0;
+    customKeyVehicleCodeSeries = {};
+
+    (source.vehicles || []).forEach(v => {
+        addCustomKeyVehicle();
+        const num = customKeyVehicleCount;
+
+        const makeSel = document.getElementById('customVehicleMake' + num);
+        if (v.make && makeSel) {
+            const hasMake = Array.from(makeSel.options).some(o => o.value === v.make);
+            if (!hasMake) {
+                const opt = document.createElement('option');
+                opt.value = v.make;
+                opt.textContent = v.make;
+                // Insert before the trailing "+ Other" option.
+                makeSel.insertBefore(opt, makeSel.lastElementChild);
+            }
+            makeSel.value = v.make;
+
+            const modelSel = document.getElementById('customVehicleModel' + num);
+            if (modelSel) {
+                populateModelDropdown(modelSel, v.make);
+                if (v.model) {
+                    const hasModel = Array.from(modelSel.options).some(o => o.value === v.model);
+                    if (hasModel) {
+                        modelSel.value = v.model;
+                    } else {
+                        modelSel.value = '__other__';
+                        const modelOther = document.getElementById('customVehicleModelOther' + num);
+                        if (modelOther) { modelOther.style.display = ''; modelOther.value = v.model; }
+                    }
+                }
+            }
+        }
+
+        const startEl = document.getElementById('customVehicleStart' + num);
+        const endEl = document.getElementById('customVehicleEnd' + num);
+        if (startEl && v.startYear != null) startEl.value = v.startYear;
+        if (endEl && v.endYear != null) endEl.value = v.endYear;
+
+        if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
+            customKeyVehicleCodeSeries[num] = v.codeSeries.map(cs => ({
+                years: cs.years || '',
+                series: cs.series || ''
+            }));
+            renderCustomKeyCodeSeriesList(num);
+        }
+    });
+
+    // If the source had no vehicles, leave one blank row (matches the default form state).
+    if (!source.vehicles || source.vehicles.length === 0) {
+        addCustomKeyVehicle();
+    }
+
+    toast('Copied from ' + source.pn + ' — enter a new Part Number');
+}
+
+// Copy from inside the Edit Custom Key modal — closes the modal, then runs copyCustomKey.
+function copyEditingCustomKey() {
+    if (editingCustomKeyIndex === null || editingCustomKeyIndex === undefined) {
+        toast('No key selected');
+        return;
+    }
+    const idx = editingCustomKeyIndex;
+    closeEditCustomKeyModal();
+    copyCustomKey(idx);
+}
+
 // ===== Add Custom Key: Brand, Alt Parts, FID assignment helpers =====
 let customKeyAltPartCount = 0;
 
@@ -21765,8 +21893,13 @@ function renderCustomKeysList() {
     container.innerHTML = customKeys.map((key, idx) => {
         const pnStr = String(key.pn || 'Unknown');
         const vehicles = (key.vehicles || []).slice(0, 2).map(v => v.make + ' ' + v.model).join(', ');
-        return '<div class="custom-key-item" onclick="openEditCustomKeyModal(' + idx + ')">' +
-            '<div class="custom-key-item-pn">' + pnStr + '</div>' +
+        return '<div class="custom-key-item" onclick="openEditCustomKeyModal(' + idx + ')" style="position:relative;">' +
+            '<button type="button" title="Copy this key into a new key" ' +
+                'onclick="event.stopPropagation(); copyCustomKey(' + idx + ');" ' +
+                'style="position:absolute;top:8px;right:8px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;">' +
+                '📋 Copy' +
+            '</button>' +
+            '<div class="custom-key-item-pn" style="padding-right:70px;">' + pnStr + '</div>' +
             '<div class="custom-key-item-details">' +
                 (key.keyway ? key.keyway + ' • ' : '') +
                 (key.chip ? key.chip : 'No chip') +
