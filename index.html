@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v154</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v155</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -11062,14 +11062,15 @@ function openFid() {
 }
 
 function renderFidList() {
+    // Build map of FCC ID -> keys that carry it. Walk every FCC ID on each key
+    // (primary `fccid` AND any in `fccids`) so FIDs assigned to additional FCC
+    // IDs still surface here.
     const fccMap = new Map();
     DB.forEach(key => {
-        if (key.fccid) {
-            if (!fccMap.has(key.fccid)) {
-                fccMap.set(key.fccid, []);
-            }
-            fccMap.get(key.fccid).push(key);
-        }
+        getKeyFccIds(key).forEach(fcc => {
+            if (!fccMap.has(fcc)) fccMap.set(fcc, []);
+            fccMap.get(fcc).push(key);
+        });
     });
     
     let fccList = Array.from(fccMap.entries());
@@ -11725,11 +11726,11 @@ function closeFidManager() {
 function renderFidManagerStats() {
     const totalFccs = new Set();
     DB.forEach(key => {
-        if (key.fccid) totalFccs.add(key.fccid);
+        getKeyFccIds(key).forEach(fcc => totalFccs.add(fcc));
     });
 
     const assignedCount = Object.keys(fidAssignments).length;
-    const unassignedCount = totalFccs.size - assignedCount;
+    const unassignedCount = Math.max(0, totalFccs.size - assignedCount);
 
     // Count by prefix
     const prefixCounts = {};
@@ -11773,29 +11774,38 @@ function renderFidManagerList() {
     const searchFccNorm = normalizeFccId(searchRaw);
     const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
 
-    // Get all FCC IDs with their assignments
+    // Get all FCC IDs with their assignments — walk every FCC ID on each key
+    // (primary `fccid` AND any in the `fccids` additional array) so keys whose
+    // FID was assigned against an additional FCC ID still show up here.
     const allFccs = [];
     const seenFcc = new Set();
 
-    DB.forEach(key => {
-        if (key.fccid && !seenFcc.has(key.fccid)) {
-            seenFcc.add(key.fccid);
-            const fid = fidAssignments[key.fccid] || null;
-            const makes = new Set();
-            DB.forEach(k => {
-                if (k.fccid === key.fccid) {
-                    (k.vehicles || []).forEach(v => {
-                        if (v.make) makes.add(v.make);
-                    });
-                }
+    // Pre-build an index of FCC ID -> set of makes across all keys.
+    const fccMakes = {};
+    DB.forEach(k => {
+        const fccs = getKeyFccIds(k);
+        if (fccs.length === 0) return;
+        (k.vehicles || []).forEach(v => {
+            if (!v.make) return;
+            fccs.forEach(fcc => {
+                if (!fccMakes[fcc]) fccMakes[fcc] = new Set();
+                fccMakes[fcc].add(v.make);
             });
+        });
+    });
+
+    DB.forEach(key => {
+        getKeyFccIds(key).forEach(fcc => {
+            if (seenFcc.has(fcc)) return;
+            seenFcc.add(fcc);
+            const fid = fidAssignments[fcc] || null;
             allFccs.push({
-                fccid: key.fccid,
+                fccid: fcc,
                 fid: fid,
-                makes: Array.from(makes).join(', '),
+                makes: Array.from(fccMakes[fcc] || []).join(', '),
                 keyType: key.keyType || ''
             });
-        }
+        });
     });
 
     // Sort: assigned first by FID, then unassigned
