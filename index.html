@@ -20869,6 +20869,7 @@ function openAddCustomKey(prefillFcc = null) {
         if (invoiceEl) invoiceEl.value = '';
 
         // Reset battery
+        populateCustomKeyBatteryDropdown();
         const batteryTypeEl = document.getElementById('customKeyBatteryType');
         if (batteryTypeEl) batteryTypeEl.value = '';
         const batteryQtyEl = document.getElementById('customKeyBatteryQty');
@@ -20994,6 +20995,27 @@ function populateCustomKeyDropdown(selectId, field, placeholder) {
     otherOpt.value = '__other__';
     otherOpt.textContent = '+ Other (custom)';
     select.appendChild(otherOpt);
+}
+
+// Inject any user-added battery types (from customDropdownValues.battery)
+// into the Battery dropdown on the Add Custom Key form, just before "+ Other".
+function populateCustomKeyBatteryDropdown() {
+    const sel = document.getElementById('customKeyBatteryType');
+    if (!sel) return;
+    Array.from(sel.querySelectorAll('option[data-custom="1"]')).forEach(o => o.remove());
+    const otherOpt = sel.querySelector('option[value="__other__"]');
+    if (!otherOpt) return;
+    const existing = new Set(Array.from(sel.options).map(o => o.value));
+    const customs = (Array.isArray(customDropdownValues.battery) ? customDropdownValues.battery : [])
+        .filter(v => v && !existing.has(v));
+    customs.sort((a, b) => String(a).localeCompare(String(b)));
+    customs.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        opt.dataset.custom = '1';
+        sel.insertBefore(opt, otherOpt);
+    });
 }
 
 function populateCustomKeyFrequencyDropdown() {
@@ -21865,6 +21887,17 @@ function saveCustomKey() {
     const batteryQtyRaw = parseInt(document.getElementById('customKeyBatteryQty')?.value, 10);
     const batteryQty = isNaN(batteryQtyRaw) || batteryQtyRaw < 1 ? 1 : batteryQtyRaw;
     const battery = batteryType ? `${batteryType} qty ${batteryQty}` : null;
+
+    // If the battery type was entered via "+ Other (custom)", persist it so the
+    // dropdown remembers it the next time a new key is created.
+    const batterySelectEl = document.getElementById('customKeyBatteryType');
+    if (batterySelectEl && batterySelectEl.value === '__other__' && batteryType) {
+        if (!Array.isArray(customDropdownValues.battery)) customDropdownValues.battery = [];
+        if (!customDropdownValues.battery.includes(batteryType)) {
+            customDropdownValues.battery.push(batteryType);
+            saveCustomDropdownValues();
+        }
+    }
 
     // Create the new key object
     const newKey = {
