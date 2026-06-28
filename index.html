@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v158</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v159</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5096,7 +5096,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v149<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v159<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5737,14 +5737,42 @@
                     <input type="checkbox" id="autelIKeyCheck_nissan" style="margin-top:2px;width:16px;height:16px;accent-color:#c8102e;">
                     <div>
                         <div style="font-weight:700;color:var(--text);font-size:13px;">Nissan Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8102e;vertical-align:middle;margin-left:4px;"></span></div>
-                        <div style="font-size:11px;color:var(--dim);">Looks like a Nissan/Infiniti prox key</div>
+                        <div style="font-size:11px;color:var(--dim);">Nissan/Infiniti prox key style</div>
                     </div>
                 </label>
                 <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
                     <input type="checkbox" id="autelIKeyCheck_tombstone" style="margin-top:2px;width:16px;height:16px;accent-color:#7b3f00;">
                     <div>
                         <div style="font-weight:700;color:var(--text);font-size:13px;">Tombstone Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7b3f00;vertical-align:middle;margin-left:4px;"></span></div>
-                        <div style="font-size:11px;color:var(--dim);">Chrysler/Dodge tombstone prox key shape</div>
+                        <div style="font-size:11px;color:var(--dim);">Chrysler/Dodge/Jeep/Ram tombstone prox key style</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+                    <input type="checkbox" id="autelIKeyCheck_honda" style="margin-top:2px;width:16px;height:16px;accent-color:#cc0000;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text);font-size:13px;">Honda Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#cc0000;vertical-align:middle;margin-left:4px;"></span></div>
+                        <div style="font-size:11px;color:var(--dim);">Honda/Acura prox key style</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+                    <input type="checkbox" id="autelIKeyCheck_hyundai" style="margin-top:2px;width:16px;height:16px;accent-color:#002C5F;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text);font-size:13px;">Hyundai Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#002C5F;vertical-align:middle;margin-left:4px;"></span></div>
+                        <div style="font-size:11px;color:var(--dim);">Hyundai/Kia prox key style</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+                    <input type="checkbox" id="autelIKeyCheck_bmw" style="margin-top:2px;width:16px;height:16px;accent-color:#1c69d4;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text);font-size:13px;">BMW Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1c69d4;vertical-align:middle;margin-left:4px;"></span></div>
+                        <div style="font-size:11px;color:var(--dim);">BMW/Volvo prox key style (BMW low freq universal key)</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+                    <input type="checkbox" id="autelIKeyCheck_gm" style="margin-top:2px;width:16px;height:16px;accent-color:#2c5697;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text);font-size:13px;">GM Style <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2c5697;vertical-align:middle;margin-left:4px;"></span></div>
+                        <div style="font-size:11px;color:var(--dim);">GM prox key style (Chevy/GMC/Cadillac/Buick)</div>
                     </div>
                 </label>
                 <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
@@ -8132,8 +8160,12 @@ let vehicleOverrides = {"5470":[{"codeSeries":[{"series":"V0001-V5718","years":"
 let keyInfoOverrides = {"40076":{"secondaryKeyPartNumber":null,"emergencyPN":null,"keyway":"B62","battery":null,"fccid":"B62","isVATS":true,"buttons":null,"chip":"VATS","notes":null,"frequency":null,"keyType":"VATS Single-Sided"}};
 let autelIKeyCompatibility = {}; // { pn: ['nissan','tombstone','autel','chip'] }
 const AUTEL_IKEY_STYLES = [
-    { id: 'nissan',    label: 'Nissan Style',    color: '#c8102e', desc: 'Looks like a Nissan/Infiniti prox key' },
-    { id: 'tombstone', label: 'Tombstone Style', color: '#7b3f00', desc: 'Looks like Chrysler/Dodge tombstone prox key' },
+    { id: 'nissan',    label: 'Nissan Style',    color: '#c8102e', desc: 'Nissan/Infiniti prox key style' },
+    { id: 'tombstone', label: 'Tombstone Style', color: '#7b3f00', desc: 'Chrysler/Dodge/Jeep/Ram tombstone prox key style' },
+    { id: 'honda',     label: 'Honda Style',     color: '#cc0000', desc: 'Honda/Acura prox key style' },
+    { id: 'hyundai',   label: 'Hyundai Style',   color: '#002C5F', desc: 'Hyundai/Kia prox key style' },
+    { id: 'bmw',       label: 'BMW Style',       color: '#1c69d4', desc: 'BMW/Volvo prox key style (BMW low freq universal key)' },
+    { id: 'gm',        label: 'GM Style',        color: '#2c5697', desc: 'GM prox key style (Chevy/GMC/Cadillac/Buick)' },
     { id: 'autel',     label: 'Autel Style',     color: '#0057a8', desc: 'Autel-specific universal key style' },
     { id: 'chip',      label: 'Universal Chip',  color: '#1a7a3c', desc: 'Autel universal transponder chip' },
 ];
