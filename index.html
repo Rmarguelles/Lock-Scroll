@@ -18024,6 +18024,23 @@ function openVehicleDetail(vehicleKey) {
         </div>
     `;
 
+    // Autel iKey banner — collect all tagged styles across this vehicle's keys
+    const vehicleIKeyStyles = new Set();
+    vehicle.keys.forEach(k => {
+        (autelIKeyCompatibility[k.pn] || []).forEach(s => vehicleIKeyStyles.add(s));
+    });
+    const vehicleIKeyStylesArr = Array.from(vehicleIKeyStyles);
+    if (vehicleIKeyStylesArr.length > 0) {
+        html += `
+        <div style="margin:8px 16px 0;padding:10px 14px;background:rgba(0,87,168,0.12);border:1px solid #0057a8;border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:700;color:#0057a8;">Autel iKey Compatible</span>
+            ${vehicleIKeyStylesArr.map(sid => {
+                const style = AUTEL_IKEY_STYLES.find(s => s.id === sid);
+                return style ? `<span style="padding:2px 8px;background:#0057a8;color:#fff;border-radius:10px;font-size:11px;font-weight:600;">${style.label}</span>` : '';
+            }).join('')}
+        </div>`;
+    }
+
     if (isDualKey) {
         // Dual-key vehicle display — supports multiple ignition and door keys
         const hasDiffCS = vehicleData.differentCodeSeries === true;
