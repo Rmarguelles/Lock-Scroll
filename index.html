@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v162</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v163</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5096,7 +5096,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v162<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v163<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10344,7 +10344,8 @@ function renderKeys() {
             `${v.make} ${v.model} (${formatYearRange(v)})`
         ).join(', ');
 
-        const iKeyTagged = (autelIKeyCompatibility[key.pn] || []).length > 0;
+        // Autel iKeys are proximity-only — only badge proximity keys
+        const iKeyTagged = normalizeKeyType(key.keyType) === 'Proximity' && (autelIKeyCompatibility[key.pn] || []).length > 0;
         const iKeyBadge = iKeyTagged
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey</span>`
             : '';
@@ -10468,9 +10469,10 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         </div>
     ` : '');
 
-    // Build Autel iKey compatibility badge section
+    // Build Autel iKey compatibility badge section — Autel iKeys are proximity-only,
+    // so this section is hidden for transponder/chip/remote keys.
     const iKeyStyles = autelIKeyCompatibility[key.pn] || [];
-    const iKeyHtml = `
+    const iKeyHtml = normalizeKeyType(key.keyType) !== 'Proximity' ? '' : `
         <div class="detail-section" style="padding:12px 16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${iKeyStyles.length > 0 ? '10px' : '0'};">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -18819,8 +18821,11 @@ function openVehicleDetail(vehicleKey) {
         </div>
     `;
 
-    // Autel iKey banner — vehicle-level lookup from Autel PDF compatibility data
-    const vehicleIKeyStylesArr = getVehicleIKeyStyles(make, model, startYear, endYear);
+    // Autel iKey banner — vehicle-level lookup from Autel PDF compatibility data.
+    // Autel iKeys are proximity/smart keys only, so only surface this on the Proximity path.
+    const vehicleIKeyStylesArr = selectedVehicleKeyType === 'Proximity'
+        ? getVehicleIKeyStyles(make, model, startYear, endYear)
+        : [];
     if (vehicleIKeyStylesArr.length > 0) {
         html += `
         <div style="margin:8px 16px 0;padding:10px 14px;background:rgba(0,87,168,0.12);border:1px solid #0057a8;border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -19041,8 +19046,8 @@ function openVehicleDetail(vehicleKey) {
         const roleLabel = key.dualKeyRole === 'ignition' ? '<span style="display:inline-block;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">IGNITION</span>'
             : key.dualKeyRole === 'door' ? '<span style="display:inline-block;background:var(--accent2);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">DOOR</span>'
             : '';
-        const iKeyStyles = autelIKeyCompatibility[key.pn] || [];
-        const iKeyBadgeVeh = iKeyStyles.length > 0
+        // Autel iKeys are proximity-only — show on proximity key cards of an iKey-compatible vehicle
+        const iKeyBadgeVeh = (vehicleIKeyStylesArr.length > 0 && normalizeKeyType(key.keyType) === 'Proximity')
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey ✓</span>`
             : '';
         return `
