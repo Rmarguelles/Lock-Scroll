@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v165</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v167</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5104,7 +5104,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v165<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v167<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -9549,6 +9549,33 @@ function saveCustomDropdownValues() {
     triggerAutoSync();
 }
 
+// Maps a dropdown category to its Add Custom Key source <select>, used to detect
+// whether a value is an existing/built-in option (so it isn't re-registered).
+const DROPDOWN_SOURCE_SELECTS = {
+    keyway: 'customKeyKeyway', chip: 'customKeyChip', keyType: 'customKeyType',
+    buttons: 'customKeyButtons', frequency: 'customKeyFreq',
+    battery: 'customKeyBatteryType', brand: 'customKeyBrand',
+};
+
+// Persist a value typed via a key form's "+ Other" into the dropdown data so it
+// shows in future dropdowns. No-op for blanks, duplicates, "None", and values
+// that are already a selectable option (built-in or previously saved).
+function registerDropdownValue(category, value) {
+    if (!value) return;
+    const v = String(value).trim();
+    if (!v) return;
+    const lower = v.toLowerCase();
+    if (lower === 'none (transponder only)') return;
+    if (!customDropdownValues[category]) customDropdownValues[category] = [];
+    if (customDropdownValues[category].some(x => String(x).toLowerCase() === lower)) return;
+    const selId = DROPDOWN_SOURCE_SELECTS[category];
+    const sel = selId && document.getElementById(selId);
+    if (sel && Array.from(sel.options).some(o => o.value && o.value.toLowerCase() === lower)) return;
+    customDropdownValues[category].push(v);
+    if (category === 'keyway' && !customKeyways.includes(v)) { customKeyways.push(v); saveCustomKeyways(); }
+    saveCustomDropdownValues();
+}
+
 function applyVehicleOverridesToDB() {
     // Apply saved vehicle overrides to base database keys
     for (const pn in vehicleOverrides) {
@@ -9951,6 +9978,13 @@ function saveEditKeyInfo() {
         // fccids should be removed from the key when null so getKeyFccIds falls back to fccid alone
         if (overrides.fccids === null || overrides.fccids === undefined) delete key.fccids;
     }
+
+    // Persist any new custom dropdown values into the dropdown data for future keys
+    registerDropdownValue('buttons', newButtons);
+    registerDropdownValue('keyType', newKeyType);
+    registerDropdownValue('keyway', newKeyway);
+    registerDropdownValue('chip', newChip);
+    registerDropdownValue('frequency', newFrequency);
 
     // Refresh the key detail page
     openKey(editingKeyInfoIdx, cameFromFcc, cameFromFid);
@@ -21998,6 +22032,7 @@ function openAddCustomKey(prefillFcc = null) {
             batteryOtherEl.style.display = 'none';
             batteryOtherEl.value = '';
         }
+        injectSavedOptions('customKeyBatteryType', 'battery', 'Saved', 'customKeyBatterySavedGroup');
 
         // Reset additional part numbers
         document.getElementById('customKeyAltParts').innerHTML = '';
@@ -22045,7 +22080,9 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyType').value = '';
         document.getElementById('customKeyTypeOther').style.display = 'none';
         document.getElementById('customKeyTypeOther').value = '';
+        injectSavedOptions('customKeyType', 'keyType', 'Saved', 'customKeyTypeSavedGroup');
 
+        injectSavedOptions('customKeyButtons', 'buttons', 'Saved Configurations', 'customKeyButtonsSavedGroup');
         document.getElementById('customKeyButtons').value = '';
         document.getElementById('customKeyButtonsOther').style.display = 'none';
         document.getElementById('customKeyButtonsOther').value = '';
@@ -22080,6 +22117,29 @@ function toggleCustomKeyChipType() {
         chipSection.style.display = 'block';
     }
     toggleCustomKeySleeve();
+}
+
+// Inject saved custom dropdown values (from the dropdown data) into an otherwise
+// hardcoded Add Custom Key <select>, so values added on previous keys are
+// available for future ones. De-duped against existing options; refreshed (the
+// prior injected group is removed) so re-opening the form never duplicates.
+function injectSavedOptions(selectId, category, groupLabel, groupId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const prev = document.getElementById(groupId);
+    if (prev) prev.remove();
+    const existing = new Set(Array.from(sel.options).map(o => (o.value || '').toLowerCase()));
+    const customs = (customDropdownValues[category] || []).filter(v => v && !existing.has(String(v).toLowerCase()));
+    if (customs.length === 0) return;
+    const group = document.createElement('optgroup');
+    group.label = groupLabel; group.id = groupId;
+    customs.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        group.appendChild(opt);
+    });
+    const otherOpt = Array.from(sel.options).find(o => o.value === '__other__');
+    if (otherOpt) sel.insertBefore(group, otherOpt); else sel.appendChild(group);
 }
 
 // Removable Sleeve applies to any key with a chip — show only when a Chip Type is set
@@ -23055,6 +23115,15 @@ function saveCustomKey() {
     // Save to custom keys storage
     customKeys.push(newKey);
     saveCustomKeys();
+
+    // Persist any new custom dropdown values into the dropdown data for future keys
+    registerDropdownValue('buttons', buttons);
+    registerDropdownValue('keyway', keyway);
+    registerDropdownValue('chip', chip);
+    registerDropdownValue('keyType', keyType);
+    registerDropdownValue('frequency', frequency);
+    registerDropdownValue('battery', batteryType);
+    registerDropdownValue('brand', brand);
 
     // Initial Stock & Pricing: seed catalog price and/or record an initial purchase
     const distributor = document.getElementById('customKeyDistributor')?.value || '';
