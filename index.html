@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v165</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v166</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5104,7 +5104,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v165<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v166<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -9549,6 +9549,24 @@ function saveCustomDropdownValues() {
     triggerAutoSync();
 }
 
+// Persist a value typed/built via a key form into the dropdown data so it shows
+// in future dropdowns. No-op for blanks, duplicates, or standard built-in options.
+function registerDropdownValue(category, value) {
+    if (!value) return;
+    const v = String(value).trim();
+    if (!v) return;
+    if (!customDropdownValues[category]) customDropdownValues[category] = [];
+    const lower = v.toLowerCase();
+    if (customDropdownValues[category].some(x => String(x).toLowerCase() === lower)) return;
+    if (category === 'buttons') {
+        if (lower === 'none (transponder only)') return;
+        const sel = document.getElementById('customKeyButtons');
+        if (sel && Array.from(sel.options).some(o => o.value && o.value.toLowerCase() === lower)) return;
+    }
+    customDropdownValues[category].push(v);
+    saveCustomDropdownValues();
+}
+
 function applyVehicleOverridesToDB() {
     // Apply saved vehicle overrides to base database keys
     for (const pn in vehicleOverrides) {
@@ -9951,6 +9969,9 @@ function saveEditKeyInfo() {
         // fccids should be removed from the key when null so getKeyFccIds falls back to fccid alone
         if (overrides.fccids === null || overrides.fccids === undefined) delete key.fccids;
     }
+
+    // Persist a new button configuration into the dropdown data for future remotes
+    registerDropdownValue('buttons', newButtons);
 
     // Refresh the key detail page
     openKey(editingKeyInfoIdx, cameFromFcc, cameFromFid);
@@ -22046,6 +22067,7 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyTypeOther').style.display = 'none';
         document.getElementById('customKeyTypeOther').value = '';
 
+        populateCustomKeyButtonsOptions();
         document.getElementById('customKeyButtons').value = '';
         document.getElementById('customKeyButtonsOther').style.display = 'none';
         document.getElementById('customKeyButtonsOther').value = '';
@@ -22080,6 +22102,29 @@ function toggleCustomKeyChipType() {
         chipSection.style.display = 'block';
     }
     toggleCustomKeySleeve();
+}
+
+// Inject saved custom button configurations (from the dropdown data) into the
+// otherwise-hardcoded Add Custom Key buttons select, so configs added on previous
+// remotes are available for future ones.
+function populateCustomKeyButtonsOptions() {
+    const sel = document.getElementById('customKeyButtons');
+    if (!sel) return;
+    const prev = document.getElementById('customKeyButtonsSavedGroup');
+    if (prev) prev.remove();
+    const hardcoded = new Set(Array.from(sel.options).map(o => (o.value || '').toLowerCase()));
+    const customs = (customDropdownValues.buttons || []).filter(v => v && !hardcoded.has(String(v).toLowerCase()));
+    if (customs.length === 0) return;
+    const group = document.createElement('optgroup');
+    group.label = 'Saved Configurations';
+    group.id = 'customKeyButtonsSavedGroup';
+    customs.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        group.appendChild(opt);
+    });
+    const otherOpt = Array.from(sel.options).find(o => o.value === '__other__');
+    if (otherOpt) sel.insertBefore(group, otherOpt); else sel.appendChild(group);
 }
 
 // Removable Sleeve applies to any key with a chip — show only when a Chip Type is set
@@ -23055,6 +23100,9 @@ function saveCustomKey() {
     // Save to custom keys storage
     customKeys.push(newKey);
     saveCustomKeys();
+
+    // Persist a new button configuration into the dropdown data for future remotes
+    registerDropdownValue('buttons', buttons);
 
     // Initial Stock & Pricing: seed catalog price and/or record an initial purchase
     const distributor = document.getElementById('customKeyDistributor')?.value || '';
