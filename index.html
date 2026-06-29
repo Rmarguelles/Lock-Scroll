@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v168</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v169</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4683,14 +4683,32 @@
     <div class="vehicle-list" id="vehicleMakeList"></div>
 </div>
 
-<!-- Antique Reference Panel - opened from the Vehicle Lookup header -->
+<!-- Antique Reference: Makes - opened from the Vehicle Lookup header -->
 <div class="vehicle-panel" id="antiquePanel" style="z-index:250;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeAntiquePanel()">←</button>
         <div class="vehicle-title">📖 Antique Reference</div>
-        <input type="text" id="antiqueSearch" placeholder="Search make, model, blank, keyway..." oninput="renderAntiqueList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
+        <input type="text" id="antiqueSearch" placeholder="Search make..." oninput="renderAntiqueMakeList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
     </div>
-    <div class="vehicle-list" id="antiqueList"></div>
+    <div class="vehicle-list" id="antiqueMakeList"></div>
+</div>
+
+<!-- Antique Reference: Models - after selecting a make -->
+<div class="vehicle-panel" id="antiqueModelsPanel" style="z-index:251;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeAntiqueModelsPanel()">←</button>
+        <div class="vehicle-title" id="antiqueModelsPanelTitle">📖 Select Model</div>
+    </div>
+    <div class="vehicle-list" id="antiqueModelsList"></div>
+</div>
+
+<!-- Antique Reference: Detail - after selecting a model -->
+<div class="vehicle-panel" id="antiqueDetailPanel" style="z-index:252;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeAntiqueDetailPanel()">←</button>
+        <div class="vehicle-title" id="antiqueDetailTitle">📖 Detail</div>
+    </div>
+    <div class="vehicle-list" id="antiqueDetailList"></div>
 </div>
 
 <!-- Vehicle Models Panel - After selecting make -->
@@ -5117,7 +5135,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v168<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v169<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -13614,6 +13632,8 @@ function showTab(tab, event) {
         document.getElementById('vehiclePanel').classList.remove('on');
         document.getElementById('vehicleDetailPanel').classList.remove('on');
         document.getElementById('antiquePanel').classList.remove('on');
+        document.getElementById('antiqueModelsPanel').classList.remove('on');
+        document.getElementById('antiqueDetailPanel').classList.remove('on');
         document.getElementById('detailPanel').classList.remove('on');
     } else if (tab === 'vehicle') {
         openVehiclePanel();
@@ -13654,6 +13674,8 @@ function goHome() {
     document.getElementById('renameModelModal').classList.remove('on');
     document.getElementById('incompleteVehiclesPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
+    document.getElementById('antiqueModelsPanel').classList.remove('on');
+    document.getElementById('antiqueDetailPanel').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -15610,57 +15632,117 @@ function openVehiclePanel() {
 }
 
 // ===================== ANTIQUE REFERENCE =====================
+let selectedAntiqueMake = null;
+let selectedAntiqueModel = null;
+
 function openAntiquePanel() {
-    renderAntiqueList();
+    renderAntiqueMakeList();
     document.getElementById('antiquePanel').classList.add('on');
 }
 
 function closeAntiquePanel() {
-    // Just close the overlay; the Vehicle Lookup page remains underneath.
+    // Close the whole antique flow; the Vehicle Lookup page remains underneath.
+    document.getElementById('antiqueDetailPanel').classList.remove('on');
+    document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
 }
 
-function renderAntiqueList() {
-    const q = (document.getElementById('antiqueSearch')?.value || '').toLowerCase().trim();
-    const rows = ANTIQUE_REFERENCE.filter(e => !q ||
-        [e.make, e.model, e.blank, e.keyway, e.codeSeries, e.notes]
-            .some(f => String(f || '').toLowerCase().includes(q)));
+function closeAntiqueModelsPanel() {
+    document.getElementById('antiqueDetailPanel').classList.remove('on');
+    document.getElementById('antiqueModelsPanel').classList.remove('on');
+}
 
-    const container = document.getElementById('antiqueList');
-    if (rows.length === 0) {
-        container.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">${q ? 'No antique entries match your search.' : 'No antique reference entries yet.'}</div>`;
-        return;
-    }
+function closeAntiqueDetailPanel() {
+    document.getElementById('antiqueDetailPanel').classList.remove('on');
+}
 
-    // Group by make, sort entries by model then start year
-    const byMake = {};
-    rows.forEach(e => { (byMake[e.make] = byMake[e.make] || []).push(e); });
-    const makes = Object.keys(byMake).sort((a, b) => a.localeCompare(b));
-
-    const field = (label, val) => val
+// Small reusable detail-field row
+function antiqueField(label, val) {
+    return val
         ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;"><span style="color:var(--dim);font-size:12px;">${label}</span><span style="color:var(--text);font-size:13px;font-weight:600;text-align:right;">${val}</span></div>`
         : '';
+}
 
+// Step 1: list of manufacturers
+function renderAntiqueMakeList() {
+    const q = (document.getElementById('antiqueSearch')?.value || '').toLowerCase().trim();
+    const byMake = {};
+    ANTIQUE_REFERENCE.forEach(e => { (byMake[e.make] = byMake[e.make] || []).push(e); });
+    const makes = Object.keys(byMake)
+        .filter(m => !q || m.toLowerCase().includes(q))
+        .sort((a, b) => a.localeCompare(b));
+
+    const container = document.getElementById('antiqueMakeList');
+    if (makes.length === 0) {
+        container.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">${q ? 'No makes match your search.' : 'No antique reference entries yet.'}</div>`;
+        return;
+    }
     container.innerHTML = makes.map(make => {
-        const entries = byMake[make].sort((a, b) =>
-            (a.model || '').localeCompare(b.model || '') || (a.startYear || 0) - (b.startYear || 0));
-        const cards = entries.map(e => `
-            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">
-                    <span style="font-size:15px;font-weight:700;color:var(--text);">${e.model || 'Most models'}</span>
-                    <span style="font-size:13px;color:var(--accent);font-weight:600;white-space:nowrap;">${formatYearRange(e)}</span>
-                </div>
-                ${field('Key Blank', e.blank)}
-                ${field('Keyway', e.keyway)}
-                ${field('Code Series', e.codeSeries)}
-                ${e.notes ? `<div style="margin-top:8px;font-size:12px;color:var(--dim);font-style:italic;">${e.notes}</div>` : ''}
-            </div>`).join('');
+        const models = new Set(byMake[make].map(e => e.model || 'Most models'));
+        const n = models.size;
         return `
-            <div style="padding:8px 12px 0;">
-                <div style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:8px 0;">${make}</div>
-                ${cards}
+            <div class="vehicle-card" onclick="selectAntiqueMake('${make.replace(/'/g, "\\'")}')">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${make}</div>
+                    <span style="color:var(--dim);font-size:12px;">${n} model${n !== 1 ? 's' : ''}</span>
+                </div>
             </div>`;
     }).join('');
+}
+
+// Step 2: models for the selected make
+function selectAntiqueMake(make) {
+    selectedAntiqueMake = make;
+    document.getElementById('antiqueModelsPanelTitle').textContent = `📖 ${make}`;
+    renderAntiqueModelsList(make);
+    document.getElementById('antiqueModelsPanel').classList.add('on');
+}
+
+function renderAntiqueModelsList(make) {
+    const entries = ANTIQUE_REFERENCE.filter(e => e.make === make);
+    const byModel = {};
+    entries.forEach(e => { const m = e.model || 'Most models'; (byModel[m] = byModel[m] || []).push(e); });
+    const models = Object.keys(byModel).sort((a, b) => a.localeCompare(b));
+
+    document.getElementById('antiqueModelsList').innerHTML = models.map(model => {
+        const list = byModel[model];
+        const minY = Math.min(...list.map(e => e.startYear || 0));
+        const maxY = Math.max(...list.map(e => e.endYear || e.startYear || 0));
+        const yearSummary = minY ? (minY === maxY ? String(minY) : `${minY} - ${maxY}`) : '';
+        return `
+            <div class="vehicle-card" onclick="selectAntiqueModel('${model.replace(/'/g, "\\'")}')">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${model}</div>
+                    <span style="color:var(--accent);font-size:12px;font-weight:600;white-space:nowrap;">${yearSummary}</span>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// Step 3: detail entries for the selected make + model
+function selectAntiqueModel(model) {
+    selectedAntiqueModel = model;
+    document.getElementById('antiqueDetailTitle').textContent = `📖 ${selectedAntiqueMake} ${model}`;
+    renderAntiqueDetail(selectedAntiqueMake, model);
+    document.getElementById('antiqueDetailPanel').classList.add('on');
+}
+
+function renderAntiqueDetail(make, model) {
+    const entries = ANTIQUE_REFERENCE
+        .filter(e => e.make === make && (e.model || 'Most models') === model)
+        .sort((a, b) => (a.startYear || 0) - (b.startYear || 0));
+
+    document.getElementById('antiqueDetailList').innerHTML = entries.map(e => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin:8px 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">
+                <span style="font-size:15px;font-weight:700;color:var(--text);">${e.model || 'Most models'}</span>
+                <span style="font-size:13px;color:var(--accent);font-weight:600;white-space:nowrap;">${formatYearRange(e)}</span>
+            </div>
+            ${antiqueField('Key Blank', e.blank)}
+            ${antiqueField('Keyway', e.keyway)}
+            ${antiqueField('Code Series', e.codeSeries)}
+            ${e.notes ? `<div style="margin-top:8px;font-size:12px;color:var(--dim);font-style:italic;">${e.notes}</div>` : ''}
+        </div>`).join('');
 }
 
 function closeVehiclePanel() {
