@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v164</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v165</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4601,6 +4601,14 @@
                 <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Buttons</label>
                 <select id="advButtonsFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
                     <option value="">Any Buttons</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;">Removable Sleeve</label>
+                <select id="advSleeveFilter" class="modal-input" style="width:100%;padding:8px;" onchange="applyFilters()">
+                    <option value="">Any</option>
+                    <option value="yes">Has Removable Sleeve</option>
+                    <option value="no">No Sleeve</option>
                 </select>
             </div>
             <div>
@@ -5096,7 +5104,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v164<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v165<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5556,11 +5564,17 @@
         </div>
         <div class="modal-input-group">
             <label>Chip Type</label>
-            <select class="modal-input" id="editKeyInfoChip" onchange="handleCustomDropdown(this, 'editKeyInfoChipOther')">
+            <select class="modal-input" id="editKeyInfoChip" onchange="handleCustomDropdown(this, 'editKeyInfoChipOther'); toggleEditKeyInfoSleeve()">
                 <option value="">-- None --</option>
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="modal-input" id="editKeyInfoChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:6px;">
+        </div>
+        <div class="modal-input-group" id="editKeyInfoSleeveSection" style="display:none;align-items:center;gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="editKeyInfoSleeve" style="width:18px;height:18px;cursor:pointer;">
+                <span>Removable Sleeve (chip can be swapped)</span>
+            </label>
         </div>
         <div class="modal-input-group" style="display:flex;align-items:center;gap:12px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -6954,9 +6968,13 @@
 
         <div class="add-inv-section" id="customKeyChipSection">
             <label>Chip Type</label>
-            <select class="add-inv-select" id="customKeyChip" onchange="handleCustomDropdown(this, 'customKeyChipOther')">
+            <select class="add-inv-select" id="customKeyChip" onchange="handleCustomDropdown(this, 'customKeyChipOther'); toggleCustomKeySleeve()">
             </select>
             <input type="text" class="add-inv-input" id="customKeyChipOther" placeholder="Enter custom chip type..." style="display:none;margin-top:8px;">
+            <label id="customKeySleeveRow" style="display:none;align-items:center;gap:8px;cursor:pointer;margin-top:10px;">
+                <input type="checkbox" id="customKeySleeve" style="width:18px;height:18px;cursor:pointer;">
+                <span>Removable sleeve (chip can be swapped)</span>
+            </label>
         </div>
 
         <div class="add-inv-section">
@@ -9764,12 +9782,29 @@ function openEditKeyInfoModal(idx) {
     document.getElementById('editKeyInfoIsVATS').checked = key.isVATS || false;
     toggleEditKeyInfoVATS();
 
+    // Removable Sleeve checkbox (visible only when a chip type is set)
+    document.getElementById('editKeyInfoSleeve').checked = key.removableSleeve || false;
+    toggleEditKeyInfoSleeve();
+
     document.getElementById('editKeyInfoModal').classList.add('on');
 }
 
 function toggleEditKeyInfoVATS() {
     const isVATS = document.getElementById('editKeyInfoIsVATS').checked;
     document.getElementById('editKeyInfoVATSSection').style.display = isVATS ? 'block' : 'none';
+}
+
+// Removable Sleeve applies to any key with a chip — show only when a Chip Type is set.
+function toggleEditKeyInfoSleeve() {
+    const chip = document.getElementById('editKeyInfoChip').value;
+    const section = document.getElementById('editKeyInfoSleeveSection');
+    if (!section) return;
+    if (chip) {
+        section.style.display = 'flex';
+    } else {
+        section.style.display = 'none';
+        document.getElementById('editKeyInfoSleeve').checked = false;
+    }
 }
 
 function closeEditKeyInfoModal() {
@@ -9827,6 +9862,8 @@ function saveEditKeyInfo() {
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
     const newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
     const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
+    // Removable sleeve only applies when a chip is set, otherwise force false.
+    const newRemovableSleeve = !!newChip && document.getElementById('editKeyInfoSleeve').checked;
 
     // Build the multi-FCC ID array. Primary first, then any extras the user added.
     let newFccids = null;
@@ -9863,6 +9900,7 @@ function saveEditKeyInfo() {
             customKeys[customIdx].notes = newNotes;
             customKeys[customIdx].isVATS = newIsVATS;
             customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
+            customKeys[customIdx].removableSleeve = newRemovableSleeve;
             saveCustomKeys();
         }
         // Also update DB entry in memory
@@ -9880,6 +9918,7 @@ function saveEditKeyInfo() {
         key.notes = newNotes;
         key.isVATS = newIsVATS;
         key.secondaryKeyPartNumber = newSecondaryPN;
+        key.removableSleeve = newRemovableSleeve;
     } else {
         // For base DB keys, save overrides
         const overrides = {};
@@ -9896,6 +9935,7 @@ function saveEditKeyInfo() {
         overrides.notes = newNotes;
         overrides.isVATS = newIsVATS;
         overrides.secondaryKeyPartNumber = newSecondaryPN;
+        overrides.removableSleeve = newRemovableSleeve;
 
         keyInfoOverrides[pn] = overrides;
         saveKeyInfoOverrides();
@@ -10047,6 +10087,7 @@ function clearAdvancedFilters() {
     document.getElementById('advKeyTypeFilter').value = '';
     document.getElementById('advFrequencyFilter').value = '';
     document.getElementById('advButtonsFilter').value = '';
+    document.getElementById('advSleeveFilter').value = '';
     document.getElementById('advFccFilter').value = '';
     applyFilters();
 }
@@ -10057,9 +10098,10 @@ function updateAdvancedFilterCount() {
     const advKeyType = document.getElementById('advKeyTypeFilter')?.value || '';
     const advFrequency = document.getElementById('advFrequencyFilter')?.value || '';
     const advButtons = document.getElementById('advButtonsFilter')?.value || '';
+    const advSleeve = document.getElementById('advSleeveFilter')?.value || '';
     const advFcc = document.getElementById('advFccFilter')?.value || '';
 
-    const count = [advKeyway, advChip, advKeyType, advFrequency, advButtons, advFcc].filter(v => v).length;
+    const count = [advKeyway, advChip, advKeyType, advFrequency, advButtons, advSleeve, advFcc].filter(v => v).length;
     const countEl = document.getElementById('advancedFilterCount');
     if (countEl) {
         countEl.textContent = count > 0 ? `${count} advanced filter${count > 1 ? 's' : ''} active` : '';
@@ -10215,6 +10257,7 @@ function resetFilters() {
         document.getElementById('advKeyTypeFilter').value = '';
         document.getElementById('advFrequencyFilter').value = '';
         document.getElementById('advButtonsFilter').value = '';
+        if (document.getElementById('advSleeveFilter')) document.getElementById('advSleeveFilter').value = '';
         document.getElementById('advFccFilter').value = '';
     }
     // Rebuild all dropdowns with full options
@@ -10326,6 +10369,7 @@ function applyFilters() {
     const advKeyType = document.getElementById('advKeyTypeFilter')?.value || '';
     const advFrequency = document.getElementById('advFrequencyFilter')?.value || '';
     const advButtons = document.getElementById('advButtonsFilter')?.value || '';
+    const advSleeve = document.getElementById('advSleeveFilter')?.value || '';
     const advFcc = normalizeFccId(document.getElementById('advFccFilter')?.value || '');
 
     // Debug logging
@@ -10380,6 +10424,8 @@ function applyFilters() {
         if (advKeyType && String(key.keyType || '').toLowerCase().trim() !== advKeyType.toLowerCase().trim()) return false;
         if (advFrequency && String(key.frequency || '').toLowerCase().trim() !== advFrequency.toLowerCase().trim()) return false;
         if (advButtons && !String(key.buttons || '').toLowerCase().includes(advButtons.toLowerCase())) return false;
+        if (advSleeve === 'yes' && !key.removableSleeve) return false;
+        if (advSleeve === 'no' && key.removableSleeve) return false;
         if (advFcc && !getKeyFccIds(key).some(f => normalizeFccId(f).includes(advFcc))) return false;
 
         return true;
@@ -10450,11 +10496,14 @@ function renderKeys() {
         const iKeyBadge = iKeyTagged
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey</span>`
             : '';
+        const sleeveBadge = key.removableSleeve
+            ? `<span style="display:inline-block;padding:2px 7px;background:#0a7d6b;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">Sleeve</span>`
+            : '';
 
         return `
             <div class="key-card" onclick="openKey(${idx})">
                 <div class="key-card-header">
-                    <span class="key-pn">${key.pn || 'N/A'}${iKeyBadge}</span>
+                    <span class="key-pn">${key.pn || 'N/A'}${iKeyBadge}${sleeveBadge}</span>
                     <span class="key-type">${key.keyType || 'Unknown'}</span>
                 </div>
                 <div class="key-info">
@@ -19151,10 +19200,13 @@ function openVehicleDetail(vehicleKey) {
         const iKeyBadgeVeh = (vehicleIKeyStylesArr.length > 0 && normalizeKeyType(key.keyType) === 'Proximity')
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey ✓</span>`
             : '';
+        const sleeveBadgeVeh = key.removableSleeve
+            ? `<span style="display:inline-block;padding:2px 7px;background:#0a7d6b;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">Sleeve</span>`
+            : '';
         return `
             <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${String(key.pn).replace(/'/g, "\\'")}')" style="cursor:pointer;">
                 <div class="vehicle-key-info">
-                    <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}${iKeyBadgeVeh}</h4>
+                    <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}${iKeyBadgeVeh}${sleeveBadgeVeh}</h4>
                     <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
                 </div>
                 <div class="vehicle-key-stock">
@@ -21985,6 +22037,9 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyChipOther').style.display = 'none';
         document.getElementById('customKeyChipOther').value = '';
         document.getElementById('customKeyChipSection').style.display = 'block';
+        // Reset removable sleeve
+        document.getElementById('customKeySleeve').checked = false;
+        document.getElementById('customKeySleeveRow').style.display = 'none';
 
         // Reset other dropdowns
         document.getElementById('customKeyType').value = '';
@@ -22023,6 +22078,23 @@ function toggleCustomKeyChipType() {
         document.getElementById('customKeyChip').value = '';
     } else {
         chipSection.style.display = 'block';
+    }
+    toggleCustomKeySleeve();
+}
+
+// Removable Sleeve applies to any key with a chip — show only when a Chip Type is set
+// and the chip section itself is visible.
+function toggleCustomKeySleeve() {
+    const row = document.getElementById('customKeySleeveRow');
+    if (!row) return;
+    const chipSection = document.getElementById('customKeyChipSection');
+    const chip = document.getElementById('customKeyChip').value;
+    const show = chip && (!chipSection || chipSection.style.display !== 'none');
+    if (show) {
+        row.style.display = 'flex';
+    } else {
+        row.style.display = 'none';
+        document.getElementById('customKeySleeve').checked = false;
     }
 }
 
@@ -22191,6 +22263,9 @@ function copyCustomKey(idx) {
     if (typeof toggleCustomKeyChipType === 'function') toggleCustomKeyChipType();
 
     setDropdownOrOther('customKeyChip', 'customKeyChipOther', source.chip);
+    // Removable sleeve follows the copied chip key.
+    document.getElementById('customKeySleeve').checked = !!source.removableSleeve;
+    toggleCustomKeySleeve();
     setDropdownOrOther('customKeyButtons', 'customKeyButtonsOther', source.buttons);
     setDropdownOrOther('customKeyFreq', 'customKeyFreqOther', source.frequency);
 
@@ -22884,6 +22959,8 @@ function saveCustomKey() {
     const keyType = getDropdownValue('customKeyType', 'customKeyTypeOther');
     const buttons = getDropdownValue('customKeyButtons', 'customKeyButtonsOther');
     const frequency = getDropdownValue('customKeyFreq', 'customKeyFreqOther');
+    // Removable sleeve only applies when a chip is set.
+    const removableSleeve = !!chip && document.getElementById('customKeySleeve').checked;
     
     // Gather vehicle data
     const vehicles = [];
@@ -22968,7 +23045,8 @@ function saveCustomKey() {
         vehicles: vehicles,
         isCustom: true,
         addedDate: new Date().toISOString(),
-        isVATS: isVATS
+        isVATS: isVATS,
+        removableSleeve: removableSleeve
     };
 
     // Add to DB array
