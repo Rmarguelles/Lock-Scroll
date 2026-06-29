@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v163</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v164</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5096,7 +5096,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v163<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v164<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5332,7 +5332,8 @@
 <div class="modal" id="addDropdownValueModal">
     <div class="modal-content" style="max-width:400px;">
         <div class="modal-title" id="addDropdownValueTitle">Add Value</div>
-        <div class="modal-input-group">
+        <div id="addDropdownValueBuilder" style="display:none;"></div>
+        <div class="modal-input-group" id="addDropdownValueInputGroup">
             <label>New Value</label>
             <input type="text" class="modal-input" id="addDropdownValueInput">
         </div>
@@ -5606,6 +5607,7 @@
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="modal-input" id="editKeyInfoButtonsOther" placeholder="Enter custom button config..." style="display:none;margin-top:6px;">
+            <div id="editKeyInfoButtonsBuilder" style="display:none;"></div>
         </div>
         <div class="modal-input-group">
             <label>Logo</label>
@@ -7003,6 +7005,7 @@
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="add-inv-input" id="customKeyButtonsOther" placeholder="e.g., 4 Button: L, U, P, X (Lock, Unlock, Panic, Custom)" style="display:none;margin-top:8px;">
+            <div id="customKeyButtonsBuilder" style="display:none;"></div>
         </div>
         
         <div class="add-inv-section">
@@ -8145,6 +8148,94 @@ const AUTEL_IKEY_STYLES = [
     { id: 'autel',     label: 'Autel Style'     },
     { id: 'chip',      label: 'Universal Chip'  },
 ];
+
+// Canonical, ordered list of remote button functions. Standard order reproduces
+// existing values like "5 Button: L, U, P, T, RS (...)". Used by the checkbox
+// button-builder so users don't have to remember abbreviations or formatting.
+const BUTTON_FUNCTIONS = [
+    { abbr: 'L',      name: 'Lock' },
+    { abbr: 'U',      name: 'Unlock' },
+    { abbr: 'P',      name: 'Panic' },
+    { abbr: 'T',      name: 'Trunk' },
+    { abbr: 'H',      name: 'Hatch' },
+    { abbr: 'TG',     name: 'Tailgate' },
+    { abbr: 'RG',     name: 'Rear Glass' },
+    { abbr: 'G',      name: 'Gate' },
+    { abbr: 'PSD',    name: 'Power Sliding Door' },
+    { abbr: 'PSD2',   name: 'Dual Power Sliding Doors' },
+    { abbr: 'RS',     name: 'Remote Start' },
+    { abbr: 'HTL',    name: 'Head & Tail Lights' },
+    { abbr: 'AC',     name: 'Air Conditioning' },
+    { abbr: 'CH',     name: 'Charge' },
+    { abbr: 'RSPA-F', name: 'Remote Self-Parking Front' },
+    { abbr: 'RSPA-R', name: 'Remote Self-Parking Rear' },
+];
+
+// Build the canonical "{n} Button: {abbrs} ({names})" string from a set of abbrevs.
+function buildButtonsString(selectedAbbrs) {
+    const set = new Set(selectedAbbrs);
+    const chosen = BUTTON_FUNCTIONS.filter(f => set.has(f.abbr));
+    if (chosen.length === 0) return 'None (Transponder Only)';
+    const abbrs = chosen.map(f => f.abbr).join(', ');
+    const names = chosen.map(f => f.name).join(', ');
+    return `${chosen.length} Button: ${abbrs} (${names})`;
+}
+
+// Extract the known abbrevs from an existing buttons string so the builder can
+// pre-check the right boxes when editing a custom value.
+function parseButtonsString(str) {
+    if (!str) return [];
+    const s = String(str);
+    const colon = s.indexOf(':');
+    const paren = s.indexOf('(');
+    // The abbrevs live between the colon and the opening paren; fall back to the
+    // whole string if the format is unexpected.
+    const segment = (colon >= 0 && paren > colon) ? s.slice(colon + 1, paren)
+        : (colon >= 0 ? s.slice(colon + 1) : s);
+    const tokens = segment.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+    const valid = new Set(BUTTON_FUNCTIONS.map(f => f.abbr.toUpperCase()));
+    return BUTTON_FUNCTIONS
+        .filter(f => tokens.includes(f.abbr.toUpperCase()))
+        .map(f => f.abbr);
+}
+
+// Render the checkbox button-builder into containerId. Every change writes the
+// generated string into the existing targetInputId text input (so all existing
+// save/read logic keeps working unchanged) and updates a live preview line.
+function renderButtonBuilder(containerId, targetInputId, preselectAbbrs) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const preset = new Set(preselectAbbrs || []);
+    const safeContainer = containerId.replace(/'/g, "\\'");
+    const checks = BUTTON_FUNCTIONS.map(f => {
+        const checked = preset.has(f.abbr) ? ' checked' : '';
+        const safeAbbr = f.abbr.replace(/"/g, '&quot;');
+        return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:3px 0;">
+            <input type="checkbox" value="${safeAbbr}" data-btnbuilder="${containerId}" onchange="updateButtonBuilder('${safeContainer}','${targetInputId.replace(/'/g, "\\'")}')" style="cursor:pointer;"${checked}>
+            <span>${f.name} <span style="color:var(--dim);">(${f.abbr})</span></span>
+        </label>`;
+    }).join('');
+    container.innerHTML = `
+        <div style="margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+            <div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:8px;">Select the buttons on this remote</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;">${checks}</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--accent);font-weight:600;word-break:break-word;" id="${containerId}_preview"></div>
+        </div>`;
+    // Seed the preview/value from the initial selection.
+    updateButtonBuilder(containerId, targetInputId);
+}
+
+// Recompute the buttons string from checked boxes; sync the target input + preview.
+function updateButtonBuilder(containerId, targetInputId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const selected = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    const value = selected.length === 0 ? '' : buildButtonsString(selected);
+    const target = document.getElementById(targetInputId);
+    if (target) target.value = value;
+    const preview = document.getElementById(containerId + '_preview');
+    if (preview) preview.textContent = value || 'No buttons selected';
+}
 const AUTEL_IKEY_VEHICLE_DB = [
     { make: 'Acura', model: 'ILX', startYear: 2013, endYear: 2015, style: 'honda' },
     { make: 'Acura', model: 'ILX', startYear: 2016, endYear: 2018, style: 'honda' },
@@ -9507,6 +9598,10 @@ function populateEditKeyInfoDropdown(selectId, otherId, values, currentValue) {
         select.innerHTML += '<option value="' + v.replace(/"/g, '&quot;') + '">' + v + '</option>';
     });
     select.innerHTML += '<option value="__other__">+ Other (custom)</option>';
+    // Buttons select gets a checkbox builder above the manual-entry input.
+    const isButtons = selectId === 'editKeyInfoButtons';
+    const builderId = isButtons ? otherId.replace('Other', 'Builder') : null;
+    const builder = builderId ? document.getElementById(builderId) : null;
     if (currentValue) {
         // Check if value exists in the options
         const exists = values.some(v => v === String(currentValue));
@@ -9514,16 +9609,22 @@ function populateEditKeyInfoDropdown(selectId, otherId, values, currentValue) {
             select.value = String(currentValue);
             otherInput.style.display = 'none';
             otherInput.value = '';
+            if (builder) builder.style.display = 'none';
         } else {
             // Value not in dropdown - show as "Other"
             select.value = '__other__';
             otherInput.style.display = 'block';
             otherInput.value = currentValue;
+            if (builder) {
+                builder.style.display = 'block';
+                renderButtonBuilder(builderId, otherId, parseButtonsString(currentValue));
+            }
         }
     } else {
         select.value = '';
         otherInput.style.display = 'none';
         otherInput.value = '';
+        if (builder) builder.style.display = 'none';
     }
 }
 
@@ -21893,6 +21994,8 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyButtons').value = '';
         document.getElementById('customKeyButtonsOther').style.display = 'none';
         document.getElementById('customKeyButtonsOther').value = '';
+        const customKeyButtonsBuilderEl = document.getElementById('customKeyButtonsBuilder');
+        if (customKeyButtonsBuilderEl) { customKeyButtonsBuilderEl.style.display = 'none'; customKeyButtonsBuilderEl.innerHTML = ''; }
 
         document.getElementById('customKeyFreq').value = '';
         document.getElementById('customKeyFreqOther').style.display = 'none';
@@ -22015,12 +22118,22 @@ function populateCustomKeyFrequencyDropdown() {
 
 function handleCustomDropdown(select, otherInputId) {
     const otherInput = document.getElementById(otherInputId);
+    // Buttons fields get a checkbox builder above the manual-entry input.
+    const isButtons = otherInputId.includes('Buttons');
+    const builderId = isButtons ? otherInputId.replace('Other', 'Builder') : null;
+    const builder = builderId ? document.getElementById(builderId) : null;
     if (select.value === '__other__') {
         otherInput.style.display = 'block';
-        otherInput.focus();
+        if (builder) {
+            builder.style.display = 'block';
+            renderButtonBuilder(builderId, otherInputId, []);
+        } else {
+            otherInput.focus();
+        }
     } else {
         otherInput.style.display = 'none';
         otherInput.value = '';
+        if (builder) builder.style.display = 'none';
     }
 }
 
@@ -22054,6 +22167,12 @@ function copyCustomKey(idx) {
             sel.value = '__other__';
             other.style.display = 'block';
             other.value = value;
+            // Buttons field: reveal + pre-check the checkbox builder for the custom value.
+            if (otherInputId && otherInputId.includes('Buttons')) {
+                const bId = otherInputId.replace('Other', 'Builder');
+                const b = document.getElementById(bId);
+                if (b) { b.style.display = 'block'; renderButtonBuilder(bId, otherInputId, parseButtonsString(value)); }
+            }
         }
     };
 
@@ -24702,6 +24821,18 @@ function openAddDropdownValueModal() {
     const category = document.getElementById('dropdownDataCategory').value;
     document.getElementById('addDropdownValueTitle').textContent = 'Add ' + getDropdownCategoryLabel(category);
     document.getElementById('addDropdownValueInput').value = '';
+    // Buttons category gets the checkbox builder instead of a bare text input.
+    const builder = document.getElementById('addDropdownValueBuilder');
+    const inputGroup = document.getElementById('addDropdownValueInputGroup');
+    if (category === 'buttons') {
+        builder.style.display = 'block';
+        if (inputGroup) inputGroup.style.display = 'none';
+        renderButtonBuilder('addDropdownValueBuilder', 'addDropdownValueInput', []);
+    } else {
+        builder.style.display = 'none';
+        builder.innerHTML = '';
+        if (inputGroup) inputGroup.style.display = '';
+    }
     document.getElementById('addDropdownValueModal').classList.add('on');
 }
 
