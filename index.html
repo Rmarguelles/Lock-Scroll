@@ -9698,6 +9698,8 @@ let fidAssignments = {"SY5KHFNA433":"HY-015","KBRASTU15, CWTWB1U733, CWTWB1U821"
 let fidMerges = {};
 // Map of obsolete part number -> replacement part number (case-insensitive lookup)
 let pnSupersessions = {};
+// Map of original catalog PN -> current display PN, for renames of base (non-custom) keys
+let pnRenames = {};
 // Feature flags — set to true to re-enable
 let ENABLE_QUICK_MOVE_TO_GROUP = false;
 let purchaseHistory = [];
@@ -9882,6 +9884,7 @@ async function init() {
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
+    applyPnRenamesToDB();
     await runFccidMergeMigration();
     await runH75xMergeMigration();
     initializeVendorPricesFromDB();
@@ -10025,6 +10028,9 @@ async function loadLocalData() {
 
             const savedPnSupersessions = await loadFromIndexedDB('pnSupersessions');
             if (savedPnSupersessions) pnSupersessions = savedPnSupersessions;
+
+            const savedPnRenames = await loadFromIndexedDB('pnRenames');
+            if (savedPnRenames) pnRenames = savedPnRenames;
             
             const savedPurchaseHistory = await loadFromIndexedDB('purchaseHistory');
             if (savedPurchaseHistory) purchaseHistory = savedPurchaseHistory;
@@ -10171,6 +10177,11 @@ function savePnSupersessions() {
     triggerAutoSync();
 }
 
+function savePnRenames() {
+    saveToIndexedDB('pnRenames', pnRenames);
+    triggerAutoSync();
+}
+
 function savePurchaseHistory() {
     saveToIndexedDB('purchaseHistory', purchaseHistory);
     triggerAutoSync();
@@ -10218,12 +10229,27 @@ function registerDropdownValue(category, value) {
     saveCustomDropdownValues();
 }
 
+// Resolves a base-DB index for an override map key that may be either the
+// original catalog PN or a PN it was later renamed to — not every write site
+// is guaranteed to use the original PN, so reads fall back to checking pnRenames.
+function findBaseDbIndexForPn(storedPn) {
+    // Use == instead of === because object keys are always strings
+    // but DB pn values can be numbers (e.g., 40076 vs "40076")
+    let idx = DB.findIndex(k => k.pn == storedPn && !k.isCustom);
+    if (idx >= 0) return idx;
+    for (const originalPn in pnRenames) {
+        if (String(pnRenames[originalPn]) === String(storedPn)) {
+            idx = DB.findIndex(k => k.pn == originalPn && !k.isCustom);
+            if (idx >= 0) return idx;
+        }
+    }
+    return -1;
+}
+
 function applyVehicleOverridesToDB() {
     // Apply saved vehicle overrides to base database keys
     for (const pn in vehicleOverrides) {
-        // Use == instead of === because object keys are always strings
-        // but DB pn values can be numbers (e.g., 40076 vs "40076")
-        const idx = DB.findIndex(k => k.pn == pn && !k.isCustom);
+        const idx = findBaseDbIndexForPn(pn);
         if (idx >= 0) {
             DB[idx].vehicles = vehicleOverrides[pn];
         }
@@ -10233,7 +10259,7 @@ function applyVehicleOverridesToDB() {
 function applyKeyInfoOverridesToDB() {
     // Apply saved key info overrides to base database keys
     for (const pn in keyInfoOverrides) {
-        const idx = DB.findIndex(k => k.pn == pn && !k.isCustom);
+        const idx = findBaseDbIndexForPn(pn);
         if (idx >= 0) {
             const overrides = keyInfoOverrides[pn];
             for (const field in overrides) {
@@ -10248,6 +10274,70 @@ function applyKeyInfoOverridesToDB() {
 function saveKeyInfoOverrides() {
     saveToIndexedDB('keyInfoOverrides', keyInfoOverrides);
     triggerAutoSync();
+}
+
+// Renames a base catalog key's PN in-memory. Must run AFTER applyVehicleOverridesToDB
+// and applyKeyInfoOverridesToDB, since those match DB entries by the original hardcoded
+// PN — renaming first would make them unable to find their target.
+function applyPnRenamesToDB() {
+    for (const originalPn in pnRenames) {
+        const idx = DB.findIndex(k => k.pn == originalPn && !k.isCustom);
+        if (idx >= 0) {
+            DB[idx].pn = pnRenames[originalPn];
+        }
+    }
+}
+
+// Given a base catalog key's current (possibly renamed) PN, finds the original
+// hardcoded PN it was loaded under, so overrides can be looked up/stored under a
+// stable key regardless of how many times the display PN has been changed.
+function getOriginalCatalogPn(currentPn) {
+    for (const originalPn in pnRenames) {
+        if (String(pnRenames[originalPn]) === String(currentPn)) return originalPn;
+    }
+    return currentPn;
+}
+
+// Migrates the persisted stores that are keyed by a key's *current* display PN
+// (as opposed to overrides/vehicleOverrides, which stay keyed by the stable
+// original catalog PN forever). Used whenever a PN is renamed, custom or base.
+function migratePnLiveStores(oldPn, newPn) {
+    if (stockData[oldPn] !== undefined) {
+        stockData[newPn] = stockData[oldPn];
+        delete stockData[oldPn];
+        saveStock();
+    }
+    if (vendorPrices[oldPn] !== undefined) {
+        vendorPrices[newPn] = vendorPrices[oldPn];
+        delete vendorPrices[oldPn];
+        saveVendorPrices();
+    }
+    if (autelIKeyCompatibility[oldPn] !== undefined) {
+        autelIKeyCompatibility[newPn] = autelIKeyCompatibility[oldPn];
+        delete autelIKeyCompatibility[oldPn];
+        saveAutelIKeyCompatibility();
+    }
+    let historyChanged = false;
+    purchaseHistory.forEach(p => {
+        if (String(p.partNumber) === oldPn) {
+            p.partNumber = newPn;
+            historyChanged = true;
+        }
+    });
+    if (historyChanged) savePurchaseHistory();
+
+    let supersessionsChanged = false;
+    for (const k of Object.keys(pnSupersessions)) {
+        if (k.toLowerCase() === oldPn.toLowerCase()) {
+            pnSupersessions[newPn] = pnSupersessions[k];
+            if (newPn.toLowerCase() !== k.toLowerCase()) delete pnSupersessions[k];
+            supersessionsChanged = true;
+        } else if (String(pnSupersessions[k]).toLowerCase() === oldPn.toLowerCase()) {
+            pnSupersessions[k] = newPn;
+            supersessionsChanged = true;
+        }
+    }
+    if (supersessionsChanged) savePnSupersessions();
 }
 
 function saveAutelIKeyCompatibility() {
@@ -10403,20 +10493,16 @@ function openEditKeyInfoModal(idx) {
     if (extraInput) extraInput.value = '';
     renderEditKeyInfoExtraFccs();
 
-    // Reset PN field — only custom keys can have their PN edited
+    // Reset PN field — locked by default; unlock button re-enables it for any key
     const pnInput = document.getElementById('editKeyInfoPN');
     pnInput.value = key.pn || '';
     pnInput.disabled = true;
     pnInput.style.opacity = '0.7';
     document.getElementById('editKeyInfoPNWarning').style.display = 'none';
     const unlockBtn = document.getElementById('editKeyInfoPNUnlockBtn');
-    if (key.isCustom) {
-        unlockBtn.style.display = '';
-        unlockBtn.textContent = '\uD83D\uDD12 Edit PN';
-        unlockBtn.style.color = 'var(--accent)';
-    } else {
-        unlockBtn.style.display = 'none';
-    }
+    unlockBtn.style.display = '';
+    unlockBtn.textContent = '\uD83D\uDD12 Edit PN';
+    unlockBtn.style.color = 'var(--accent)';
 
     // Collect unique values from DB for fields without a dedicated category
     const fccIds = new Set();
@@ -10488,7 +10574,7 @@ function saveEditKeyInfo() {
     const oldPn = String(key.pn);
     const pnInput = document.getElementById('editKeyInfoPN');
     const newPnRaw = pnInput.value.trim();
-    const pnChanged = key.isCustom && !pnInput.disabled && newPnRaw && newPnRaw !== oldPn;
+    const pnChanged = !pnInput.disabled && newPnRaw && newPnRaw !== oldPn;
 
     if (pnChanged) {
         const collision = DB.find(k => String(k.pn).toLowerCase() === newPnRaw.toLowerCase() && String(k.pn) !== oldPn);
@@ -10505,15 +10591,25 @@ function saveEditKeyInfo() {
     // Apply PN change before anything else
     if (pnChanged) {
         key.pn = newPnRaw;
-        if (stockData[oldPn] !== undefined) {
-            stockData[newPnRaw] = stockData[oldPn];
-            delete stockData[oldPn];
-            saveStock();
-        }
-        if (keyInfoOverrides[oldPn] !== undefined) {
-            keyInfoOverrides[newPnRaw] = keyInfoOverrides[oldPn];
-            delete keyInfoOverrides[oldPn];
-            saveKeyInfoOverrides();
+        migratePnLiveStores(oldPn, newPnRaw);
+        if (key.isCustom) {
+            if (keyInfoOverrides[oldPn] !== undefined) {
+                keyInfoOverrides[newPnRaw] = keyInfoOverrides[oldPn];
+                delete keyInfoOverrides[oldPn];
+                saveKeyInfoOverrides();
+            }
+        } else {
+            // Base catalog keys are rebuilt from hardcoded source on every load, so
+            // overrides/vehicle overrides must stay keyed by the ORIGINAL catalog PN
+            // forever. The display rename itself is tracked separately in pnRenames
+            // and reapplied last, after the original-PN-keyed overrides are matched.
+            const originalPn = getOriginalCatalogPn(oldPn);
+            if (newPnRaw === originalPn) {
+                delete pnRenames[originalPn];
+            } else {
+                pnRenames[originalPn] = newPnRaw;
+            }
+            savePnRenames();
         }
     }
 
@@ -10606,7 +10702,9 @@ function saveEditKeyInfo() {
         overrides.secondaryKeyPartNumber = newSecondaryPN;
         overrides.removableSleeve = newRemovableSleeve;
 
-        keyInfoOverrides[pn] = overrides;
+        // Keyed by the original catalog PN (stable across renames), not the current
+        // display pn — see applyKeyInfoOverridesToDB/applyPnRenamesToDB ordering.
+        keyInfoOverrides[getOriginalCatalogPn(pn)] = overrides;
         saveKeyInfoOverrides();
 
         // Apply to in-memory DB
@@ -12498,6 +12596,18 @@ function deletePartNumber(idx) {
     saveKeyInfoOverrides();
     delete keyRelationships[pn];
     saveKeyRelationships();
+
+    // If this was a renamed base key, also clean up the entries kept under its
+    // original catalog PN (overrides/vehicleOverrides/pnRenames stay keyed by that).
+    const originalPn = getOriginalCatalogPn(pn);
+    if (originalPn !== pn) {
+        delete vehicleOverrides[originalPn];
+        saveVehicleOverrides();
+        delete keyInfoOverrides[originalPn];
+        saveKeyInfoOverrides();
+        delete pnRenames[originalPn];
+        savePnRenames();
+    }
 
     // Remove from purchase history
     const beforePH = purchaseHistory.length;
