@@ -8801,7 +8801,8 @@ const BUTTON_FUNCTIONS = [
     { abbr: 'RG',     name: 'Rear Glass' },
     { abbr: 'G',      name: 'Gate' },
     { abbr: 'PSD',    name: 'Power Sliding Door' },
-    { abbr: 'PSD2',   name: 'Dual Power Sliding Doors' },
+    // Counts as 2 buttons — separate left/right actuator buttons on the remote.
+    { abbr: 'PSD2',   name: 'Dual Power Sliding Doors', weight: 2 },
     { abbr: 'RS',     name: 'Remote Start' },
     { abbr: 'HTL',    name: 'Head & Tail Lights' },
     { abbr: 'AC',     name: 'Air Conditioning' },
@@ -8815,9 +8816,10 @@ function buildButtonsString(selectedAbbrs) {
     const set = new Set(selectedAbbrs);
     const chosen = BUTTON_FUNCTIONS.filter(f => set.has(f.abbr));
     if (chosen.length === 0) return 'None (Transponder Only)';
+    const count = chosen.reduce((sum, f) => sum + (f.weight || 1), 0);
     const abbrs = chosen.map(f => f.abbr).join(', ');
     const names = chosen.map(f => f.name).join(', ');
-    return `${chosen.length} Button: ${abbrs} (${names})`;
+    return `${count} Button: ${abbrs} (${names})`;
 }
 
 // Extract the known abbrevs from an existing buttons string so the builder can
@@ -23188,7 +23190,7 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyTypeOther').value = '';
         injectSavedOptions('customKeyType', 'keyType', 'Saved', 'customKeyTypeSavedGroup');
 
-        injectSavedOptions('customKeyButtons', 'buttons', 'Saved Configurations', 'customKeyButtonsSavedGroup');
+        injectSavedButtonConfigs('customKeyButtons');
         document.getElementById('customKeyButtons').value = '';
         document.getElementById('customKeyButtonsOther').style.display = 'none';
         document.getElementById('customKeyButtonsOther').value = '';
@@ -23245,6 +23247,42 @@ function injectSavedOptions(selectId, category, groupLabel, groupId) {
     });
     const otherOpt = Array.from(sel.options).find(o => o.value === '__other__');
     if (otherOpt) sel.insertBefore(group, otherOpt); else sel.appendChild(group);
+}
+
+// Maps a "N Button: ..." / "None (Transponder Only)" value to the label of its
+// existing button-count optgroup (see the customKeyButtons markup), so a newly
+// built custom configuration slots in next to configs with the same button
+// count instead of a separate flat "Saved Configurations" group.
+function getButtonsOptgroupLabel(value) {
+    if (!value) return null;
+    if (String(value).toLowerCase().startsWith('none')) return 'No Buttons';
+    const match = String(value).match(/^(\d+)\s*Button/i);
+    if (!match) return null;
+    const count = parseInt(match[1], 10);
+    return count >= 7 ? '7+ Button' : `${count} Button`;
+}
+
+// Like injectSavedOptions, but for the buttons dropdown specifically: instead of
+// a separate "Saved Configurations" group, each saved custom config is inserted
+// into the optgroup matching its own button count.
+function injectSavedButtonConfigs(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const existing = new Set(Array.from(sel.options).map(o => (o.value || '').toLowerCase()));
+    const customs = (customDropdownValues.buttons || []).filter(v => v && !existing.has(String(v).toLowerCase()));
+    customs.forEach(v => {
+        const label = getButtonsOptgroupLabel(v) || 'Other Configurations';
+        let group = Array.from(sel.querySelectorAll('optgroup')).find(g => g.label === label);
+        if (!group) {
+            group = document.createElement('optgroup');
+            group.label = label;
+            const otherOpt = Array.from(sel.options).find(o => o.value === '__other__');
+            if (otherOpt) sel.insertBefore(group, otherOpt); else sel.appendChild(group);
+        }
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        group.appendChild(opt);
+    });
 }
 
 // Removable Sleeve applies to any key with a chip — show only when a Chip Type is set
