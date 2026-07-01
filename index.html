@@ -4540,7 +4540,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v171</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v172</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4663,9 +4663,9 @@
 <!-- Vehicle Lookup Panel - Make Selection -->
 <div class="vehicle-panel" id="vehiclePanel">
     <div class="vehicle-header">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-right:52px;">
-            <button class="back-btn" onclick="closeVehiclePanel()">←</button>
-            <button onclick="openAntiquePanel()" style="background:var(--accent);color:#000;border:none;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Antiques: 1940-1985</button>
+        <div style="position:relative;height:34px;margin-bottom:8px;">
+            <button class="back-btn" style="position:absolute;left:0;top:50%;transform:translateY(-50%);" onclick="closeVehiclePanel()">←</button>
+            <button onclick="openAntiquePanel()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--accent);color:#000;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Antiques: 1940-1985</button>
         </div>
         <div class="vehicle-title">🚗 Vehicle Lookup</div>
         <div class="vehicle-filters">
@@ -4709,6 +4709,26 @@
         <div class="vehicle-title" id="antiqueDetailTitle">📖 Detail</div>
     </div>
     <div class="vehicle-list" id="antiqueDetailList"></div>
+</div>
+
+<!-- Antique Entry Edit Modal -->
+<div class="modal" id="antiqueEditModal" style="z-index:300;">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-title" id="antiqueEditTitle">Edit Antique Entry</div>
+        <input type="hidden" id="antiqueEditId">
+        <div class="modal-input-group"><label>Make</label><input type="text" class="modal-input" id="antiqueEditMake"></div>
+        <div class="modal-input-group"><label>Model</label><input type="text" class="modal-input" id="antiqueEditModel"></div>
+        <div class="modal-input-group"><label>Years <span style="color:var(--dim);font-size:11px;">(e.g. 1965-70)</span></label><input type="text" class="modal-input" id="antiqueEditYears"></div>
+        <div class="modal-input-group"><label>Lock Application <span style="color:var(--dim);font-size:11px;">(Ignition, Door/Trunk, Trunk/GB, All...)</span></label><input type="text" class="modal-input" id="antiqueEditApp"></div>
+        <div class="modal-input-group"><label>Key Blank <span style="color:var(--dim);font-size:11px;">(ILCO/EZ, e.g. X26/MZ9)</span></label><input type="text" class="modal-input" id="antiqueEditBlank"></div>
+        <div class="modal-input-group"><label>Code Series</label><input type="text" class="modal-input" id="antiqueEditCode"></div>
+        <div class="modal-input-group"><label>Substitutes</label><input type="text" class="modal-input" id="antiqueEditSubs"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="deleteAntiqueEntry()" id="antiqueDeleteBtn" style="background:#5a1f1f;color:#fff;">Delete</button>
+            <button class="modal-btn secondary" onclick="closeAntiqueEditModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveAntiqueEditModal()">Save</button>
+        </div>
+    </div>
 </div>
 
 <!-- Vehicle Models Panel - After selecting make -->
@@ -5135,7 +5155,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v171<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v172<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -9857,6 +9877,7 @@ async function init() {
     await loadLocalData();
     await loadCustomKeys();
     await loadCustomVehicles();
+    await loadAntiqueData();
     await loadKeyRelationships();
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
@@ -15987,7 +16008,9 @@ function exportData() {
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
         keyRelationships: keyRelationships,
-        fccRelationships: fccRelationships
+        fccRelationships: fccRelationships,
+        antiqueOverrides: antiqueOverrides,
+        antiqueCustom: antiqueCustom
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -16103,6 +16126,15 @@ function importData(event) {
                 saveCustomVehicles();
             }
 
+            if (data.antiqueOverrides || data.antiqueCustom) {
+                if (data.antiqueOverrides && typeof data.antiqueOverrides === 'object') antiqueOverrides = data.antiqueOverrides;
+                if (Array.isArray(data.antiqueCustom)) {
+                    antiqueCustom = data.antiqueCustom;
+                    antiqueCustomSeq = antiqueCustom.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^c/, '')) || 0), 0);
+                }
+                saveAntiqueData();
+            }
+
             if (data.toolsDatabase) {
                 toolsDatabase = data.toolsDatabase;
                 // Ensure structure integrity
@@ -16214,6 +16246,53 @@ function openVehiclePanel() {
 // ===================== ANTIQUE REFERENCE =====================
 let selectedAntiqueMake = null;
 let selectedAntiqueModel = null;
+// User edits layered on top of the read-only ANTIQUE_REFERENCE book.
+let antiqueOverrides = {}; // { 'b<idx>': {field overrides, or _deleted:true} }
+let antiqueCustom = [];    // user-added rows, each with its own _id 'c<n>'
+let antiqueCustomSeq = 0;
+
+// Best-effort numeric start/end from a years string (handles "1976-80", "1974, 1978", "Pre 1970").
+function parseAntiqueYears(str) {
+    const s = String(str || '');
+    const nums = (s.match(/\b(?:18|19|20)\d{2}\b/g) || []).map(Number);
+    const m = s.match(/\b(\d{4})\s*-\s*(\d{2})\b/); // 2-digit end e.g. 1976-80
+    if (m) { const a = +m[1]; let b = +(String(a).slice(0, 2) + m[2]); if (b < a) b += 100; nums.push(a, b); }
+    if (!nums.length) return [null, null];
+    return [Math.min(...nums), Math.max(...nums)];
+}
+
+// Merge the base book with user overrides/additions; each row gets a stable _id.
+function getAntiqueRows() {
+    const out = [];
+    ANTIQUE_REFERENCE.forEach((base, i) => {
+        const id = 'b' + i;
+        const ov = antiqueOverrides[id];
+        if (ov && ov._deleted) return;
+        out.push(Object.assign({}, base, ov || {}, { _id: id }));
+    });
+    antiqueCustom.forEach(c => out.push(Object.assign({}, c)));
+    return out;
+}
+
+function saveAntiqueData() {
+    saveToIndexedDB('antiqueOverrides', antiqueOverrides);
+    saveToIndexedDB('antiqueCustom', antiqueCustom);
+    triggerAutoSync();
+}
+
+async function loadAntiqueData() {
+    try {
+        const ov = await loadFromIndexedDB('antiqueOverrides');
+        if (ov && typeof ov === 'object') antiqueOverrides = ov;
+        const cu = await loadFromIndexedDB('antiqueCustom');
+        if (cu && Array.isArray(cu)) {
+            antiqueCustom = cu;
+            antiqueCustomSeq = antiqueCustom.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^c/, '')) || 0), 0);
+        }
+    } catch (e) {
+        console.error('Error loading antique data:', e);
+    }
+}
 
 function openAntiquePanel() {
     renderAntiqueMakeList();
@@ -16247,7 +16326,7 @@ function antiqueField(label, val) {
 function renderAntiqueMakeList() {
     const q = (document.getElementById('antiqueSearch')?.value || '').toLowerCase().trim();
     const byMake = {};
-    ANTIQUE_REFERENCE.forEach(e => { (byMake[e.make] = byMake[e.make] || []).push(e); });
+    getAntiqueRows().forEach(e => { (byMake[e.make] = byMake[e.make] || []).push(e); });
     const makes = Object.keys(byMake)
         .filter(m => !q || m.toLowerCase().includes(q))
         .sort((a, b) => a.localeCompare(b));
@@ -16279,7 +16358,7 @@ function selectAntiqueMake(make) {
 }
 
 function renderAntiqueModelsList(make) {
-    const entries = ANTIQUE_REFERENCE.filter(e => e.make === make);
+    const entries = getAntiqueRows().filter(e => e.make === make);
     const byModel = {};
     entries.forEach(e => { const m = e.model || 'Most models'; (byModel[m] = byModel[m] || []).push(e); });
     const models = Object.keys(byModel).sort((a, b) => a.localeCompare(b));
@@ -16308,7 +16387,7 @@ function selectAntiqueModel(model) {
 }
 
 function renderAntiqueDetail(make, model) {
-    const rows = ANTIQUE_REFERENCE.filter(e => e.make === make && (e.model || '') === model);
+    const rows = getAntiqueRows().filter(e => e.make === make && (e.model || '') === model);
 
     // Group by year range (preserve first-seen order, sorted by startYear)
     const groups = {}; const order = [];
@@ -16319,7 +16398,7 @@ function renderAntiqueDetail(make, model) {
     });
     order.sort((a, b) => a.sy - b.sy);
 
-    const html = order.map(({ k }) => {
+    const cards = order.map(({ k }) => {
         const grp = groups[k];
         // sub-group by lock application (preserve order)
         const apps = {}; const aorder = [];
@@ -16330,9 +16409,12 @@ function renderAntiqueDetail(make, model) {
                     r.codeSeries ? `code ${r.codeSeries}` : '',
                     r.substitutes ? `subs ${r.substitutes}` : ''
                 ].filter(Boolean).join('  ·  ');
-                return `<div style="padding:2px 0;">
-                    <span style="font-family:monospace;font-size:14px;font-weight:700;color:var(--text);">${r.blank}</span>
-                    ${meta ? `<div style="font-size:11px;color:var(--dim);margin-left:2px;">${meta}</div>` : ''}
+                return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:2px 0;">
+                    <div>
+                        <span style="font-family:monospace;font-size:14px;font-weight:700;color:var(--text);">${r.blank}</span>
+                        ${meta ? `<div style="font-size:11px;color:var(--dim);margin-left:2px;">${meta}</div>` : ''}
+                    </div>
+                    <button onclick="openAntiqueEditModal('${r._id}')" title="Edit" style="flex:none;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 8px;cursor:pointer;">✏️</button>
                 </div>`;
             }).join('');
             return `<div style="margin-top:8px;">
@@ -16347,7 +16429,93 @@ function renderAntiqueDetail(make, model) {
             </div>`;
     }).join('');
 
-    document.getElementById('antiqueDetailList').innerHTML = html;
+    const addBtn = `<div style="margin:12px;"><button onclick="openAntiqueAddEntry()" style="width:100%;padding:10px;background:transparent;border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">+ Add Entry</button></div>`;
+    document.getElementById('antiqueDetailList').innerHTML = cards + addBtn;
+}
+
+// ---- Antique edit modal ----
+function openAntiqueEditModal(id) {
+    const row = getAntiqueRows().find(r => r._id === id);
+    if (!row) return;
+    document.getElementById('antiqueEditId').value = id;
+    document.getElementById('antiqueEditMake').value = row.make || '';
+    document.getElementById('antiqueEditModel').value = row.model || '';
+    document.getElementById('antiqueEditYears').value = row.years || '';
+    document.getElementById('antiqueEditApp').value = row.application || '';
+    document.getElementById('antiqueEditCode').value = row.codeSeries || '';
+    document.getElementById('antiqueEditBlank').value = row.blank || '';
+    document.getElementById('antiqueEditSubs').value = row.substitutes || '';
+    document.getElementById('antiqueEditTitle').textContent = 'Edit Antique Entry';
+    document.getElementById('antiqueDeleteBtn').style.display = 'inline-block';
+    document.getElementById('antiqueEditModal').classList.add('on');
+}
+
+function openAntiqueAddEntry() {
+    document.getElementById('antiqueEditId').value = '';
+    document.getElementById('antiqueEditMake').value = selectedAntiqueMake || '';
+    document.getElementById('antiqueEditModel').value = selectedAntiqueModel || '';
+    document.getElementById('antiqueEditYears').value = '';
+    document.getElementById('antiqueEditApp').value = '';
+    document.getElementById('antiqueEditCode').value = '';
+    document.getElementById('antiqueEditBlank').value = '';
+    document.getElementById('antiqueEditSubs').value = '';
+    document.getElementById('antiqueEditTitle').textContent = 'Add Antique Entry';
+    document.getElementById('antiqueDeleteBtn').style.display = 'none';
+    document.getElementById('antiqueEditModal').classList.add('on');
+}
+
+function closeAntiqueEditModal() {
+    document.getElementById('antiqueEditModal').classList.remove('on');
+}
+
+function saveAntiqueEditModal() {
+    const id = document.getElementById('antiqueEditId').value;
+    const make = document.getElementById('antiqueEditMake').value.trim();
+    const model = document.getElementById('antiqueEditModel').value.trim();
+    const years = document.getElementById('antiqueEditYears').value.trim();
+    const blank = document.getElementById('antiqueEditBlank').value.trim();
+    if (!make || !blank) { toast('Make and Key Blank are required'); return; }
+    const [sy, ey] = parseAntiqueYears(years);
+    const fields = {
+        make, model, years,
+        startYear: sy, endYear: ey,
+        application: document.getElementById('antiqueEditApp').value.trim(),
+        codeSeries: document.getElementById('antiqueEditCode').value.trim(),
+        blank,
+        substitutes: document.getElementById('antiqueEditSubs').value.trim()
+    };
+    if (!id) {
+        // new custom row
+        const newId = 'c' + (++antiqueCustomSeq);
+        antiqueCustom.push(Object.assign({ _id: newId }, fields));
+    } else if (id.charAt(0) === 'c') {
+        const idx = antiqueCustom.findIndex(r => r._id === id);
+        if (idx >= 0) antiqueCustom[idx] = Object.assign({ _id: id }, fields);
+    } else {
+        antiqueOverrides[id] = fields; // override a base-book row
+    }
+    saveAntiqueData();
+    closeAntiqueEditModal();
+    // Re-render current views; the edited row may have moved make/model
+    renderAntiqueDetail(selectedAntiqueMake, selectedAntiqueModel);
+    renderAntiqueModelsList(selectedAntiqueMake);
+    toast('Antique entry saved');
+}
+
+function deleteAntiqueEntry() {
+    const id = document.getElementById('antiqueEditId').value;
+    if (!id) { closeAntiqueEditModal(); return; }
+    if (!confirm('Delete this antique entry?')) return;
+    if (id.charAt(0) === 'c') {
+        antiqueCustom = antiqueCustom.filter(r => r._id !== id);
+    } else {
+        antiqueOverrides[id] = { _deleted: true }; // hide a base-book row
+    }
+    saveAntiqueData();
+    closeAntiqueEditModal();
+    renderAntiqueDetail(selectedAntiqueMake, selectedAntiqueModel);
+    renderAntiqueModelsList(selectedAntiqueMake);
+    toast('Antique entry deleted');
 }
 
 function closeVehiclePanel() {
