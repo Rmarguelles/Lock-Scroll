@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v175</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v176</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5167,7 +5167,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v175</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v176</p>
         </div>
 
         <div class="settings-section">
@@ -5179,7 +5179,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v175<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v176<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19623,6 +19623,13 @@ function normalizeKeyType(keyType) {
     return 'Keyed Ignition'; // Default to Keyed Ignition
 }
 
+// Remote-only remotes (no key blade) get listed in their own subsection below
+// the cut keys (non-chip, chip, flip, remote head) so they don't break the flow
+function isRemoteOnlyKey(key) {
+    const kt = ((key && key.keyType) || '').toLowerCase();
+    return kt.includes('remote only') || kt === 'remote';
+}
+
 function renderVehicleYearsForModel(make, model, keyType) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
@@ -19698,7 +19705,13 @@ function renderVehicleYearsForModel(make, model, keyType) {
         return;
     }
 
-    html += filteredVehicles.map(v => {
+    // Year ranges whose keys are all remote-only go in their own subsection
+    // below, since remotes often have odd year ranges that break up the flow
+    const isRemoteOnlyRange = v => v.keys.length > 0 && v.keys.every(isRemoteOnlyKey);
+    const mainVehicles = filteredVehicles.filter(v => !isRemoteOnlyRange(v));
+    const remoteOnlyVehicles = filteredVehicles.filter(isRemoteOnlyRange);
+
+    const renderYearCard = v => {
         const inStockKeys = v.keys.filter(k => (stockData[k.pn] || 0) > 0);
         const hasStock = inStockKeys.length > 0;
         const totalStock = inStockKeys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
@@ -19753,7 +19766,15 @@ function renderVehicleYearsForModel(make, model, keyType) {
                 </div>
             </div>
         `;
-    }).join('');
+    };
+
+    html += mainVehicles.map(renderYearCard).join('');
+
+    if (remoteOnlyVehicles.length > 0) {
+        html += `
+            <div style="margin:16px 0 8px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;">📡 Remote Only (${remoteOnlyVehicles.length})</div>`;
+        html += remoteOnlyVehicles.map(renderYearCard).join('');
+    }
 
     // Add notes section at the bottom
     const noteKey = `${make}|${model}|${keyType}`;
@@ -20548,12 +20569,6 @@ function openVehicleDetail(vehicleKey) {
         return stockB - stockA; // In-stock first
     });
 
-    // Remote-only remotes (no key blade) list separately below the cut keys
-    // (non-chip, chip, flip, remote head) so they don't interrupt the flow
-    const isRemoteOnlyKey = k => {
-        const kt = (k.keyType || '').toLowerCase();
-        return kt.includes('remote only') || kt === 'remote';
-    };
     const mainKeys = sortedKeys.filter(k => !isRemoteOnlyKey(k));
     const remoteOnlyKeys = sortedKeys.filter(k => isRemoteOnlyKey(k));
 
