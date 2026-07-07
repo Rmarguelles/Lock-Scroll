@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v180</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v181</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4697,6 +4697,7 @@
         <button class="back-btn" onclick="closeAntiquePanel()">←</button>
         <div class="vehicle-title">📖 Antique Reference</div>
         <input type="text" id="antiqueSearch" placeholder="Search make..." oninput="renderAntiqueMakeList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
+        <button onclick="generateAntiquePartNumbers()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔑 Generate Part Numbers</button>
     </div>
     <div class="vehicle-list" id="antiqueMakeList"></div>
 </div>
@@ -5167,7 +5168,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v180</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v181</p>
         </div>
 
         <div class="settings-section">
@@ -5179,7 +5180,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v180<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v181<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -11730,6 +11731,10 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                     ${replacedOldPns.map(p => `<span class="detail-value mono" style="font-size:13px;text-decoration:line-through;color:var(--dim);">${p}</span>`).join('')}
                 </div>
             </div>` : ''}
+            ${key.ilco ? `<div class="detail-row">
+                <span class="detail-label">ILCO Blank</span>
+                <span class="detail-value mono">${key.ilco}</span>
+            </div>` : ''}
             ${key.keyType ? `<div class="detail-row">
                 <span class="detail-label">Key Type</span>
                 <span class="detail-value">${key.keyType}</span>
@@ -16735,6 +16740,104 @@ async function loadAntiqueData() {
     } catch (e) {
         console.error('Error loading antique data:', e);
     }
+}
+
+// Create one key DB part number per distinct antique blank so the classic
+// keys are searchable and stockable like everything else. Blanks like
+// "X109-FT43" split into pn "X109" / ilco "FT43"; no-dash blanks become the
+// PN as-is. Idempotent: PNs that already exist are skipped, safe to re-run.
+function generateAntiquePartNumbers() {
+    const rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
+    const byBlank = {};
+    rows.forEach(r => {
+        const b = String(r.blank).trim();
+        (byBlank[b] = byBlank[b] || []).push(r);
+    });
+    const blanks = Object.keys(byBlank).sort();
+    if (blanks.length === 0) { toast('No antique entries with key blanks found'); return; }
+    if (!confirm(`Create part numbers for ${blanks.length} antique key blanks (Non-Chip Keys with their vehicle applications)? Existing part numbers are skipped.`)) return;
+
+    const existingPns = new Set(DB.map(k => String(k.pn).toLowerCase()));
+    // Blanks already generated in a previous run (keys carry their source blank)
+    const doneBlanks = new Set(DB.filter(k => k.antiqueBlank).map(k => k.antiqueBlank));
+    let created = 0, skipped = 0;
+
+    blanks.forEach(blank => {
+        if (doneBlanks.has(blank)) { skipped++; return; }
+        const dash = blank.indexOf('-');
+        let pn = dash > 0 ? blank.slice(0, dash).trim() : blank;
+        let ilco = dash > 0 ? blank.slice(dash + 1).trim() : null;
+        if (existingPns.has(pn.toLowerCase())) {
+            // PN taken (base key or an earlier blank) — fall back to the full blank string
+            if (pn !== blank && !existingPns.has(blank.toLowerCase())) {
+                pn = blank;
+                ilco = null;
+            } else {
+                skipped++;
+                return;
+            }
+        }
+        existingPns.add(pn.toLowerCase());
+
+        const vehicles = [];
+        const seenVeh = {};
+        const appLines = new Set();
+        const substitutes = new Set();
+        byBlank[blank].forEach(r => {
+            const model = r.model || 'Most models';
+            const vKey = `${r.make}|${model}|${r.startYear}|${r.endYear}`;
+            let veh = seenVeh[vKey];
+            if (!veh) {
+                veh = { make: r.make, model: model, startYear: r.startYear || 0, endYear: r.endYear || r.startYear || 0 };
+                seenVeh[vKey] = veh;
+                vehicles.push(veh);
+            }
+            if (r.codeSeries) {
+                if (!veh.codeSeries) veh.codeSeries = [];
+                if (!veh.codeSeries.some(cs => cs.series === r.codeSeries)) {
+                    veh.codeSeries.push({ years: r.years || `${r.startYear}-${r.endYear}`, series: r.codeSeries });
+                }
+            }
+            if (r.application) appLines.add(`${r.make} ${model} ${r.years || ''}: ${r.application}`.replace(/\s+/g, ' ').trim());
+            if (r.substitutes) String(r.substitutes).split(',').map(s => s.trim()).filter(Boolean).forEach(s => substitutes.add(s));
+        });
+
+        let notes = 'From ILCO antique key blank reference (1940-1985).';
+        if (substitutes.size > 0) notes += '\nSubstitutes: ' + Array.from(substitutes).join(', ') + '.';
+        if (appLines.size > 0) notes += '\nApplications: ' + Array.from(appLines).join('; ');
+
+        const newKey = {
+            pn: pn,
+            ilco: ilco,
+            brand: null,
+            altParts: null,
+            fccid: null,
+            keyway: null,
+            chip: null,
+            keyType: 'Non-Chip Key',
+            buttons: null,
+            frequency: null,
+            battery: null,
+            notes: notes,
+            vehicles: vehicles,
+            isCustom: true,
+            antiqueGenerated: true,
+            antiqueBlank: blank,
+            addedDate: new Date().toISOString(),
+            isVATS: false,
+            removableSleeve: false
+        };
+        DB.push(newKey);
+        customKeys.push(newKey);
+        created++;
+    });
+
+    if (created > 0) {
+        saveCustomKeys();
+        buildFilters();
+        applyFilters();
+    }
+    toast(`${created} part number${created !== 1 ? 's' : ''} created` + (skipped > 0 ? `, ${skipped} skipped (already exist)` : ''));
 }
 
 function openAntiquePanel() {
