@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v182</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v183</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v182</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v183</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v182<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v183<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5634,6 +5634,24 @@
         <div id="importVehiclesKeyResults" style="flex:1;overflow-y:auto;min-height:200px;max-height:50vh;"></div>
         <div class="modal-btns" style="margin-top:12px;">
             <button class="modal-btn secondary" onclick="closeImportVehiclesFromKeyModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Key Modal - absorb a duplicate PN into the currently open key -->
+<div class="modal" id="mergeKeyModal" style="z-index:400;">
+    <div class="modal-content" style="max-width:500px;max-height:85vh;display:flex;flex-direction:column;">
+        <div class="modal-title">🔀 Merge Duplicate Into <span id="mergeKeyTargetPn" style="font-family:monospace;color:var(--accent);"></span></div>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">
+            Pick the duplicate entry to absorb. Its vehicles, stock, pricing, and history move onto this key, then the duplicate is deleted. Search by Part Number, ILCO, FCC ID, or keyway.
+        </p>
+        <input type="text" class="modal-input" id="mergeKeySearch"
+            placeholder="Search keys..."
+            oninput="filterMergeKeyList()"
+            style="margin-bottom:12px;">
+        <div id="mergeKeyResults" style="flex:1;overflow-y:auto;min-height:200px;max-height:50vh;"></div>
+        <div class="modal-btns" style="margin-top:12px;">
+            <button class="modal-btn secondary" onclick="closeMergeKeyModal()">Cancel</button>
         </div>
     </div>
 </div>
@@ -11446,6 +11464,7 @@ function applyFilters() {
             const altPartStrings = (key.altParts || []).map(ap => ap && ap.pn).filter(Boolean);
             const searchStr = [
                 key.pn,
+                key.ilco,
                 ...getKeyFccIds(key),
                 key.keyway,
                 key.chip,
@@ -11871,8 +11890,9 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
         </div>
 
-        <!-- Delete Part Number -->
-        <div style="margin-top:24px;padding:16px;text-align:center;">
+        <!-- Merge / Delete Part Number -->
+        <div style="margin-top:24px;padding:16px;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="openMergeKeyModal(${idx})" style="padding:10px 24px;background:transparent;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔀 Merge Duplicate Into This Key</button>
             <button onclick="deletePartNumber(${idx})" style="padding:10px 24px;background:transparent;border:1px solid #ff4444;border-radius:8px;color:#ff4444;font-size:13px;cursor:pointer;">Delete Part Number</button>
         </div>
     `;
@@ -12954,6 +12974,239 @@ function deletePartNumber(idx) {
     applyFilters();
     document.getElementById('totalCount').textContent = DB.length;
     toast(`Deleted ${pn}`);
+}
+
+// ===================== MERGE DUPLICATE KEYS =====================
+// Absorb one key entry (the duplicate) into another (the one being viewed):
+// vehicles union, gaps filled, stock summed, PN-keyed stores re-pointed,
+// then the duplicate is removed and its PN redirects to the survivor.
+let mergeKeyTargetIdx = null;
+
+function openMergeKeyModal(targetIdx) {
+    mergeKeyTargetIdx = targetIdx;
+    document.getElementById('mergeKeyTargetPn').textContent = DB[targetIdx] ? DB[targetIdx].pn : '';
+    const inp = document.getElementById('mergeKeySearch');
+    if (inp) inp.value = '';
+    renderMergeKeyList('');
+    document.getElementById('mergeKeyModal').classList.add('on');
+}
+
+function closeMergeKeyModal() {
+    document.getElementById('mergeKeyModal').classList.remove('on');
+    mergeKeyTargetIdx = null;
+}
+
+function filterMergeKeyList() {
+    const inp = document.getElementById('mergeKeySearch');
+    renderMergeKeyList((inp ? inp.value : '').toLowerCase().trim());
+}
+
+function renderMergeKeyList(search) {
+    const container = document.getElementById('mergeKeyResults');
+    if (!container) return;
+
+    const matches = [];
+    DB.forEach((key, idx) => {
+        if (idx === mergeKeyTargetIdx) return;
+        if (search) {
+            const altPnStr = Array.isArray(key.altParts)
+                ? key.altParts.map(a => a && a.pn ? a.pn : '').join(' ')
+                : '';
+            const haystack = [
+                String(key.pn || ''),
+                String(key.ilco || ''),
+                getKeyFccIds(key).join(' '),
+                String(key.keyway || ''),
+                String(key.keyType || ''),
+                altPnStr
+            ].join(' ').toLowerCase();
+            if (!haystack.includes(search)) return;
+        }
+        matches.push({ key, idx });
+    });
+
+    matches.sort((a, b) => String(a.key.pn || '').localeCompare(String(b.key.pn || '')));
+    const capped = matches.slice(0, 50);
+
+    if (capped.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">'
+            + (search ? 'No keys match your search' : 'No other keys found')
+            + '</div>';
+        return;
+    }
+
+    const truncatedNote = matches.length > capped.length
+        ? `<div style="text-align:center;color:var(--dim);padding:8px;font-size:11px;">Showing first ${capped.length} of ${matches.length} matches — refine your search to narrow.</div>`
+        : '';
+
+    container.innerHTML = capped.map(({ key, idx }) => {
+        const vCount = (key.vehicles || []).length;
+        const stock = stockData[key.pn] || 0;
+        const pnStr = `${String(key.pn || 'Unknown')}${key.ilco ? ' / ' + key.ilco : ''}`.replace(/</g, '&lt;');
+        const preview = (key.vehicles || []).slice(0, 2)
+            .map(v => `${v.make || '?'} ${v.model || '?'}`).join(', ')
+            + (vCount > 2 ? ` +${vCount - 2} more` : '');
+        return `
+            <div onclick="mergeKeyInto(${idx})"
+                style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent);font-size:14px;">${pnStr}</div>
+                    <div style="font-size:11px;color:var(--dim);white-space:nowrap;">${key.keyType || ''}${stock > 0 ? ` • ${stock} in stock` : ''}</div>
+                </div>
+                <div style="font-size:11px;color:var(--text);margin-top:4px;">${preview.replace(/</g, '&lt;') || '<span style="color:var(--dim);">No vehicles</span>'}</div>
+            </div>
+        `;
+    }).join('') + truncatedNote;
+}
+
+function mergeKeyInto(sourceIdx) {
+    const targetIdx = mergeKeyTargetIdx;
+    if (targetIdx === null || sourceIdx === targetIdx) return;
+    const target = DB[targetIdx];
+    const source = DB[sourceIdx];
+    if (!target || !source) return;
+    const targetPn = String(target.pn);
+    const sourcePn = String(source.pn);
+
+    if (!confirm(`Merge ${sourcePn} into ${targetPn}?\n\n${sourcePn} will be deleted. Its vehicles, stock, pricing, and history move to ${targetPn}, and searching ${sourcePn} will redirect there.`)) return;
+
+    // Vehicles: union, deduped by make|model|years; merge code series entries
+    if (!Array.isArray(target.vehicles)) target.vehicles = [];
+    (source.vehicles || []).forEach(sv => {
+        const match = target.vehicles.find(tv =>
+            tv.make === sv.make && tv.model === sv.model &&
+            tv.startYear === sv.startYear && tv.endYear === sv.endYear);
+        if (!match) {
+            target.vehicles.push(sv);
+            return;
+        }
+        if (!sv.codeSeries) return;
+        const srcCs = Array.isArray(sv.codeSeries) ? sv.codeSeries : [{ years: `${sv.startYear}-${sv.endYear}`, series: sv.codeSeries }];
+        if (!match.codeSeries) match.codeSeries = [];
+        else if (!Array.isArray(match.codeSeries)) match.codeSeries = [{ years: `${match.startYear}-${match.endYear}`, series: match.codeSeries }];
+        srcCs.forEach(cs => {
+            if (cs.series && !match.codeSeries.some(x => x.series === cs.series && x.years === cs.years)) {
+                match.codeSeries.push(cs);
+            }
+        });
+    });
+
+    // Scalar fields: target wins, source fills gaps
+    ['ilco', 'keyway', 'chip', 'fccid', 'buttons', 'frequency', 'battery', 'brand', 'logo', 'emergencyPN'].forEach(f => {
+        if (!target[f] && source[f]) target[f] = source[f];
+    });
+    if (source.notes && source.notes !== target.notes) {
+        target.notes = target.notes ? target.notes + '\n' + source.notes : source.notes;
+    }
+
+    // Alt part numbers: union
+    if (Array.isArray(source.altParts) && source.altParts.length > 0) {
+        if (!Array.isArray(target.altParts)) target.altParts = [];
+        source.altParts.forEach(ap => {
+            if (ap && ap.pn && !target.altParts.some(x => x && String(x.pn).toLowerCase() === String(ap.pn).toLowerCase())) {
+                target.altParts.push(ap);
+            }
+        });
+    }
+
+    // Record the absorbed PN(s) on the survivor (shows as "Includes PNs")
+    if (!Array.isArray(target.mergedPNs)) target.mergedPNs = [];
+    [sourcePn, ...(source.mergedPNs || [])].forEach(p => {
+        if (!target.mergedPNs.includes(p)) target.mergedPNs.push(p);
+    });
+    // Keep the antique generator from recreating the absorbed blank on re-run
+    if (source.antiqueBlank) {
+        if (!Array.isArray(target.antiqueBlanksMerged)) target.antiqueBlanksMerged = [];
+        target.antiqueBlanksMerged.push(source.antiqueBlank);
+        if (Array.isArray(source.antiqueBlanksMerged)) target.antiqueBlanksMerged.push(...source.antiqueBlanksMerged);
+    }
+
+    // Stock: sum onto the survivor
+    if (stockData[sourcePn] !== undefined) {
+        stockData[targetPn] = (stockData[targetPn] || 0) + (stockData[sourcePn] || 0);
+        delete stockData[sourcePn];
+        saveStock();
+    }
+
+    // Vendor pricing: merge per vendor, target wins on conflicts
+    if (vendorPrices[sourcePn]) {
+        if (!vendorPrices[targetPn]) vendorPrices[targetPn] = {};
+        Object.entries(vendorPrices[sourcePn]).forEach(([vendor, prices]) => {
+            if (!vendorPrices[targetPn][vendor]) vendorPrices[targetPn][vendor] = prices;
+        });
+        delete vendorPrices[sourcePn];
+        saveVendorPrices();
+    }
+
+    // Autel iKey tags: union
+    if (autelIKeyCompatibility[sourcePn]) {
+        const mergedStyles = new Set([...(autelIKeyCompatibility[targetPn] || []), ...autelIKeyCompatibility[sourcePn]]);
+        autelIKeyCompatibility[targetPn] = Array.from(mergedStyles);
+        delete autelIKeyCompatibility[sourcePn];
+        saveAutelIKeyCompatibility();
+    }
+
+    // Purchase history: re-point to the survivor
+    let phChanged = false;
+    purchaseHistory.forEach(p => {
+        if (String(p.partNumber) === sourcePn) { p.partNumber = targetPn; phChanged = true; }
+    });
+    if (phChanged) savePurchaseHistory();
+
+    // Job history keys-used: re-point to the survivor
+    let jhChanged = false;
+    (jobHistory || []).forEach(job => {
+        (job.keysUsed || []).forEach(k => {
+            if (String(k.pn) === sourcePn) { k.pn = targetPn; jhChanged = true; }
+        });
+    });
+    if (jhChanged) saveJobHistory();
+
+    // Supersessions: re-point references to the source, then redirect the source PN itself
+    for (const k of Object.keys(pnSupersessions)) {
+        if (String(pnSupersessions[k]).toLowerCase() === sourcePn.toLowerCase()) pnSupersessions[k] = targetPn;
+        if (k.toLowerCase() === sourcePn.toLowerCase()) delete pnSupersessions[k];
+    }
+    pnSupersessions[sourcePn] = targetPn;
+    savePnSupersessions();
+
+    // Override stores for the source (same cleanup as deletePartNumber)
+    delete vehicleOverrides[sourcePn];
+    saveVehicleOverrides();
+    delete keyInfoOverrides[sourcePn];
+    saveKeyInfoOverrides();
+    delete keyRelationships[sourcePn];
+    saveKeyRelationships();
+    const sourceOriginalPn = getOriginalCatalogPn(sourcePn);
+    if (sourceOriginalPn !== sourcePn) {
+        delete vehicleOverrides[sourceOriginalPn];
+        saveVehicleOverrides();
+        delete keyInfoOverrides[sourceOriginalPn];
+        saveKeyInfoOverrides();
+        delete pnRenames[sourceOriginalPn];
+        savePnRenames();
+    }
+
+    // Remove the source record from DB and customKeys
+    DB.splice(sourceIdx, 1);
+    const ckSrcIdx = customKeys.findIndex(k => String(k.pn) === sourcePn);
+    if (ckSrcIdx >= 0) customKeys.splice(ckSrcIdx, 1);
+    // DB entries can be copies of customKeys entries (loadCustomKeysIntoDB spreads
+    // them), so re-point the survivor's customKeys slot at the merged object
+    const ckTgtIdx = customKeys.findIndex(k => String(k.pn) === targetPn);
+    if (ckTgtIdx >= 0) customKeys[ckTgtIdx] = target;
+    saveCustomKeys();
+    saveToIndexedDB('database', DB);
+
+    closeMergeKeyModal();
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+
+    // Re-open the survivor — its index may have shifted after the splice
+    const newTargetIdx = DB.findIndex(k => String(k.pn) === targetPn);
+    if (newTargetIdx >= 0) openKey(newTargetIdx);
+    toast(`Merged ${sourcePn} into ${targetPn}`);
 }
 
 // ===================== STOCK =====================
@@ -14716,6 +14969,7 @@ function goHome() {
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.getElementById('vehicleDetailPanel').classList.remove('on');
     document.getElementById('detailPanel').classList.remove('on');
+    document.getElementById('mergeKeyModal').classList.remove('on');
     document.getElementById('renameModelModal').classList.remove('on');
     document.getElementById('incompleteVehiclesPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
@@ -16765,7 +17019,9 @@ function generateAntiquePartNumbers() {
     const rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
     const byBlank = {};
     rows.forEach(r => {
-        const b = String(r.blank).trim();
+        // The reference writes the same blank with either separator (e.g.
+        // "S1970AM-RA3" and "S1970AM/RA3") — normalize so they stay one key
+        const b = String(r.blank).trim().replace(/\//g, '-');
         (byBlank[b] = byBlank[b] || []).push(r);
     });
     const blanks = Object.keys(byBlank).sort();
@@ -16773,8 +17029,13 @@ function generateAntiquePartNumbers() {
     if (!confirm(`Create part numbers for ${blanks.length} antique key blanks (Non-Chip Keys with their vehicle applications)? Existing part numbers are skipped.`)) return;
 
     const existingPns = new Set(DB.map(k => String(k.pn).toLowerCase()));
-    // Blanks already generated in a previous run (keys carry their source blank)
-    const doneBlanks = new Set(DB.filter(k => k.antiqueBlank).map(k => k.antiqueBlank));
+    // Blanks already generated in a previous run (keys carry their source blank,
+    // plus any blanks absorbed via merge) — compared separator-normalized
+    const doneBlanks = new Set();
+    DB.forEach(k => {
+        if (k.antiqueBlank) doneBlanks.add(String(k.antiqueBlank).replace(/\//g, '-'));
+        (k.antiqueBlanksMerged || []).forEach(b => doneBlanks.add(String(b).replace(/\//g, '-')));
+    });
     let created = 0, skipped = 0;
 
     blanks.forEach(blank => {
