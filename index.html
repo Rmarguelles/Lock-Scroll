@@ -1530,6 +1530,14 @@
             border-bottom: 1px solid var(--border);
         }
 
+        .job-active-banner {
+            margin: 8px 16px 0;
+            padding: 12px;
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+        }
+
         .fccid-group {
             margin-bottom: 8px;
             border: 1px solid var(--border);
@@ -5102,6 +5110,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openJobHistory()">
+                    <span class="settings-nav-icon">💼</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Job History</span>
+                        <span class="settings-nav-desc">Logged jobs, charges, and notes</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openFidManager()">
                     <span class="settings-nav-icon">📋</span>
                     <div class="settings-nav-info">
@@ -6087,6 +6103,38 @@
     </div>
 </div>
 
+<!-- Complete Job Modal -->
+<div class="modal" id="jobCompleteModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">✅ Complete Job</div>
+        <div id="jobCompleteInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>Vehicle Label (optional)</label>
+            <input type="text" class="modal-input" id="jobLabel" placeholder="e.g. red one, stock #4821, VIN ...9384">
+        </div>
+        <div class="modal-input-group">
+            <label>Test Keys Used</label>
+            <input type="number" class="modal-input" id="jobTestKeys" min="0" step="1" inputmode="numeric" placeholder="0">
+        </div>
+        <div class="modal-input-group">
+            <label>Keys Used From Inventory</label>
+            <div id="jobKeysUsedList"></div>
+        </div>
+        <div class="modal-input-group">
+            <label>Amount Charged ($)</label>
+            <input type="number" class="modal-input" id="jobCharge" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="modal-input-group">
+            <label>Job Notes (programming, cutting, gotchas)</label>
+            <textarea class="modal-input" id="jobNotes" rows="4" placeholder="e.g. AutoPro Pad added key in 5 min, code cut from door lock..."></textarea>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeJobCompleteModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveJobComplete()">Save & Complete</button>
+        </div>
+    </div>
+</div>
+
 <!-- Quick Add Vehicle Modal -->
 <div class="modal" id="quickAddVehicleModal">
     <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
@@ -6890,6 +6938,18 @@
     <div class="purchase-history-list" id="purchaseHistoryList"></div>
 </div>
 
+<!-- Job History Panel -->
+<div class="purchase-history-panel" id="jobHistoryPanel">
+    <div class="add-inv-header">
+        <button class="back-btn" onclick="closeJobHistory()">←</button>
+        <div class="add-inv-title">💼 Job History</div>
+    </div>
+    <div class="purchase-history-filters">
+        <input type="text" class="add-inv-input" id="jobHistorySearch" placeholder="Search vehicle, notes, keys..." oninput="filterJobHistory()">
+    </div>
+    <div class="purchase-history-list" id="jobHistoryList"></div>
+</div>
+
 <!-- Add Custom Key Panel -->
 <div class="add-custom-key-panel" id="addCustomKeyPanel">
     <div class="add-inv-header">
@@ -7547,6 +7607,7 @@ function renderCloudSyncUI() {
                 <div class="sync-item-row"><span>Lishi Tools</span><span class="count">${Object.keys(lishiInventory).length}</span></div>
                 <div class="sync-item-row"><span>FID Assignments</span><span class="count">${Object.keys(fidAssignments).length}</span></div>
                 <div class="sync-item-row"><span>Purchase History</span><span class="count">${purchaseHistory.length}</span></div>
+                <div class="sync-item-row"><span>Job History</span><span class="count">${jobHistory.length}</span></div>
             </div>
             ${renderSharedUsersSection()}
         `;
@@ -7849,6 +7910,8 @@ async function uploadToCloud() {
                 pnSupersessions: pnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
+                jobHistory: jobHistory,
+                activeJobs: activeJobs,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
@@ -7878,6 +7941,8 @@ async function uploadToCloud() {
                 pnSupersessions: pnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
+                jobHistory: jobHistory,
+                activeJobs: activeJobs,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
@@ -8029,6 +8094,27 @@ async function downloadFromCloud() {
                 }
             });
             savePurchaseHistory();
+        }
+        if (data.jobHistory && data.jobHistory.length > 0) {
+            // Merge job history by ID
+            const existingJobIds = new Set(jobHistory.map(j => j.id));
+            data.jobHistory.forEach(j => {
+                if (!existingJobIds.has(j.id)) {
+                    jobHistory.push(j);
+                }
+            });
+            jobHistory.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+            saveJobHistory();
+        }
+        if (data.activeJobs) {
+            // Merge active jobs (local wins per job id), then drop any job that
+            // was already completed elsewhere so it doesn't resurrect as active
+            activeJobs = { ...data.activeJobs, ...activeJobs };
+            const completedIds = new Set(jobHistory.map(j => j.id));
+            Object.keys(activeJobs).forEach(id => {
+                if (completedIds.has(id)) delete activeJobs[id];
+            });
+            saveActiveJobs();
         }
         if (data.toolsDatabase) {
             // Merge tools database
@@ -9683,6 +9769,12 @@ let pnRenames = {};
 // Feature flags — set to true to re-enable
 let ENABLE_QUICK_MOVE_TO_GROUP = false;
 let purchaseHistory = [];
+// Job logging: completed jobs (newest first) + in-progress jobs keyed by job id
+// (keyed by id, not vehicleKey, so two identical vehicles can run jobs at once)
+let jobHistory = [];
+let activeJobs = {};
+let jobCompleteJobId = null;
+let jobKeysUsedSelection = {};
 let fidPrefixes = {"N":{"makes":["Nissan","Infiniti"],"name":"Nissan/Infiniti"},"F":{"makes":["Ford","Lincoln","Mercury"],"name":"Ford/Lincoln/Mercury"},"GM":{"makes":["Chevrolet","GMC","Buick","Cadillac","Saturn","Pontiac","Oldsmobile","Hummer"],"name":"GM/Chevrolet/Buick/Cadillac/GMC"},"T":{"makes":["Toyota","Lexus","Scion"],"name":"Toyota/Lexus/Scion"},"H":{"makes":["Honda","Acura"],"name":"Honda/Acura"},"CH":{"name":"Chrysler/Dodge/Jeep/Ram","makes":["Chrysler","Dodge","Jeep","Ram","Eagle","Plymouth"]},"HY":{"name":"Hyundai/Kia/Genesis","makes":["Hyundai","Kia","Genesis"]},"MZ":{"makes":["Mazda"],"name":"Mazda"},"MT":{"makes":["Mitsubishi"],"name":"Mitsubishi"},"SB":{"name":"Subaru","makes":["Subaru"]},"VW":{"name":"Volkswagen/Audi","makes":["Volkswagen","Audi"]},"SZ":{"name":"Suzuki","makes":["Suzuki"]},"CL":{"name":"Cloneable Keys","makes":[]},"TB":{"name":"Tibbe Keys","makes":[]},"OT":{"name":"Other","makes":[]}};
 let cameFromFcc = false;
 let cameFromFid = false;
@@ -10107,6 +10199,12 @@ async function loadLocalData() {
             const savedVehicleYearNotes = await loadFromIndexedDB('vehicleYearNotes');
             if (savedVehicleYearNotes) vehicleYearNotes = savedVehicleYearNotes;
 
+            const savedJobHistory = await loadFromIndexedDB('jobHistory');
+            if (savedJobHistory) jobHistory = savedJobHistory;
+
+            const savedActiveJobs = await loadFromIndexedDB('activeJobs');
+            if (savedActiveJobs) activeJobs = savedActiveJobs;
+
             // Load tools database
             await loadToolsDatabase();
         }
@@ -10238,6 +10336,16 @@ function savePnRenames() {
 
 function savePurchaseHistory() {
     saveToIndexedDB('purchaseHistory', purchaseHistory);
+    triggerAutoSync();
+}
+
+function saveJobHistory() {
+    saveToIndexedDB('jobHistory', jobHistory);
+    triggerAutoSync();
+}
+
+function saveActiveJobs() {
+    saveToIndexedDB('activeJobs', activeJobs);
     triggerAutoSync();
 }
 
@@ -14438,6 +14546,8 @@ function goHome() {
     document.getElementById('fidManagerPanel').classList.remove('on');
     document.getElementById('addInventoryPanel').classList.remove('on');
     document.getElementById('purchaseHistoryPanel').classList.remove('on');
+    document.getElementById('jobHistoryPanel').classList.remove('on');
+    document.getElementById('jobCompleteModal').classList.remove('on');
     document.getElementById('addCustomKeyPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
@@ -16172,6 +16282,8 @@ function exportData() {
         fidMerges: fidMerges,
         fidPrefixes: fidPrefixes,
         purchaseHistory: purchaseHistory,
+        jobHistory: jobHistory,
+        activeJobs: activeJobs,
         customKeys: customKeys,
         customVehicles: customVehicles,
         toolsDatabase: toolsDatabase,
@@ -16280,6 +16392,16 @@ function importData(event) {
             if (data.purchaseHistory) {
                 purchaseHistory = data.purchaseHistory;
                 savePurchaseHistory();
+            }
+
+            if (data.jobHistory) {
+                jobHistory = data.jobHistory;
+                saveJobHistory();
+            }
+
+            if (data.activeJobs) {
+                activeJobs = data.activeJobs;
+                saveActiveJobs();
             }
             
             if (data.customKeys) {
@@ -20105,6 +20227,30 @@ function openVehicleDetail(vehicleKey) {
         </div>
     `;
 
+    // Job logging — one banner per active job on this vehicle, plus a start button
+    const vehicleKeyEsc = vehicleKey.replace(/'/g, "\\'");
+    const vehicleActiveJobs = findActiveJobsForVehicle(vehicleKey);
+    vehicleActiveJobs.forEach(job => {
+        const jobIdEsc = String(job.id).replace(/'/g, "\\'");
+        const startTime = new Date(job.startedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        html += `
+        <div class="job-active-banner">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span style="font-weight:700;color:var(--accent);">⏱ Job in progress${job.label ? ' — ' + job.label : ''}</span>
+                <button onclick="editJobLabel('${jobIdEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 6px;">✎</button>
+            </div>
+            <div style="font-size:12px;color:var(--dim);margin-top:4px;">Started ${startTime} (${formatJobElapsed(job.startedAt)} ago)${job.startedBy && job.startedBy !== 'Unknown' ? ' • ' + job.startedBy : ''}</div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+                <button onclick="openJobCompleteModal('${jobIdEsc}')" style="flex:1;padding:10px;background:var(--success);color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">✅ Complete Job</button>
+                <button onclick="cancelJob('${jobIdEsc}')" style="padding:10px 14px;background:none;border:1px solid var(--border);border-radius:8px;color:#ff4444;font-size:13px;cursor:pointer;">Cancel</button>
+            </div>
+        </div>`;
+    });
+    html += `
+        <div style="padding:8px 16px 0;">
+            <button onclick="startJob('${vehicleKeyEsc}')" style="width:100%;padding:12px;background:${vehicleActiveJobs.length > 0 ? 'var(--card);border:1px solid var(--accent);color:var(--accent)' : 'var(--accent);border:none;color:#000'};border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">${vehicleActiveJobs.length > 0 ? '+ Start Another Job' : '▶ Start Job'}</button>
+        </div>`;
+
     // Autel iKey banner — vehicle-level lookup from Autel PDF compatibility data.
     // Autel iKeys are proximity/smart keys only, so only surface this on the Proximity path.
     const vehicleIKeyStylesArr = selectedVehicleKeyType === 'Proximity'
@@ -20536,6 +20682,8 @@ function openVehicleDetail(vehicleKey) {
             </div>
         `;
     }
+
+    html += renderJobHistorySection(vehicleKey);
 
     document.getElementById('vehicleDetailContent').innerHTML = html;
     document.getElementById('vehicleDetailPanel').classList.add('on');
@@ -23091,6 +23239,284 @@ function filterPurchaseHistory() {
         if (vendor && !text.includes(vendor.toLowerCase())) show = false;
         
         item.style.display = show ? '' : 'none';
+    });
+}
+
+// ===================== JOB LOGGING =====================
+function escapeJobText(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+    const as = parseInt(aStart), ae = parseInt(aEnd), bs = parseInt(bStart), be = parseInt(bEnd);
+    if (isNaN(as) || isNaN(ae) || isNaN(bs) || isNaN(be)) return false;
+    return as <= be && bs <= ae;
+}
+
+// Jobs relevant to a vehicle entry: same make+model with an overlapping year
+// range, regardless of which entry (or key type) the job was logged on
+function findJobsForVehicle(vehicleKey) {
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    return jobHistory
+        .filter(j => j.make === make && j.model === model &&
+            (j.vehicleKey === vehicleKey || rangesOverlap(j.startYear, j.endYear, startYear, endYear)))
+        .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+}
+
+function findActiveJobsForVehicle(vehicleKey) {
+    return Object.values(activeJobs)
+        .filter(j => j.vehicleKey === vehicleKey)
+        .sort((a, b) => (a.startedAt || '').localeCompare(b.startedAt || ''));
+}
+
+function startJob(vehicleKey) {
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    const job = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        vehicleKey: vehicleKey,
+        make: make,
+        model: model,
+        startYear: parseInt(startYear),
+        endYear: parseInt(endYear),
+        startedAt: new Date().toISOString(),
+        startedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
+        label: ''
+    };
+    activeJobs[job.id] = job;
+    saveActiveJobs();
+    toast('Job started');
+    openVehicleDetail(vehicleKey);
+}
+
+function editJobLabel(jobId) {
+    const job = activeJobs[jobId];
+    if (!job) return;
+    const label = prompt('Label this job (color, stock #, last-4 VIN...)', job.label || '');
+    if (label === null) return;
+    job.label = label.trim();
+    saveActiveJobs();
+    openVehicleDetail(job.vehicleKey);
+}
+
+function cancelJob(jobId) {
+    const job = activeJobs[jobId];
+    if (!job) return;
+    if (!confirm('Cancel this job? Nothing will be logged.')) return;
+    delete activeJobs[jobId];
+    saveActiveJobs();
+    toast('Job canceled');
+    openVehicleDetail(job.vehicleKey);
+}
+
+function formatJobDuration(mins) {
+    if (mins < 60) return mins + 'm';
+    return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+}
+
+function formatJobElapsed(startedAtIso) {
+    return formatJobDuration(Math.max(0, Math.round((Date.now() - new Date(startedAtIso).getTime()) / 60000)));
+}
+
+// Deduped compatible keys for a vehicle entry (same lookup the detail page uses)
+function getJobCompatibleKeys(vehicleKey) {
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    const vehicle = getUniqueVehicles().find(v =>
+        v.make === make && v.model === model &&
+        v.startYear === parseInt(startYear) && v.endYear === parseInt(endYear)
+    );
+    if (!vehicle) return [];
+    const seen = new Set();
+    return vehicle.keys.filter(k => {
+        if (seen.has(k.pn)) return false;
+        seen.add(k.pn);
+        return true;
+    }).sort((a, b) => (stockData[b.pn] || 0) - (stockData[a.pn] || 0));
+}
+
+function openJobCompleteModal(jobId) {
+    const job = activeJobs[jobId];
+    if (!job) {
+        toast('Job not found');
+        return;
+    }
+    jobCompleteJobId = jobId;
+    jobKeysUsedSelection = {};
+
+    const startTime = new Date(job.startedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    document.getElementById('jobCompleteInfo').textContent =
+        `${job.make} ${job.model} ${job.startYear}-${job.endYear}` +
+        (job.label ? ` — ${job.label}` : '') +
+        ` • started ${startTime} (${formatJobElapsed(job.startedAt)})`;
+    document.getElementById('jobLabel').value = job.label || '';
+    document.getElementById('jobTestKeys').value = '';
+    document.getElementById('jobCharge').value = '';
+    document.getElementById('jobNotes').value = '';
+    renderJobKeysUsedList(job.vehicleKey);
+    document.getElementById('jobCompleteModal').classList.add('on');
+}
+
+function renderJobKeysUsedList(vehicleKey) {
+    const keys = getJobCompatibleKeys(vehicleKey);
+    if (keys.length === 0) {
+        document.getElementById('jobKeysUsedList').innerHTML =
+            '<div style="color:var(--dim);font-size:12px;padding:8px 0;">No compatible keys in the database for this vehicle</div>';
+        return;
+    }
+    document.getElementById('jobKeysUsedList').innerHTML = keys.map(key => {
+        const stock = stockData[key.pn] || 0;
+        const qty = jobKeysUsedSelection[key.pn] || 0;
+        const pnEsc = String(key.pn).replace(/'/g, "\\'");
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:var(--bg);border:1px solid ${qty > 0 ? 'var(--accent)' : 'var(--border)'};border-radius:8px;margin-bottom:6px;">
+                <div style="min-width:0;">
+                    <div style="font-weight:600;font-size:13px;">${escapeJobText(key.pn)}</div>
+                    <div style="font-size:11px;color:var(--dim);">${key.fccid ? escapeJobText(key.fccid) + ' • ' : ''}<span style="color:${stock > 0 ? 'var(--success)' : '#ff4444'};">${stock} in stock</span></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                    <button onclick="adjustJobKeyQty('${pnEsc}', -1)" style="width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;">−</button>
+                    <span style="min-width:20px;text-align:center;font-weight:700;color:${qty > 0 ? 'var(--accent)' : 'var(--dim)'};">${qty}</span>
+                    <button onclick="adjustJobKeyQty('${pnEsc}', 1)" style="width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;">+</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function adjustJobKeyQty(pn, delta) {
+    const job = activeJobs[jobCompleteJobId];
+    if (!job) return;
+    const max = stockData[pn] || 0;
+    const next = Math.max(0, Math.min(max, (jobKeysUsedSelection[pn] || 0) + delta));
+    if (next === 0) {
+        delete jobKeysUsedSelection[pn];
+    } else {
+        jobKeysUsedSelection[pn] = next;
+    }
+    renderJobKeysUsedList(job.vehicleKey);
+}
+
+function closeJobCompleteModal() {
+    document.getElementById('jobCompleteModal').classList.remove('on');
+    jobCompleteJobId = null;
+    jobKeysUsedSelection = {};
+}
+
+function saveJobComplete() {
+    const job = activeJobs[jobCompleteJobId];
+    if (!job) {
+        toast('Job not found');
+        closeJobCompleteModal();
+        return;
+    }
+
+    const completedAt = new Date().toISOString();
+    const keysUsed = Object.entries(jobKeysUsedSelection).map(([pn, qty]) => {
+        const dbKey = DB.find(k => k.pn === pn);
+        return { pn: pn, qty: qty, fccid: dbKey?.fccid || '' };
+    });
+
+    const record = {
+        id: job.id,
+        vehicleKey: job.vehicleKey,
+        make: job.make,
+        model: job.model,
+        startYear: job.startYear,
+        endYear: job.endYear,
+        label: document.getElementById('jobLabel').value.trim(),
+        startedAt: job.startedAt,
+        completedAt: completedAt,
+        durationMin: Math.max(0, Math.round((new Date(completedAt) - new Date(job.startedAt)) / 60000)),
+        testKeysUsed: parseInt(document.getElementById('jobTestKeys').value) || 0,
+        keysUsed: keysUsed,
+        charge: parseFloat(document.getElementById('jobCharge').value) || 0,
+        notes: document.getElementById('jobNotes').value.trim(),
+        startedBy: job.startedBy,
+        completedBy: currentUser?.displayName || currentUser?.email || 'Unknown'
+    };
+
+    // Deduct used keys from inventory (adjustStock() needs the key detail
+    // panel's DOM, so mutate directly like the bulk-purchase save does)
+    if (keysUsed.length > 0) {
+        keysUsed.forEach(k => {
+            stockData[k.pn] = Math.max(0, (stockData[k.pn] || 0) - k.qty);
+        });
+        saveStock();
+    }
+
+    jobHistory.unshift(record);
+    saveJobHistory();
+    delete activeJobs[job.id];
+    saveActiveJobs();
+    closeJobCompleteModal();
+    toast(record.charge > 0 ? `Job logged — $${record.charge.toFixed(2)}` : 'Job logged');
+    openVehicleDetail(job.vehicleKey);
+}
+
+function renderJobRecordCard(job, viewingVehicleKey) {
+    const completed = new Date(job.completedAt);
+    const dateStr = completed.toLocaleDateString() + ' ' + completed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const otherEntry = viewingVehicleKey && job.vehicleKey !== viewingVehicleKey
+        ? `<span style="font-size:10px;color:var(--dim);"> (logged on ${job.startYear}-${job.endYear} entry)</span>` : '';
+    const keyChips = (job.keysUsed || []).map(k =>
+        `<span style="padding:2px 8px;background:rgba(0,212,255,0.15);border-radius:10px;font-size:11px;color:var(--accent);">${k.qty}× ${escapeJobText(k.pn)}</span>`
+    ).join('');
+    return '<div class="purchase-item">' +
+        '<div class="purchase-item-header">' +
+            '<div>' +
+                '<div class="purchase-item-pn">' + escapeJobText(`${job.make} ${job.model} ${job.startYear}-${job.endYear}`) + (job.label ? ' <span style="color:var(--accent2);font-size:12px;">— ' + escapeJobText(job.label) + '</span>' : '') + '</div>' +
+                '<div style="font-size:12px;color:var(--dim);">' + dateStr + (job.durationMin ? ' • ' + formatJobDuration(job.durationMin) : '') + otherEntry + '</div>' +
+            '</div>' +
+            (job.charge > 0 ? '<div style="color:var(--success);font-weight:700;">$' + job.charge.toFixed(2) + '</div>' : '') +
+        '</div>' +
+        '<div class="purchase-item-details" style="flex-wrap:wrap;gap:6px;">' +
+            (keyChips || '<span style="font-size:11px;color:var(--dim);">No inventory keys used</span>') +
+            (job.testKeysUsed > 0 ? '<span style="font-size:11px;color:var(--dim);">Test keys: ' + job.testKeysUsed + '</span>' : '') +
+        '</div>' +
+        (job.notes ? '<div style="margin-top:6px;padding:8px;background:var(--bg);border-left:3px solid cornflowerblue;border-radius:4px;font-size:12px;color:var(--text);white-space:pre-wrap;">📝 ' + escapeJobText(job.notes) + '</div>' : '') +
+        (job.completedBy && job.completedBy !== 'Unknown' ? '<div style="font-size:10px;color:var(--dim);margin-top:4px;">' + escapeJobText(job.completedBy) + '</div>' : '') +
+    '</div>';
+}
+
+function renderJobHistorySection(vehicleKey) {
+    const jobs = findJobsForVehicle(vehicleKey);
+    let html = `<div class="vehicle-section">
+        <div class="vehicle-section-title">Job History${jobs.length > 0 ? ` (${jobs.length})` : ''}</div>`;
+    if (jobs.length === 0) {
+        html += '<div style="color:var(--dim);font-size:13px;text-align:center;padding:12px;">No jobs logged yet</div>';
+    } else {
+        html += jobs.map(j => renderJobRecordCard(j, vehicleKey)).join('');
+    }
+    html += '</div>';
+    return html;
+}
+
+function openJobHistory() {
+    renderJobHistory();
+    document.getElementById('jobHistoryPanel').classList.add('on');
+}
+
+function closeJobHistory() {
+    document.getElementById('jobHistoryPanel').classList.remove('on');
+}
+
+function renderJobHistory() {
+    if (jobHistory.length === 0) {
+        document.getElementById('jobHistoryList').innerHTML = '<div class="add-inv-placeholder">No jobs logged yet</div>';
+        return;
+    }
+    const sorted = [...jobHistory].sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+    document.getElementById('jobHistoryList').innerHTML = sorted.map(j => renderJobRecordCard(j, null)).join('');
+}
+
+function filterJobHistory() {
+    const search = document.getElementById('jobHistorySearch').value.toLowerCase();
+    const items = document.querySelectorAll('#jobHistoryList .purchase-item');
+    items.forEach(item => {
+        item.style.display = (!search || item.textContent.toLowerCase().includes(search)) ? '' : 'none';
     });
 }
 
