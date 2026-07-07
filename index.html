@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v181</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v182</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4697,7 +4697,10 @@
         <button class="back-btn" onclick="closeAntiquePanel()">←</button>
         <div class="vehicle-title">📖 Antique Reference</div>
         <input type="text" id="antiqueSearch" placeholder="Search make..." oninput="renderAntiqueMakeList()" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
-        <button onclick="generateAntiquePartNumbers()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔑 Generate Part Numbers</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button onclick="generateAntiquePartNumbers()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔑 Generate Part Numbers</button>
+            <button onclick="openAntiqueInventoryPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📦 Count Inventory</button>
+        </div>
     </div>
     <div class="vehicle-list" id="antiqueMakeList"></div>
 </div>
@@ -4718,6 +4721,17 @@
         <div class="vehicle-title" id="antiqueDetailTitle">📖 Detail</div>
     </div>
     <div class="vehicle-list" id="antiqueDetailList"></div>
+</div>
+
+<!-- Antique Key Inventory - count stock for keys generated from the antique reference -->
+<div class="vehicle-panel" id="antiqueInventoryPanel" style="z-index:253;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeAntiqueInventoryPanel()">←</button>
+        <div class="vehicle-title">📦 Antique Key Inventory</div>
+        <div id="antiqueInventorySummary" style="font-size:12px;color:var(--dim);margin-top:4px;"></div>
+        <input type="text" id="antiqueInventorySearch" placeholder="Search PN, ILCO, or vehicle..." oninput="renderAntiqueInventoryList()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
+    </div>
+    <div class="vehicle-list" id="antiqueInventoryList"></div>
 </div>
 
 <!-- Antique Entry Edit Modal -->
@@ -5168,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v181</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v182</p>
         </div>
 
         <div class="settings-section">
@@ -5180,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v181<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v182<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14707,6 +14721,7 @@ function goHome() {
     document.getElementById('antiquePanel').classList.remove('on');
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiqueDetailPanel').classList.remove('on');
+    document.getElementById('antiqueInventoryPanel').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -16840,6 +16855,100 @@ function generateAntiquePartNumbers() {
     toast(`${created} part number${created !== 1 ? 's' : ''} created` + (skipped > 0 ? `, ${skipped} skipped (already exist)` : ''));
 }
 
+// ---- Antique key inventory: count stock for keys generated from the reference ----
+
+function openAntiqueInventoryPanel() {
+    renderAntiqueInventoryList();
+    document.getElementById('antiqueInventoryPanel').classList.add('on');
+}
+
+function closeAntiqueInventoryPanel() {
+    document.getElementById('antiqueInventoryPanel').classList.remove('on');
+}
+
+function renderAntiqueInventoryList() {
+    const container = document.getElementById('antiqueInventoryList');
+    const q = (document.getElementById('antiqueInventorySearch')?.value || '').toLowerCase().trim();
+
+    const keys = DB.filter(k => k.antiqueBlank)
+        .sort((a, b) => String(a.pn).localeCompare(String(b.pn), undefined, { numeric: true }));
+
+    if (keys.length === 0) {
+        document.getElementById('antiqueInventorySummary').textContent = '';
+        container.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No antique part numbers yet — use 🔑 Generate Part Numbers first.</div>';
+        return;
+    }
+
+    const filtered = q ? keys.filter(k => {
+        const hay = `${k.pn} ${k.ilco || ''} ${(k.vehicles || []).map(v => v.make + ' ' + v.model).join(' ')}`.toLowerCase();
+        return hay.includes(q);
+    }) : keys;
+
+    const totalStock = keys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+    const inStockCount = keys.filter(k => (stockData[k.pn] || 0) > 0).length;
+    document.getElementById('antiqueInventorySummary').textContent =
+        `${keys.length} keys • ${inStockCount} in stock • ${totalStock} total`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No keys match your search.</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(k => {
+        const pnEsc = String(k.pn).replace(/'/g, "\\'");
+        const qty = stockData[k.pn] || 0;
+        const vehSummary = (k.vehicles || []).slice(0, 2).map(v => `${v.make} ${v.model}`).join(', ')
+            + ((k.vehicles || []).length > 2 ? ` +${k.vehicles.length - 2} more` : '');
+        const keyIdx = DB.findIndex(x => x.pn === k.pn);
+        return `
+            <div class="vehicle-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <div style="min-width:0;cursor:pointer;" onclick="openKey(${keyIdx})">
+                    <div style="font-weight:600;color:var(--text);">${k.pn}${k.ilco ? ` <span style="color:var(--dim);font-weight:400;">/ ${k.ilco}</span>` : ''}</div>
+                    <div style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${vehSummary}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                    <button onclick="adjustAntiqueStock('${pnEsc}', -1, this)" style="width:34px;height:34px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;font-size:18px;cursor:pointer;">−</button>
+                    <input type="number" value="${qty}" min="0" inputmode="numeric"
+                        onchange="setAntiqueStock('${pnEsc}', this.value, this)"
+                        style="width:52px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid ${qty > 0 ? 'var(--success)' : 'var(--border)'};border-radius:8px;color:${qty > 0 ? 'var(--success)' : 'var(--text)'};font-size:14px;font-weight:600;box-sizing:border-box;">
+                    <button onclick="adjustAntiqueStock('${pnEsc}', 1, this)" style="width:34px;height:34px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--success);font-size:18px;cursor:pointer;">+</button>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function adjustAntiqueStock(pn, delta, btn) {
+    const newQty = Math.max(0, (stockData[pn] || 0) + delta);
+    stockData[pn] = newQty;
+    saveStock();
+    // Update the row's input in place instead of re-rendering the whole list
+    const input = btn.parentElement.querySelector('input');
+    input.value = newQty;
+    input.style.borderColor = newQty > 0 ? 'var(--success)' : 'var(--border)';
+    input.style.color = newQty > 0 ? 'var(--success)' : 'var(--text)';
+    updateAntiqueInventorySummary();
+    applyFilters();
+}
+
+function setAntiqueStock(pn, value, input) {
+    const qty = Math.max(0, parseInt(value, 10) || 0);
+    stockData[pn] = qty;
+    saveStock();
+    input.value = qty;
+    input.style.borderColor = qty > 0 ? 'var(--success)' : 'var(--border)';
+    input.style.color = qty > 0 ? 'var(--success)' : 'var(--text)';
+    updateAntiqueInventorySummary();
+    applyFilters();
+}
+
+function updateAntiqueInventorySummary() {
+    const keys = DB.filter(k => k.antiqueBlank);
+    const totalStock = keys.reduce((sum, k) => sum + (stockData[k.pn] || 0), 0);
+    const inStockCount = keys.filter(k => (stockData[k.pn] || 0) > 0).length;
+    document.getElementById('antiqueInventorySummary').textContent =
+        `${keys.length} keys • ${inStockCount} in stock • ${totalStock} total`;
+}
+
 function openAntiquePanel() {
     renderAntiqueMakeList();
     document.getElementById('antiquePanel').classList.add('on');
@@ -16847,6 +16956,7 @@ function openAntiquePanel() {
 
 function closeAntiquePanel() {
     // Close the whole antique flow; the Vehicle Lookup page remains underneath.
+    document.getElementById('antiqueInventoryPanel').classList.remove('on');
     document.getElementById('antiqueDetailPanel').classList.remove('on');
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
