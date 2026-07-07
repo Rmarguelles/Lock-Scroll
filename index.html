@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v176</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v177</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5167,7 +5167,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v176</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v177</p>
         </div>
 
         <div class="settings-section">
@@ -5179,7 +5179,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v176<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v177<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5520,7 +5520,7 @@
                     style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
             </div>
         </div>
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:16px;" id="addVehCodeSeriesGroup">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <label style="font-size:12px;color:var(--dim);">Code Series (optional)</label>
                 <button onclick="addAddVehicleCodeSeriesEntry()"
@@ -7066,7 +7066,7 @@
         <div class="add-inv-section">
             <label>Replaces Old Part Numbers</label>
             <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
-                Old PNs that have been discontinued in favor of this key. Searching the old PN will redirect to this one.
+                Old PNs that have been discontinued in favor of this key. Searching the old PN will redirect to this one. Comma-separate (type or paste) to add several at once.
             </div>
             <div id="customKeyOldPns"></div>
             <button type="button" onclick="addCustomKeyOldPn()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
@@ -11811,9 +11811,10 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 </div>
             </div>
             ${(key.vehicles || []).slice().sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.startYear - b.startYear).map(v => {
-                // Handle codeSeries: can be string (old format) or array (new format)
+                // Handle codeSeries: can be string (old format) or array (new format).
+                // Code series only applies to cut keys — hidden on Remote Only parts.
                 let codeSeriesHtml = '';
-                if (v.codeSeries) {
+                if (v.codeSeries && !isRemoteOnlyKey(key)) {
                     if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
                         // New array format: [{ years: "1997-1999", series: "AA00-7T51" }]
                         codeSeriesHtml = v.codeSeries.map(cs =>
@@ -11830,7 +11831,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                         <span class="detail-label">${v.make} ${v.model}</span>
                         <span class="detail-value">${formatYearRange(v)}</span>
                     </div>
-                    ${Array.isArray(v.codeSeries) && v.codeSeries.length > 0 ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : (typeof v.codeSeries === 'string' && v.codeSeries ? codeSeriesHtml : '')}
+                    ${codeSeriesHtml ? (Array.isArray(v.codeSeries) ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : codeSeriesHtml) : ''}
                 </div>
             `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
         </div>
@@ -11957,6 +11958,10 @@ function closeEditVehiclesModal() {
 function renderEditVehiclesList() {
     const container = document.getElementById('editVehiclesList');
 
+    // Code series only applies to cut keys — hide the editor on Remote Only parts
+    const editingKey = editingVehiclesKeyIdx !== null ? DB[editingVehiclesKeyIdx] : null;
+    const hideCodeSeries = editingKey && isRemoteOnlyKey(editingKey);
+
     // Build code series cache if needed
     if (codeSeriesCache.length === 0) {
         buildCodeSeriesCache();
@@ -12063,6 +12068,7 @@ function renderEditVehiclesList() {
                     </div>
                     <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128465;</button>
                 </div>
+                ${hideCodeSeries ? '' : `
                 <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <span style="font-size:11px;color:var(--dim);">Code Series (with year ranges)</span>
@@ -12070,7 +12076,7 @@ function renderEditVehiclesList() {
                             style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
                     </div>
                     ${codeSeriesEntriesHtml || '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px;">No code series added</div>'}
-                </div>
+                </div>`}
             </div>
         `;
     }).join('');
@@ -12272,6 +12278,10 @@ function openAddSingleVehicleModal(keyIdx) {
     addingVehicle = { make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] };
     buildVehicleDropdownData();
     buildCodeSeriesCache();
+
+    // Code series only applies to cut keys — hide the section on Remote Only parts
+    const csGroup = document.getElementById('addVehCodeSeriesGroup');
+    if (csGroup) csGroup.style.display = (DB[keyIdx] && isRemoteOnlyKey(DB[keyIdx])) ? 'none' : '';
 
     // Populate make dropdown
     const makeSelect = document.getElementById('addVehMake');
@@ -19762,7 +19772,7 @@ function renderVehicleYearsForModel(make, model, keyType) {
                 <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
                     <span style="color:var(--dim);">${keyCountDisplay}</span>
                     ${keyTypeBreakdown ? `<span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>` : ''}
-                    ${v.codeSeries && v.codeSeries.length > 0 ? `<span style="color:var(--accent2);font-size:11px;">📋 ${v.codeSeries.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).join(', ')}</span>` : ''}
+                    ${v.codeSeries && v.codeSeries.length > 0 && !isRemoteOnlyRange(v) ? `<span style="color:var(--accent2);font-size:11px;">📋 ${v.codeSeries.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).join(', ')}</span>` : ''}
                 </div>
             </div>
         `;
@@ -20316,6 +20326,9 @@ function openVehicleDetail(vehicleKey) {
     const totalVehicleStock = vehicle.keys.reduce((sum, key) => sum + (stockData[key.pn] || 0), 0);
     const hasStock = totalVehicleStock > 0;
 
+    // Code series only applies to cut keys — hide it when every key here is remote-only
+    const allKeysRemoteOnly = vehicle.keys.length > 0 && vehicle.keys.every(isRemoteOnlyKey);
+
     // Get secondary key (Door/Trunk/GB) from vehicle data
     const secondaryKeyPN = vehicleData.secondaryKeyPN || null;
     const secondaryKeyStock = secondaryKeyPN ? (stockData[secondaryKeyPN] || 0) : 0;
@@ -20477,10 +20490,11 @@ function openVehicleDetail(vehicleKey) {
                 const keyTypeDisplay = vdKeyType || (aggKeyTypes.length > 0 ? [...new Set(aggKeyTypes)].join(', ') : '');
                 return keyTypeDisplay ? '<div class="vehicle-info-item"><div class="vehicle-info-label">Key Type</div><div class="vehicle-info-value">' + keyTypeDisplay + '</div></div>' : '';
             })()}
+            ${allKeysRemoteOnly ? '' : `
             <div class="vehicle-info-item">
                 <div class="vehicle-info-label">Code Series ${!isCodeSeriesOverride ? '<span style="color:#ff9500;font-size:10px;">(from keyway)</span>' : ''}</div>
                 <div class="vehicle-info-value highlight">${codeSeriesDisplay}</div>
-            </div>
+            </div>`}
             ${(() => {
                 const vdKeyway = vehicleData.keyway || '';
                 const keywayDisplay = vdKeyway || keyways.join(', ');
@@ -24015,6 +24029,11 @@ function toggleCustomKeyChipType() {
     } else {
         chipSection.style.display = 'block';
     }
+    // Code series only applies to cut keys — hide on vehicle rows for Remote Only
+    const hideCs = isRemoteOnlyKey({ keyType });
+    document.querySelectorAll('.customKeyCodeSeriesSection').forEach(el => {
+        el.style.display = hideCs ? 'none' : '';
+    });
     toggleCustomKeySleeve();
 }
 
@@ -24438,7 +24457,20 @@ function addCustomKeyOldPn(prefillPn = '') {
         '<input type="text" class="add-inv-input" id="customOldPnInput' + idx + '" placeholder="Old part number (e.g., 5915392)" style="flex:1;min-width:0;">' +
         '<button type="button" onclick="removeCustomKeyOldPn(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>';
     container.appendChild(row);
-    if (prefillPn) document.getElementById('customOldPnInput' + idx).value = prefillPn;
+    const pnInput = document.getElementById('customOldPnInput' + idx);
+    pnInput.addEventListener('paste', handleOldPnBulkPaste);
+    if (prefillPn) pnInput.value = prefillPn;
+}
+
+function handleOldPnBulkPaste(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text || text.indexOf(',') === -1) return;
+    const parts = text.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return;
+    e.preventDefault();
+    const target = e.target;
+    if (!target.value.trim()) target.value = parts.shift();
+    parts.forEach(pn => addCustomKeyOldPn(pn));
 }
 
 function removeCustomKeyOldPn(idx) {
@@ -24452,8 +24484,10 @@ function gatherCustomKeyOldPns() {
         const idx = row.id.replace('customOldPn', '');
         const input = document.getElementById('customOldPnInput' + idx);
         if (!input) return;
-        const v = input.value.trim();
-        if (v) oldPns.push(v);
+        // Support comma-separated values typed into a single row
+        input.value.split(',').map(s => s.trim()).filter(Boolean).forEach(pn => {
+            if (!oldPns.includes(pn)) oldPns.push(pn);
+        });
     });
     return oldPns;
 }
@@ -24605,6 +24639,10 @@ function addCustomKeyVehicle() {
 
     const currentYear = new Date().getFullYear();
 
+    // Code series only applies to cut keys — start hidden when key type is Remote Only
+    const keyTypeSel = document.getElementById('customKeyType');
+    const csHiddenStyle = keyTypeSel && isRemoteOnlyKey({ keyType: keyTypeSel.value }) ? 'display:none;' : '';
+
     const html = '<div class="custom-vehicle-row" id="customVehicle' + customKeyVehicleCount + '">' +
         '<div class="custom-vehicle-row-header">' +
             '<span class="custom-vehicle-row-title">Vehicle #' + customKeyVehicleCount + '</span>' +
@@ -24624,7 +24662,7 @@ function addCustomKeyVehicle() {
                 '<input type="number" id="customVehicleStart' + customKeyVehicleCount + '" placeholder="Start Year" value="' + currentYear + '">' +
                 '<input type="number" id="customVehicleEnd' + customKeyVehicleCount + '" placeholder="End Year" value="' + currentYear + '">' +
             '</div>' +
-            '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' +
+            '<div class="customKeyCodeSeriesSection" style="' + csHiddenStyle + 'margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                     '<span style="font-size:11px;color:var(--dim);">Code Series (optional)</span>' +
                     '<button onclick="addCustomKeyCodeSeriesEntry(' + customKeyVehicleCount + ')" style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>' +
@@ -24885,8 +24923,9 @@ function saveCustomKey() {
         const startYear = parseInt(document.getElementById('customVehicleStart' + num)?.value) || new Date().getFullYear();
         const endYear = parseInt(document.getElementById('customVehicleEnd' + num)?.value) || startYear;
 
-        // Gather multiple code series entries for this vehicle
-        const csEntries = (customKeyVehicleCodeSeries[num] || []).filter(cs => cs.series && cs.series.trim());
+        // Gather multiple code series entries for this vehicle (dropped for
+        // Remote Only parts — code series only applies to cut keys)
+        const csEntries = isRemoteOnlyKey({ keyType }) ? [] : (customKeyVehicleCodeSeries[num] || []).filter(cs => cs.series && cs.series.trim());
         const codeSeries = csEntries.length > 0 ? csEntries : [];
 
         if (make && make !== '__other__') {
