@@ -5118,6 +5118,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openTestKeysPanel()">
+                    <span class="settings-nav-icon">🗝️</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Test Key Inventory</span>
+                        <span class="settings-nav-desc">Test key blanks tracked by keyway</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openFidManager()">
                     <span class="settings-nav-icon">📋</span>
                     <div class="settings-nav-info">
@@ -5186,6 +5194,19 @@
         <input type="text" class="settings-search" id="lishiInventorySearch" placeholder="Search Lishi tools..." oninput="filterLishiInventory()" style="width:100%;box-sizing:border-box;">
         <div id="lishiInventoryList" style="margin-top:12px;"></div>
         <button class="add-vendor-btn" onclick="openAddLishiToolModal()" style="margin-top:12px;width:100%;">+ Add Lishi Tool</button>
+    </div>
+</div>
+
+<!-- Test Keys Panel -->
+<div class="panel" id="testKeysPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeTestKeysPanel()">←</button>
+        <h2>🗝️ Test Keys</h2>
+    </div>
+    <div style="padding:16px;">
+        <input type="text" class="settings-search" id="testKeysSearch" placeholder="Search keyways..." oninput="filterTestKeys()" style="width:100%;box-sizing:border-box;">
+        <div id="testKeysList" style="margin-top:12px;"></div>
+        <button class="add-vendor-btn" onclick="openAddTestKeysModal()" style="margin-top:12px;width:100%;">+ Add Test Keys</button>
     </div>
 </div>
 
@@ -6114,7 +6135,9 @@
         </div>
         <div class="modal-input-group">
             <label>Test Keys Used</label>
+            <select class="modal-input" id="jobTestKeyway" onchange="updateJobTestKeyStock()" style="margin-bottom:8px;"></select>
             <input type="number" class="modal-input" id="jobTestKeys" min="0" step="1" inputmode="numeric" placeholder="0">
+            <div id="jobTestKeyStock" style="font-size:11px;margin-top:4px;"></div>
         </div>
         <div class="modal-input-group">
             <label>Keys Used From Inventory</label>
@@ -6131,6 +6154,44 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeJobCompleteModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveJobComplete()">Save & Complete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Test Keys Modal -->
+<div class="modal" id="addTestKeysModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">🗝️ Add Test Keys</div>
+        <div class="modal-input-group">
+            <label>Keyway *</label>
+            <select class="modal-input" id="testKeyPurchaseKeyway" onchange="onTestKeyPurchaseKeywayChange()"></select>
+            <input type="text" class="modal-input" id="testKeyPurchaseNewKeyway" placeholder="Enter new keyway..." style="display:none;margin-top:8px;">
+        </div>
+        <div class="modal-input-group">
+            <label>Quantity *</label>
+            <input type="number" class="modal-input" id="testKeyPurchaseQty" min="1" step="1" inputmode="numeric" placeholder="e.g. 10">
+        </div>
+        <div class="modal-input-group">
+            <label>Part Number (optional)</label>
+            <input type="text" class="modal-input" id="testKeyPurchasePN" placeholder="If you have one for this keyway...">
+        </div>
+        <div class="modal-input-group">
+            <label>Vendor (optional)</label>
+            <select class="modal-input" id="testKeyPurchaseVendor">
+                <option value="">Select vendor...</option>
+            </select>
+        </div>
+        <div class="modal-input-group">
+            <label>Price Each (optional)</label>
+            <input type="number" class="modal-input" id="testKeyPurchasePrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="modal-input-group">
+            <label>Invoice/PO # (optional)</label>
+            <input type="text" class="modal-input" id="testKeyPurchaseInvoice" placeholder="Invoice number...">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeAddTestKeysModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveTestKeyPurchase()">Add to Stock</button>
         </div>
     </div>
 </div>
@@ -6832,6 +6893,7 @@
         <div class="add-inv-title">Add Inventory</div>
         <div class="add-inv-header-buttons">
             <button class="history-btn" onclick="closeAddInventory()">Inventory</button>
+            <button class="history-btn" onclick="openTestKeysPanel()">Test Keys</button>
             <button class="history-btn" onclick="openPurchaseHistory()">History</button>
         </div>
     </div>
@@ -7608,6 +7670,7 @@ function renderCloudSyncUI() {
                 <div class="sync-item-row"><span>FID Assignments</span><span class="count">${Object.keys(fidAssignments).length}</span></div>
                 <div class="sync-item-row"><span>Purchase History</span><span class="count">${purchaseHistory.length}</span></div>
                 <div class="sync-item-row"><span>Job History</span><span class="count">${jobHistory.length}</span></div>
+                <div class="sync-item-row"><span>Test Keys</span><span class="count">${Object.keys(testKeyInventory).length}</span></div>
             </div>
             ${renderSharedUsersSection()}
         `;
@@ -7912,6 +7975,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
                 activeJobs: activeJobs,
+                testKeyInventory: testKeyInventory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
@@ -7943,6 +8007,7 @@ async function uploadToCloud() {
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
                 activeJobs: activeJobs,
+                testKeyInventory: testKeyInventory,
                 toolsDatabase: toolsDatabase,
                 vehicleOverrides: vehicleOverrides,
                 keyInfoOverrides: keyInfoOverrides,
@@ -8115,6 +8180,18 @@ async function downloadFromCloud() {
                 if (completedIds.has(id)) delete activeJobs[id];
             });
             saveActiveJobs();
+        }
+        if (data.testKeyInventory) {
+            // Per-keyway last-writer-wins (qty is a counter — a blind spread would
+            // clobber newer local adjustments; simultaneous offline edits can still
+            // lose one adjustment, same limitation as other synced stores)
+            Object.entries(data.testKeyInventory).forEach(([kw, remote]) => {
+                const local = testKeyInventory[kw];
+                if (!local || (remote.updatedAt || '') > (local.updatedAt || '')) {
+                    testKeyInventory[kw] = remote;
+                }
+            });
+            saveTestKeyInventory();
         }
         if (data.toolsDatabase) {
             // Merge tools database
@@ -9775,6 +9852,9 @@ let jobHistory = [];
 let activeJobs = {};
 let jobCompleteJobId = null;
 let jobKeysUsedSelection = {};
+// Test key blanks (non-transponder) tracked by keyway, with optional part number:
+// { "HU100": { qty: 10, pn: "", notes: "", updatedAt: ISO, updatedBy: name } }
+let testKeyInventory = {};
 let fidPrefixes = {"N":{"makes":["Nissan","Infiniti"],"name":"Nissan/Infiniti"},"F":{"makes":["Ford","Lincoln","Mercury"],"name":"Ford/Lincoln/Mercury"},"GM":{"makes":["Chevrolet","GMC","Buick","Cadillac","Saturn","Pontiac","Oldsmobile","Hummer"],"name":"GM/Chevrolet/Buick/Cadillac/GMC"},"T":{"makes":["Toyota","Lexus","Scion"],"name":"Toyota/Lexus/Scion"},"H":{"makes":["Honda","Acura"],"name":"Honda/Acura"},"CH":{"name":"Chrysler/Dodge/Jeep/Ram","makes":["Chrysler","Dodge","Jeep","Ram","Eagle","Plymouth"]},"HY":{"name":"Hyundai/Kia/Genesis","makes":["Hyundai","Kia","Genesis"]},"MZ":{"makes":["Mazda"],"name":"Mazda"},"MT":{"makes":["Mitsubishi"],"name":"Mitsubishi"},"SB":{"name":"Subaru","makes":["Subaru"]},"VW":{"name":"Volkswagen/Audi","makes":["Volkswagen","Audi"]},"SZ":{"name":"Suzuki","makes":["Suzuki"]},"CL":{"name":"Cloneable Keys","makes":[]},"TB":{"name":"Tibbe Keys","makes":[]},"OT":{"name":"Other","makes":[]}};
 let cameFromFcc = false;
 let cameFromFid = false;
@@ -10205,6 +10285,9 @@ async function loadLocalData() {
             const savedActiveJobs = await loadFromIndexedDB('activeJobs');
             if (savedActiveJobs) activeJobs = savedActiveJobs;
 
+            const savedTestKeyInventory = await loadFromIndexedDB('testKeyInventory');
+            if (savedTestKeyInventory) testKeyInventory = savedTestKeyInventory;
+
             // Load tools database
             await loadToolsDatabase();
         }
@@ -10346,6 +10429,11 @@ function saveJobHistory() {
 
 function saveActiveJobs() {
     saveToIndexedDB('activeJobs', activeJobs);
+    triggerAutoSync();
+}
+
+function saveTestKeyInventory() {
+    saveToIndexedDB('testKeyInventory', testKeyInventory);
     triggerAutoSync();
 }
 
@@ -14548,6 +14636,8 @@ function goHome() {
     document.getElementById('purchaseHistoryPanel').classList.remove('on');
     document.getElementById('jobHistoryPanel').classList.remove('on');
     document.getElementById('jobCompleteModal').classList.remove('on');
+    document.getElementById('testKeysPanel').classList.remove('on');
+    document.getElementById('addTestKeysModal').classList.remove('on');
     document.getElementById('addCustomKeyPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
@@ -16284,6 +16374,7 @@ function exportData() {
         purchaseHistory: purchaseHistory,
         jobHistory: jobHistory,
         activeJobs: activeJobs,
+        testKeyInventory: testKeyInventory,
         customKeys: customKeys,
         customVehicles: customVehicles,
         toolsDatabase: toolsDatabase,
@@ -16402,6 +16493,11 @@ function importData(event) {
             if (data.activeJobs) {
                 activeJobs = data.activeJobs;
                 saveActiveJobs();
+            }
+
+            if (data.testKeyInventory) {
+                testKeyInventory = data.testKeyInventory;
+                saveTestKeyInventory();
             }
             
             if (data.customKeys) {
@@ -23337,6 +23433,78 @@ function getJobCompatibleKeys(vehicleKey) {
     }).sort((a, b) => (stockData[b.pn] || 0) - (stockData[a.pn] || 0));
 }
 
+// Keyways for a vehicle entry, ignition first — same precedence as the detail
+// display: manual override in lishiVehicleData, else keyways aggregated from DB
+// keys; dual-key vehicles use their per-role ignition/door keyway fields
+function getVehicleKeyways(vehicleKey) {
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    const vehicleData = lishiVehicleData[vehicleKey] || {};
+    const cvForDetail = customVehicles.find(c =>
+        c.make === make && c.model === model &&
+        c.startYear === parseInt(startYear) && c.endYear === parseInt(endYear)
+    );
+    const isDualKey = (cvForDetail && cvForDetail.multipleKeys === true) || vehicleData.multipleKeys === true;
+
+    const result = [];
+    const seen = new Set();
+    const add = (keyway, role) => {
+        const kw = (keyway || '').trim();
+        if (!kw || seen.has(kw)) return;
+        seen.add(kw);
+        result.push({ keyway: kw, role: role });
+    };
+
+    if (isDualKey) {
+        const pickKeys = (arrField, flatKeyway) => {
+            if (cvForDetail) {
+                if (Array.isArray(cvForDetail[arrField]) && cvForDetail[arrField].length > 0) return cvForDetail[arrField];
+                if (cvForDetail[flatKeyway]) return [{ keyway: cvForDetail[flatKeyway] }];
+            }
+            if (vehicleData[flatKeyway]) return [{ keyway: vehicleData[flatKeyway] }];
+            return [];
+        };
+        pickKeys('ignition_keys', 'ignition_keyway').forEach(e => add(e.keyway, 'ignition'));
+        pickKeys('door_keys', 'door_keyway').forEach(e => add(e.keyway, 'door'));
+        if (result.length > 0) return result;
+    }
+
+    if (vehicleData.keyway) {
+        vehicleData.keyway.split(',').forEach(kw => add(kw, 'primary'));
+    } else {
+        const vehicle = getUniqueVehicles().find(v =>
+            v.make === make && v.model === model &&
+            v.startYear === parseInt(startYear) && v.endYear === parseInt(endYear)
+        );
+        if (vehicle) Array.from(vehicle.keyways).forEach(kw => add(kw, 'primary'));
+    }
+    return result;
+}
+
+function setupJobTestKeywaySelector(vehicleKey) {
+    const select = document.getElementById('jobTestKeyway');
+    const kws = getVehicleKeyways(vehicleKey);
+    select.innerHTML = kws.map(k => {
+        const roleLabel = k.role === 'ignition' ? ' (Ignition)' : k.role === 'door' ? ' (Door)' : '';
+        return `<option value="${escapeJobText(k.keyway)}">${escapeJobText(k.keyway)}${roleLabel}</option>`;
+    }).join('');
+    // Hide the selector when there's nothing to choose; a single keyway still
+    // keeps its value set so saveJobComplete records it
+    select.style.display = kws.length > 1 ? '' : 'none';
+    updateJobTestKeyStock();
+}
+
+function updateJobTestKeyStock() {
+    const kw = document.getElementById('jobTestKeyway').value;
+    const el = document.getElementById('jobTestKeyStock');
+    if (!kw) {
+        el.innerHTML = '<span style="color:var(--dim);">No keyway on file for this vehicle — count is recorded but no test key stock is deducted</span>';
+        return;
+    }
+    const entry = testKeyInventory[kw];
+    const qty = entry ? entry.qty : 0;
+    el.innerHTML = `${escapeJobText(kw)} test keys: <span style="color:${qty > 0 ? 'var(--success)' : '#ff4444'};font-weight:600;">${qty} in stock</span>${entry && entry.pn ? ` <span style="color:var(--dim);">• PN ${escapeJobText(entry.pn)}</span>` : ''}`;
+}
+
 function openJobCompleteModal(jobId) {
     const job = activeJobs[jobId];
     if (!job) {
@@ -23355,6 +23523,7 @@ function openJobCompleteModal(jobId) {
     document.getElementById('jobTestKeys').value = '';
     document.getElementById('jobCharge').value = '';
     document.getElementById('jobNotes').value = '';
+    setupJobTestKeywaySelector(job.vehicleKey);
     renderJobKeysUsedList(job.vehicleKey);
     document.getElementById('jobCompleteModal').classList.add('on');
 }
@@ -23431,6 +23600,7 @@ function saveJobComplete() {
         completedAt: completedAt,
         durationMin: Math.max(0, Math.round((new Date(completedAt) - new Date(job.startedAt)) / 60000)),
         testKeysUsed: parseInt(document.getElementById('jobTestKeys').value) || 0,
+        testKeyway: document.getElementById('jobTestKeyway').value || '',
         keysUsed: keysUsed,
         charge: parseFloat(document.getElementById('jobCharge').value) || 0,
         notes: document.getElementById('jobNotes').value.trim(),
@@ -23445,6 +23615,19 @@ function saveJobComplete() {
             stockData[k.pn] = Math.max(0, (stockData[k.pn] || 0) - k.qty);
         });
         saveStock();
+    }
+
+    // Deduct test keys from the keyway's stock — clamped at 0 while the record
+    // keeps the true count; create-if-missing so the keyway shows in the panel
+    if (record.testKeysUsed > 0 && record.testKeyway) {
+        if (!testKeyInventory[record.testKeyway]) {
+            testKeyInventory[record.testKeyway] = { qty: 0, pn: '', notes: '' };
+        }
+        const tkEntry = testKeyInventory[record.testKeyway];
+        tkEntry.qty = Math.max(0, tkEntry.qty - record.testKeysUsed);
+        tkEntry.updatedAt = completedAt;
+        tkEntry.updatedBy = record.completedBy;
+        saveTestKeyInventory();
     }
 
     jobHistory.unshift(record);
@@ -23474,7 +23657,7 @@ function renderJobRecordCard(job, viewingVehicleKey) {
         '</div>' +
         '<div class="purchase-item-details" style="flex-wrap:wrap;gap:6px;">' +
             (keyChips || '<span style="font-size:11px;color:var(--dim);">No inventory keys used</span>') +
-            (job.testKeysUsed > 0 ? '<span style="font-size:11px;color:var(--dim);">Test keys: ' + job.testKeysUsed + '</span>' : '') +
+            (job.testKeysUsed > 0 ? '<span style="font-size:11px;color:var(--dim);">Test keys: ' + job.testKeysUsed + (job.testKeyway ? ' (' + escapeJobText(job.testKeyway) + ')' : '') + '</span>' : '') +
         '</div>' +
         (job.notes ? '<div style="margin-top:6px;padding:8px;background:var(--bg);border-left:3px solid cornflowerblue;border-radius:4px;font-size:12px;color:var(--text);white-space:pre-wrap;">📝 ' + escapeJobText(job.notes) + '</div>' : '') +
         (job.completedBy && job.completedBy !== 'Unknown' ? '<div style="font-size:10px;color:var(--dim);margin-top:4px;">' + escapeJobText(job.completedBy) + '</div>' : '') +
@@ -23518,6 +23701,155 @@ function filterJobHistory() {
     items.forEach(item => {
         item.style.display = (!search || item.textContent.toLowerCase().includes(search)) ? '' : 'none';
     });
+}
+
+// ===================== TEST KEY INVENTORY =====================
+function openTestKeysPanel() {
+    renderTestKeys();
+    document.getElementById('testKeysPanel').classList.add('on');
+}
+
+function closeTestKeysPanel() {
+    document.getElementById('testKeysPanel').classList.remove('on');
+}
+
+function renderTestKeys() {
+    const entries = Object.entries(testKeyInventory).sort((a, b) => a[0].localeCompare(b[0]));
+    if (entries.length === 0) {
+        document.getElementById('testKeysList').innerHTML =
+            '<div class="add-inv-placeholder">No test keys yet — add your first purchase below</div>';
+        return;
+    }
+    document.getElementById('testKeysList').innerHTML = entries.map(([kw, entry]) => {
+        const kwEsc = kw.replace(/'/g, "\\'");
+        const qty = entry.qty || 0;
+        return `
+            <div class="test-key-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+                <div style="min-width:0;">
+                    <div style="font-weight:700;font-size:15px;">${escapeJobText(kw)}</div>
+                    <div style="font-size:11px;color:var(--dim);">
+                        ${entry.pn ? 'PN: ' + escapeJobText(entry.pn) : 'No part number yet'}
+                        <button onclick="editTestKeyPN('${kwEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 4px;">✎</button>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                    <button onclick="adjustTestKeyQty('${kwEsc}', -1)" style="width:32px;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;">−</button>
+                    <span style="min-width:24px;text-align:center;font-weight:700;font-size:16px;color:${qty > 0 ? 'var(--success)' : '#ff4444'};">${qty}</span>
+                    <button onclick="adjustTestKeyQty('${kwEsc}', 1)" style="width:32px;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;">+</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterTestKeys() {
+    const search = document.getElementById('testKeysSearch').value.toLowerCase();
+    document.querySelectorAll('#testKeysList .test-key-item').forEach(item => {
+        item.style.display = (!search || item.textContent.toLowerCase().includes(search)) ? '' : 'none';
+    });
+}
+
+function adjustTestKeyQty(keyway, delta) {
+    const entry = testKeyInventory[keyway];
+    if (!entry) return;
+    entry.qty = Math.max(0, (entry.qty || 0) + delta);
+    entry.updatedAt = new Date().toISOString();
+    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    saveTestKeyInventory();
+    renderTestKeys();
+}
+
+function editTestKeyPN(keyway) {
+    const entry = testKeyInventory[keyway];
+    if (!entry) return;
+    const pn = prompt(`Part number for ${keyway} test keys`, entry.pn || '');
+    if (pn === null) return;
+    entry.pn = pn.trim();
+    entry.updatedAt = new Date().toISOString();
+    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    saveTestKeyInventory();
+    renderTestKeys();
+}
+
+function openAddTestKeysModal() {
+    populateYrfDropdown('testKeyPurchaseKeyway', getYrfDropdownOptions().keyways, 'Select Keyway...', true);
+    const vendorSelect = document.getElementById('testKeyPurchaseVendor');
+    vendorSelect.innerHTML = '<option value="">Select vendor...</option>';
+    [...DEFAULT_VENDORS.map(v => v.name), ...customVendors.map(v => v.name)].sort().forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        vendorSelect.appendChild(opt);
+    });
+    document.getElementById('testKeyPurchaseNewKeyway').style.display = 'none';
+    document.getElementById('testKeyPurchaseNewKeyway').value = '';
+    document.getElementById('testKeyPurchaseQty').value = '';
+    document.getElementById('testKeyPurchasePN').value = '';
+    document.getElementById('testKeyPurchasePrice').value = '';
+    document.getElementById('testKeyPurchaseInvoice').value = '';
+    document.getElementById('addTestKeysModal').classList.add('on');
+}
+
+function onTestKeyPurchaseKeywayChange() {
+    const kw = document.getElementById('testKeyPurchaseKeyway').value;
+    const newInput = document.getElementById('testKeyPurchaseNewKeyway');
+    newInput.style.display = kw === '__ADD_NEW__' ? '' : 'none';
+    if (kw && kw !== '__ADD_NEW__' && testKeyInventory[kw] && testKeyInventory[kw].pn) {
+        document.getElementById('testKeyPurchasePN').value = testKeyInventory[kw].pn;
+    }
+}
+
+function closeAddTestKeysModal() {
+    document.getElementById('addTestKeysModal').classList.remove('on');
+}
+
+function saveTestKeyPurchase() {
+    let kw = document.getElementById('testKeyPurchaseKeyway').value;
+    if (kw === '__ADD_NEW__') {
+        kw = document.getElementById('testKeyPurchaseNewKeyway').value.trim();
+    }
+    if (!kw || kw === '__ADD_NEW__') {
+        toast('Select or enter a keyway');
+        return;
+    }
+    const qty = parseInt(document.getElementById('testKeyPurchaseQty').value) || 0;
+    if (qty <= 0) {
+        toast('Enter a quantity');
+        return;
+    }
+    const pn = document.getElementById('testKeyPurchasePN').value.trim();
+    const vendor = document.getElementById('testKeyPurchaseVendor').value;
+    const priceEach = parseFloat(document.getElementById('testKeyPurchasePrice').value) || 0;
+    const invoice = document.getElementById('testKeyPurchaseInvoice').value.trim();
+
+    if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
+    const entry = testKeyInventory[kw];
+    entry.qty = (entry.qty || 0) + qty;
+    if (pn) entry.pn = pn;
+    entry.updatedAt = new Date().toISOString();
+    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    saveTestKeyInventory();
+
+    purchaseHistory.unshift({
+        id: Date.now() + '_testkey_' + Math.random().toString(36).substr(2, 4),
+        date: new Date().toISOString().split('T')[0],
+        vendor: vendor || 'Unknown',
+        partNumber: pn || kw,
+        quantity: qty,
+        priceEach: priceEach,
+        total: priceEach * qty,
+        invoice: invoice,
+        notes: '[Test Key] ' + kw,
+        brand: '',
+        fccid: '',
+        keyway: kw,
+        fid: ''
+    });
+    savePurchaseHistory();
+
+    closeAddTestKeysModal();
+    toast(`Added ${qty}× ${kw} test keys`);
+    renderTestKeys();
 }
 
 // ===================== ADD CUSTOM KEY =====================
