@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v179</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v180</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5167,7 +5167,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v179</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v180</p>
         </div>
 
         <div class="settings-section">
@@ -5179,7 +5179,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v179<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v180<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5472,7 +5472,13 @@
     <div class="modal-content" style="max-width:550px;">
         <div class="modal-title">Edit Compatible Vehicles</div>
         <div id="editVehiclesList" style="max-height:350px;overflow-y:auto;margin-bottom:12px;"></div>
-        <button onclick="addVehicleToKey()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:16px;">+ Add Vehicle</button>
+        <button onclick="addVehicleToKey()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:8px;">+ Add Vehicle</button>
+        <button onclick="toggleEditVehiclesPaste()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;margin-bottom:16px;">📋 Paste Vehicle List</button>
+        <div id="editVehiclesPasteBox" style="display:none;margin-bottom:16px;">
+            <textarea id="editVehiclesPasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;2003-2006 Toyota Tundra"
+                style="width:100%;min-height:110px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+            <button onclick="addEditVehiclesFromPaste()" style="width:100%;margin-top:6px;padding:10px;background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Add Vehicles from List</button>
+        </div>
         <div class="modal-buttons">
             <button class="modal-btn" onclick="closeEditVehiclesModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveKeyVehicles()">Save Changes</button>
@@ -7239,6 +7245,16 @@
                 </button>
                 <button onclick="openImportVehiclesFromKeyModal()" title="Copy the vehicle list from another known key" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">
                     📥 Import from Key
+                </button>
+            </div>
+            <button onclick="toggleCustomKeyVehiclePaste()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">
+                📋 Paste Vehicle List
+            </button>
+            <div id="customKeyVehiclePasteBox" style="display:none;margin-top:8px;">
+                <textarea id="customKeyVehiclePasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;2003-2006 Toyota Tundra&#10;1995-2004 Toyota Tacoma"
+                    style="width:100%;min-height:110px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+                <button onclick="addCustomKeyVehiclesFromPaste()" style="width:100%;margin-top:6px;padding:10px;background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+                    Add Vehicles from List
                 </button>
             </div>
         </div>
@@ -11946,6 +11962,8 @@ function openEditVehiclesModal(keyIdx) {
     );
     buildVehicleDropdownData();
     renderEditVehiclesList();
+    const pasteBox = document.getElementById('editVehiclesPasteBox');
+    if (pasteBox) { pasteBox.style.display = 'none'; document.getElementById('editVehiclesPasteText').value = ''; }
     document.getElementById('editVehiclesModal').classList.add('on');
 }
 
@@ -12232,6 +12250,30 @@ function updateEditVehicle(index, field, value) {
 function addVehicleToKey() {
     editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] });
     renderEditVehiclesList();
+}
+
+function toggleEditVehiclesPaste() {
+    const box = document.getElementById('editVehiclesPasteBox');
+    const show = box.style.display === 'none';
+    box.style.display = show ? '' : 'none';
+    if (show) document.getElementById('editVehiclesPasteText').focus();
+}
+
+function addEditVehiclesFromPaste() {
+    const textEl = document.getElementById('editVehiclesPasteText');
+    const { vehicles, failed } = parseVehicleListText(textEl.value);
+    if (vehicles.length === 0) {
+        toast('No vehicles recognized — use one per line like "2004-2006 Scion xB"');
+        return;
+    }
+    vehicles.forEach(v => {
+        editingVehicles.push({ make: v.make, model: v.model, startYear: v.startYear, endYear: v.endYear, codeSeries: [] });
+    });
+    textEl.value = '';
+    document.getElementById('editVehiclesPasteBox').style.display = 'none';
+    renderEditVehiclesList();
+    toast(`${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} added` +
+        (failed.length ? ` — ${failed.length} line${failed.length !== 1 ? 's' : ''} not recognized` : ''));
 }
 
 function removeEditVehicle(index) {
@@ -23910,6 +23952,8 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyFCC').value = prefillFcc || '';
         document.getElementById('customKeyNotes').value = '';
         document.getElementById('customKeyVehicles').innerHTML = '';
+        document.getElementById('customKeyVehiclePasteBox').style.display = 'none';
+        document.getElementById('customKeyVehiclePasteText').value = '';
         document.getElementById('newKeyFidDisplay').style.display = 'none';
         document.getElementById('newKeyFidDisplay').textContent = '';
 
@@ -24604,6 +24648,127 @@ function applyManualFidToNewKey() {
 
 // Track code series data for each vehicle row in the Add Custom Key form
 let customKeyVehicleCodeSeries = {};
+
+// Parse a pasted vehicle list — one entry per line in the common
+// "2004-2006 Scion xB" format. Also accepts single years ("2015 Ford F-150"),
+// en/em dashes or "to" in the range, two-digit end years ("2007-13"),
+// year at the end ("Toyota Tundra 2003-2006"), and a leading "For"/"Fits".
+// Returns { vehicles: [{make, model, startYear, endYear}], failed: [lines] }.
+function parseVehicleListText(text) {
+    const vehicles = [];
+    const failed = [];
+
+    // Known makes (longest first) so multi-word makes like "Land Rover" or
+    // "Alfa Romeo" match before the first-word fallback splits them. Common
+    // multi-word makes are seeded so they parse even before any key uses them.
+    const knownMakes = new Set(['Land Rover', 'Alfa Romeo', 'Aston Martin', 'Rolls Royce', 'Rolls-Royce', 'AM General', 'Mercedes Benz']);
+    DB.forEach(k => (k.vehicles || []).forEach(v => { if (v.make) knownMakes.add(v.make); }));
+    customVehicles.forEach(cv => { if (cv.make) knownMakes.add(cv.make); });
+    const makesByLength = Array.from(knownMakes).sort((a, b) => b.length - a.length);
+
+    const yearRe = /((?:19|20)\d{2})\s*(?:[-–—~]|to\s)\s*((?:19|20)\d{2}|\d{2})|((?:19|20)\d{2})/;
+
+    (text || '').split(/[\n;]/).forEach(rawLine => {
+        let line = rawLine.replace(/["<>]/g, '').trim()
+            .replace(/^(for|fits)\s+/i, '')
+            .replace(/[.,]+$/, '');
+        if (!line) return;
+
+        const m = line.match(yearRe);
+        if (!m) { failed.push(rawLine.trim()); return; }
+
+        let startYear, endYear;
+        if (m[1]) {
+            startYear = parseInt(m[1]);
+            endYear = parseInt(m[2]);
+            if (m[2].length === 2) endYear = Math.floor(startYear / 100) * 100 + endYear; // "2007-13"
+        } else {
+            startYear = endYear = parseInt(m[3]);
+        }
+        if (endYear < startYear) { const t = startYear; startYear = endYear; endYear = t; }
+
+        // Remove the year token; what's left is "Make Model"
+        const rest = (line.slice(0, m.index) + ' ' + line.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim();
+        if (!rest) { failed.push(rawLine.trim()); return; }
+
+        let make = '', model = '';
+        const restLower = rest.toLowerCase();
+        for (const km of makesByLength) {
+            const kmLower = km.toLowerCase();
+            if (restLower === kmLower || restLower.startsWith(kmLower + ' ')) {
+                make = km;
+                model = rest.slice(km.length).trim();
+                break;
+            }
+        }
+        if (!make) {
+            const sp = rest.indexOf(' ');
+            make = sp === -1 ? rest : rest.slice(0, sp);
+            model = sp === -1 ? '' : rest.slice(sp + 1).trim();
+        }
+
+        vehicles.push({ make, model: model || 'Unknown', startYear, endYear });
+    });
+
+    return { vehicles, failed };
+}
+
+function toggleCustomKeyVehiclePaste() {
+    const box = document.getElementById('customKeyVehiclePasteBox');
+    const show = box.style.display === 'none';
+    box.style.display = show ? '' : 'none';
+    if (show) document.getElementById('customKeyVehiclePasteText').focus();
+}
+
+function addCustomKeyVehiclesFromPaste() {
+    const textEl = document.getElementById('customKeyVehiclePasteText');
+    const { vehicles, failed } = parseVehicleListText(textEl.value);
+    if (vehicles.length === 0) {
+        toast('No vehicles recognized — use one per line like "2004-2006 Scion xB"');
+        return;
+    }
+
+    // Drop untouched blank rows so the pasted list doesn't sit under an empty one
+    document.querySelectorAll('#customKeyVehicles .custom-vehicle-row').forEach(row => {
+        const num = row.id.replace('customVehicle', '');
+        const makeVal = document.getElementById('customVehicleMake' + num)?.value;
+        const modelVal = document.getElementById('customVehicleModel' + num)?.value;
+        const modelOtherVal = document.getElementById('customVehicleModelOther' + num)?.value;
+        if (!makeVal && !modelVal && !modelOtherVal) removeCustomKeyVehicle(num);
+    });
+
+    vehicles.forEach(v => {
+        addCustomKeyVehicle();
+        const num = customKeyVehicleCount;
+
+        const makeSelect = document.getElementById('customVehicleMake' + num);
+        if (!Array.from(makeSelect.options).some(o => o.value === v.make)) {
+            const opt = document.createElement('option');
+            opt.value = v.make;
+            opt.textContent = v.make;
+            makeSelect.insertBefore(opt, makeSelect.lastElementChild);
+        }
+        makeSelect.value = v.make;
+        updateCustomVehicleModels(num);
+
+        const modelSelect = document.getElementById('customVehicleModel' + num);
+        if (!Array.from(modelSelect.options).some(o => o.value === v.model)) {
+            const opt = document.createElement('option');
+            opt.value = v.model;
+            opt.textContent = v.model;
+            modelSelect.insertBefore(opt, modelSelect.lastElementChild);
+        }
+        modelSelect.value = v.model;
+
+        document.getElementById('customVehicleStart' + num).value = v.startYear;
+        document.getElementById('customVehicleEnd' + num).value = v.endYear;
+    });
+
+    textEl.value = '';
+    document.getElementById('customKeyVehiclePasteBox').style.display = 'none';
+    toast(`${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} added` +
+        (failed.length ? ` — ${failed.length} line${failed.length !== 1 ? 's' : ''} not recognized` : ''));
+}
 
 function addCustomKeyVehicle() {
     // Capture the make from the most recent existing row (if any) so we can
