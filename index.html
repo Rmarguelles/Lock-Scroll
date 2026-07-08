@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v184</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v185</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v184</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v185</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v184<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v185<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5490,7 +5490,7 @@
         <button onclick="addVehicleToKey()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:8px;">+ Add Vehicle</button>
         <button onclick="toggleEditVehiclesPaste()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;margin-bottom:16px;">📋 Paste Vehicle List</button>
         <div id="editVehiclesPasteBox" style="display:none;margin-bottom:16px;">
-            <textarea id="editVehiclesPasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;2003-2006 Toyota Tundra"
+            <textarea id="editVehiclesPasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;or a make with models under it:&#10;Dodge&#10;  Caravan (99-03)&#10;  Dakota (01-04)"
                 style="width:100%;min-height:110px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
             <button onclick="addEditVehiclesFromPaste()" style="width:100%;margin-top:6px;padding:10px;background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Add Vehicles from List</button>
         </div>
@@ -7284,7 +7284,7 @@
                 📋 Paste Vehicle List
             </button>
             <div id="customKeyVehiclePasteBox" style="display:none;margin-top:8px;">
-                <textarea id="customKeyVehiclePasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;2003-2006 Toyota Tundra&#10;1995-2004 Toyota Tacoma"
+                <textarea id="customKeyVehiclePasteText" placeholder="One vehicle per line, e.g.&#10;2004-2006 Scion xB&#10;or a make with models under it:&#10;Dodge&#10;  Caravan (99-03)&#10;  Dakota (01-04)"
                     style="width:100%;min-height:110px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
                 <button onclick="addCustomKeyVehiclesFromPaste()" style="width:100%;margin-top:6px;padding:10px;background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
                     Add Vehicles from List
@@ -25190,7 +25190,13 @@ let customKeyVehicleCodeSeries = {};
 // Parse a pasted vehicle list — one entry per line in the common
 // "2004-2006 Scion xB" format. Also accepts single years ("2015 Ford F-150"),
 // en/em dashes or "to" in the range, two-digit end years ("2007-13"),
-// year at the end ("Toyota Tundra 2003-2006"), and a leading "For"/"Fits".
+// year at the end ("Toyota Tundra 2003-2006"), a leading "For"/"Fits", and
+// the make-header catalog format:
+//     Dodge
+//       Caravan (99-03)
+//       Ram Van (03)
+// where a yearless line sets the make for the indented "Model (yy-yy)" lines
+// under it (two-digit years expand as 30+ -> 19xx, else 20xx).
 // Returns { vehicles: [{make, model, startYear, endYear}], failed: [lines] }.
 function parseVehicleListText(text) {
     const vehicles = [];
@@ -25205,6 +25211,40 @@ function parseVehicleListText(text) {
     const makesByLength = Array.from(knownMakes).sort((a, b) => b.length - a.length);
 
     const yearRe = /((?:19|20)\d{2})\s*(?:[-–—~]|to\s)\s*((?:19|20)\d{2}|\d{2})|((?:19|20)\d{2})/;
+    const parenYearRe = /\(\s*(\d{2}|\d{4})(?:\s*[-–—~]\s*(\d{2}|\d{4}))?\s*\)/;
+    const expandYear = y => { y = parseInt(y, 10); return y < 100 ? (y >= 30 ? 1900 + y : 2000 + y) : y; };
+
+    // Match the longest known make at the start of a string
+    const matchKnownMake = rest => {
+        const restLower = rest.toLowerCase();
+        for (const km of makesByLength) {
+            const kmLower = km.toLowerCase();
+            if (restLower === kmLower || restLower.startsWith(kmLower + ' ')) {
+                return { make: km, model: rest.slice(km.length).trim() };
+            }
+        }
+        return null;
+    };
+
+    const pushVehicle = (rest, currentMake, startYear, endYear, rawLine) => {
+        const mk = matchKnownMake(rest);
+        if (mk) {
+            vehicles.push({ make: mk.make, model: mk.model || 'Unknown', startYear, endYear });
+        } else if (currentMake) {
+            vehicles.push({ make: currentMake, model: rest || 'Unknown', startYear, endYear });
+        } else if (rest) {
+            const sp = rest.indexOf(' ');
+            vehicles.push({
+                make: sp === -1 ? rest : rest.slice(0, sp),
+                model: sp === -1 ? 'Unknown' : rest.slice(sp + 1).trim(),
+                startYear, endYear
+            });
+        } else {
+            failed.push(rawLine);
+        }
+    };
+
+    let currentMake = '';
 
     (text || '').split(/[\n;]/).forEach(rawLine => {
         let line = rawLine.replace(/["<>]/g, '').trim()
@@ -25212,40 +25252,47 @@ function parseVehicleListText(text) {
             .replace(/[.,]+$/, '');
         if (!line) return;
 
-        const m = line.match(yearRe);
-        if (!m) { failed.push(rawLine.trim()); return; }
+        // "Model (99-03), Model (01-04)" lines split into one segment per model
+        const parenCount = (line.match(/\(\s*\d{2,4}[^)]*\)/g) || []).length;
+        const segments = parenCount > 1 ? line.split(',').map(s => s.trim()).filter(Boolean) : [line];
 
-        let startYear, endYear;
-        if (m[1]) {
-            startYear = parseInt(m[1]);
-            endYear = parseInt(m[2]);
-            if (m[2].length === 2) endYear = Math.floor(startYear / 100) * 100 + endYear; // "2007-13"
-        } else {
-            startYear = endYear = parseInt(m[3]);
-        }
-        if (endYear < startYear) { const t = startYear; startYear = endYear; endYear = t; }
-
-        // Remove the year token; what's left is "Make Model"
-        const rest = (line.slice(0, m.index) + ' ' + line.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim();
-        if (!rest) { failed.push(rawLine.trim()); return; }
-
-        let make = '', model = '';
-        const restLower = rest.toLowerCase();
-        for (const km of makesByLength) {
-            const kmLower = km.toLowerCase();
-            if (restLower === kmLower || restLower.startsWith(kmLower + ' ')) {
-                make = km;
-                model = rest.slice(km.length).trim();
-                break;
+        segments.forEach(seg => {
+            // Catalog format: model text with parenthesized years, e.g. "Caravan (99-03)"
+            const pm = seg.match(parenYearRe);
+            if (pm) {
+                let startYear = expandYear(pm[1]);
+                let endYear = pm[2] !== undefined ? expandYear(pm[2]) : startYear;
+                if (endYear < startYear) { const t = startYear; startYear = endYear; endYear = t; }
+                const rest = (seg.slice(0, pm.index) + ' ' + seg.slice(pm.index + pm[0].length)).replace(/\s+/g, ' ').trim();
+                pushVehicle(rest, currentMake, startYear, endYear, seg);
+                return;
             }
-        }
-        if (!make) {
-            const sp = rest.indexOf(' ');
-            make = sp === -1 ? rest : rest.slice(0, sp);
-            model = sp === -1 ? '' : rest.slice(sp + 1).trim();
-        }
 
-        vehicles.push({ make, model: model || 'Unknown', startYear, endYear });
+            // Plain year token, e.g. "2004-2006 Scion xB"
+            const m = seg.match(yearRe);
+            if (!m) {
+                // No years at all: a bare name line ("Dodge") sets the make
+                // for the model lines under it
+                if (!/\d/.test(seg)) { currentMake = seg; return; }
+                failed.push(seg);
+                return;
+            }
+
+            let startYear, endYear;
+            if (m[1]) {
+                startYear = parseInt(m[1]);
+                endYear = parseInt(m[2]);
+                if (m[2].length === 2) endYear = Math.floor(startYear / 100) * 100 + endYear; // "2007-13"
+            } else {
+                startYear = endYear = parseInt(m[3]);
+            }
+            if (endYear < startYear) { const t = startYear; startYear = endYear; endYear = t; }
+
+            // Remove the year token; what's left is "Make Model" (or just the
+            // model when under a make-header line)
+            const rest = (seg.slice(0, m.index) + ' ' + seg.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim();
+            pushVehicle(rest, currentMake, startYear, endYear, seg);
+        });
     });
 
     return { vehicles, failed };
