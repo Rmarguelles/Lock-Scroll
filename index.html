@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v183</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v184</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v183</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v184</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v183<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v184<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10000,6 +10000,47 @@ async function runFccidMergeMigration() {
 }
 
 // Merge custom key H75x into H75 (H75x only exists in user's IndexedDB/customKeys)
+// Repair antique-generated keys whose PN kept the combined "PN/ILCO" spelling
+// (early generator runs, or a merge that kept the combined-spelling side):
+// pn "S1970AM/RA3" becomes pn "S1970AM" with ILCO "RA3", and everything keyed
+// by the old PN moves along. Idempotent — no-op once nothing matches.
+function runAntiqueSlashPnMigration() {
+    let changed = false;
+    DB.forEach(key => {
+        if (!key.antiqueGenerated) return;
+        const oldPn = String(key.pn);
+        const sep = oldPn.indexOf('/');
+        if (sep <= 0) return;
+        const newPn = oldPn.slice(0, sep).trim();
+        const blankPart = oldPn.slice(sep + 1).trim();
+        if (!newPn || !blankPart) return;
+        // Leave it alone if another key already owns the clean PN
+        if (DB.some(k => k !== key && String(k.pn).toLowerCase() === newPn.toLowerCase())) return;
+
+        key.pn = newPn;
+        if (!key.ilco) key.ilco = blankPart;
+        // Keep the old spelling findable and visible on the key
+        key.mergedPNs = (key.mergedPNs || []).filter(p => String(p).toLowerCase() !== newPn.toLowerCase());
+        if (!key.mergedPNs.includes(oldPn)) key.mergedPNs.push(oldPn);
+        // customKeys may hold a separate copy — re-point it at this object
+        const ckIdx = customKeys.findIndex(k => String(k.pn) === oldPn);
+        if (ckIdx >= 0) customKeys[ckIdx] = key;
+        migratePnLiveStores(oldPn, newPn);
+        pnSupersessions[oldPn] = newPn;
+        changed = true;
+    });
+    if (!changed) return;
+
+    // Drop self-referential redirects left behind (e.g. a merge had mapped
+    // "S1970AM" -> "S1970AM/RA3" and the rename just inverted it)
+    for (const k of Object.keys(pnSupersessions)) {
+        if (String(pnSupersessions[k]).toLowerCase() === k.toLowerCase()) delete pnSupersessions[k];
+    }
+    savePnSupersessions();
+    saveCustomKeys();
+    saveToIndexedDB('database', DB);
+}
+
 async function runH75xMergeMigration() {
     const done = await loadFromIndexedDB('h75xMergeV1');
     if (done) return;
@@ -10162,6 +10203,7 @@ async function init() {
     applyPnRenamesToDB();
     await runFccidMergeMigration();
     await runH75xMergeMigration();
+    runAntiqueSlashPnMigration();
     initializeVendorPricesFromDB();
     buildFilters();
     buildFccidDatalist();
@@ -13062,13 +13104,30 @@ function renderMergeKeyList(search) {
 function mergeKeyInto(sourceIdx) {
     const targetIdx = mergeKeyTargetIdx;
     if (targetIdx === null || sourceIdx === targetIdx) return;
-    const target = DB[targetIdx];
-    const source = DB[sourceIdx];
+    let target = DB[targetIdx];
+    let source = DB[sourceIdx];
     if (!target || !source) return;
+
+    // If one entry is just the combined "PN/ILCO" spelling of the other (e.g.
+    // pn "S1970AM/RA3" vs pn "S1970AM" + ILCO "RA3"), keep the clean split-form
+    // entry no matter which side the user started the merge from — otherwise
+    // the survivor ends up displayed as "S1970AM/RA3 / RA3".
+    const normPn = s => String(s || '').replace(/\//g, '-').toLowerCase();
+    let swapped = false;
+    if (source.ilco && normPn(target.pn) === normPn(String(source.pn) + '-' + String(source.ilco))) {
+        const tmp = target;
+        target = source;
+        source = tmp;
+        swapped = true;
+    }
+    const absorbedIdx = swapped ? targetIdx : sourceIdx;
     const targetPn = String(target.pn);
     const sourcePn = String(source.pn);
 
-    if (!confirm(`Merge ${sourcePn} into ${targetPn}?\n\n${sourcePn} will be deleted. Its vehicles, stock, pricing, and history move to ${targetPn}, and searching ${sourcePn} will redirect there.`)) return;
+    const confirmMsg = swapped
+        ? `${sourcePn} is the combined spelling of ${targetPn} — the cleaner ${targetPn} entry will be kept.\n\nMerge ${sourcePn} into ${targetPn}? Its vehicles, stock, pricing, and history move to ${targetPn}, and searching ${sourcePn} will redirect there.`
+        : `Merge ${sourcePn} into ${targetPn}?\n\n${sourcePn} will be deleted. Its vehicles, stock, pricing, and history move to ${targetPn}, and searching ${sourcePn} will redirect there.`;
+    if (!confirm(confirmMsg)) return;
 
     // Vehicles: union, deduped by make|model|years; merge code series entries
     if (!Array.isArray(target.vehicles)) target.vehicles = [];
@@ -13092,9 +13151,14 @@ function mergeKeyInto(sourceIdx) {
     });
 
     // Scalar fields: target wins, source fills gaps
-    ['ilco', 'keyway', 'chip', 'fccid', 'buttons', 'frequency', 'battery', 'brand', 'logo', 'emergencyPN'].forEach(f => {
+    ['keyway', 'chip', 'fccid', 'buttons', 'frequency', 'battery', 'brand', 'logo', 'emergencyPN'].forEach(f => {
         if (!target[f] && source[f]) target[f] = source[f];
     });
+    // ILCO fills a gap too, but never when that blank is already spelled
+    // inside the surviving PN (avoids the redundant "S1970AM/RA3 / RA3")
+    if (!target.ilco && source.ilco && !normPn(targetPn).endsWith('-' + String(source.ilco).trim().toLowerCase())) {
+        target.ilco = source.ilco;
+    }
     if (source.notes && source.notes !== target.notes) {
         target.notes = target.notes ? target.notes + '\n' + source.notes : source.notes;
     }
@@ -13187,8 +13251,8 @@ function mergeKeyInto(sourceIdx) {
         savePnRenames();
     }
 
-    // Remove the source record from DB and customKeys
-    DB.splice(sourceIdx, 1);
+    // Remove the absorbed record from DB and customKeys
+    DB.splice(absorbedIdx, 1);
     const ckSrcIdx = customKeys.findIndex(k => String(k.pn) === sourcePn);
     if (ckSrcIdx >= 0) customKeys.splice(ckSrcIdx, 1);
     // DB entries can be copies of customKeys entries (loadCustomKeysIntoDB spreads
