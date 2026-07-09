@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v187</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v188</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v187</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v188</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v187<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v188<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6214,6 +6214,7 @@
         <div class="modal-input-group">
             <label>Part Number (optional)</label>
             <input type="text" class="modal-input" id="testKeyPurchasePN" placeholder="If you have one for this keyway...">
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">A PN different from the keyway creates its own test key under that keyway (e.g. Y157 or "Y159 Shell" under Y159), with its own count.</div>
         </div>
         <div class="modal-input-group">
             <label>Vendor (optional)</label>
@@ -21300,22 +21301,25 @@ function openVehicleDetail(vehicleKey) {
     html += `</div>`;
 
     // Test keys for this vehicle's keyway(s) — shared test-key stock the job
-    // completion form deducts from
+    // completion form deducts from; a keyway can have several (Y157, Y159,
+    // Y159 Shell all serve Y159)
     const vehicleTestKeys = [];
     keyways.forEach(kw => {
-        const entry = testKeyInventory[kw];
-        if (entry && entry.linkedPn) vehicleTestKeys.push({ kw, entry });
+        getTestKeyEntriesForKeyway(kw).forEach(([name, entry]) => {
+            vehicleTestKeys.push({ name, kw, entry });
+        });
     });
     if (vehicleTestKeys.length > 0) {
         html += `<div class="vehicle-section">
             <div class="vehicle-section-title">🗝️ Test Keys</div>
-            ${vehicleTestKeys.map(({ kw, entry }) => {
-                const tkIdx = DB.findIndex(k => String(k.pn).toLowerCase() === String(entry.linkedPn).toLowerCase());
+            ${vehicleTestKeys.map(({ name, kw, entry }) => {
+                const openPn = entry.linkedPn || '';
+                const tkIdx = openPn ? DB.findIndex(k => String(k.pn).toLowerCase() === openPn.toLowerCase()) : -1;
                 const qty = entry.qty || 0;
                 return `
-                <div class="vehicle-key-card ${qty > 0 ? 'in-stock' : ''}"${tkIdx >= 0 ? ` onclick="openKeyFromVehicle(${tkIdx}, '${String(entry.linkedPn).replace(/'/g, "\\'")}')" style="cursor:pointer;"` : ''}>
+                <div class="vehicle-key-card ${qty > 0 ? 'in-stock' : ''}"${tkIdx >= 0 ? ` onclick="openKeyFromVehicle(${tkIdx}, '${openPn.replace(/'/g, "\\'")}')" style="cursor:pointer;"` : ''}>
                     <div class="vehicle-key-info">
-                        <h4>${escapeJobText(String(entry.linkedPn))}</h4>
+                        <h4>${escapeJobText(name)}</h4>
                         <p>Test key • ${escapeJobText(kw)} keyway</p>
                     </div>
                     <div class="vehicle-key-stock">
@@ -24168,13 +24172,30 @@ function getVehicleKeyways(vehicleKey) {
 function setupJobTestKeywaySelector(vehicleKey) {
     const select = document.getElementById('jobTestKeyway');
     const kws = getVehicleKeyways(vehicleKey);
-    select.innerHTML = kws.map(k => {
+    // Each vehicle keyway can be served by several test keys (e.g. Y157, Y159,
+    // and "Y159 Shell" all serve Y159) — list them all; fall back to the bare
+    // keyway when no test key entries exist for it yet
+    const options = [];
+    kws.forEach(k => {
         const roleLabel = k.role === 'ignition' ? ' (Ignition)' : k.role === 'door' ? ' (Door)' : '';
-        return `<option value="${escapeJobText(k.keyway)}">${escapeJobText(k.keyway)}${roleLabel}</option>`;
-    }).join('');
-    // Hide the selector when there's nothing to choose; a single keyway still
+        const entries = getTestKeyEntriesForKeyway(k.keyway);
+        if (entries.length > 0) {
+            entries.forEach(([name]) => {
+                options.push({
+                    value: name,
+                    label: name + (name === k.keyway ? '' : ' — ' + k.keyway) + roleLabel
+                });
+            });
+        } else {
+            options.push({ value: k.keyway, label: k.keyway + roleLabel });
+        }
+    });
+    select.innerHTML = options.map(o =>
+        `<option value="${escapeJobText(o.value)}">${escapeJobText(o.label)}</option>`
+    ).join('');
+    // Hide the selector when there's nothing to choose; a single option still
     // keeps its value set so saveJobComplete records it
-    select.style.display = kws.length > 1 ? '' : 'none';
+    select.style.display = options.length > 1 ? '' : 'none';
     updateJobTestKeyStock();
 }
 
@@ -24187,7 +24208,8 @@ function updateJobTestKeyStock() {
     }
     const entry = testKeyInventory[kw];
     const qty = entry ? entry.qty : 0;
-    el.innerHTML = `${escapeJobText(kw)} test keys: <span style="color:${qty > 0 ? 'var(--success)' : '#ff4444'};font-weight:600;">${qty} in stock</span>${entry && entry.pn ? ` <span style="color:var(--dim);">• PN ${escapeJobText(entry.pn)}</span>` : ''}`;
+    const servesKw = entry && entry.keyway && entry.keyway !== kw ? ` <span style="color:var(--dim);">(${escapeJobText(entry.keyway)} keyway)</span>` : '';
+    el.innerHTML = `${escapeJobText(kw)}${servesKw} test keys: <span style="color:${qty > 0 ? 'var(--success)' : '#ff4444'};font-weight:600;">${qty} in stock</span>${entry && entry.pn && entry.pn !== kw ? ` <span style="color:var(--dim);">• PN ${escapeJobText(entry.pn)}</span>` : ''}`;
 }
 
 function openJobCompleteModal(jobId) {
@@ -24404,6 +24426,14 @@ function getTestKeyEntryForKey(key) {
     return null;
 }
 
+// All test key entries serving a keyway — an entry's map key is the test
+// key's name; its (optional) keyway field says which keyway it serves,
+// defaulting to its own name for entries created before variants existed.
+function getTestKeyEntriesForKeyway(kw) {
+    if (!kw) return [];
+    return Object.entries(testKeyInventory).filter(([name, e]) => e && (e.keyway || name) === kw);
+}
+
 function adjustTestKeyStockFromDetail(keyway, delta) {
     const entry = testKeyInventory[keyway];
     if (!entry) return;
@@ -24422,11 +24452,15 @@ function toggleTestKeyFlag(idx) {
         delete existing.entry.linkedPn;
         toast(`${key.pn} is a regular key again`);
     } else {
+        // Entry is named after the key's PN and records which keyway it
+        // serves, so several test keys can serve the same keyway
         const kw = key.keyway || String(key.pn);
-        if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
-        testKeyInventory[kw].linkedPn = String(key.pn);
-        if (!testKeyInventory[kw].pn) testKeyInventory[kw].pn = String(key.pn);
-        toast(`${key.pn} is now the test key for the ${kw} keyway`);
+        const name = String(key.pn);
+        if (!testKeyInventory[name]) testKeyInventory[name] = { qty: 0, pn: '', notes: '' };
+        testKeyInventory[name].linkedPn = name;
+        testKeyInventory[name].keyway = kw;
+        if (!testKeyInventory[name].pn) testKeyInventory[name].pn = name;
+        toast(`${key.pn} is now a test key for the ${kw} keyway`);
     }
     saveTestKeyInventory();
     openKey(idx);
@@ -24442,10 +24476,11 @@ function createTestKeyEntries() {
         return;
     }
     let created = 0, linked = 0;
-    pending.forEach(([kw, entry]) => {
-        const pn = (entry.pn || kw).trim() || kw;
+    pending.forEach(([name, entry]) => {
+        const kw = entry.keyway || name;
+        const pn = (entry.pn || name).trim() || name;
         const existing = DB.find(k => String(k.pn).toLowerCase() === pn.toLowerCase())
-            || DB.find(k => String(k.pn).toLowerCase() === kw.toLowerCase());
+            || DB.find(k => String(k.pn).toLowerCase() === name.toLowerCase());
         if (existing) {
             entry.linkedPn = String(existing.pn);
             linked++;
@@ -24508,6 +24543,7 @@ function renderTestKeys() {
                     <div style="font-size:11px;color:var(--dim);">
                         ${entry.pn ? 'PN: ' + escapeJobText(entry.pn) : 'No part number yet'}
                         <button onclick="editTestKeyPN('${kwEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 4px;">✎</button>
+                        ${entry.keyway && entry.keyway !== kw ? `<span style="color:var(--accent);">• serves ${escapeJobText(entry.keyway)}</span>` : ''}
                         ${entry.linkedPn ? '<span style="color:var(--accent2);">• 🗝️ key entry linked</span>' : ''}
                     </div>
                 </div>
@@ -24573,8 +24609,10 @@ function onTestKeyPurchaseKeywayChange() {
     const kw = document.getElementById('testKeyPurchaseKeyway').value;
     const newInput = document.getElementById('testKeyPurchaseNewKeyway');
     newInput.style.display = kw === '__ADD_NEW__' ? '' : 'none';
-    if (kw && kw !== '__ADD_NEW__' && testKeyInventory[kw] && testKeyInventory[kw].pn) {
-        document.getElementById('testKeyPurchasePN').value = testKeyInventory[kw].pn;
+    // Prefill the keyway entry's PN, but never overwrite one the user typed
+    const pnInput = document.getElementById('testKeyPurchasePN');
+    if (kw && kw !== '__ADD_NEW__' && !pnInput.value.trim() && testKeyInventory[kw] && testKeyInventory[kw].pn) {
+        pnInput.value = testKeyInventory[kw].pn;
     }
 }
 
@@ -24601,8 +24639,18 @@ function saveTestKeyPurchase() {
     const priceEach = parseFloat(document.getElementById('testKeyPurchasePrice').value) || 0;
     const invoice = document.getElementById('testKeyPurchaseInvoice').value.trim();
 
-    if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
-    const entry = testKeyInventory[kw];
+    // A PN that differs from the keyway is its own test key (variant) under
+    // that keyway — e.g. "Y157" or "Y159 Shell" serving Y159. Only exception:
+    // the keyway's entry already carries that exact PN (repeat purchase of
+    // the keyway's own test key).
+    let entryName = kw;
+    if (pn && pn !== kw) {
+        const kwEntry = testKeyInventory[kw];
+        entryName = (kwEntry && kwEntry.pn === pn) ? kw : pn;
+    }
+    if (!testKeyInventory[entryName]) testKeyInventory[entryName] = { qty: 0, pn: '', notes: '' };
+    const entry = testKeyInventory[entryName];
+    if (entryName !== kw) entry.keyway = kw;
     entry.qty = (entry.qty || 0) + qty;
     if (pn) entry.pn = pn;
     entry.updatedAt = new Date().toISOString();
