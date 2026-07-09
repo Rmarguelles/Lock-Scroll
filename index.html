@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v185</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v186</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v185</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v186</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v185<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v186<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -11501,13 +11501,25 @@ function applyFilters() {
         console.log('Frequency filter active:', advFrequency);
     }
 
+    // fccid -> FID lookup so the search matches FIDs like "FD-042" (typed with
+    // or without the dash). fidAssignments keys can be comma-separated FCC lists.
+    const searchFccToFid = {};
+    if (search) {
+        for (const [fccKey, fid] of Object.entries(fidAssignments || {})) {
+            fccKey.split(',').map(s => s.trim()).forEach(id => { if (id) searchFccToFid[id] = fid; });
+        }
+    }
+
     filteredKeys = DB.filter((key, idx) => {
         if (search) {
             const altPartStrings = (key.altParts || []).map(ap => ap && ap.pn).filter(Boolean);
+            const keyFids = getKeyFccIds(key).map(f => searchFccToFid[f]).filter(Boolean);
             const searchStr = [
                 key.pn,
                 key.ilco,
                 ...getKeyFccIds(key),
+                ...keyFids,
+                ...keyFids.map(f => String(f).replace(/-/g, '')),
                 key.keyway,
                 key.chip,
                 key.keyType,
