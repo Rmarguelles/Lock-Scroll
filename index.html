@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v186</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v187</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v186</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v187</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v186<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v187<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5222,6 +5222,7 @@
         <input type="text" class="settings-search" id="testKeysSearch" placeholder="Search keyways..." oninput="filterTestKeys()" style="width:100%;box-sizing:border-box;">
         <div id="testKeysList" style="margin-top:12px;"></div>
         <button class="add-vendor-btn" onclick="openAddTestKeysModal()" style="margin-top:12px;width:100%;">+ Add Test Keys</button>
+        <button onclick="createTestKeyEntries()" style="margin-top:8px;width:100%;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">🔑 Create Key Entries for All Keyways</button>
     </div>
 </div>
 
@@ -11619,9 +11620,16 @@ function renderKeys() {
         return;
     }
 
+    // PNs linked to the test key inventory show its shared count + a badge
+    const testKeyPnMap = {};
+    Object.values(testKeyInventory).forEach(e => {
+        if (e && e.linkedPn) testKeyPnMap[String(e.linkedPn).toLowerCase()] = e;
+    });
+
     list.innerHTML = supersessionBanner + filteredKeys.map((key, i) => {
         const idx = DB.indexOf(key);
-        const stock = stockData[key.pn] || 0;
+        const tkEntry = testKeyPnMap[String(key.pn).toLowerCase()];
+        const stock = tkEntry ? (tkEntry.qty || 0) : (stockData[key.pn] || 0);
         const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
 
         const vehicles = (key.vehicles || []).slice(0, 3).map(v =>
@@ -11636,11 +11644,14 @@ function renderKeys() {
         const sleeveBadge = key.removableSleeve
             ? `<span style="display:inline-block;padding:2px 7px;background:#0a7d6b;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">Sleeve</span>`
             : '';
+        const testKeyBadge = tkEntry
+            ? `<span style="display:inline-block;padding:2px 7px;background:var(--accent2);color:#000;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">🗝️ TEST</span>`
+            : '';
 
         return `
             <div class="key-card" onclick="openKey(${idx})">
                 <div class="key-card-header">
-                    <span class="key-pn">${key.pn || 'N/A'}${iKeyBadge}${sleeveBadge}</span>
+                    <span class="key-pn">${key.pn || 'N/A'}${testKeyBadge}${iKeyBadge}${sleeveBadge}</span>
                     <span class="key-type">${key.keyType || 'Unknown'}</span>
                 </div>
                 <div class="key-info">
@@ -11731,6 +11742,8 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
 
     const key = DB[idx];
     const stock = stockData[key.pn] || 0;
+    // Test keys share one stock count with the job flow (testKeyInventory)
+    const tkLink = getTestKeyEntryForKey(key);
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
     const allKeyFccs = getKeyFccIds(key);
@@ -11786,12 +11799,13 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         ${iKeyHtml}
         <!-- Stock Section -->
         <div class="detail-section">
-            <h3>Stock Management</h3>
+            <h3>Stock Management${tkLink ? ' <span style="display:inline-block;padding:2px 8px;background:var(--accent2);color:#000;border-radius:10px;font-size:10px;font-weight:700;vertical-align:middle;margin-left:6px;">🗝️ TEST KEY</span>' : ''}</h3>
+            ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">Shared test key stock for the ${escapeJobText(tkLink.keyway)} keyway — completing a job deducts from this same count</div>` : ''}
             <div style="display:flex;justify-content:center;align-items:center;padding:16px;">
                 <div class="stock-controls">
-                    <button class="stock-btn minus" onclick="adjustStock('${key.pn}', -1)">−</button>
-                    <span class="stock-qty" id="stockQty">${stock}</span>
-                    <button class="stock-btn plus" onclick="adjustStock('${key.pn}', 1)">+</button>
+                    <button class="stock-btn minus" onclick="${tkLink ? `adjustTestKeyStockFromDetail('${tkLink.keyway.replace(/'/g, "\\'")}', -1)` : `adjustStock('${key.pn}', -1)`}">−</button>
+                    <span class="stock-qty" id="stockQty">${tkLink ? (tkLink.entry.qty || 0) : stock}</span>
+                    <button class="stock-btn plus" onclick="${tkLink ? `adjustTestKeyStockFromDetail('${tkLink.keyway.replace(/'/g, "\\'")}', 1)` : `adjustStock('${key.pn}', 1)`}">+</button>
                 </div>
             </div>
         </div>
@@ -11944,8 +11958,9 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
         </div>
 
-        <!-- Merge / Delete Part Number -->
+        <!-- Test Key Flag / Merge / Delete Part Number -->
         <div style="margin-top:24px;padding:16px;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="toggleTestKeyFlag(${idx})" style="padding:10px 24px;background:transparent;border:1px solid var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">${tkLink ? '🗝️ Unmark Test Key' : '🗝️ Treat as Test Key'}</button>
             <button onclick="openMergeKeyModal(${idx})" style="padding:10px 24px;background:transparent;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔀 Merge Duplicate Into This Key</button>
             <button onclick="deletePartNumber(${idx})" style="padding:10px 24px;background:transparent;border:1px solid #ff4444;border-radius:8px;color:#ff4444;font-size:13px;cursor:pointer;">Delete Part Number</button>
         </div>
@@ -21284,6 +21299,34 @@ function openVehicleDetail(vehicleKey) {
 
     html += `</div>`;
 
+    // Test keys for this vehicle's keyway(s) — shared test-key stock the job
+    // completion form deducts from
+    const vehicleTestKeys = [];
+    keyways.forEach(kw => {
+        const entry = testKeyInventory[kw];
+        if (entry && entry.linkedPn) vehicleTestKeys.push({ kw, entry });
+    });
+    if (vehicleTestKeys.length > 0) {
+        html += `<div class="vehicle-section">
+            <div class="vehicle-section-title">🗝️ Test Keys</div>
+            ${vehicleTestKeys.map(({ kw, entry }) => {
+                const tkIdx = DB.findIndex(k => String(k.pn).toLowerCase() === String(entry.linkedPn).toLowerCase());
+                const qty = entry.qty || 0;
+                return `
+                <div class="vehicle-key-card ${qty > 0 ? 'in-stock' : ''}"${tkIdx >= 0 ? ` onclick="openKeyFromVehicle(${tkIdx}, '${String(entry.linkedPn).replace(/'/g, "\\'")}')" style="cursor:pointer;"` : ''}>
+                    <div class="vehicle-key-info">
+                        <h4>${escapeJobText(String(entry.linkedPn))}</h4>
+                        <p>Test key • ${escapeJobText(kw)} keyway</p>
+                    </div>
+                    <div class="vehicle-key-stock">
+                        <div class="count" style="color:${qty > 0 ? 'var(--success)' : 'var(--dim)'}">${qty}</div>
+                        <div class="label">test keys</div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
 
     // Lishi Tools & Pick Direction Section (combined)
     const uniqueTools = lishiTools.length > 0
@@ -24346,6 +24389,99 @@ function filterJobHistory() {
 }
 
 // ===================== TEST KEY INVENTORY =====================
+// A key entry is a "test key" when a testKeyInventory entry is linked to its
+// PN — its stock is then the shared test-key count the job flow deducts from.
+// The link lives on the (already-synced) testKeyInventory entry, so no new
+// data store is needed.
+function getTestKeyEntryForKey(key) {
+    if (!key) return null;
+    const pnLower = String(key.pn).toLowerCase();
+    for (const [kw, entry] of Object.entries(testKeyInventory)) {
+        if (entry && entry.linkedPn && String(entry.linkedPn).toLowerCase() === pnLower) {
+            return { keyway: kw, entry };
+        }
+    }
+    return null;
+}
+
+function adjustTestKeyStockFromDetail(keyway, delta) {
+    const entry = testKeyInventory[keyway];
+    if (!entry) return;
+    entry.qty = Math.max(0, (entry.qty || 0) + delta);
+    entry.updatedAt = new Date().toISOString();
+    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    saveTestKeyInventory();
+    document.getElementById('stockQty').textContent = entry.qty;
+}
+
+function toggleTestKeyFlag(idx) {
+    const key = DB[idx];
+    if (!key) return;
+    const existing = getTestKeyEntryForKey(key);
+    if (existing) {
+        delete existing.entry.linkedPn;
+        toast(`${key.pn} is a regular key again`);
+    } else {
+        const kw = key.keyway || String(key.pn);
+        if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
+        testKeyInventory[kw].linkedPn = String(key.pn);
+        if (!testKeyInventory[kw].pn) testKeyInventory[kw].pn = String(key.pn);
+        toast(`${key.pn} is now the test key for the ${kw} keyway`);
+    }
+    saveTestKeyInventory();
+    openKey(idx);
+}
+
+// Create a key entry (PN = keyway, Non-Chip) for every test key inventory
+// keyway that doesn't have one yet; existing keys with a matching PN are
+// linked instead of duplicated.
+function createTestKeyEntries() {
+    const pending = Object.entries(testKeyInventory).filter(([, e]) => e && !e.linkedPn);
+    if (pending.length === 0) {
+        toast('Every test keyway already has a linked key entry');
+        return;
+    }
+    let created = 0, linked = 0;
+    pending.forEach(([kw, entry]) => {
+        const pn = (entry.pn || kw).trim() || kw;
+        const existing = DB.find(k => String(k.pn).toLowerCase() === pn.toLowerCase())
+            || DB.find(k => String(k.pn).toLowerCase() === kw.toLowerCase());
+        if (existing) {
+            entry.linkedPn = String(existing.pn);
+            linked++;
+            return;
+        }
+        const newKey = {
+            pn: pn,
+            brand: null,
+            altParts: null,
+            fccid: null,
+            keyway: kw,
+            chip: null,
+            keyType: 'Non-Chip Key',
+            buttons: null,
+            frequency: null,
+            battery: null,
+            notes: `Test key for the ${kw} keyway — used when fitting cuts to a lock.`,
+            vehicles: [],
+            isCustom: true,
+            addedDate: new Date().toISOString(),
+            isVATS: false,
+            removableSleeve: false
+        };
+        DB.push(newKey);
+        customKeys.push(newKey);
+        entry.linkedPn = pn;
+        created++;
+    });
+    if (created > 0) saveCustomKeys();
+    saveTestKeyInventory();
+    buildFilters();
+    applyFilters();
+    renderTestKeys();
+    toast(`${created} key entr${created === 1 ? 'y' : 'ies'} created${linked > 0 ? `, ${linked} linked to existing keys` : ''}`);
+}
+
 function openTestKeysPanel() {
     renderTestKeys();
     document.getElementById('testKeysPanel').classList.add('on');
@@ -24372,6 +24508,7 @@ function renderTestKeys() {
                     <div style="font-size:11px;color:var(--dim);">
                         ${entry.pn ? 'PN: ' + escapeJobText(entry.pn) : 'No part number yet'}
                         <button onclick="editTestKeyPN('${kwEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 4px;">✎</button>
+                        ${entry.linkedPn ? '<span style="color:var(--accent2);">• 🗝️ key entry linked</span>' : ''}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
