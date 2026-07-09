@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v187</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v188</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5182,7 +5182,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v187</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v188</p>
         </div>
 
         <div class="settings-section">
@@ -5194,7 +5194,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v187<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v188<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5625,7 +5625,7 @@
 <div class="modal" id="importVehiclesFromKeyModal" style="z-index:400;">
     <div class="modal-content" style="max-width:500px;max-height:85vh;display:flex;flex-direction:column;">
         <div class="modal-title">📥 Import Vehicles from Another Key</div>
-        <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">
+        <p id="importVehiclesModalDesc" style="font-size:12px;color:var(--dim);margin-bottom:12px;">
             Pick a known key and append its compatible-vehicle list to this new key. Search by Part Number, FCC ID, or keyway.
         </p>
         <input type="text" class="modal-input" id="importVehiclesKeySearch"
@@ -11930,6 +11930,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 <div style="display:flex;gap:6px;">
                     <button onclick="openAddSingleVehicleModal(${idx})" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">+ Add</button>
                     <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                    <button onclick="openImportVehiclesFromKeyModal(${idx})" title="Merge the vehicle list from another key into this one" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">🔗 Merge</button>
                 </div>
             </div>
             ${(key.vehicles || []).slice().sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.startYear - b.startYear).map(v => {
@@ -15061,6 +15062,7 @@ function goHome() {
     document.getElementById('vehicleDetailPanel').classList.remove('on');
     document.getElementById('detailPanel').classList.remove('on');
     document.getElementById('mergeKeyModal').classList.remove('on');
+    document.getElementById('importVehiclesFromKeyModal').classList.remove('on');
     document.getElementById('renameModelModal').classList.remove('on');
     document.getElementById('incompleteVehiclesPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
@@ -25001,8 +25003,18 @@ function addCustomKeyVehicleFromData(v) {
 }
 
 // ===== Import Vehicles From Another Key =====
+// Two modes: null = Add Custom Key form mode (appends rows to the form);
+// a DB index = key detail mode (merges straight into that saved key).
+let importVehiclesTargetIdx = null;
 
-function openImportVehiclesFromKeyModal() {
+function openImportVehiclesFromKeyModal(targetIdx) {
+    importVehiclesTargetIdx = (typeof targetIdx === 'number') ? targetIdx : null;
+    const desc = document.getElementById('importVehiclesModalDesc');
+    if (desc) {
+        desc.textContent = importVehiclesTargetIdx !== null
+            ? `Pick a known key and merge its compatible-vehicle list into ${(DB[importVehiclesTargetIdx] && DB[importVehiclesTargetIdx].pn) || 'this key'}. Vehicles already on the list are skipped. Search by Part Number, FCC ID, or keyway.`
+            : 'Pick a known key and append its compatible-vehicle list to this new key. Search by Part Number, FCC ID, or keyway.';
+    }
     const inp = document.getElementById('importVehiclesKeySearch');
     if (inp) inp.value = '';
     renderImportVehiclesKeyList('');
@@ -25011,6 +25023,7 @@ function openImportVehiclesFromKeyModal() {
 
 function closeImportVehiclesFromKeyModal() {
     document.getElementById('importVehiclesFromKeyModal').classList.remove('on');
+    importVehiclesTargetIdx = null;
 }
 
 function filterImportVehiclesKeyList() {
@@ -25025,6 +25038,7 @@ function renderImportVehiclesKeyList(search) {
 
     const matches = [];
     DB.forEach((key, idx) => {
+        if (idx === importVehiclesTargetIdx) return; // can't merge a key into itself
         const vCount = (key.vehicles || []).length;
         if (vCount === 0) return;
         if (search) {
@@ -25084,6 +25098,12 @@ function importVehiclesFromKey(idx) {
         return;
     }
 
+    // Key detail mode: merge straight into the saved key and persist
+    if (importVehiclesTargetIdx !== null) {
+        mergeVehiclesIntoKey(importVehiclesTargetIdx, source);
+        return;
+    }
+
     // If the form currently has a single empty vehicle row (the default seeded
     // by openAddCustomKey), drop it so the imported list isn't padded with a blank.
     const existingRows = document.querySelectorAll('#customKeyVehicles .custom-vehicle-row');
@@ -25101,6 +25121,53 @@ function importVehiclesFromKey(idx) {
     source.vehicles.forEach(v => addCustomKeyVehicleFromData(v));
     closeImportVehiclesFromKeyModal();
     toast(`Imported ${source.vehicles.length} vehicle${source.vehicles.length !== 1 ? 's' : ''} from ${source.pn}`);
+}
+
+// Merge a source key's vehicle list into an existing key (union, deduped by
+// make|model|years; code series entries merged) and persist like saveKeyVehicles.
+function mergeVehiclesIntoKey(targetIdx, source) {
+    const target = DB[targetIdx];
+    if (!target) return;
+    if (!Array.isArray(target.vehicles)) target.vehicles = [];
+
+    let added = 0;
+    (source.vehicles || []).forEach(sv => {
+        const match = target.vehicles.find(tv =>
+            tv.make === sv.make && tv.model === sv.model &&
+            tv.startYear === sv.startYear && tv.endYear === sv.endYear);
+        if (!match) {
+            target.vehicles.push(JSON.parse(JSON.stringify(sv)));
+            added++;
+            return;
+        }
+        if (!sv.codeSeries) return;
+        const srcCs = Array.isArray(sv.codeSeries) ? sv.codeSeries : [{ years: `${sv.startYear}-${sv.endYear}`, series: sv.codeSeries }];
+        if (!match.codeSeries) match.codeSeries = [];
+        else if (!Array.isArray(match.codeSeries)) match.codeSeries = [{ years: `${match.startYear}-${match.endYear}`, series: match.codeSeries }];
+        srcCs.forEach(cs => {
+            if (cs.series && !match.codeSeries.some(x => x.series === cs.series && x.years === cs.years)) {
+                match.codeSeries.push(JSON.parse(JSON.stringify(cs)));
+            }
+        });
+    });
+
+    if (target.isCustom) {
+        const customIdx = customKeys.findIndex(k => k.pn === target.pn);
+        if (customIdx >= 0) {
+            customKeys[customIdx].vehicles = target.vehicles;
+            saveCustomKeys();
+        }
+    } else {
+        vehicleOverrides[target.pn] = target.vehicles;
+        saveVehicleOverrides();
+    }
+
+    closeImportVehiclesFromKeyModal();
+    openKey(targetIdx, cameFromFcc, cameFromFid); // refresh the detail view
+    toast(added > 0
+        ? `Merged ${added} vehicle${added !== 1 ? 's' : ''} from ${source.pn}`
+        : `No new vehicles — everything from ${source.pn} was already listed`);
+    triggerAutoSync();
 }
 
 // Copy from inside the Edit Custom Key modal — closes the modal, then runs copyCustomKey.
