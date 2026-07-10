@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v192</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v193</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v192</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v193</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v192<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v193<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8005,11 +8005,15 @@ async function syncNow() {
     renderCloudSyncUI();
     
     try {
-        await uploadToCloud();
-        await downloadFromCloud();
-        lastSyncTime = new Date();
-        localStorage.setItem('lockscroll_last_sync', lastSyncTime.toISOString());
-        toast('Sync complete!');
+        // Never download over local changes that failed to upload — pulling the
+        // stale cloud copy would erase the edit that was just made locally.
+        const uploaded = await uploadToCloud();
+        if (uploaded) {
+            await downloadFromCloud();
+            lastSyncTime = new Date();
+            localStorage.setItem('lockscroll_last_sync', lastSyncTime.toISOString());
+            toast('Sync complete!');
+        }
     } catch (error) {
         console.error('Sync error:', error);
         toast('Sync failed: ' + error.message);
@@ -8019,16 +8023,24 @@ async function syncNow() {
     renderCloudSyncUI();
 }
 
+// Firestore rejects any document containing an undefined value anywhere, so a
+// single stray `startMonth: undefined` on one vehicle would fail the whole
+// upload. JSON round-trip drops undefined-valued object properties (undefined
+// array slots become null, which Firestore accepts).
+function sanitizeForFirestore(payload) {
+    return JSON.parse(JSON.stringify(payload));
+}
+
+// Returns true when everything uploaded, false on failure — callers must not
+// download over local state that failed to upload.
 async function uploadToCloud() {
-    if (!currentUser || !firebaseDb) return;
+    if (!currentUser || !firebaseDb) return false;
 
     try {
         // Always save personal data (stock counts) to user's own location
         const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
-        const personalData = {
-            stockData: stockData,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        const personalData = sanitizeForFirestore({ stockData: stockData });
+        personalData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
         await personalDocRef.set(personalData, { merge: true });
 
         // Check if user is authorized for shared mode
@@ -8036,12 +8048,12 @@ async function uploadToCloud() {
             const isAuthorized = authorizedUsers.includes(currentUser.email);
             if (!isAuthorized) {
                 console.log('User not authorized for shared database');
-                return;
+                return false;
             }
 
             // Save shared data to shared location (excludes stockData)
             const sharedDocRef = firebaseDb.collection('shared').doc('data');
-            const sharedData = {
+            const sharedData = sanitizeForFirestore({
                 customKeys: customKeys,
                 customVehicles: customVehicles,
                 lishiInventory: lishiInventory,
@@ -8067,13 +8079,13 @@ async function uploadToCloud() {
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastUpdatedBy: currentUser.email
-            };
+            });
+            sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             await sharedDocRef.set(sharedData, { merge: true });
         } else {
             // Not in shared mode - save everything to personal location
-            const allData = {
+            const allData = sanitizeForFirestore({
                 customKeys: customKeys,
                 customVehicles: customVehicles,
                 lishiInventory: lishiInventory,
@@ -8098,15 +8110,17 @@ async function uploadToCloud() {
                 vehicleYearNotes: vehicleYearNotes,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
-                fccRelationships: fccRelationships,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+                fccRelationships: fccRelationships
+            });
+            allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             await personalDocRef.set(allData, { merge: true });
         }
         console.log('Cloud sync successful');
+        return true;
     } catch (error) {
         console.error('Cloud sync failed:', error);
         toast('Cloud backup failed: ' + error.message);
+        return false;
     }
 }
 
@@ -8143,6 +8157,16 @@ async function downloadFromCloud() {
     if (dataDoc.exists) {
         const data = dataDoc.data();
 
+        // For records that exist on both sides, the newer edit wins (by
+        // lastEdited/createdAt); ties and unstamped records keep the LOCAL
+        // copy, so a fresh local edit can never be erased by a stale cloud
+        // snapshot (e.g. when the matching upload didn't go through).
+        const cloudIsNewer = (cloudRec, localRec) => {
+            const cloudTs = Date.parse(cloudRec.lastEdited || cloudRec.createdAt || '') || 0;
+            const localTs = Date.parse(localRec.lastEdited || localRec.createdAt || '') || 0;
+            return cloudTs > localTs;
+        };
+
         // Note: stockData is loaded separately from personal location above
         if (data.customKeys && data.customKeys.length > 0) {
             // Merge custom keys by part number
@@ -8151,9 +8175,8 @@ async function downloadFromCloud() {
                 if (!existingPNs.has(key.pn)) {
                     customKeys.push(key);
                 } else {
-                    // Update existing
                     const idx = customKeys.findIndex(k => k.pn === key.pn);
-                    if (idx >= 0) customKeys[idx] = key;
+                    if (idx >= 0 && cloudIsNewer(key, customKeys[idx])) customKeys[idx] = key;
                 }
             });
             saveCustomKeys();
@@ -8167,9 +8190,8 @@ async function downloadFromCloud() {
                 if (!existingIds.has(vehicle.id)) {
                     customVehicles.push(vehicle);
                 } else {
-                    // Update existing
                     const idx = customVehicles.findIndex(v => v.id === vehicle.id);
-                    if (idx >= 0) customVehicles[idx] = vehicle;
+                    if (idx >= 0 && cloudIsNewer(vehicle, customVehicles[idx])) customVehicles[idx] = vehicle;
                 }
             });
             saveCustomVehicles();
@@ -12532,6 +12554,12 @@ function onEditVehicleModelChange(index, value) {
 }
 
 function updateEditVehicle(index, field, value) {
+    // Cleared fields are removed rather than stored as undefined/NaN —
+    // undefined values break the Firestore cloud upload.
+    if (value === undefined || value === null || (typeof value === 'number' && isNaN(value))) {
+        delete editingVehicles[index][field];
+        return;
+    }
     editingVehicles[index][field] = value;
 }
 
@@ -12580,12 +12608,7 @@ function saveKeyVehicles() {
 
     const key = DB[editingVehiclesKeyIdx];
     if (key.isCustom) {
-        // Save to customKeys for custom keys
-        const customIdx = customKeys.findIndex(k => k.pn === key.pn);
-        if (customIdx >= 0) {
-            customKeys[customIdx].vehicles = validVehicles;
-            saveCustomKeys();
-        }
+        persistCustomKeyVehicles(key, validVehicles);
     } else {
         // Save to vehicleOverrides for base database keys
         vehicleOverrides[key.pn] = validVehicles;
@@ -12866,7 +12889,11 @@ function saveAddSingleVehicle() {
         return;
     }
 
-    const newVehicle = { make, model, startYear, endYear, startMonth: startMonth || undefined, endMonth: endMonth || undefined, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
+    // Never store undefined-valued fields — Firestore rejects documents that
+    // contain undefined anywhere, which silently breaks the whole cloud upload.
+    const newVehicle = { make, model, startYear, endYear, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
+    if (startMonth) newVehicle.startMonth = startMonth;
+    if (endMonth) newVehicle.endMonth = endMonth;
 
     // Check if this vehicle application already exists on this key
     const key = DB[addingVehicleKeyIdx];
@@ -12908,12 +12935,7 @@ function saveAddSingleVehicle() {
     DB[addingVehicleKeyIdx].vehicles = updatedVehicles;
 
     if (key.isCustom) {
-        // Save to customKeys for custom keys
-        const customIdx = customKeys.findIndex(k => k.pn === key.pn);
-        if (customIdx >= 0) {
-            customKeys[customIdx].vehicles = updatedVehicles;
-            saveCustomKeys();
-        }
+        persistCustomKeyVehicles(key, updatedVehicles);
     } else {
         // Save to vehicleOverrides for base database keys
         vehicleOverrides[key.pn] = updatedVehicles;
@@ -20355,11 +20377,7 @@ function saveNewYearRange() {
         DB[dbIdx].vehicles = updatedVehicles;
 
         if (key.isCustom) {
-            const customIdx = customKeys.findIndex(k => k.pn === pn);
-            if (customIdx >= 0) {
-                customKeys[customIdx].vehicles = updatedVehicles;
-                saveCustomKeys();
-            }
+            persistCustomKeyVehicles(key, updatedVehicles);
         } else {
             vehicleOverrides[pn] = updatedVehicles;
             saveVehicleOverrides();
@@ -23528,6 +23546,7 @@ function saveVehicleDataEdit() {
                 if (customIdx >= 0) {
                     if (!customKeys[customIdx].vehicles) customKeys[customIdx].vehicles = [];
                     customKeys[customIdx].vehicles.push(newVehicle);
+                    customKeys[customIdx].lastEdited = new Date().toISOString();
                     saveCustomKeys();
                 }
             } else {
@@ -23541,6 +23560,7 @@ function saveVehicleDataEdit() {
                 const customIdx = customKeys.findIndex(ck => String(ck.pn) == pn);
                 if (customIdx >= 0 && customKeys[customIdx].vehicles && customKeys[customIdx].vehicles[existingVehicleIdx]) {
                     customKeys[customIdx].vehicles[existingVehicleIdx].codeSeries = cs;
+                    customKeys[customIdx].lastEdited = new Date().toISOString();
                     saveCustomKeys();
                 }
             } else {
@@ -25501,11 +25521,7 @@ function mergeVehiclesIntoKey(targetIdx, source) {
     });
 
     if (target.isCustom) {
-        const customIdx = customKeys.findIndex(k => k.pn === target.pn);
-        if (customIdx >= 0) {
-            customKeys[customIdx].vehicles = target.vehicles;
-            saveCustomKeys();
-        }
+        persistCustomKeyVehicles(target, target.vehicles);
     } else {
         vehicleOverrides[target.pn] = target.vehicles;
         saveVehicleOverrides();
@@ -26443,6 +26459,22 @@ function saveCustomKeys() {
     triggerAutoSync();
 }
 
+// Persist a custom key's vehicles list into customKeys (the store that
+// survives reloads and syncs), stamping lastEdited so the cloud merge can
+// tell which side is newer. Returns false when the key isn't in storage.
+function persistCustomKeyVehicles(key, vehicles) {
+    const idx = customKeys.findIndex(k => String(k.pn) === String(key.pn));
+    if (idx < 0) {
+        console.error('Custom key not found in storage:', key.pn);
+        toast('Warning: could not save vehicles for ' + key.pn);
+        return false;
+    }
+    customKeys[idx].vehicles = vehicles;
+    customKeys[idx].lastEdited = new Date().toISOString();
+    saveCustomKeys();
+    return true;
+}
+
 // Render custom keys list in settings
 function renderCustomKeysList() {
     const container = document.getElementById('customKeysList');
@@ -26637,6 +26669,8 @@ function saveEditCustomKey() {
     key.isVATS = document.getElementById('editCustomKeyIsVATS').checked;
     key.secondaryKeyPartNumber = key.isVATS ? (document.getElementById('editCustomKeySecondaryPN').value.trim() || null) : null;
 
+    key.lastEdited = new Date().toISOString();
+
     // Update in DB array (search by old PN since key.pn was already updated above)
     const searchPn = pnChanged ? oldPn : newPn || oldPn;
     const dbIndex = DB.findIndex(k => String(k.pn) === searchPn && k.isCustom);
@@ -26689,12 +26723,13 @@ async function loadCustomKeys() {
         const saved = await loadFromIndexedDB('customKeys');
         if (saved && Array.isArray(saved)) {
             customKeys = saved;
-            // Add custom keys to DB
+            // Add custom keys to DB — always flagged isCustom so their edits
+            // route to customKeys storage (matches loadCustomKeysIntoDB)
             customKeys.forEach(key => {
                 // Check if not already in DB
                 const exists = DB.some(k => String(k.pn).toLowerCase() === String(key.pn).toLowerCase());
                 if (!exists) {
-                    DB.push(key);
+                    DB.push({ ...key, isCustom: true });
                 }
             });
         }
@@ -27352,7 +27387,7 @@ function saveQuickAddVehicle() {
             id: 'vehicle-' + Date.now(),
             make: make, model: model,
             startYear: startYear, endYear: endYear,
-            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
+            startMonth: startMonth || null, endMonth: endMonth || null,
             multipleKeys: true,
             dataStatus: hasData ? 'complete' : 'partial',
             // Ignition key
@@ -27379,7 +27414,7 @@ function saveQuickAddVehicle() {
             id: 'vehicle-' + Date.now(),
             make: make, model: model,
             startYear: startYear, endYear: endYear,
-            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
+            startMonth: startMonth || null, endMonth: endMonth || null,
             multipleKeys: false,
             dataStatus: hasOptionalData ? 'complete' : 'partial',
             keyType: keyType, chip: chip, buttons: buttons,
@@ -27393,7 +27428,7 @@ function saveQuickAddVehicle() {
     saveCustomVehicles();
 
     // Add key entries to DB/customKeys for any specified key blanks
-    const vehicleEntry = { make: make, model: model, startYear: startYear, endYear: endYear, startMonth: startMonth || undefined, endMonth: endMonth || undefined };
+    const vehicleEntry = { make: make, model: model, startYear: startYear, endYear: endYear, startMonth: startMonth || null, endMonth: endMonth || null };
     const keyBlanksToAdd = [];
 
     if (isMultipleKeys) {
@@ -27653,7 +27688,7 @@ function saveEditCustomVehicle() {
         customVehicles[idx] = {
             ...customVehicles[idx],
             make, model, startYear, endYear, notes,
-            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
+            startMonth: startMonth || null, endMonth: endMonth || null,
             multipleKeys: true,
             keyType: '', chip: '', buttons: '', fccid: '', frequency: '', keyway: '',
             ignition_keyBlank, ignition_chip, ignition_keyway, ignition_fccid,
@@ -27675,7 +27710,7 @@ function saveEditCustomVehicle() {
         customVehicles[idx] = {
             ...customVehicles[idx],
             make, model, startYear, endYear, notes,
-            startMonth: startMonth || undefined, endMonth: endMonth || undefined,
+            startMonth: startMonth || null, endMonth: endMonth || null,
             multipleKeys: false,
             keyType, chip, buttons, fccid, frequency, keyway,
             ignition_chip: '', ignition_keyway: '', ignition_fccid: '',
