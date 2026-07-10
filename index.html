@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v194</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v195</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v194</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v195</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v194<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v195<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5753,15 +5753,25 @@
         </div>
         <div class="modal-input-group" id="editKeyInfoRoleSection" style="display:none;background:var(--bg);padding:12px;border-radius:8px;">
             <label style="margin-bottom:8px;">Key Role</label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
-                <input type="checkbox" id="editKeyInfoRoleIgnition" onchange="if(this.checked)document.getElementById('editKeyInfoRoleDoor').checked=false;" style="width:18px;height:18px;cursor:pointer;">
-                <span>&#128273; Ignition key only</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input type="checkbox" id="editKeyInfoRoleDoor" onchange="if(this.checked)document.getElementById('editKeyInfoRoleIgnition').checked=false;" style="width:18px;height:18px;cursor:pointer;">
-                <span>&#128682; Door/Trunk key only</span>
-            </label>
-            <div style="font-size:11px;color:var(--dim);margin-top:8px;">Leave both unchecked if this key operates the whole vehicle.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="editKeyInfoRoleIgnition" style="width:18px;height:18px;cursor:pointer;">
+                    <span>&#128273; Ignition</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="editKeyInfoRoleDoor" style="width:18px;height:18px;cursor:pointer;">
+                    <span>&#128682; Door</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="editKeyInfoRoleGlovebox" style="width:18px;height:18px;cursor:pointer;">
+                    <span>&#129508; Glovebox</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="editKeyInfoRoleTrunk" style="width:18px;height:18px;cursor:pointer;">
+                    <span>&#129523; Trunk</span>
+                </label>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:8px;">Check every lock this key operates. Leave all unchecked if it works the whole vehicle.</div>
         </div>
         <div class="modal-input-group">
             <label>FCC ID <span style="font-size:11px;color:var(--dim);font-weight:normal;">(primary)</span></label>
@@ -11131,9 +11141,12 @@ function openEditKeyInfoModal(idx) {
     document.getElementById('editKeyInfoSleeve').checked = key.removableSleeve || false;
     toggleEditKeyInfoSleeve();
 
-    // Ignition/door key role checkboxes (mechanical keys only)
-    document.getElementById('editKeyInfoRoleIgnition').checked = key.keyRole === 'ignition';
-    document.getElementById('editKeyInfoRoleDoor').checked = key.keyRole === 'door';
+    // Key role checkboxes (mechanical keys only)
+    const roles = getKeyRolesArray(key);
+    document.getElementById('editKeyInfoRoleIgnition').checked = roles.includes('ignition');
+    document.getElementById('editKeyInfoRoleDoor').checked = roles.includes('door');
+    document.getElementById('editKeyInfoRoleGlovebox').checked = roles.includes('glovebox');
+    document.getElementById('editKeyInfoRoleTrunk').checked = roles.includes('trunk');
     toggleEditKeyInfoMechanical();
 
     document.getElementById('editKeyInfoModal').classList.add('on');
@@ -11252,12 +11265,16 @@ function saveEditKeyInfo() {
     const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
     // Removable sleeve only applies when a chip is set, otherwise force false.
     const newRemovableSleeve = !!newChip && document.getElementById('editKeyInfoSleeve').checked;
-    // Key role: ignition-only / door-trunk-only; null = whole vehicle.
+    // Key roles: which locks this key operates; null = whole vehicle.
     // Only meaningful for mechanical keys — cleared for anything else.
-    const newKeyRole = isMechanicalKeyType(newKeyType)
-        ? (document.getElementById('editKeyInfoRoleIgnition').checked ? 'ignition'
-            : document.getElementById('editKeyInfoRoleDoor').checked ? 'door' : null)
-        : null;
+    let newKeyRoles = null;
+    if (isMechanicalKeyType(newKeyType)) {
+        const checked = KEY_ROLES.filter(r => {
+            const box = document.getElementById('editKeyInfoRole' + r.charAt(0).toUpperCase() + r.slice(1));
+            return box && box.checked;
+        });
+        newKeyRoles = checked.length > 0 ? checked : null;
+    }
 
     // Build the multi-FCC ID array. Primary first, then any extras the user added.
     let newFccids = null;
@@ -11274,10 +11291,16 @@ function saveEditKeyInfo() {
     }
 
     if (key.isCustom) {
-        // For custom keys, update the customKeys array directly
-        // Search by old PN if it was renamed, otherwise by current pn
+        // For custom keys, update the customKeys array directly.
+        // Search by old PN if it was renamed, otherwise by current pn.
         const searchPn = pnChanged ? oldPn : pn;
-        const customIdx = customKeys.findIndex(ck => String(ck.pn) === searchPn);
+        let customIdx = customKeys.findIndex(ck => String(ck.pn) === searchPn);
+        // The DB entry and the customKeys entry can be the SAME object (keys
+        // created or antique-generated this session, or loaded by older app
+        // versions) — in that case the rename above already updated the
+        // customKeys copy, so the old-PN lookup misses. Retry by the new PN
+        // rather than silently dropping the whole save.
+        if (customIdx < 0) customIdx = customKeys.findIndex(ck => String(ck.pn) === pn);
         if (customIdx >= 0) {
             if (pnChanged) customKeys[customIdx].pn = newPnRaw;
             customKeys[customIdx].keyType = newKeyType;
@@ -11295,9 +11318,13 @@ function saveEditKeyInfo() {
             customKeys[customIdx].isVATS = newIsVATS;
             customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
             customKeys[customIdx].removableSleeve = newRemovableSleeve;
-            customKeys[customIdx].keyRole = newKeyRole;
+            customKeys[customIdx].keyRoles = newKeyRoles;
+            customKeys[customIdx].keyRole = null; // legacy single-role field
             customKeys[customIdx].lastEdited = new Date().toISOString();
             saveCustomKeys();
+        } else {
+            console.error('Custom key not found in storage:', pn);
+            toast('Warning: could not save changes for ' + pn);
         }
         // Also update DB entry in memory
         key.keyType = newKeyType;
@@ -11315,7 +11342,8 @@ function saveEditKeyInfo() {
         key.isVATS = newIsVATS;
         key.secondaryKeyPartNumber = newSecondaryPN;
         key.removableSleeve = newRemovableSleeve;
-        key.keyRole = newKeyRole;
+        key.keyRoles = newKeyRoles;
+        key.keyRole = null; // legacy single-role field
     } else {
         // For base DB keys, save overrides
         const overrides = {};
@@ -11333,7 +11361,8 @@ function saveEditKeyInfo() {
         overrides.isVATS = newIsVATS;
         overrides.secondaryKeyPartNumber = newSecondaryPN;
         overrides.removableSleeve = newRemovableSleeve;
-        overrides.keyRole = newKeyRole;
+        overrides.keyRoles = newKeyRoles;
+        overrides.keyRole = null; // legacy single-role field
 
         // Keyed by the original catalog PN (stable across renames), not the current
         // display pn — see applyKeyInfoOverridesToDB/applyPnRenamesToDB ordering.
@@ -12142,10 +12171,10 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             </div>
             ` : ''}
             ` : ''}
-            ${key.keyRole ? `
+            ${getKeyRolesArray(key).length > 0 ? `
             <div class="detail-row" style="background:linear-gradient(90deg, rgba(0,212,255,0.12), transparent);border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;">
-                <span class="detail-label" style="color:var(--accent);font-weight:600;">${key.keyRole === 'ignition' ? '&#128273; Key Role' : '&#128682; Key Role'}</span>
-                <span class="detail-value" style="color:var(--accent);font-weight:600;">${key.keyRole === 'ignition' ? 'Ignition only' : 'Door/Trunk only'}</span>
+                <span class="detail-label" style="color:var(--accent);font-weight:600;">&#128273; Key Role</span>
+                <span class="detail-value" style="color:var(--accent);font-weight:600;">${getKeyRolesArray(key).map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', ')}</span>
             </div>
             ` : ''}
             ${key.frequency ? `<div class="detail-row">
@@ -20716,6 +20745,18 @@ function isMechanicalKeyType(keyType) {
     return isNonChipKeyType(keyType) || kt.includes('vats');
 }
 
+// Which locks a key operates, in canonical order. Empty = whole vehicle.
+const KEY_ROLES = ['ignition', 'door', 'glovebox', 'trunk'];
+function getKeyRolesArray(key) {
+    if (Array.isArray(key.keyRoles) && key.keyRoles.length > 0) {
+        return KEY_ROLES.filter(r => key.keyRoles.includes(r));
+    }
+    // Legacy single-value field from v194: 'door' meant "Door/Trunk"
+    if (key.keyRole === 'ignition') return ['ignition'];
+    if (key.keyRole === 'door') return ['door', 'trunk'];
+    return [];
+}
+
 function renderVehicleYearsForModel(make, model, keyType) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
@@ -21667,11 +21708,11 @@ function openVehicleDetail(vehicleKey) {
         const stock = stockData[key.pn] || 0;
         const inStock = stock > 0;
         const keyIdx = DB.findIndex(k => k.pn === key.pn);
-        // Role from the vehicle's dual-key data, else from the key's own stored role
-        const cardRole = key.dualKeyRole || key.keyRole;
-        const roleLabel = cardRole === 'ignition' ? '<span style="display:inline-block;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">IGNITION</span>'
-            : cardRole === 'door' ? '<span style="display:inline-block;background:var(--accent2);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">DOOR</span>'
-            : '';
+        // Roles from the vehicle's dual-key data, else from the key's own stored roles
+        const cardRoles = key.dualKeyRole ? [key.dualKeyRole] : getKeyRolesArray(key);
+        const roleLabel = cardRoles.map(r =>
+            `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">${r.toUpperCase()}</span>`
+        ).join('');
         // Autel iKeys are proximity-only — show on proximity key cards of an iKey-compatible vehicle
         const iKeyBadgeVeh = (vehicleIKeyStylesArr.length > 0 && normalizeKeyType(key.keyType) === 'Proximity')
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey ✓</span>`
