@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v195</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v196</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v195</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v196</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v195<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v196<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10429,6 +10429,25 @@ async function runNonChipFccMigration() {
     saveToIndexedDB('nonChipFccV1', true);
 }
 
+// ===================== ANTIQUE CONSOLIDATION MIGRATION =====================
+// One-shot cleanup for users who already generated antique part numbers: the
+// old generator split blanks like "P1098E-B44" on the first dash, creating a
+// duplicate of base key B44 named P1098E and skipping rows whose names were
+// taken. syncAntiqueReferenceToKeys merges those duplicates into one key per
+// blank (named by its most widely used code) and attaches every antique
+// row's vehicle data. Users who never generated antique PNs are left alone —
+// they opt in via the antique panel's button.
+async function runAntiqueConsolidationMigration() {
+    const done = await loadFromIndexedDB('antiqueConsolidateV1');
+    if (done) return;
+
+    if (DB.some(k => k.antiqueGenerated)) {
+        const stats = syncAntiqueReferenceToKeys();
+        console.log('Antique consolidation:', stats);
+    }
+    saveToIndexedDB('antiqueConsolidateV1', true);
+}
+
 // ===================== INIT =====================
 async function init() {
     // Initialize IndexedDB first
@@ -10454,6 +10473,9 @@ async function init() {
     await runFccidMergeMigration();
     await runH75xMergeMigration();
     runAntiqueSlashPnMigration();
+    // Must run after the override applies above: it reads base keys with their
+    // vehicle/key-info overrides already in place and persists on top of them.
+    await runAntiqueConsolidationMigration();
     initializeVendorPricesFromDB();
     buildFilters();
     buildFccidDatalist();
@@ -11345,8 +11367,10 @@ function saveEditKeyInfo() {
         key.keyRoles = newKeyRoles;
         key.keyRole = null; // legacy single-role field
     } else {
-        // For base DB keys, save overrides
-        const overrides = {};
+        // For base DB keys, save overrides. Start from the existing override
+        // record so fields the modal doesn't edit (ilco, mergedPNs, antique
+        // bookkeeping from the consolidation sync) survive a key-info save.
+        const overrides = keyInfoOverrides[getOriginalCatalogPn(pn)] || {};
         overrides.keyType = newKeyType;
         overrides.keyway = newKeyway;
         overrides.chip = newChip;
@@ -13474,6 +13498,28 @@ function mergeKeyInto(sourceIdx) {
         : `Merge ${sourcePn} into ${targetPn}?\n\n${sourcePn} will be deleted. Its vehicles, stock, pricing, and history move to ${targetPn}, and searching ${sourcePn} will redirect there.`;
     if (!confirm(confirmMsg)) return;
 
+    executeKeyMerge(target, source, absorbedIdx);
+
+    closeMergeKeyModal();
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+
+    // Re-open the survivor — its index may have shifted after the splice
+    const newTargetIdx = DB.findIndex(k => String(k.pn) === targetPn);
+    if (newTargetIdx >= 0) openKey(newTargetIdx);
+    toast(`Merged ${sourcePn} into ${targetPn}`);
+}
+
+// Core merge: absorb `source` (at DB index absorbedIdx) into `target`. Moves
+// vehicles, names, stock, pricing, and history; records supersessions; removes
+// the absorbed record from DB and customKeys. UI refresh is the caller's job.
+// Also used by the antique consolidation sync.
+function executeKeyMerge(target, source, absorbedIdx) {
+    const normPn = s => String(s || '').replace(/\//g, '-').toLowerCase();
+    const targetPn = String(target.pn);
+    const sourcePn = String(source.pn);
+
     // Vehicles: union, deduped by make|model|years; merge code series entries
     if (!Array.isArray(target.vehicles)) target.vehicles = [];
     (source.vehicles || []).forEach(sv => {
@@ -13606,16 +13652,6 @@ function mergeKeyInto(sourceIdx) {
     if (ckTgtIdx >= 0) customKeys[ckTgtIdx] = target;
     saveCustomKeys();
     saveToIndexedDB('database', DB);
-
-    closeMergeKeyModal();
-    buildFilters();
-    applyFilters();
-    document.getElementById('totalCount').textContent = DB.length;
-
-    // Re-open the survivor — its index may have shifted after the splice
-    const newTargetIdx = DB.findIndex(k => String(k.pn) === targetPn);
-    if (newTargetIdx >= 0) openKey(newTargetIdx);
-    toast(`Merged ${sourcePn} into ${targetPn}`);
 }
 
 // ===================== STOCK =====================
@@ -17591,110 +17627,269 @@ async function loadAntiqueData() {
     }
 }
 
-// Create one key DB part number per distinct antique blank so the classic
-// keys are searchable and stockable like everything else. Blanks like
-// "X109-FT43" split into pn "X109" / ilco "FT43"; no-dash blanks become the
-// PN as-is. Idempotent: PNs that already exist are skipped, safe to re-run.
-function generateAntiquePartNumbers() {
+// ===== Antique blank <-> key database sync =====
+// A blank string carries every name the blank is known by ("P1098E-B44").
+function splitAntiqueBlankNames(blank) {
+    const parts = String(blank || '').trim().replace(/\//g, '-').split('-').map(s => s.trim()).filter(Boolean);
+    return [...new Set(parts)];
+}
+
+// The most widely used name wins as the PN: Ilco-style short codes, preferring
+// B##/F##/HO##/HD## first, then other letter+number codes (shortest first).
+const ANTIQUE_PN_PREFERENCE = [/^B\d+[A-Z]?$/i, /^F\d+[A-Z]?$/i, /^HO\d+[A-Z]?$/i, /^HD\d+[A-Z]?$/i, /^H\d+[A-Z]?$/i, /^Y\d+[A-Z]?$/i, /^X\d+[A-Z]?$/i];
+function pickPreferredAntiquePn(parts) {
+    for (const re of ANTIQUE_PN_PREFERENCE) {
+        const hit = parts.find(p => re.test(p));
+        if (hit) return hit;
+    }
+    const generic = parts.filter(p => /^[A-Z]{1,2}\d{1,4}[A-Z]?$/i.test(p)).sort((a, b) => a.length - b.length);
+    return generic.length > 0 ? generic[0] : parts[0];
+}
+
+// All DB indexes whose pn / ilco / mergedPNs / altParts match any given name.
+// Separator-normalized, so a combined spelling like "P1098E/B44" matches the
+// name "P1098E-B44".
+function findKeysByAnyName(names) {
+    const norm = s => String(s).replace(/\//g, '-').toLowerCase();
+    const set = new Set(names.map(norm));
+    const out = [];
+    DB.forEach((k, i) => {
+        if (set.has(norm(k.pn))
+            || (k.ilco && set.has(norm(k.ilco)))
+            || (k.mergedPNs || []).some(p => set.has(norm(p)))
+            || (k.altParts || []).some(a => a && a.pn && set.has(norm(a.pn)))) {
+            out.push(i);
+        }
+    });
+    return out;
+}
+
+// Sync the ILCO antique reference into the key database. For every distinct
+// blank: resolve one canonical key (an existing base key when any of the
+// blank's names matches it; else a custom key, renamed to the preferred
+// Ilco-style name; else a newly created Non-Chip key), absorb duplicate
+// antique-generated entries into it, and attach the blank's vehicle
+// applications and alternate names. Idempotent — reruns change nothing.
+function syncAntiqueReferenceToKeys() {
     const rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
     const byBlank = {};
     rows.forEach(r => {
-        // The reference writes the same blank with either separator (e.g.
-        // "S1970AM-RA3" and "S1970AM/RA3") — normalize so they stay one key
         const b = String(r.blank).trim().replace(/\//g, '-');
         (byBlank[b] = byBlank[b] || []).push(r);
     });
-    const blanks = Object.keys(byBlank).sort();
-    if (blanks.length === 0) { toast('No antique entries with key blanks found'); return; }
-    if (!confirm(`Create part numbers for ${blanks.length} antique key blanks (Non-Chip Keys with their vehicle applications)? Existing part numbers are skipped.`)) return;
 
-    const existingPns = new Set(DB.map(k => String(k.pn).toLowerCase()));
-    // Blanks already generated in a previous run (keys carry their source blank,
-    // plus any blanks absorbed via merge) — compared separator-normalized
-    const doneBlanks = new Set();
-    DB.forEach(k => {
-        if (k.antiqueBlank) doneBlanks.add(String(k.antiqueBlank).replace(/\//g, '-'));
-        (k.antiqueBlanksMerged || []).forEach(b => doneBlanks.add(String(b).replace(/\//g, '-')));
-    });
-    let created = 0, skipped = 0;
+    const stats = { created: 0, merged: 0, updated: 0, renamed: 0 };
+    let customDirty = false, overridesDirty = false, vehOverridesDirty = false, supersessionsDirty = false, fidDirty = false;
 
-    blanks.forEach(blank => {
-        if (doneBlanks.has(blank)) { skipped++; return; }
-        const dash = blank.indexOf('-');
-        let pn = dash > 0 ? blank.slice(0, dash).trim() : blank;
-        let ilco = dash > 0 ? blank.slice(dash + 1).trim() : null;
-        if (existingPns.has(pn.toLowerCase())) {
-            // PN taken (base key or an earlier blank) — fall back to the full blank string
-            if (pn !== blank && !existingPns.has(blank.toLowerCase())) {
-                pn = blank;
-                ilco = null;
-            } else {
-                skipped++;
-                return;
+    Object.keys(byBlank).sort().forEach(blank => {
+        const names = splitAntiqueBlankNames(blank);
+        if (names.length === 0) return;
+        const preferred = pickPreferredAntiquePn(names);
+        // Include the full blank string — old-generator keys could carry the
+        // combined spelling ("P1098E-B44") as their PN
+        const lookupNames = names.length > 1 ? names.concat([blank]) : names;
+
+        // Resolve the canonical key: base key first, then preferred-named
+        // custom, then any match; create if the blank has no key at all.
+        let matchIdxs = findKeysByAnyName(lookupNames);
+        let targetIdx = matchIdxs.find(i => !DB[i].isCustom);
+        if (targetIdx === undefined) targetIdx = matchIdxs.find(i => String(DB[i].pn).toLowerCase() === preferred.toLowerCase());
+        if (targetIdx === undefined) targetIdx = matchIdxs[0];
+
+        if (targetIdx === undefined) {
+            const newKey = {
+                pn: preferred,
+                ilco: null,
+                brand: null,
+                altParts: null,
+                // Non-chip keys use their own PN as FCC stand-in for FID grouping
+                fccid: String(preferred),
+                keyway: null,
+                chip: null,
+                keyType: 'Non-Chip Key',
+                buttons: null,
+                frequency: null,
+                battery: null,
+                notes: null,
+                vehicles: [],
+                isCustom: true,
+                antiqueGenerated: true,
+                antiqueBlank: blank,
+                addedDate: new Date().toISOString(),
+                isVATS: false,
+                removableSleeve: false
+            };
+            customKeys.push(newKey);
+            DB.push({ ...newKey });
+            customDirty = true;
+            stats.created++;
+            targetIdx = DB.length - 1;
+        } else {
+            // Absorb duplicate entries — but only ones the antique generator
+            // created; never auto-merge base catalog keys or unrelated customs.
+            let guard = 0;
+            while (guard++ < 25) {
+                const targetPnNow = String(DB[targetIdx].pn);
+                const dupIdx = findKeysByAnyName(lookupNames).find(i =>
+                    i !== targetIdx && DB[i].isCustom && DB[i].antiqueGenerated);
+                if (dupIdx === undefined) break;
+                executeKeyMerge(DB[targetIdx], DB[dupIdx], dupIdx);
+                stats.merged++;
+                targetIdx = DB.findIndex(k => String(k.pn) === targetPnNow);
+                if (targetIdx < 0) break;
             }
+            if (targetIdx < 0) return;
         }
-        existingPns.add(pn.toLowerCase());
 
-        const vehicles = [];
-        const seenVeh = {};
+        let target = DB[targetIdx];
+        let touched = false;
+        let renamedFrom = null;
+
+        // Rename an antique-generated custom key to the preferred name — but
+        // only when its current PN isn't already an Ilco-style code. Once a
+        // key carries a preferred-style name it keeps it, so blanks that share
+        // a name can't rename the same key back and forth.
+        const pnAlreadyStyled = /^[A-Z]{1,2}\d{1,4}[A-Z]?$/i.test(String(target.pn));
+        if (target.isCustom && target.antiqueGenerated && !pnAlreadyStyled
+            && String(target.pn).toLowerCase() !== preferred.toLowerCase()
+            && !DB.some(k => k !== target && String(k.pn).toLowerCase() === preferred.toLowerCase())) {
+            renamedFrom = String(target.pn);
+            target.pn = preferred;
+            if (String(target.fccid || '').toLowerCase() === renamedFrom.toLowerCase()) target.fccid = preferred;
+            migratePnLiveStores(renamedFrom, preferred);
+            if (fidAssignments[renamedFrom] && !fidAssignments[preferred]) {
+                fidAssignments[preferred] = fidAssignments[renamedFrom];
+                delete fidAssignments[renamedFrom];
+                fidDirty = true;
+            }
+            pnSupersessions[renamedFrom] = preferred;
+            supersessionsDirty = true;
+            stats.renamed++;
+            touched = true;
+        }
+
+        const pnL = String(target.pn).toLowerCase();
+
+        // Names: fill an empty ILCO with the next-best name; everything else
+        // becomes a searchable merged PN. The old PN stays findable too.
+        const otherNames = names.filter(n => n.toLowerCase() !== pnL);
+        if (renamedFrom && !otherNames.some(n => n.toLowerCase() === renamedFrom.toLowerCase())) otherNames.push(renamedFrom);
+        if (!target.ilco && otherNames.length > 0) {
+            target.ilco = otherNames[0];
+            touched = true;
+        }
+        const ilcoL = String(target.ilco || '').toLowerCase();
+        otherNames.forEach(n => {
+            const nl = n.toLowerCase();
+            if (nl === pnL || nl === ilcoL) return;
+            if (!Array.isArray(target.mergedPNs)) target.mergedPNs = [];
+            if (!target.mergedPNs.some(p => String(p).toLowerCase() === nl)) {
+                target.mergedPNs.push(n);
+                touched = true;
+            }
+        });
+        if (Array.isArray(target.mergedPNs)) {
+            const cleaned = target.mergedPNs.filter(p => String(p).toLowerCase() !== pnL && String(p).toLowerCase() !== ilcoL);
+            if (cleaned.length !== target.mergedPNs.length) { target.mergedPNs = cleaned; touched = true; }
+        }
+
+        // Vehicles: attach every row's application, deduped by make|model|years
+        if (!Array.isArray(target.vehicles)) target.vehicles = [];
         const appLines = new Set();
         const substitutes = new Set();
         byBlank[blank].forEach(r => {
             const model = r.model || 'Most models';
-            const vKey = `${r.make}|${model}|${r.startYear}|${r.endYear}`;
-            let veh = seenVeh[vKey];
+            const sy = r.startYear || 0;
+            const ey = r.endYear || r.startYear || 0;
+            let veh = target.vehicles.find(v => v.make === r.make && v.model === model
+                && (parseInt(v.startYear) || 0) === sy && (parseInt(v.endYear) || 0) === ey);
             if (!veh) {
-                veh = { make: r.make, model: model, startYear: r.startYear || 0, endYear: r.endYear || r.startYear || 0 };
-                seenVeh[vKey] = veh;
-                vehicles.push(veh);
+                veh = { make: r.make, model: model, startYear: sy, endYear: ey };
+                target.vehicles.push(veh);
+                touched = true;
             }
             if (r.codeSeries) {
                 if (!veh.codeSeries) veh.codeSeries = [];
+                if (!Array.isArray(veh.codeSeries)) veh.codeSeries = [{ years: `${sy}-${ey}`, series: veh.codeSeries }];
                 if (!veh.codeSeries.some(cs => cs.series === r.codeSeries)) {
-                    veh.codeSeries.push({ years: r.years || `${r.startYear}-${r.endYear}`, series: r.codeSeries });
+                    veh.codeSeries.push({ years: r.years || `${sy}-${ey}`, series: r.codeSeries });
+                    touched = true;
                 }
             }
             if (r.application) appLines.add(`${r.make} ${model} ${r.years || ''}: ${r.application}`.replace(/\s+/g, ' ').trim());
             if (r.substitutes) String(r.substitutes).split(',').map(s => s.trim()).filter(Boolean).forEach(s => substitutes.add(s));
         });
 
-        let notes = 'From ILCO antique key blank reference (1940-1985).';
-        if (substitutes.size > 0) notes += '\nSubstitutes: ' + Array.from(substitutes).join(', ') + '.';
-        if (appLines.size > 0) notes += '\nApplications: ' + Array.from(appLines).join('; ');
+        // Notes: append the reference block once
+        if (!String(target.notes || '').includes('ILCO antique')) {
+            let notes = 'From ILCO antique key blank reference (1940-1985).';
+            if (substitutes.size > 0) notes += '\nSubstitutes: ' + Array.from(substitutes).join(', ') + '.';
+            if (appLines.size > 0) notes += '\nApplications: ' + Array.from(appLines).join('; ');
+            target.notes = target.notes ? target.notes + '\n' + notes : notes;
+            touched = true;
+        }
 
-        const newKey = {
-            pn: pn,
-            ilco: ilco,
-            brand: null,
-            altParts: null,
-            // Non-chip keys use their own PN as FCC stand-in for FID grouping
-            fccid: String(pn),
-            keyway: null,
-            chip: null,
-            keyType: 'Non-Chip Key',
-            buttons: null,
-            frequency: null,
-            battery: null,
-            notes: notes,
-            vehicles: vehicles,
-            isCustom: true,
-            antiqueGenerated: true,
-            antiqueBlank: blank,
-            addedDate: new Date().toISOString(),
-            isVATS: false,
-            removableSleeve: false
-        };
-        DB.push(newKey);
-        customKeys.push(newKey);
-        created++;
+        // Blank bookkeeping keeps this sync and the generator idempotent
+        const blankNorm = b => String(b).replace(/\//g, '-');
+        if (!target.antiqueBlank) {
+            target.antiqueBlank = blank;
+            touched = true;
+        } else if (blankNorm(target.antiqueBlank) !== blank) {
+            if (!Array.isArray(target.antiqueBlanksMerged)) target.antiqueBlanksMerged = [];
+            if (!target.antiqueBlanksMerged.some(b => blankNorm(b) === blank)) {
+                target.antiqueBlanksMerged.push(blank);
+                touched = true;
+            }
+        }
+
+        if (!touched) return;
+        stats.updated++;
+
+        if (target.isCustom) {
+            target.lastEdited = new Date().toISOString();
+            let ck = customKeys.findIndex(k => String(k.pn).toLowerCase() === pnL);
+            if (ck < 0 && renamedFrom) ck = customKeys.findIndex(k => String(k.pn).toLowerCase() === renamedFrom.toLowerCase());
+            if (ck >= 0) customKeys[ck] = target;
+            customDirty = true;
+        } else {
+            // Base catalog keys are rebuilt from source every load — persist the
+            // attached data in the override stores, keyed by the original PN.
+            const orig = getOriginalCatalogPn(String(target.pn));
+            vehicleOverrides[orig] = target.vehicles;
+            vehOverridesDirty = true;
+            const ov = keyInfoOverrides[orig] || {};
+            if (target.ilco) ov.ilco = target.ilco;
+            if (Array.isArray(target.mergedPNs) && target.mergedPNs.length > 0) ov.mergedPNs = target.mergedPNs;
+            if (target.antiqueBlank) ov.antiqueBlank = target.antiqueBlank;
+            if (Array.isArray(target.antiqueBlanksMerged) && target.antiqueBlanksMerged.length > 0) ov.antiqueBlanksMerged = target.antiqueBlanksMerged;
+            if (target.notes) ov.notes = target.notes;
+            keyInfoOverrides[orig] = ov;
+            overridesDirty = true;
+        }
     });
 
-    if (created > 0) {
-        saveCustomKeys();
-        buildFilters();
-        applyFilters();
-    }
-    toast(`${created} part number${created !== 1 ? 's' : ''} created` + (skipped > 0 ? `, ${skipped} skipped (already exist)` : ''));
+    if (customDirty) saveCustomKeys();
+    if (overridesDirty) saveKeyInfoOverrides();
+    if (vehOverridesDirty) saveVehicleOverrides();
+    if (supersessionsDirty) savePnSupersessions();
+    if (fidDirty) saveFidAssignments();
+    return stats;
+}
+
+// Sync the ILCO antique reference into the key database (button in the
+// antique panel). Duplicate spellings merge into one key per blank, named by
+// its most widely used code; vehicle applications attach to existing keys.
+function generateAntiquePartNumbers() {
+    const rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
+    if (rows.length === 0) { toast('No antique entries with key blanks found'); return; }
+    const blankCount = new Set(rows.map(r => String(r.blank).trim().replace(/\//g, '-'))).size;
+    if (!confirm(`Sync ${blankCount} antique key blanks into the key database?\n\nNew blanks become Non-Chip keys named by their most widely used code (B##, F##, HO##, HD##…); duplicate spellings merge into one key; vehicle applications attach to existing keys.`)) return;
+
+    const stats = syncAntiqueReferenceToKeys();
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+    toast(`Antique sync: ${stats.created} created, ${stats.merged} merged, ${stats.updated} updated` + (stats.renamed > 0 ? `, ${stats.renamed} renamed` : ''));
 }
 
 // ---- Antique key inventory: count stock for keys generated from the reference ----
