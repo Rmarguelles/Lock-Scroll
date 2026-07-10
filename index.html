@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v193</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v194</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v193</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v194</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v193<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v194<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5615,7 +5615,7 @@
             <label>Keyway / Blade</label>
             <input type="text" class="modal-input" id="editCustomKeyKeyway">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editCustomKeyChipGroup">
             <label>Chip Type</label>
             <input type="text" class="modal-input" id="editCustomKeyChip">
         </div>
@@ -5631,13 +5631,13 @@
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
-            <input type="text" class="modal-input" id="editCustomKeyType">
+            <input type="text" class="modal-input" id="editCustomKeyType" oninput="toggleEditCustomKeyMechanical()">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editCustomKeyButtonsGroup">
             <label>Buttons</label>
             <input type="text" class="modal-input" id="editCustomKeyButtons">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editCustomKeyFrequencyGroup">
             <label>Frequency</label>
             <input type="text" class="modal-input" id="editCustomKeyFrequency">
         </div>
@@ -5709,11 +5709,11 @@
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
-            <select class="modal-input" id="editKeyInfoKeyType" onchange="handleCustomDropdown(this, 'editKeyInfoKeyTypeOther')">
+            <select class="modal-input" id="editKeyInfoKeyType" onchange="handleCustomDropdown(this, 'editKeyInfoKeyTypeOther'); toggleEditKeyInfoMechanical()">
                 <option value="">-- None --</option>
                 <option value="__other__">+ Other (custom)</option>
             </select>
-            <input type="text" class="modal-input" id="editKeyInfoKeyTypeOther" placeholder="Enter custom key type..." style="display:none;margin-top:6px;">
+            <input type="text" class="modal-input" id="editKeyInfoKeyTypeOther" placeholder="Enter custom key type..." style="display:none;margin-top:6px;" oninput="toggleEditKeyInfoMechanical()">
         </div>
         <div class="modal-input-group">
             <label>Keyway / Blade</label>
@@ -5723,7 +5723,7 @@
             </select>
             <input type="text" class="modal-input" id="editKeyInfoKeywayOther" placeholder="Enter custom keyway..." style="display:none;margin-top:6px;">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editKeyInfoChipGroup">
             <label>Chip Type</label>
             <select class="modal-input" id="editKeyInfoChip" onchange="handleCustomDropdown(this, 'editKeyInfoChipOther'); toggleEditKeyInfoSleeve()">
                 <option value="">-- None --</option>
@@ -5751,6 +5751,18 @@
             </select>
             <input type="text" class="modal-input" id="editKeyInfoSecondaryPNOther" placeholder="Enter part number..." style="display:none;margin-top:6px;">
         </div>
+        <div class="modal-input-group" id="editKeyInfoRoleSection" style="display:none;background:var(--bg);padding:12px;border-radius:8px;">
+            <label style="margin-bottom:8px;">Key Role</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                <input type="checkbox" id="editKeyInfoRoleIgnition" onchange="if(this.checked)document.getElementById('editKeyInfoRoleDoor').checked=false;" style="width:18px;height:18px;cursor:pointer;">
+                <span>&#128273; Ignition key only</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="editKeyInfoRoleDoor" onchange="if(this.checked)document.getElementById('editKeyInfoRoleIgnition').checked=false;" style="width:18px;height:18px;cursor:pointer;">
+                <span>&#128682; Door/Trunk key only</span>
+            </label>
+            <div style="font-size:11px;color:var(--dim);margin-top:8px;">Leave both unchecked if this key operates the whole vehicle.</div>
+        </div>
         <div class="modal-input-group">
             <label>FCC ID <span style="font-size:11px;color:var(--dim);font-weight:normal;">(primary)</span></label>
             <select class="modal-input" id="editKeyInfoFCC" onchange="handleCustomDropdown(this, 'editKeyInfoFCCOther')">
@@ -5767,14 +5779,14 @@
                 <button type="button" onclick="addExtraFccId()" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
             </div>
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editKeyInfoFrequencyGroup">
             <label>Frequency</label>
             <select class="modal-input" id="editKeyInfoFrequency" onchange="handleCustomDropdown(this, 'editKeyInfoFrequencyOther')">
                 <option value="">-- None --</option>
             </select>
             <input type="text" class="modal-input" id="editKeyInfoFrequencyOther" placeholder="Enter custom frequency..." style="display:none;margin-top:6px;">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editKeyInfoButtonsGroup">
             <label>Buttons</label>
             <select class="modal-input" id="editKeyInfoButtons" onchange="handleCustomDropdown(this, 'editKeyInfoButtonsOther')">
                 <option value="">-- None --</option>
@@ -5791,7 +5803,7 @@
             </select>
             <input type="text" class="modal-input" id="editKeyInfoLogoOther" placeholder="Enter logo..." style="display:none;margin-top:6px;">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editKeyInfoBatteryGroup">
             <label>Battery</label>
             <select class="modal-input" id="editKeyInfoBattery" onchange="handleCustomDropdown(this, 'editKeyInfoBatteryOther')">
                 <option value="">-- None --</option>
@@ -5799,7 +5811,7 @@
             </select>
             <input type="text" class="modal-input" id="editKeyInfoBatteryOther" placeholder="Enter battery type..." style="display:none;margin-top:6px;">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editKeyInfoEmergencyGroup">
             <label>Emergency Key PN</label>
             <select class="modal-input" id="editKeyInfoEmergencyPN" onchange="handleCustomDropdown(this, 'editKeyInfoEmergencyPNOther')">
                 <option value="">-- None --</option>
@@ -7222,7 +7234,7 @@
             </label>
         </div>
 
-        <div class="add-inv-section">
+        <div class="add-inv-section" id="customKeyButtonsSection">
             <label>Buttons</label>
             <select class="add-inv-select" id="customKeyButtons" onchange="handleCustomDropdown(this, 'customKeyButtonsOther')">
                 <option value="">Select...</option>
@@ -7271,7 +7283,7 @@
             <div id="customKeyButtonsBuilder" style="display:none;"></div>
         </div>
         
-        <div class="add-inv-section">
+        <div class="add-inv-section" id="customKeyFreqSection">
             <label>Frequency</label>
             <select class="add-inv-select" id="customKeyFreq">
                 <option value="">Select...</option>
@@ -7285,7 +7297,7 @@
             <input type="text" class="add-inv-input" id="customKeyFreqOther" style="display:none;">
         </div>
 
-        <div class="add-inv-section">
+        <div class="add-inv-section" id="customKeyBatterySection">
             <label>Battery</label>
             <div style="display:flex;gap:8px;">
                 <select class="add-inv-select" id="customKeyBatteryType" onchange="handleCustomDropdown(this, 'customKeyBatteryTypeOther')" style="flex:2;min-width:0;">
@@ -10382,6 +10394,31 @@ async function runFidTypeBandsMigration() {
     saveToIndexedDB('fidTypeBandsV1', true);
 }
 
+// ===================== NON-CHIP FCC MIGRATION =====================
+// Non-chip mechanical keys use their own PN as FCC stand-in for FID grouping
+// (B44 -> "B44"). Antique-generated blanks (B10, B11, ...) predate that
+// convention and have no FCC ID at all, so they never appear in the FID
+// system. Give every non-chip custom key without an FCC ID its own PN.
+async function runNonChipFccMigration() {
+    const done = await loadFromIndexedDB('nonChipFccV1');
+    if (done) return;
+
+    let changed = 0;
+    customKeys.forEach(ck => {
+        if (!isNonChipKeyType(ck.keyType)) return;
+        if (ck.fccid || (Array.isArray(ck.fccids) && ck.fccids.length > 0)) return;
+        ck.fccid = String(ck.pn);
+        ck.lastEdited = new Date().toISOString();
+        // Mirror onto the in-memory DB copy
+        const dbKey = DB.find(k => k.isCustom && String(k.pn) === String(ck.pn));
+        if (dbKey) dbKey.fccid = ck.fccid;
+        changed++;
+    });
+
+    if (changed > 0) saveCustomKeys();
+    saveToIndexedDB('nonChipFccV1', true);
+}
+
 // ===================== INIT =====================
 async function init() {
     // Initialize IndexedDB first
@@ -10399,6 +10436,7 @@ async function init() {
     await runFrequencyBucketMigration();
     await runVatsChipMergeMigration();
     await runFidTypeBandsMigration();
+    await runNonChipFccMigration();
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
@@ -11093,12 +11131,45 @@ function openEditKeyInfoModal(idx) {
     document.getElementById('editKeyInfoSleeve').checked = key.removableSleeve || false;
     toggleEditKeyInfoSleeve();
 
+    // Ignition/door key role checkboxes (mechanical keys only)
+    document.getElementById('editKeyInfoRoleIgnition').checked = key.keyRole === 'ignition';
+    document.getElementById('editKeyInfoRoleDoor').checked = key.keyRole === 'door';
+    toggleEditKeyInfoMechanical();
+
     document.getElementById('editKeyInfoModal').classList.add('on');
 }
 
 function toggleEditKeyInfoVATS() {
     const isVATS = document.getElementById('editKeyInfoIsVATS').checked;
     document.getElementById('editKeyInfoVATSSection').style.display = isVATS ? 'block' : 'none';
+}
+
+// Current Key Type value in the edit modal, honoring the "+ Other" input
+function getEditKeyInfoKeyType() {
+    const sel = document.getElementById('editKeyInfoKeyType');
+    if (sel.value === '__other__') {
+        return document.getElementById('editKeyInfoKeyTypeOther').value;
+    }
+    return sel.value;
+}
+
+// Mechanical keys (Non-Chip / VATS) hide the remote-electronics fields and
+// show the ignition/door key-role checkboxes instead. VATS keeps its Chip
+// field (it reads 'VATS'). Hiding is display-only — the hidden inputs keep
+// their values, so saving never wipes data. FCC ID stays visible for every
+// type because mechanical keys use it as their FID grouping handle.
+function toggleEditKeyInfoMechanical() {
+    const keyType = getEditKeyInfoKeyType();
+    const mechanical = isMechanicalKeyType(keyType);
+    const nonChip = isNonChipKeyType(keyType);
+
+    document.getElementById('editKeyInfoChipGroup').style.display = nonChip ? 'none' : '';
+    ['editKeyInfoFrequencyGroup', 'editKeyInfoButtonsGroup', 'editKeyInfoBatteryGroup', 'editKeyInfoEmergencyGroup'].forEach(id => {
+        document.getElementById(id).style.display = mechanical ? 'none' : '';
+    });
+    document.getElementById('editKeyInfoRoleSection').style.display = mechanical ? 'block' : 'none';
+    toggleEditKeyInfoSleeve();
+    if (nonChip) document.getElementById('editKeyInfoSleeveSection').style.display = 'none';
 }
 
 // Removable Sleeve applies to any key with a chip — show only when a Chip Type is set.
@@ -11181,6 +11252,12 @@ function saveEditKeyInfo() {
     const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
     // Removable sleeve only applies when a chip is set, otherwise force false.
     const newRemovableSleeve = !!newChip && document.getElementById('editKeyInfoSleeve').checked;
+    // Key role: ignition-only / door-trunk-only; null = whole vehicle.
+    // Only meaningful for mechanical keys — cleared for anything else.
+    const newKeyRole = isMechanicalKeyType(newKeyType)
+        ? (document.getElementById('editKeyInfoRoleIgnition').checked ? 'ignition'
+            : document.getElementById('editKeyInfoRoleDoor').checked ? 'door' : null)
+        : null;
 
     // Build the multi-FCC ID array. Primary first, then any extras the user added.
     let newFccids = null;
@@ -11218,6 +11295,8 @@ function saveEditKeyInfo() {
             customKeys[customIdx].isVATS = newIsVATS;
             customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
             customKeys[customIdx].removableSleeve = newRemovableSleeve;
+            customKeys[customIdx].keyRole = newKeyRole;
+            customKeys[customIdx].lastEdited = new Date().toISOString();
             saveCustomKeys();
         }
         // Also update DB entry in memory
@@ -11236,6 +11315,7 @@ function saveEditKeyInfo() {
         key.isVATS = newIsVATS;
         key.secondaryKeyPartNumber = newSecondaryPN;
         key.removableSleeve = newRemovableSleeve;
+        key.keyRole = newKeyRole;
     } else {
         // For base DB keys, save overrides
         const overrides = {};
@@ -11253,6 +11333,7 @@ function saveEditKeyInfo() {
         overrides.isVATS = newIsVATS;
         overrides.secondaryKeyPartNumber = newSecondaryPN;
         overrides.removableSleeve = newRemovableSleeve;
+        overrides.keyRole = newKeyRole;
 
         // Keyed by the original catalog PN (stable across renames), not the current
         // display pn — see applyKeyInfoOverridesToDB/applyPnRenamesToDB ordering.
@@ -12060,6 +12141,12 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 <span class="detail-value mono">${key.secondaryKeyPartNumber} <span style="color:var(--accent);font-size:11px;">(Stock: ${stockData[key.secondaryKeyPartNumber] || 0})</span></span>
             </div>
             ` : ''}
+            ` : ''}
+            ${key.keyRole ? `
+            <div class="detail-row" style="background:linear-gradient(90deg, rgba(0,212,255,0.12), transparent);border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;">
+                <span class="detail-label" style="color:var(--accent);font-weight:600;">${key.keyRole === 'ignition' ? '&#128273; Key Role' : '&#128682; Key Role'}</span>
+                <span class="detail-value" style="color:var(--accent);font-weight:600;">${key.keyRole === 'ignition' ? 'Ignition only' : 'Door/Trunk only'}</span>
+            </div>
             ` : ''}
             ${key.frequency ? `<div class="detail-row">
                 <span class="detail-label">Frequency</span>
@@ -17551,7 +17638,8 @@ function generateAntiquePartNumbers() {
             ilco: ilco,
             brand: null,
             altParts: null,
-            fccid: null,
+            // Non-chip keys use their own PN as FCC stand-in for FID grouping
+            fccid: String(pn),
             keyway: null,
             chip: null,
             keyType: 'Non-Chip Key',
@@ -20616,6 +20704,18 @@ function isRemoteOnlyKey(key) {
     return kt.includes('remote only') || kt === 'remote';
 }
 
+// Mechanical keys (non-chip blanks and VATS resistor keys) have no remote
+// electronics — frequency/buttons/battery/emergency fields don't apply.
+function isNonChipKeyType(keyType) {
+    const kt = String(keyType || '').toLowerCase();
+    return kt.includes('non-chip') || kt.includes('non chip');
+}
+
+function isMechanicalKeyType(keyType) {
+    const kt = String(keyType || '').toLowerCase();
+    return isNonChipKeyType(keyType) || kt.includes('vats');
+}
+
 function renderVehicleYearsForModel(make, model, keyType) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
@@ -21567,8 +21667,10 @@ function openVehicleDetail(vehicleKey) {
         const stock = stockData[key.pn] || 0;
         const inStock = stock > 0;
         const keyIdx = DB.findIndex(k => k.pn === key.pn);
-        const roleLabel = key.dualKeyRole === 'ignition' ? '<span style="display:inline-block;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">IGNITION</span>'
-            : key.dualKeyRole === 'door' ? '<span style="display:inline-block;background:var(--accent2);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">DOOR</span>'
+        // Role from the vehicle's dual-key data, else from the key's own stored role
+        const cardRole = key.dualKeyRole || key.keyRole;
+        const roleLabel = cardRole === 'ignition' ? '<span style="display:inline-block;background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">IGNITION</span>'
+            : cardRole === 'door' ? '<span style="display:inline-block;background:var(--accent2);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">DOOR</span>'
             : '';
         // Autel iKeys are proximity-only — show on proximity key cards of an iKey-compatible vehicle
         const iKeyBadgeVeh = (vehicleIKeyStylesArr.length > 0 && normalizeKeyType(key.keyType) === 'Proximity')
@@ -25131,6 +25233,18 @@ function toggleCustomKeyChipType() {
     } else {
         chipSection.style.display = 'block';
     }
+    // Mechanical keys (Non-Chip / VATS) have no remote electronics — hide
+    // buttons/frequency/battery and clear them so hidden junk isn't saved.
+    const mechanical = isMechanicalKeyType(keyType);
+    [['customKeyButtonsSection', ['customKeyButtons', 'customKeyButtonsOther']],
+     ['customKeyFreqSection', ['customKeyFreq']],
+     ['customKeyBatterySection', ['customKeyBatteryType', 'customKeyBatteryTypeOther']]].forEach(([sectionId, inputIds]) => {
+        document.getElementById(sectionId).style.display = mechanical ? 'none' : 'block';
+        if (mechanical) inputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    });
     // Code series only applies to cut keys — hide on vehicle rows for Remote Only
     const hideCs = isRemoteOnlyKey({ keyType });
     document.querySelectorAll('.customKeyCodeSeriesSection').forEach(el => {
@@ -26316,12 +26430,14 @@ function saveCustomKey() {
     const batteryQty = isNaN(batteryQtyRaw) || batteryQtyRaw < 1 ? 1 : batteryQtyRaw;
     const battery = batteryType ? `${batteryType} qty ${batteryQty}` : null;
 
-    // Create the new key object
+    // Create the new key object. Non-chip keys without an FCC ID default to
+    // their own PN as FCC stand-in (the FID grouping handle, like B44 -> "B44").
+    const enteredFcc = document.getElementById('customKeyFCC').value.trim();
     const newKey = {
         pn: pn,
         brand: brand || null,
         altParts: altParts.length > 0 ? altParts : null,
-        fccid: document.getElementById('customKeyFCC').value.trim() || null,
+        fccid: enteredFcc || (isNonChipKeyType(keyType) ? String(pn) : null),
         keyway: keyway || null,
         chip: chip || null,
         keyType: keyType || null,
@@ -26530,6 +26646,7 @@ function openEditCustomKeyModal(idx) {
     document.getElementById('editCustomKeyIsVATS').checked = key.isVATS || false;
     document.getElementById('editCustomKeySecondaryPN').value = key.secondaryKeyPartNumber || '';
     toggleVATSFields();
+    toggleEditCustomKeyMechanical();
 
     document.getElementById('editCustomKeyModal').classList.add('on');
 }
@@ -26601,6 +26718,16 @@ function toggleVATSFields() {
     const isVATS = document.getElementById('editCustomKeyIsVATS').checked;
     const vatsSection = document.getElementById('editCustomKeyVATSSection');
     vatsSection.style.display = isVATS ? 'block' : 'none';
+}
+
+// Mechanical keys (Non-Chip / VATS) hide the remote-electronics fields in the
+// Edit Custom Key modal. Display-only — hidden inputs keep their values.
+function toggleEditCustomKeyMechanical() {
+    const keyType = document.getElementById('editCustomKeyType').value;
+    const mechanical = isMechanicalKeyType(keyType);
+    document.getElementById('editCustomKeyChipGroup').style.display = isNonChipKeyType(keyType) ? 'none' : '';
+    document.getElementById('editCustomKeyButtonsGroup').style.display = mechanical ? 'none' : '';
+    document.getElementById('editCustomKeyFrequencyGroup').style.display = mechanical ? 'none' : '';
 }
 
 function closeEditCustomKeyModal() {
