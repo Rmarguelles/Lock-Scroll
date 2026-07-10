@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v190</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v191</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4868,11 +4868,15 @@
 
         <!-- FID Number Section -->
         <div class="modal-input-group">
+            <label>Type Group <span style="font-size:10px;color:var(--dim);font-weight:normal;">(sets the first digit)</span></label>
+            <select class="modal-input" id="editFidBandSelect" onchange="onEditFidBandChange()"></select>
+        </div>
+        <div class="modal-input-group">
             <label>FID Number</label>
             <div style="display:flex;gap:8px;align-items:center;">
                 <select class="modal-input" id="editFidPrefix" style="width:100px;"></select>
                 <input type="text" class="modal-input" id="editFidNumber" placeholder="001" style="flex:1;font-family:monospace;">
-                <button type="button" onclick="autoAssignNextFid()" style="padding:8px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;" title="Auto-assign next available number">⚡ Next</button>
+                <button type="button" onclick="autoAssignNextFid()" style="padding:8px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;" title="Auto-assign next available number in the selected group">⚡ Next</button>
             </div>
         </div>
         <div id="editFidWarning" style="display:none;padding:10px;background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:6px;color:#ff4444;font-size:12px;margin-bottom:12px;"></div>
@@ -4972,6 +4976,7 @@
                 </div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     <button onclick="fidManagerBulkChangePrefix()" class="settings-btn" style="flex:1;min-width:140px;">🏷️ Change Prefix</button>
+                    <button onclick="fidManagerBulkMoveToBand()" class="settings-btn" style="flex:1;min-width:140px;">🔢 Move to Group</button>
                     <button onclick="fidManagerBulkShift()" class="settings-btn" style="flex:1;min-width:140px;">⬆️⬇️ Shift Numbers</button>
                     <button onclick="fidManagerBulkRemove()" class="settings-btn danger" style="flex:1;min-width:140px;">🗑️ Remove Selected</button>
                 </div>
@@ -5040,6 +5045,22 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeFidBulkShiftModal()">Cancel</button>
             <button class="modal-btn primary" onclick="executeBulkShift()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- FID Bulk Move to Group Modal -->
+<div class="modal" id="fidBulkBandModal">
+    <div class="modal-content">
+        <div class="modal-title">Move Selected FIDs to Group</div>
+        <div class="modal-input-group">
+            <label>Type Group</label>
+            <select class="modal-input" id="fidBulkNewBand"></select>
+        </div>
+        <p style="font-size:12px;color:var(--dim);margin-bottom:16px;">Each of the <span id="fidBulkBandCount" style="color:var(--text);font-weight:600;"></span> selected FIDs keeps its brand prefix and gets the next free number in the chosen group. FIDs already in that group stay put.</p>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeFidBulkBandModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="executeBulkMoveToBand()">Apply</button>
         </div>
     </div>
 </div>
@@ -5191,7 +5212,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v190</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v191</p>
         </div>
 
         <div class="settings-section">
@@ -5203,7 +5224,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v190<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v191<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14171,6 +14192,11 @@ function openEditFidModal(fccId) {
         movePrefixSelect.appendChild(opt.cloneNode(true));
     });
 
+    // Populate the type group selector (first digit of the FID number)
+    const bandSelect = document.getElementById('editFidBandSelect');
+    bandSelect.innerHTML = FID_BAND_NAMES.map((name, d) =>
+        `<option value="${d}">${d}xx — ${name}</option>`).join('');
+
     // Set current values
     const currentFid = fidAssignments[fccId];
     if (currentFid) {
@@ -14179,6 +14205,8 @@ function openEditFidModal(fccId) {
         movePrefixSelect.value = prefix;
         document.getElementById('editFidNumber').value = num;
         document.getElementById('editFidCurrentFid').textContent = 'Current: ' + currentFid;
+        const currentDigit = Math.floor((parseInt(num) || 0) / 100);
+        bandSelect.value = FID_BAND_NAMES[currentDigit] !== undefined ? currentDigit : getFidTypeDigitForFcc(fccId);
     } else {
         // Suggest prefix based on makes
         const makes = [];
@@ -14192,9 +14220,11 @@ function openEditFidModal(fccId) {
         const suggestedPrefix = getPrefixForMakes(makes);
         prefixSelect.value = suggestedPrefix;
         movePrefixSelect.value = suggestedPrefix;
-        const suggestedNum = getNextFidNumber(suggestedPrefix, getFidTypeDigitForFcc(fccId));
+        const suggestedDigit = getFidTypeDigitForFcc(fccId);
+        const suggestedNum = getNextFidNumber(suggestedPrefix, suggestedDigit);
         document.getElementById('editFidNumber').value = suggestedNum === null ? '' : formatFidNumber(suggestedNum);
         document.getElementById('editFidCurrentFid').textContent = 'No FID assigned yet';
+        bandSelect.value = suggestedDigit;
     }
 
     // Reset move section
@@ -14288,10 +14318,13 @@ function saveFidEdit() {
     
     const newFid = `${prefix}-${formatFidNumber(parseInt(num))}`;
 
-    // Warn when the number's band doesn't match this FCC's key type
+    // Warn when the number's band matches neither the explicitly chosen Type
+    // Group nor the key type from the data — likely a typo. A number inside
+    // the chosen group is intent and saves without asking.
+    const chosenDigit = getEditFidSelectedDigit();
     const expectedDigit = getFidTypeDigitForFcc(editingFccId);
     const numDigit = Math.floor(parseInt(num) / 100);
-    if (numDigit !== expectedDigit && FID_BAND_NAMES[numDigit] !== undefined) {
+    if (numDigit !== chosenDigit && numDigit !== expectedDigit && FID_BAND_NAMES[numDigit] !== undefined) {
         if (!confirm(newFid + ' is in the ' + FID_BAND_NAMES[numDigit] + ' band (' + numDigit + 'xx), but this key belongs in ' + expectedDigit + 'xx (' + FID_BAND_NAMES[expectedDigit] + '). Save anyway?')) return;
     }
 
@@ -14331,9 +14364,29 @@ function closeRemoveFidConfirm() {
     document.getElementById('removeFidConfirmModal').classList.remove('on');
 }
 
+// Digit currently chosen in the edit modal's Type Group selector,
+// falling back to the FCC's data-derived digit
+function getEditFidSelectedDigit() {
+    const sel = document.getElementById('editFidBandSelect');
+    const d = sel ? parseInt(sel.value, 10) : NaN;
+    return isNaN(d) ? getFidTypeDigitForFcc(editingFccId) : d;
+}
+
+function onEditFidBandChange() {
+    const prefix = document.getElementById('editFidPrefix').value;
+    const digit = getEditFidSelectedDigit();
+    const nextNum = getNextFidNumber(prefix, digit);
+    if (nextNum === null) {
+        toast('The ' + FID_BAND_NAMES[digit] + ' band (' + digit + 'xx) is full for ' + prefix);
+        document.getElementById('editFidNumber').value = '';
+        return;
+    }
+    document.getElementById('editFidNumber').value = formatFidNumber(nextNum);
+}
+
 function autoAssignNextFid() {
     const prefix = document.getElementById('editFidPrefix').value;
-    const digit = getFidTypeDigitForFcc(editingFccId);
+    const digit = getEditFidSelectedDigit();
     const nextNum = getNextFidNumber(prefix, digit);
     if (nextNum === null) {
         toast('The ' + FID_BAND_NAMES[digit] + ' band (' + digit + 'xx) is full for ' + prefix);
@@ -14910,6 +14963,77 @@ function executeBulkShift() {
     toast('Shifted ' + shifted + ' FIDs by ' + shiftAmount);
 }
 
+function fidManagerBulkMoveToBand() {
+    if (fidManagerSelectedFccs.size === 0) {
+        toast('No FIDs selected');
+        return;
+    }
+    document.getElementById('fidBulkNewBand').innerHTML = FID_BAND_NAMES.map((name, d) =>
+        `<option value="${d}">${d}xx — ${name}</option>`).join('');
+    document.getElementById('fidBulkBandCount').textContent = fidManagerSelectedFccs.size;
+    document.getElementById('fidBulkBandModal').classList.add('on');
+}
+
+function closeFidBulkBandModal() {
+    document.getElementById('fidBulkBandModal').classList.remove('on');
+}
+
+function executeBulkMoveToBand() {
+    const digit = parseInt(document.getElementById('fidBulkNewBand').value, 10);
+    if (isNaN(digit) || FID_BAND_NAMES[digit] === undefined) {
+        toast('Pick a group');
+        return;
+    }
+
+    // Assigned entries go first in current number order so their relative
+    // order carries into the target group; unassigned FCCs last, alphabetical.
+    const items = Array.from(fidManagerSelectedFccs).map(fcc => {
+        const fid = fidAssignments[fcc];
+        return { fcc, fid, num: fid ? parseInt(String(fid).split('-')[1]) || 0 : null };
+    });
+    items.sort((a, b) => {
+        if (a.fid && b.fid) return a.num - b.num || String(a.fid).localeCompare(String(b.fid));
+        if (a.fid) return -1;
+        if (b.fid) return 1;
+        return a.fcc.localeCompare(b.fcc);
+    });
+
+    let moved = 0;
+    let alreadyThere = 0;
+    let skipped = 0;
+    items.forEach(item => {
+        let prefix;
+        if (item.fid) {
+            if (Math.floor(item.num / 100) === digit) { alreadyThere++; return; }
+            prefix = String(item.fid).split('-')[0];
+        } else {
+            // Unassigned FCC — derive the brand prefix from its keys' vehicle makes
+            const makes = [];
+            DB.forEach(key => {
+                if (getKeyFccIds(key).includes(item.fcc)) {
+                    (key.vehicles || []).forEach(v => { if (v.make) makes.push(v.make); });
+                }
+            });
+            prefix = getPrefixForMakes(makes);
+        }
+        const nextNum = getNextFidNumber(prefix, digit);
+        if (nextNum === null) { skipped++; return; }
+        fidAssignments[item.fcc] = prefix + '-' + formatFidNumber(nextNum);
+        moved++;
+    });
+
+    saveFidAssignments();
+    closeFidBulkBandModal();
+    fidManagerSelectedFccs.clear();
+    updateFidManagerBulkUI();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast('Moved ' + moved + ' FID' + (moved !== 1 ? 's' : '') + ' to ' + digit + 'xx (' + FID_BAND_NAMES[digit] + ')'
+        + (alreadyThere ? ' — ' + alreadyThere + ' already there' : '')
+        + (skipped ? ' — ' + skipped + ' skipped (group full)' : ''));
+}
+
 function fidManagerBulkRemove() {
     if (fidManagerSelectedFccs.size === 0) {
         toast('No FIDs selected');
@@ -15277,6 +15401,7 @@ function goHome() {
     document.getElementById('detailPanel').classList.remove('on');
     document.getElementById('mergeKeyModal').classList.remove('on');
     document.getElementById('importVehiclesFromKeyModal').classList.remove('on');
+    document.getElementById('fidBulkBandModal').classList.remove('on');
     document.getElementById('renameModelModal').classList.remove('on');
     document.getElementById('incompleteVehiclesPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
