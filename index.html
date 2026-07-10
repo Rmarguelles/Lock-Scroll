@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v191</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v192</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4955,6 +4955,9 @@
                 <button class="settings-btn" onclick="fidManagerAutoAssignAll()" style="background:var(--accent);color:var(--bg);">
                     ⚡ Auto-Assign All Unassigned FIDs
                 </button>
+                <button class="settings-btn" onclick="fidManagerReorganizeByType()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
+                    🔃 Reorganize All by Key Type
+                </button>
                 <button class="settings-btn" onclick="fidManagerReassignAll()" style="background:var(--accent2);color:var(--bg);">
                     🔄 Reassign All FIDs (Fresh Start)
                 </button>
@@ -5212,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v191</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v192</p>
         </div>
 
         <div class="settings-section">
@@ -5224,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v191<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v192<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10275,10 +10278,13 @@ async function runVatsChipMergeMigration() {
 // order, and repacked upward from d01. Also seeds the consolidated VATS
 // groups (B62 single-sided, VATS-D double-sided). Repacking already-banded
 // data reproduces the same numbers, so a re-run is a no-op.
-async function runFidTypeBandsMigration() {
-    const done = await loadFromIndexedDB('fidTypeBandsV1');
-    if (done) return;
-
+// Build the renumbering that puts every assigned FID into its key type's
+// band: per prefix, unique FID values are grouped by type digit (shared FID
+// values take the lowest digit among their FCC entries), kept in their
+// current relative order, and repacked upward from d01. Returns the
+// oldFid → newFid mapping plus how many fidAssignments entries would change.
+// Also reused by the FID Manager's "Reorganize by Key Type" quick action.
+function computeFidBandRepackMapping() {
     const byPrefix = {};
     const fidDigit = {};
     const fidOldNum = {};
@@ -10287,14 +10293,12 @@ async function runFidTypeBandsMigration() {
         if (!m) return; // unparseable FID — leave untouched
         const prefix = m[1];
         const d = getFidTypeDigitForFcc(fcc);
-        // Shared FID values take the lowest digit among their FCC entries
         if (fidDigit[fid] === undefined || d < fidDigit[fid]) fidDigit[fid] = d;
         fidOldNum[fid] = parseInt(m[2], 10);
         if (!byPrefix[prefix]) byPrefix[prefix] = new Set();
         byPrefix[prefix].add(fid);
     });
 
-    let changed = false;
     const mapping = {};
     Object.entries(byPrefix).forEach(([prefix, fidSet]) => {
         const bands = {};
@@ -10308,19 +10312,37 @@ async function runFidTypeBandsMigration() {
             fids.forEach((fid, i) => {
                 // Past d99 the numbers keep counting up (4-digit) rather than
                 // dropping assignments — theoretical, >99 same-type FIDs per brand.
-                const newFid = prefix + '-' + formatFidNumber(parseInt(d, 10) * 100 + 1 + i);
-                mapping[fid] = newFid;
-                if (newFid !== fid) changed = true;
+                mapping[fid] = prefix + '-' + formatFidNumber(parseInt(d, 10) * 100 + 1 + i);
             });
         });
     });
 
-    if (changed) {
-        Object.keys(fidAssignments).forEach(fcc => {
-            const mapped = mapping[fidAssignments[fcc]];
-            if (mapped) fidAssignments[fcc] = mapped;
-        });
-    }
+    let changed = 0;
+    Object.values(fidAssignments).forEach(fid => {
+        if (mapping[fid] && mapping[fid] !== fid) changed++;
+    });
+    return { mapping, changed };
+}
+
+// Apply a repack mapping to fidAssignments; returns how many entries changed.
+function applyFidBandRepack(mapping) {
+    let changed = 0;
+    Object.keys(fidAssignments).forEach(fcc => {
+        const mapped = mapping[fidAssignments[fcc]];
+        if (mapped && mapped !== fidAssignments[fcc]) {
+            fidAssignments[fcc] = mapped;
+            changed++;
+        }
+    });
+    return changed;
+}
+
+async function runFidTypeBandsMigration() {
+    const done = await loadFromIndexedDB('fidTypeBandsV1');
+    if (done) return;
+
+    const repack = computeFidBandRepackMapping();
+    let changed = applyFidBandRepack(repack.mapping) > 0;
 
     // Consolidated VATS groups: one FID covers all single-sided VATS keys
     // (FCC stand-in B62), one covers all double-sided (stand-in VATS-D)
@@ -14753,6 +14775,36 @@ function fidManagerAutoAssignAll() {
     renderFidManagerList();
 }
 
+// Reorganize every assigned FID into the group matching its keys' key type:
+// recompute each entry's band digit and repack the bands densely, keeping
+// the current relative order within each group.
+function fidManagerReorganizeByType() {
+    const repack = computeFidBandRepackMapping();
+    if (repack.changed === 0) {
+        toast('All FIDs already match their key type groups');
+        return;
+    }
+
+    const moves = Object.entries(repack.mapping)
+        .filter(([oldFid, newFid]) => oldFid !== newFid)
+        .map(([oldFid, newFid]) => `• ${oldFid} → ${newFid}`);
+    const preview = moves.slice(0, 10).join('\n');
+    const more = moves.length > 10 ? `\n…and ${moves.length - 10} more` : '';
+    const msg = `Reorganize ${repack.changed} FID assignment${repack.changed !== 1 ? 's' : ''} into their key type groups?\n\n${preview}${more}\n\nNote: FIDs manually placed in a different group will move back to their key type's group. To keep a key in another group permanently, correct its Key Type instead.`;
+    if (!confirm(msg)) return;
+
+    const changed = applyFidBandRepack(repack.mapping);
+    saveFidAssignments();
+    if (document.getElementById('fidManagerPanel').classList.contains('on')) {
+        renderFidManagerStats();
+        renderFidManagerList();
+    }
+    if (document.getElementById('fidPanel').classList.contains('on')) {
+        renderFidList();
+    }
+    toast(`Reorganized ${changed} FID${changed !== 1 ? 's' : ''} by key type`);
+}
+
 function fidManagerCleanOrphans() {
     const dbFccs = new Set();
     DB.forEach(k => getKeyFccIds(k).forEach(f => dbFccs.add(f.toUpperCase())));
@@ -14796,56 +14848,14 @@ function closeFidReassignAllModal() {
 }
 
 function executeReassignAllFids() {
-    // Clear all existing assignments
+    // Clear all existing assignments, then run the band-aware bulk assigner —
+    // it walks every unassigned FCC ID, numbers each into its key type's
+    // group, saves, and refreshes the FID list.
     Object.keys(fidAssignments).forEach(key => delete fidAssignments[key]);
-
-    // Now auto-assign all with priority sorting
-    const fccToAssign = [];
-    const seenFcc = new Set();
-
-    DB.forEach(key => {
-        if (key.fccid && !seenFcc.has(key.fccid)) {
-            seenFcc.add(key.fccid);
-            const makes = new Set();
-            let keyType = key.keyType || '';
-            DB.forEach(k => {
-                if (k.fccid === key.fccid) {
-                    (k.vehicles || []).forEach(v => {
-                        if (v.make) makes.add(v.make);
-                    });
-                    if (!keyType && k.keyType) keyType = k.keyType;
-                }
-            });
-            fccToAssign.push({
-                fccid: key.fccid,
-                makes: Array.from(makes),
-                keyType: keyType,
-                priority: getKeyTypePriority(keyType)
-            });
-        }
-    });
-
-    // Sort by priority, then alphabetically by fccid with natural number ordering
-    fccToAssign.sort((a, b) => a.priority - b.priority || naturalSortCompare(a.fccid, b.fccid));
-
-    // Track counters per prefix
-    const prefixCounters = {};
-
-    fccToAssign.forEach(item => {
-        const prefix = getPrefixForMakes(item.makes);
-        if (prefixCounters[prefix] === undefined) {
-            prefixCounters[prefix] = 0;
-        }
-        prefixCounters[prefix]++;
-        fidAssignments[item.fccid] = prefix + '-' + formatFidNumber(prefixCounters[prefix]);
-    });
-
-    saveFidAssignments();
     closeFidReassignAllModal();
+    autoAssignAllFids();
     renderFidManagerStats();
     renderFidManagerList();
-    renderFidList();
-    toast('Reassigned ' + fccToAssign.length + ' FIDs');
 }
 
 function fidManagerClearAll() {
