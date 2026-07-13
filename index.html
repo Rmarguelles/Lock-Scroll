@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v200</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v201</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v200</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v201</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v200<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v201<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7191,13 +7191,13 @@
                 </div>
 
                 <div style="margin-top:12px;">
-                    <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Or create new FID manually:</div>
+                    <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Or create new FID manually <span style="font-size:11px;">(set Key Type below first — picking a prefix fills the next free number for that type)</span>:</div>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <select class="add-inv-select" id="customKeyManualPrefix" onchange="suggestManualFidNumber()" style="flex:1;min-width:0;">
+                        <select class="add-inv-select" id="customKeyManualPrefix" onchange="suggestManualFidNumber(true)" style="flex:1;min-width:0;">
                             <option value="">Prefix...</option>
                         </select>
                         <span style="color:var(--dim);font-weight:600;">-</span>
-                        <input type="text" class="add-inv-input" id="customKeyManualNumber" placeholder="042" style="width:80px;text-align:center;">
+                        <input type="text" class="add-inv-input" id="customKeyManualNumber" placeholder="042" oninput="customKeyFidNumberAutofilled=false" style="width:80px;text-align:center;">
                         <button type="button" onclick="applyManualFidToNewKey()" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Apply</button>
                     </div>
                 </div>
@@ -7215,7 +7215,7 @@
 
         <div class="add-inv-section">
             <label>Key Type</label>
-            <select class="add-inv-select" id="customKeyType" onchange="handleCustomDropdown(this, 'customKeyTypeOther'); toggleCustomKeyChipType()">
+            <select class="add-inv-select" id="customKeyType" onchange="handleCustomDropdown(this, 'customKeyTypeOther'); toggleCustomKeyChipType(); suggestManualFidNumber()">
                 <option value="">Select type...</option>
                 <option value="Proximity">Proximity / Smart Key</option>
                 <option value="Remote Head Key">Remote Head Key</option>
@@ -25642,6 +25642,7 @@ function openAddCustomKey(prefillFcc = null) {
 
         // Reset FID assignment controls
         populateCustomKeyFidOptions();
+        customKeyFidNumberAutofilled = false;
         const manualNumEl = document.getElementById('customKeyManualNumber');
         if (manualNumEl) manualNumEl.value = '';
         const manualPrefixEl = document.getElementById('customKeyManualPrefix');
@@ -26299,14 +26300,41 @@ function populateCustomKeyFidOptions() {
     }
 }
 
-function suggestManualFidNumber() {
-    const prefix = document.getElementById('customKeyManualPrefix').value;
+// Tracks whether the manual-FID number currently holds an auto-suggested
+// value (safe to overwrite) as opposed to something the user typed (never
+// overwritten). Cleared by the number input's oninput and on form open.
+let customKeyFidNumberAutofilled = false;
+
+// Fill the manual-FID number with the next free number for the chosen prefix,
+// in the type band matching the form's selected Key Type (0xx Non-Chip …
+// 6xx Remote Only). Runs when the prefix is picked (fromPrefix=true) and
+// again whenever the Key Type changes, so the suggestion follows the type.
+function suggestManualFidNumber(fromPrefix) {
+    const prefixEl = document.getElementById('customKeyManualPrefix');
     const numInput = document.getElementById('customKeyManualNumber');
-    if (!prefix || !numInput) return;
-    if (!numInput.value.trim()) {
-        const nextNum = getNextFidNumber(prefix, getCustomKeyFormTypeDigit());
-        if (nextNum !== null) numInput.value = formatFidNumber(nextNum);
+    if (!prefixEl || !numInput) return;
+    const prefix = prefixEl.value;
+    if (!prefix) return;
+    // Never overwrite a number the user typed themselves
+    if (numInput.value.trim() && !customKeyFidNumberAutofilled) return;
+
+    const keyType = getDropdownValue('customKeyType', 'customKeyTypeOther');
+    if (!keyType) {
+        // Can't know the band yet — the key type picks the first digit
+        if (customKeyFidNumberAutofilled) numInput.value = '';
+        customKeyFidNumberAutofilled = false;
+        if (fromPrefix) toast('Select the Key Type first — it sets the FID number group (0xx–6xx)');
+        return;
     }
+
+    const digit = getCustomKeyFormTypeDigit();
+    const nextNum = getNextFidNumber(prefix, digit);
+    if (nextNum === null) {
+        toast('The ' + (FID_BAND_NAMES[digit] || digit + 'xx') + ' band (' + digit + 'xx) is full for ' + prefix);
+        return;
+    }
+    numInput.value = formatFidNumber(nextNum);
+    customKeyFidNumberAutofilled = true;
 }
 
 function showAssignedFidOnNewKey(fid, color) {
