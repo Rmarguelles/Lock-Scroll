@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v205</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v206</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v205</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v206</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v205<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v206<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12413,36 +12413,63 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                     <button onclick="openImportVehiclesFromKeyModal(${idx})" title="Merge the vehicle list from another key into this one" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">🔗 Merge</button>
                 </div>
             </div>
-            ${(key.vehicles || []).slice().sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.startYear - b.startYear).map(v => {
-                // Handle codeSeries: can be string (old format) or array (new format).
-                // Code series only applies to cut keys — hidden on Remote Only parts.
-                let codeSeriesHtml = '';
-                if (v.codeSeries && !isRemoteOnlyKey(key)) {
-                    if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
-                        // New array format: [{ years: "1997-1999", series: "AA00-7T51" }]
-                        codeSeriesHtml = v.codeSeries.map(cs =>
-                            `<div style="color:var(--accent2);font-size:11px;margin-top:4px;">📋 ${cs.series} <span style="color:var(--dim);font-size:10px;">(${cs.years})</span></div>`
-                        ).join('');
-                    } else if (typeof v.codeSeries === 'string') {
-                        // Old string format for backwards compatibility
-                        codeSeriesHtml = `<span style="color:var(--accent2);font-size:11px;margin-left:6px;">📋 ${v.codeSeries}</span>`;
+            ${(() => {
+                // Group applications by make+model so a vehicle with several
+                // (possibly non-consecutive) year ranges shows as ONE line
+                // listing all its ranges — the separate entries stay separate
+                // in the data, this is display-only consolidation.
+                const groups = [];
+                const byVehicle = {};
+                (key.vehicles || []).forEach(v => {
+                    const gk = (v.make || '') + '|' + (v.model || '');
+                    if (!byVehicle[gk]) {
+                        byVehicle[gk] = { make: v.make, model: v.model, entries: [] };
+                        groups.push(byVehicle[gk]);
                     }
-                }
-                // Per-vehicle uses badges — only when this application overrides the key's default
-                const vehRolesHtml = (Array.isArray(v.keyRoles) && v.keyRoles.length > 0)
-                    ? `<div style="margin-top:4px;">${KEY_ROLES.filter(r => v.keyRoles.includes(r)).map(r =>
-                        `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;">${r.toUpperCase()}</span>`).join('')}</div>`
-                    : '';
-                return `
+                    byVehicle[gk].entries.push(v);
+                });
+                groups.sort((a, b) => (a.make || '').localeCompare(b.make || '') || (a.model || '').localeCompare(b.model || ''));
+                return groups.map(g => {
+                    g.entries.sort((a, b) => (parseInt(a.startYear) || 0) - (parseInt(b.startYear) || 0));
+                    const yearsLabel = g.entries.map(v => formatYearRange(v)).join(', ');
+
+                    // Code series from every range, each labeled with its years.
+                    // Handles both the array format and the legacy string format;
+                    // only applies to cut keys — hidden on Remote Only parts.
+                    let codeSeriesHtml = '';
+                    if (!isRemoteOnlyKey(key)) {
+                        codeSeriesHtml = g.entries.map(v => {
+                            if (!v.codeSeries) return '';
+                            if (Array.isArray(v.codeSeries)) {
+                                return v.codeSeries.map(cs =>
+                                    `<div style="color:var(--accent2);font-size:11px;margin-top:4px;">📋 ${cs.series} <span style="color:var(--dim);font-size:10px;">(${cs.years})</span></div>`
+                                ).join('');
+                            }
+                            if (typeof v.codeSeries === 'string') {
+                                return `<div style="color:var(--accent2);font-size:11px;margin-top:4px;">📋 ${v.codeSeries} <span style="color:var(--dim);font-size:10px;">(${formatYearRange(v)})</span></div>`;
+                            }
+                            return '';
+                        }).join('');
+                    }
+
+                    // Per-vehicle uses badges — union of the ranges' overrides
+                    const roleSet = new Set();
+                    g.entries.forEach(v => (Array.isArray(v.keyRoles) ? v.keyRoles : []).forEach(r => roleSet.add(r)));
+                    const vehRolesHtml = roleSet.size > 0
+                        ? `<div style="margin-top:4px;">${KEY_ROLES.filter(r => roleSet.has(r)).map(r =>
+                            `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;">${r.toUpperCase()}</span>`).join('')}</div>`
+                        : '';
+                    return `
                 <div class="detail-row" style="flex-wrap:wrap;flex-direction:column;align-items:flex-start;">
-                    <div style="display:flex;justify-content:space-between;width:100%;">
-                        <span class="detail-label">${v.make} ${v.model}</span>
-                        <span class="detail-value">${formatYearRange(v)}</span>
+                    <div style="display:flex;justify-content:space-between;width:100%;gap:8px;">
+                        <span class="detail-label">${g.make} ${g.model}</span>
+                        <span class="detail-value" style="text-align:right;">${yearsLabel}</span>
                     </div>
                     ${vehRolesHtml}
-                    ${codeSeriesHtml ? (Array.isArray(v.codeSeries) ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : codeSeriesHtml) : ''}
+                    ${codeSeriesHtml ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : ''}
                 </div>
-            `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
+            `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>';
+            })()}
         </div>
 
         <!-- Test Key Flag / Merge / Delete Part Number -->
@@ -12684,6 +12711,7 @@ function renderEditVehiclesList() {
                     </div>
                     <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128465;</button>
                 </div>
+                <button onclick="addEditVehicleYearRange(${i})" title="Add another (e.g. non-consecutive) year range for this same vehicle" style="width:100%;padding:6px;background:var(--bg);border:1px dashed var(--border);border-radius:6px;color:var(--dim);font-size:11px;cursor:pointer;margin-bottom:8px;">+ Add Year Range for ${v.make || 'this vehicle'} ${v.model || ''}</button>
                 ${showRoles ? `
                 <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;margin-bottom:8px;">
                     <div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Uses on this vehicle <span style="font-size:10px;">(none checked = key's default)</span></div>
@@ -12864,6 +12892,16 @@ function updateEditVehicle(index, field, value) {
 
 function addVehicleToKey() {
     editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] });
+    renderEditVehiclesList();
+}
+
+// Adds another application entry for the SAME vehicle (make/model prefilled)
+// right below the given one — for vehicles with non-consecutive year ranges.
+// Years start empty; an entry left without years is dropped at save.
+function addEditVehicleYearRange(vehicleIdx) {
+    const src = editingVehicles[vehicleIdx];
+    if (!src) return;
+    editingVehicles.splice(vehicleIdx + 1, 0, { make: src.make || '', model: src.model || '', startYear: '', endYear: '', codeSeries: [] });
     renderEditVehiclesList();
 }
 
