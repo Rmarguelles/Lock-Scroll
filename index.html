@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v202</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v203</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v202</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v203</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v202<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v203<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12359,12 +12359,18 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                         codeSeriesHtml = `<span style="color:var(--accent2);font-size:11px;margin-left:6px;">📋 ${v.codeSeries}</span>`;
                     }
                 }
+                // Per-vehicle uses badges — only when this application overrides the key's default
+                const vehRolesHtml = (Array.isArray(v.keyRoles) && v.keyRoles.length > 0)
+                    ? `<div style="margin-top:4px;">${KEY_ROLES.filter(r => v.keyRoles.includes(r)).map(r =>
+                        `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;">${r.toUpperCase()}</span>`).join('')}</div>`
+                    : '';
                 return `
                 <div class="detail-row" style="flex-wrap:wrap;flex-direction:column;align-items:flex-start;">
                     <div style="display:flex;justify-content:space-between;width:100%;">
                         <span class="detail-label">${v.make} ${v.model}</span>
                         <span class="detail-value">${formatYearRange(v)}</span>
                     </div>
+                    ${vehRolesHtml}
                     ${codeSeriesHtml ? (Array.isArray(v.codeSeries) ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : codeSeriesHtml) : ''}
                 </div>
             `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
@@ -12499,6 +12505,9 @@ function renderEditVehiclesList() {
     // Code series only applies to cut keys — hide the editor on Remote Only parts
     const editingKey = editingVehiclesKeyIdx !== null ? DB[editingVehiclesKeyIdx] : null;
     const hideCodeSeries = editingKey && isRemoteOnlyKey(editingKey);
+    // Per-vehicle uses (ignition/door/glovebox/trunk) — mechanical keys only,
+    // same visibility rule as the key-level Uses section in Edit Key Info
+    const showRoles = editingKey && isMechanicalKeyType(editingKey.keyType);
 
     // Build code series cache if needed
     if (codeSeriesCache.length === 0) {
@@ -12606,6 +12615,17 @@ function renderEditVehiclesList() {
                     </div>
                     <button onclick="removeEditVehicle(${i})" style="padding:8px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128465;</button>
                 </div>
+                ${showRoles ? `
+                <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;margin-bottom:8px;">
+                    <div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Uses on this vehicle <span style="font-size:10px;">(none checked = key's default)</span></div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        ${KEY_ROLES.map(r => `
+                        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;">
+                            <input type="checkbox" ${Array.isArray(v.keyRoles) && v.keyRoles.includes(r) ? 'checked' : ''} onchange="toggleEditVehicleRole(${i}, '${r}', this.checked)" style="width:16px;height:16px;cursor:pointer;">
+                            ${r.charAt(0).toUpperCase() + r.slice(1)}
+                        </label>`).join('')}
+                    </div>
+                </div>` : ''}
                 ${hideCodeSeries ? '' : `
                 <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -12805,6 +12825,21 @@ function addEditVehiclesFromPaste() {
 function removeEditVehicle(index) {
     editingVehicles.splice(index, 1);
     renderEditVehiclesList();
+}
+
+// Toggle one use (ignition/door/glovebox/trunk) on a vehicle application.
+// All unchecked = no per-vehicle override; the key's default roles apply.
+function toggleEditVehicleRole(vehicleIdx, role, checked) {
+    const v = editingVehicles[vehicleIdx];
+    if (!v) return;
+    let roles = Array.isArray(v.keyRoles) ? v.keyRoles.slice() : [];
+    if (checked) {
+        if (!roles.includes(role)) roles.push(role);
+    } else {
+        roles = roles.filter(r => r !== role);
+    }
+    if (roles.length > 0) v.keyRoles = KEY_ROLES.filter(r => roles.includes(r));
+    else delete v.keyRoles;
 }
 
 function saveKeyVehicles() {
@@ -21195,6 +21230,28 @@ function getKeyRolesArray(key) {
     return [];
 }
 
+// Roles for a key on ONE vehicle application: the vehicle entry's own
+// keyRoles (set per vehicle in Edit Compatible Vehicles) win; the key-level
+// assignment from Edit Key Info is the fallback. Handles vehicles where the
+// same key splits differently than the key's usual pattern (e.g. trunk +
+// glovebox on one key, ignition + door on another).
+function getVehicleRolesArray(key, vehicleEntry) {
+    if (vehicleEntry && Array.isArray(vehicleEntry.keyRoles) && vehicleEntry.keyRoles.length > 0) {
+        return KEY_ROLES.filter(r => vehicleEntry.keyRoles.includes(r));
+    }
+    return key ? getKeyRolesArray(key) : [];
+}
+
+// The key's vehicle application covering the given make/model/year range
+function findKeyVehicleEntry(key, make, model, startYear, endYear) {
+    const s = parseInt(startYear) || 0;
+    const e = parseInt(endYear) || s || 9999;
+    return ((key && key.vehicles) || []).find(v =>
+        v.make === make && v.model === model &&
+        (parseInt(v.startYear) || 0) <= e &&
+        (parseInt(v.endYear) || parseInt(v.startYear) || 9999) >= s);
+}
+
 function renderVehicleYearsForModel(make, model, keyType) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const vehicles = getUniqueVehicles().filter(v => v.make === make && v.model === model);
@@ -22146,8 +22203,15 @@ function openVehicleDetail(vehicleKey) {
         const stock = stockData[key.pn] || 0;
         const inStock = stock > 0;
         const keyIdx = DB.findIndex(k => k.pn === key.pn);
-        // Roles from the vehicle's dual-key data, else from the key's own stored roles
-        const cardRoles = key.dualKeyRole ? [key.dualKeyRole] : getKeyRolesArray(key);
+        // Roles: an explicit per-vehicle assignment on the key's matching
+        // application wins (it can say more than ignition/door, e.g. trunk +
+        // glovebox), then the vehicle's dual-key data, then key-level roles
+        const dbKeyForRoles = keyIdx >= 0 ? DB[keyIdx] : key;
+        const vehEntryForRoles = findKeyVehicleEntry(dbKeyForRoles, vehicle.make, vehicle.model, vehicle.startYear, vehicle.endYear);
+        const hasVehRoles = vehEntryForRoles && Array.isArray(vehEntryForRoles.keyRoles) && vehEntryForRoles.keyRoles.length > 0;
+        const cardRoles = hasVehRoles
+            ? getVehicleRolesArray(dbKeyForRoles, vehEntryForRoles)
+            : (key.dualKeyRole ? [key.dualKeyRole] : getKeyRolesArray(dbKeyForRoles));
         const roleLabel = cardRoles.map(r =>
             `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">${r.toUpperCase()}</span>`
         ).join('');
