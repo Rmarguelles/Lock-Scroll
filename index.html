@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v204</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v205</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v204</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v205</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v204<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v205<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7231,6 +7231,24 @@
                 <option value="__other__">+ Other (custom)</option>
             </select>
             <input type="text" class="add-inv-input" id="customKeyTypeOther" placeholder="Enter custom key type..." style="display:none;margin-top:8px;">
+        </div>
+
+        <div class="add-inv-section" id="customKeyRoleSection" style="display:none;">
+            <label>Uses <span style="font-size:11px;color:var(--dim);font-weight:normal;">(which locks this key operates — none checked = whole vehicle)</span></label>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="customKeyRoleIgnition" style="width:17px;height:17px;cursor:pointer;"> Ignition
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="customKeyRoleDoor" style="width:17px;height:17px;cursor:pointer;"> Door
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="customKeyRoleGlovebox" style="width:17px;height:17px;cursor:pointer;"> Glovebox
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="customKeyRoleTrunk" style="width:17px;height:17px;cursor:pointer;"> Trunk
+                </label>
+            </div>
         </div>
 
         <div class="add-inv-section" id="customKeyChipSection">
@@ -25755,6 +25773,14 @@ function openAddCustomKey(prefillFcc = null) {
         if (oldPnContainer) oldPnContainer.innerHTML = '';
         customKeyOldPnCount = 0;
 
+        // Reset Uses checkboxes (section hidden until a mechanical type is chosen)
+        KEY_ROLES.forEach(r => {
+            const box = document.getElementById('customKeyRole' + r.charAt(0).toUpperCase() + r.slice(1));
+            if (box) box.checked = false;
+        });
+        const roleSection = document.getElementById('customKeyRoleSection');
+        if (roleSection) roleSection.style.display = 'none';
+
         // Reset FID assignment controls
         populateCustomKeyFidOptions();
         customKeyFidNumberAutofilled = false;
@@ -25831,6 +25857,16 @@ function toggleCustomKeyChipType() {
     // Mechanical keys (Non-Chip / VATS) have no remote electronics — hide
     // buttons/frequency/battery and clear them so hidden junk isn't saved.
     const mechanical = isMechanicalKeyType(keyType);
+    // Uses (ignition/door/glovebox/trunk) only applies to mechanical keys —
+    // same rule as the Uses section in Edit Key Info
+    const roleSection = document.getElementById('customKeyRoleSection');
+    if (roleSection) {
+        roleSection.style.display = mechanical ? 'block' : 'none';
+        if (!mechanical) KEY_ROLES.forEach(r => {
+            const box = document.getElementById('customKeyRole' + r.charAt(0).toUpperCase() + r.slice(1));
+            if (box) box.checked = false;
+        });
+    }
     [['customKeyButtonsSection', ['customKeyButtons', 'customKeyButtonsOther']],
      ['customKeyFreqSection', ['customKeyFreq']],
      ['customKeyBatterySection', ['customKeyBatteryType', 'customKeyBatteryTypeOther']]].forEach(([sectionId, inputIds]) => {
@@ -27046,6 +27082,16 @@ function saveCustomKey() {
     // Determine if this is a VATS key based on keyType
     const isVATS = keyType && (keyType === 'VATS' || keyType.startsWith('VATS '));
 
+    // Uses: which locks this key operates; mechanical keys only, null = whole vehicle
+    let keyRoles = null;
+    if (isMechanicalKeyType(keyType)) {
+        const checkedRoles = KEY_ROLES.filter(r => {
+            const box = document.getElementById('customKeyRole' + r.charAt(0).toUpperCase() + r.slice(1));
+            return box && box.checked;
+        });
+        keyRoles = checkedRoles.length > 0 ? checkedRoles : null;
+    }
+
     // Battery: combine type + quantity into the existing "<type> qty <n>" format
     const batteryType = getDropdownValue('customKeyBatteryType', 'customKeyBatteryTypeOther');
     const batteryQtyRaw = parseInt(document.getElementById('customKeyBatteryQty')?.value, 10);
@@ -27071,7 +27117,8 @@ function saveCustomKey() {
         isCustom: true,
         addedDate: new Date().toISOString(),
         isVATS: isVATS,
-        removableSleeve: removableSleeve
+        removableSleeve: removableSleeve,
+        keyRoles: keyRoles
     };
 
     // Add to DB array
