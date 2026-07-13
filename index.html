@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v206</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v207</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v206</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v207</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v206<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v207<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12404,16 +12404,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         ` : ''}
 
         <!-- Vehicles Section -->
-        <div class="detail-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h3 style="margin:0;">🚙 Compatible Vehicles</h3>
-                <div style="display:flex;gap:6px;">
-                    <button onclick="openAddSingleVehicleModal(${idx})" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">+ Add</button>
-                    <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
-                    <button onclick="openImportVehiclesFromKeyModal(${idx})" title="Merge the vehicle list from another key into this one" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">🔗 Merge</button>
-                </div>
-            </div>
-            ${(() => {
+        ${(() => {
                 // Group applications by make+model so a vehicle with several
                 // (possibly non-consecutive) year ranges shows as ONE line
                 // listing all its ranges — the separate entries stay separate
@@ -12429,7 +12420,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                     byVehicle[gk].entries.push(v);
                 });
                 groups.sort((a, b) => (a.make || '').localeCompare(b.make || '') || (a.model || '').localeCompare(b.model || ''));
-                return groups.map(g => {
+                const renderVehicleGroup = g => {
                     g.entries.sort((a, b) => (parseInt(a.startYear) || 0) - (parseInt(b.startYear) || 0));
                     const yearsLabel = g.entries.map(v => formatYearRange(v)).join(', ');
 
@@ -12468,9 +12459,34 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                     ${vehRolesHtml}
                     ${codeSeriesHtml ? `<div style="margin-top:4px;padding-left:8px;">${codeSeriesHtml}</div>` : ''}
                 </div>
-            `}).join('') || '<div style="color:var(--dim)">No vehicle data</div>';
+            `};
+
+                // "Misc Models" / "Most Models" are the antique reference's
+                // catch-all applications, not real model matches — split them
+                // into their own section below the specific vehicles.
+                const isCatchAll = g => /^(misc|most)\s+models$/i.test(String(g.model || '').trim());
+                const regular = groups.filter(g => !isCatchAll(g));
+                const misc = groups.filter(isCatchAll);
+
+                const miscSection = misc.length > 0 ? `
+        <div class="detail-section">
+            <h3>📖 Misc Models <span style="font-size:12px;color:var(--dim);font-weight:normal;">(antique reference catch-all)</span></h3>
+            ${misc.map(renderVehicleGroup).join('')}
+        </div>` : '';
+
+                return `
+        <div class="detail-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h3 style="margin:0;">🚙 Compatible Vehicles</h3>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="openAddSingleVehicleModal(${idx})" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">+ Add</button>
+                    <button onclick="openEditVehiclesModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                    <button onclick="openImportVehiclesFromKeyModal(${idx})" title="Merge the vehicle list from another key into this one" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">🔗 Merge</button>
+                </div>
+            </div>
+            ${regular.map(renderVehicleGroup).join('') || '<div style="color:var(--dim)">No vehicle data</div>'}
+        </div>${miscSection}`;
             })()}
-        </div>
 
         <!-- Test Key Flag / Merge / Delete Part Number -->
         <div style="margin-top:24px;padding:16px;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
