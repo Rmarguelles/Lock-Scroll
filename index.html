@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v197</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v198</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4861,8 +4861,8 @@
     <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
         <div class="modal-title">Edit FID Assignment</div>
         <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--dim);text-transform:uppercase;">FCC ID</div>
-            <div id="editFidFccId" style="font-size:18px;color:var(--accent2);font-family:monospace;font-weight:700;"></div>
+            <div style="font-size:11px;color:var(--dim);text-transform:uppercase;">FCC ID <span style="text-transform:none;">— editable; renaming updates keys, FIDs &amp; vehicle data</span></div>
+            <input type="text" class="modal-input" id="editFidFccId" style="font-size:18px;color:var(--accent2);font-family:monospace;font-weight:700;margin-top:6px;">
             <div id="editFidCurrentFid" style="font-size:12px;color:var(--dim);margin-top:4px;"></div>
         </div>
 
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v197</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v198</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v197<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v198<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14370,10 +14370,120 @@ function autoAssignFidForNewKey() {
     toast('Assigned FID: ' + newFid);
 }
 
+// ===== FCC ID rename =====
+// Renames an FCC ID everywhere it lives: keys in DB (plus the persisted
+// customKeys / keyInfoOverrides copies), fidAssignments, fidMerges,
+// fccRelationships, and vehicle-level FCC references (lishiVehicleData +
+// customVehicles). Matching is hyphen/space/case-insensitive so cosmetic
+// variants of the old ID migrate too. Every store touched here is already
+// wired into cloud sync and export/import, so no extra plumbing is needed.
+// Returns null on success or an error message to show the user.
+function renameFccId(oldFcc, newFccRaw) {
+    const newFcc = String(newFccRaw || '').trim();
+    if (!newFcc) return 'FCC ID cannot be empty';
+    if (newFcc === oldFcc) return null;
+    const oldNorm = normalizeFccId(oldFcc);
+    const newNorm = normalizeFccId(newFcc);
+    const matches = f => normalizeFccId(f) === oldNorm;
+
+    // Renaming onto a different, already-existing FCC ID would silently fuse
+    // two entries — that's what Merge is for. The same normalized form is
+    // fine (fixing hyphens/spacing/case on the same ID).
+    if (newNorm !== oldNorm && DB.some(k => getKeyFccIds(k).some(f => normalizeFccId(f) === newNorm))) {
+        return 'FCC ID ' + newFcc + ' already exists on another key — use Merge instead';
+    }
+
+    // Keys: primary fccid + additional fccids, persisted per key kind
+    let customDirty = false, overridesDirty = false;
+    DB.forEach(key => {
+        const hitPrimary = key.fccid && matches(key.fccid);
+        const hitExtra = Array.isArray(key.fccids) && key.fccids.some(matches);
+        if (!hitPrimary && !hitExtra) return;
+        if (hitPrimary) key.fccid = newFcc;
+        if (hitExtra) key.fccids = key.fccids.map(f => matches(f) ? newFcc : f);
+        if (key.isCustom) {
+            const ck = customKeys.find(c => String(c.pn) === String(key.pn));
+            if (ck) {
+                // ck can be the SAME object as the DB entry — already updated above
+                if (ck !== key) {
+                    if (ck.fccid && matches(ck.fccid)) ck.fccid = newFcc;
+                    if (Array.isArray(ck.fccids)) ck.fccids = ck.fccids.map(f => matches(f) ? newFcc : f);
+                }
+                customDirty = true;
+            }
+        } else {
+            const orig = getOriginalCatalogPn(String(key.pn));
+            const ov = keyInfoOverrides[orig] || {};
+            if (hitPrimary) ov.fccid = newFcc;
+            if (hitExtra) ov.fccids = key.fccids;
+            keyInfoOverrides[orig] = ov;
+            overridesDirty = true;
+        }
+    });
+
+    // FID assignments — keys are usually one FCC but can be comma-joined lists
+    let fidDirty = false;
+    Object.keys(fidAssignments).forEach(k => {
+        const parts = String(k).split(',').map(s => s.trim());
+        if (!parts.some(matches)) return;
+        const newKey = parts.map(p => matches(p) ? newFcc : p).join(',');
+        const fid = fidAssignments[k];
+        delete fidAssignments[k];
+        if (fidAssignments[newKey] === undefined) fidAssignments[newKey] = fid;
+        fidDirty = true;
+    });
+
+    // Merge relationships — rename both source and target sides
+    let mergesDirty = false;
+    Object.keys(fidMerges).forEach(k => {
+        let src = k, tgt = fidMerges[k];
+        if (matches(src)) src = newFcc;
+        if (matches(tgt)) tgt = newFcc;
+        if (src === k && tgt === fidMerges[k]) return;
+        delete fidMerges[k];
+        // A merge of an FCC into itself is meaningless — drop it
+        if (normalizeFccId(src) !== normalizeFccId(tgt)) fidMerges[src] = tgt;
+        mergesDirty = true;
+    });
+
+    // Learned button-count/frequency data
+    let relDirty = false;
+    Object.keys(fccRelationships).forEach(k => {
+        if (!matches(k) || k === newFcc) return;
+        if (!fccRelationships[newFcc]) fccRelationships[newFcc] = fccRelationships[k];
+        delete fccRelationships[k];
+        relDirty = true;
+    });
+
+    // Vehicle-level FCC references
+    const FCC_FIELDS = ['fccid', 'ignition_fccid', 'door_fccid'];
+    let lishiDirty = false;
+    Object.values(lishiVehicleData).forEach(vd => {
+        FCC_FIELDS.forEach(f => {
+            if (vd[f] && matches(vd[f])) { vd[f] = newFcc; lishiDirty = true; }
+        });
+    });
+    let cvDirty = false;
+    customVehicles.forEach(cv => {
+        FCC_FIELDS.forEach(f => {
+            if (cv[f] && matches(cv[f])) { cv[f] = newFcc; cvDirty = true; }
+        });
+    });
+
+    if (customDirty) saveCustomKeys();
+    if (overridesDirty) saveKeyInfoOverrides();
+    if (fidDirty) saveFidAssignments();
+    if (mergesDirty) saveFidMerges();
+    if (relDirty) saveToIndexedDB('fccRelationships', fccRelationships);
+    if (lishiDirty) saveLishiVehicle();
+    if (cvDirty) saveCustomVehicles();
+    return null;
+}
+
 function openEditFidModal(fccId) {
     editingFccId = fccId;
 
-    document.getElementById('editFidFccId').textContent = fccId;
+    document.getElementById('editFidFccId').value = fccId;
 
     // Populate prefix dropdowns (both edit and move)
     const prefixSelect = document.getElementById('editFidPrefix');
@@ -14500,18 +14610,32 @@ function closeEditFidModal() {
     editingFccId = null;
 }
 
+// Re-render whichever FID views are open. The edit modal is reachable from
+// both the FID panel and the FID Manager panel, so refresh both.
+function refreshFidViews() {
+    renderFidList();
+    if (document.getElementById('fidManagerPanel').classList.contains('on')) {
+        renderFidManagerStats();
+        renderFidManagerList();
+    }
+}
+
 function saveFidEdit() {
     if (!editingFccId) return;
-    
+
+    const warn = msg => {
+        document.getElementById('editFidWarning').textContent = msg;
+        document.getElementById('editFidWarning').style.display = 'block';
+    };
+
     const prefix = document.getElementById('editFidPrefix').value;
     const num = document.getElementById('editFidNumber').value.trim();
-    
+
     if (!num) {
-        document.getElementById('editFidWarning').textContent = 'Please enter a number';
-        document.getElementById('editFidWarning').style.display = 'block';
+        warn('Please enter a number');
         return;
     }
-    
+
     const newFid = `${prefix}-${formatFidNumber(parseInt(num))}`;
 
     // Warn when the number's band matches neither the explicitly chosen Type
@@ -14527,16 +14651,26 @@ function saveFidEdit() {
     // Check for collision
     const existingFccId = Object.entries(fidAssignments).find(([fcc, fid]) => fid === newFid && fcc !== editingFccId);
     if (existingFccId) {
-        document.getElementById('editFidWarning').textContent = `FID ${newFid} is already assigned to ${existingFccId[0]}`;
-        document.getElementById('editFidWarning').style.display = 'block';
+        warn(`FID ${newFid} is already assigned to ${existingFccId[0]}`);
         return;
     }
-    
-    fidAssignments[editingFccId] = newFid;
+
+    // Apply an FCC ID rename if the FCC field was edited — it propagates
+    // through keys, assignments, merges, and vehicle references.
+    const newFccRaw = document.getElementById('editFidFccId').value.trim();
+    const fccChanged = newFccRaw !== editingFccId;
+    if (fccChanged) {
+        const err = renameFccId(editingFccId, newFccRaw);
+        if (err) { warn(err); return; }
+        editingFccId = newFccRaw;
+    }
+
+    const finalFcc = editingFccId;
+    fidAssignments[finalFcc] = newFid;
     saveFidAssignments();
     closeEditFidModal();
-    renderFidList();
-    toast(`FID ${newFid} assigned`);
+    refreshFidViews();
+    toast(fccChanged ? `FCC ID renamed to ${finalFcc} — FID ${newFid}` : `FID ${newFid} assigned`);
 }
 
 function removeFidAssignment() {
@@ -14546,7 +14680,7 @@ function removeFidAssignment() {
     saveFidAssignments();
     closeRemoveFidConfirm();
     closeEditFidModal();
-    renderFidList();
+    refreshFidViews();
     toast('FID removed (position left empty)');
 }
 
@@ -14624,7 +14758,7 @@ function showMoveOptions() {
         fidAssignments[editingFccId] = targetFid;
         saveFidAssignments();
         closeEditFidModal();
-        renderFidList();
+        refreshFidViews();
         toast(`Moved to ${targetFid}`);
     }
 }
@@ -14654,7 +14788,7 @@ function executeMoveSwap() {
 
     saveFidAssignments();
     closeEditFidModal();
-    renderFidList();
+    refreshFidViews();
     toast(`Swapped positions`);
 }
 
@@ -14698,7 +14832,7 @@ function executeMoveShift() {
 
     saveFidAssignments();
     closeEditFidModal();
-    renderFidList();
+    refreshFidViews();
     toast(`Moved to ${pendingMoveTarget}, shifted ${toShift.length} others down`);
 }
 
@@ -14722,7 +14856,7 @@ function mergeFids() {
     saveFidMerges();
     saveFidAssignments();
     closeEditFidModal();
-    renderFidList();
+    refreshFidViews();
     toast('Merged into ' + targetFid);
 }
 
@@ -14734,7 +14868,7 @@ function unmergeFid(fccId) {
     
     saveFidMerges();
     closeEditFidModal();
-    renderFidList();
+    refreshFidViews();
     toast('FCC ID unmerged');
 }
 
@@ -14886,9 +15020,10 @@ function renderFidManagerList() {
 
     container.innerHTML = filtered.map(item => {
         const isSelected = fidManagerSelectedFccs.has(item.fccid);
+        const fccArg = item.fccid.replace(/'/g, "\\'");
         return `
-            <div class="fid-manager-item" data-fccid="${item.fccid}" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${item.fccid}')">
-                <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFidManagerSelection('${item.fccid}')" style="width:18px;height:18px;cursor:pointer;">
+            <div class="fid-manager-item" data-fccid="${item.fccid}" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${fccArg}')">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFidManagerSelection('${fccArg}')" style="width:18px;height:18px;cursor:pointer;">
                 <div style="flex:1;min-width:0;">
                     <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${item.fccid}</div>
                     <div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.makes || 'Unknown'} ${item.keyType ? '• ' + item.keyType : ''}</div>
@@ -14899,6 +15034,7 @@ function renderFidManagerList() {
                         : `<span style="font-size:12px;color:var(--dim);font-style:italic;">Unassigned</span>`
                     }
                 </div>
+                <button onclick="event.stopPropagation();openEditFidModal('${fccArg}')" title="Edit FCC ID / FID" style="padding:6px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;flex-shrink:0;">✏️</button>
             </div>
         `;
     }).join('');
