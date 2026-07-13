@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v203</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v204</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v203</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v204</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v203<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v204<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10463,6 +10463,47 @@ async function runNonChipFccMigration() {
     saveToIndexedDB('nonChipFccV1', true);
 }
 
+// ===================== NON-CHIP CHIP-CLEAR =====================
+// Older saves kept the hidden Chip Type / VATS fields when a key's type was
+// switched to Non-Chip (e.g. B70 corrected from VATS to Non-Chip Key),
+// leaving keys that claim both. Enforce the invariant on the in-memory DB
+// every load — overrides store chip as null, which applyKeyInfoOverridesToDB
+// skips, so a base key's hardcoded chip would otherwise resurface on every
+// reload — and persist the fix into the stored records once.
+async function runNonChipChipClearMigration() {
+    DB.forEach(k => {
+        if (isNonChipKeyType(k.keyType) && (k.chip || k.isVATS)) {
+            k.chip = null;
+            k.isVATS = false;
+            k.secondaryKeyPartNumber = null;
+        }
+    });
+
+    const done = await loadFromIndexedDB('nonChipChipClearV1');
+    if (done) return;
+    let customChanged = 0;
+    customKeys.forEach(ck => {
+        if (isNonChipKeyType(ck.keyType) && (ck.chip || ck.isVATS)) {
+            ck.chip = null;
+            ck.isVATS = false;
+            ck.secondaryKeyPartNumber = null;
+            customChanged++;
+        }
+    });
+    if (customChanged > 0) saveCustomKeys();
+    let ovChanged = 0;
+    Object.values(keyInfoOverrides).forEach(ov => {
+        if (ov && isNonChipKeyType(ov.keyType) && (ov.chip || ov.isVATS)) {
+            ov.chip = null;
+            ov.isVATS = false;
+            ov.secondaryKeyPartNumber = null;
+            ovChanged++;
+        }
+    });
+    if (ovChanged > 0) saveKeyInfoOverrides();
+    saveToIndexedDB('nonChipChipClearV1', true);
+}
+
 // ===================== ANTIQUE CONSOLIDATION MIGRATION =====================
 // One-shot cleanup for users who already generated antique part numbers: the
 // old generator split blanks like "P1098E-B44" on the first dash, creating a
@@ -10504,6 +10545,7 @@ async function init() {
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
     applyPnRenamesToDB();
+    await runNonChipChipClearMigration();
     await runFccidMergeMigration();
     await runH75xMergeMigration();
     runAntiqueSlashPnMigration();
@@ -11337,7 +11379,7 @@ function saveEditKeyInfo() {
 
     const newKeyType = getDropdownValue('editKeyInfoKeyType', 'editKeyInfoKeyTypeOther') || null;
     const newKeyway = getDropdownValue('editKeyInfoKeyway', 'editKeyInfoKeywayOther') || null;
-    const newChip = getDropdownValue('editKeyInfoChip', 'editKeyInfoChipOther') || null;
+    let newChip = getDropdownValue('editKeyInfoChip', 'editKeyInfoChipOther') || null;
     let newFccid = getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || null;
 
     // Non-chip keys use their PN as the FCC stand-in for FID grouping. When
@@ -11353,8 +11395,17 @@ function saveEditKeyInfo() {
     const newBattery = getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther') || null;
     const newEmergencyPN = getDropdownValue('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther') || null;
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
-    const newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
-    const newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
+    let newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
+    let newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
+    // A non-chip key has no chip and can't be VATS. The Chip Type / VATS
+    // fields are only hidden (not cleared) when the key type switches, e.g.
+    // VATS -> Non-Chip Key, so drop their stale values instead of saving
+    // them back onto the key.
+    if (isNonChipKeyType(newKeyType)) {
+        newChip = null;
+        newIsVATS = false;
+        newSecondaryPN = null;
+    }
     // Removable sleeve only applies when a chip is set, otherwise force false.
     const newRemovableSleeve = !!newChip && document.getElementById('editKeyInfoSleeve').checked;
     // Key roles: which locks this key operates; null = whole vehicle.
@@ -27422,6 +27473,14 @@ function saveEditCustomKey() {
     // VATS fields
     key.isVATS = document.getElementById('editCustomKeyIsVATS').checked;
     key.secondaryKeyPartNumber = key.isVATS ? (document.getElementById('editCustomKeySecondaryPN').value.trim() || null) : null;
+
+    // A non-chip key has no chip and can't be VATS — drop values left in
+    // fields the key-type switch only hides
+    if (isNonChipKeyType(key.keyType)) {
+        key.chip = null;
+        key.isVATS = false;
+        key.secondaryKeyPartNumber = null;
+    }
 
     key.lastEdited = new Date().toISOString();
 
