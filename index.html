@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v201</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v202</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v201</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v202</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v201<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v202<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -26966,6 +26966,33 @@ function saveCustomKey() {
     customKeys.push(newKey);
     saveCustomKeys();
 
+    // FID assignment: the Apply buttons in the FID row are optional — an
+    // existing-FID selection or a filled-in prefix + number (e.g. the
+    // auto-suggested next free number) left un-applied is assigned here at
+    // save time instead of being silently lost.
+    let assignedFid = null;
+    const fidFcc = newKey.fccid ? String(newKey.fccid).trim().toUpperCase() : '';
+    if (fidFcc && !fidAssignments[fidFcc]) {
+        const existingFidChoice = document.getElementById('customKeyExistingFid')?.value || '';
+        const manualPrefix = document.getElementById('customKeyManualPrefix')?.value || '';
+        const manualNum = parseInt((document.getElementById('customKeyManualNumber')?.value || '').trim(), 10);
+        if (existingFidChoice) {
+            fidAssignments[fidFcc] = existingFidChoice;
+            assignedFid = existingFidChoice;
+            saveFidAssignments();
+        } else if (manualPrefix && !isNaN(manualNum) && manualNum >= 1) {
+            const newFid = manualPrefix + '-' + formatFidNumber(manualNum);
+            const collision = Object.entries(fidAssignments).find(([fcc, fid]) => fid === newFid && fcc !== fidFcc);
+            if (collision) {
+                toast('FID ' + newFid + ' is already assigned to ' + collision[0] + ' — key saved without a FID');
+            } else {
+                fidAssignments[fidFcc] = newFid;
+                assignedFid = newFid;
+                saveFidAssignments();
+            }
+        }
+    }
+
     // Persist any new custom dropdown values into the dropdown data for future keys
     registerDropdownValue('buttons', buttons);
     registerDropdownValue('keyway', keyway);
@@ -27066,7 +27093,7 @@ function saveCustomKey() {
     // Close panel, return to the home page, and show success
     closeAddCustomKey();
     goHome();
-    toast('Key added to database');
+    toast(assignedFid ? `Key added to database — FID ${assignedFid}` : 'Key added to database');
 }
 
 function getDropdownValue(selectId, otherInputId) {
