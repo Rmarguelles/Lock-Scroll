@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v199</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v200</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v199</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v200</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v199<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v200<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -11275,7 +11275,24 @@ function saveEditKeyInfo() {
     if (pnChanged) {
         const collision = DB.find(k => String(k.pn).toLowerCase() === newPnRaw.toLowerCase() && String(k.pn) !== oldPn);
         if (collision) {
-            toast(`Part number "${newPnRaw}" already exists in the database`);
+            // The "rename" is really a merge: the target name already exists
+            // as its own key (e.g. renaming antique P1098A to B48 when a B48
+            // key exists). Offer to absorb this key into it instead of just
+            // refusing the save.
+            const mergeConfirmed = confirm(
+                `\u26A0\uFE0F "${newPnRaw}" already exists in the database (as ${collision.pn}).\n\n` +
+                `Merge ${oldPn} into ${collision.pn} instead?\n\n` +
+                `${oldPn} will be deleted. Its vehicles, stock, pricing, and history move to ${collision.pn}, and searching ${oldPn} will redirect there. Other edits in this form are discarded.`
+            );
+            if (!mergeConfirmed) return;
+            executeKeyMerge(collision, key, editingKeyInfoIdx);
+            closeEditKeyInfoModal();
+            buildFilters();
+            applyFilters();
+            document.getElementById('totalCount').textContent = DB.length;
+            const survivorIdx = DB.findIndex(k => String(k.pn) === String(collision.pn));
+            if (survivorIdx >= 0) openKey(survivorIdx, cameFromFcc, cameFromFid);
+            toast(`Merged ${oldPn} into ${collision.pn}`);
             return;
         }
         const saveConfirmed = confirm(
@@ -13678,6 +13695,19 @@ function executeKeyMerge(target, source, absorbedIdx) {
     pnSupersessions[sourcePn] = targetPn;
     savePnSupersessions();
 
+    // A PN-as-FCC stand-in (non-chip keys) dies with the absorbed PN. Move
+    // its FID assignment onto the survivor's FCC when that has no FID yet;
+    // otherwise drop it so the number frees up instead of orphaning.
+    const sourceStandIn = getKeyFccIds(source).find(f => normalizeFccId(f) === normalizeFccId(sourcePn));
+    if (sourceStandIn && fidAssignments[sourceStandIn]) {
+        const targetFcc = target.fccid || getKeyFccIds(target)[0];
+        if (targetFcc && !fidAssignments[targetFcc]) {
+            fidAssignments[targetFcc] = fidAssignments[sourceStandIn];
+        }
+        delete fidAssignments[sourceStandIn];
+        saveFidAssignments();
+    }
+
     // Override stores for the source (same cleanup as deletePartNumber)
     delete vehicleOverrides[sourcePn];
     saveVehicleOverrides();
@@ -14512,12 +14542,14 @@ function renameFccId(oldFcc, newFccRaw) {
     const FCC_FIELDS = ['fccid', 'ignition_fccid', 'door_fccid'];
     let lishiDirty = false;
     Object.values(lishiVehicleData).forEach(vd => {
+        if (!vd || typeof vd !== 'object') return;
         FCC_FIELDS.forEach(f => {
             if (vd[f] && matches(vd[f])) { vd[f] = newFcc; lishiDirty = true; }
         });
     });
     let cvDirty = false;
     customVehicles.forEach(cv => {
+        if (!cv || typeof cv !== 'object') return;
         FCC_FIELDS.forEach(f => {
             if (cv[f] && matches(cv[f])) { cv[f] = newFcc; cvDirty = true; }
         });
@@ -27197,10 +27229,26 @@ function saveEditCustomKey() {
             toast('Part number cannot be empty');
             return;
         }
-        // Check for collision with an existing different key
+        // Check for collision with an existing different key — offer a merge
+        // instead of refusing (the target name already being a key means the
+        // rename is really a merge)
         const collision = DB.find(k => String(k.pn).toLowerCase() === newPn.toLowerCase() && String(k.pn) !== oldPn);
         if (collision) {
-            toast(`Part number "${newPn}" already exists in the database`);
+            const mergeConfirmed = confirm(
+                `⚠️ "${newPn}" already exists in the database (as ${collision.pn}).\n\n` +
+                `Merge ${oldPn} into ${collision.pn} instead?\n\n` +
+                `${oldPn} will be deleted. Its vehicles, stock, pricing, and history move to ${collision.pn}, and searching ${oldPn} will redirect there. Other edits in this form are discarded.`
+            );
+            if (!mergeConfirmed) return;
+            const sourceIdx = DB.findIndex(k => String(k.pn).toLowerCase() === oldPn.toLowerCase() && k.isCustom);
+            if (sourceIdx >= 0) {
+                executeKeyMerge(collision, DB[sourceIdx], sourceIdx);
+                closeEditCustomKeyModal();
+                renderCustomKeysList();
+                buildFilters();
+                applyFilters();
+                toast(`Merged ${oldPn} into ${collision.pn}`);
+            }
             return;
         }
         // Second confirmation at save time
