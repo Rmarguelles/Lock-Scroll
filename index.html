@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v198</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v199</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v198</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v199</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v198<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v199<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8361,6 +8361,12 @@ async function downloadFromCloud() {
             saveToIndexedDB('fccRelationships', fccRelationships);
         }
 
+        // The customKeys merge above is by PN, so a rename done here can be
+        // silently undone: a copy still carrying the old PN (stale cloud doc,
+        // another device) gets re-added next to the renamed key. Drop those
+        // resurrected copies before rendering.
+        pruneSupersededCustomKeys();
+
         // Refresh UI
         buildFilters();
         applyFilters();
@@ -8368,6 +8374,34 @@ async function downloadFromCloud() {
             renderLishiInventory();
         }
     }
+}
+
+// Removes custom keys whose PN was renamed away (recorded in pnSupersessions
+// by the rename flows and the antique sync) when their renamed successor also
+// exists — the old-named entry is a resurrected pre-rename copy, not a real
+// key. A copy edited AFTER the successor is kept: that's a deliberately
+// recreated key, not a stale one. Returns how many entries were dropped.
+function pruneSupersededCustomKeys() {
+    const ts = k => Date.parse(k.lastEdited || k.addedDate || '') || 0;
+    const byLowerPn = {};
+    customKeys.forEach(k => { byLowerPn[String(k.pn).toLowerCase()] = k; });
+    const superLower = {};
+    Object.keys(pnSupersessions || {}).forEach(o => { superLower[o.toLowerCase()] = String(pnSupersessions[o]); });
+    const stale = new Set();
+    customKeys.forEach(k => {
+        const pnL = String(k.pn).toLowerCase();
+        const target = superLower[pnL];
+        if (!target || target.toLowerCase() === pnL) return;
+        const successor = byLowerPn[target.toLowerCase()];
+        if (successor && ts(k) <= ts(successor)) stale.add(pnL);
+    });
+    if (stale.size === 0) return 0;
+    customKeys = customKeys.filter(k => !stale.has(String(k.pn).toLowerCase()));
+    for (let i = DB.length - 1; i >= 0; i--) {
+        if (DB[i].isCustom && stale.has(String(DB[i].pn).toLowerCase())) DB.splice(i, 1);
+    }
+    saveCustomKeys();
+    return stale.size;
 }
 
 function loadCustomKeysIntoDB() {
@@ -10476,6 +10510,8 @@ async function init() {
     // Must run after the override applies above: it reads base keys with their
     // vehicle/key-info overrides already in place and persists on top of them.
     await runAntiqueConsolidationMigration();
+    // Heal renamed keys whose old-named copies were resurrected by past syncs
+    pruneSupersededCustomKeys();
     initializeVendorPricesFromDB();
     buildFilters();
     buildFccidDatalist();
@@ -10946,7 +10982,9 @@ function migratePnLiveStores(oldPn, newPn) {
             if (newPn.toLowerCase() !== k.toLowerCase()) delete pnSupersessions[k];
             supersessionsChanged = true;
         } else if (String(pnSupersessions[k]).toLowerCase() === oldPn.toLowerCase()) {
-            pnSupersessions[k] = newPn;
+            // A rename back to an old name would leave a self-mapping — drop it
+            if (k.toLowerCase() === newPn.toLowerCase()) delete pnSupersessions[k];
+            else pnSupersessions[k] = newPn;
             supersessionsChanged = true;
         }
     }
@@ -11256,6 +11294,13 @@ function saveEditKeyInfo() {
                 delete keyInfoOverrides[oldPn];
                 saveKeyInfoOverrides();
             }
+            // Record the rename so old-named copies from the cloud or other
+            // devices can't resurrect it (see pruneSupersededCustomKeys) and
+            // searches for the old PN still resolve.
+            if (oldPn.toLowerCase() !== newPnRaw.toLowerCase()) {
+                pnSupersessions[oldPn] = newPnRaw;
+                savePnSupersessions();
+            }
         } else {
             // Base catalog keys are rebuilt from hardcoded source on every load, so
             // overrides/vehicle overrides must stay keyed by the ORIGINAL catalog PN
@@ -11276,7 +11321,15 @@ function saveEditKeyInfo() {
     const newKeyType = getDropdownValue('editKeyInfoKeyType', 'editKeyInfoKeyTypeOther') || null;
     const newKeyway = getDropdownValue('editKeyInfoKeyway', 'editKeyInfoKeywayOther') || null;
     const newChip = getDropdownValue('editKeyInfoChip', 'editKeyInfoChipOther') || null;
-    const newFccid = getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || null;
+    let newFccid = getDropdownValue('editKeyInfoFCC', 'editKeyInfoFCCOther') || null;
+
+    // Non-chip keys use their PN as the FCC stand-in for FID grouping. When
+    // the PN is renamed, move the stand-in (and any FID assignment riding on
+    // it) to the new PN — otherwise the FID system keeps showing the old name
+    // and the rename looks like it never saved.
+    if (pnChanged && newFccid && normalizeFccId(newFccid) === normalizeFccId(oldPn)) {
+        if (!renameFccId(newFccid, newPnRaw)) newFccid = newPnRaw;
+    }
     const newFrequency = getDropdownValue('editKeyInfoFrequency', 'editKeyInfoFrequencyOther') || null;
     const newButtons = getDropdownValue('editKeyInfoButtons', 'editKeyInfoButtonsOther') || null;
     const newLogo = getDropdownValue('editKeyInfoLogo', 'editKeyInfoLogoOther') || null;
@@ -11316,13 +11369,13 @@ function saveEditKeyInfo() {
         // For custom keys, update the customKeys array directly.
         // Search by old PN if it was renamed, otherwise by current pn.
         const searchPn = pnChanged ? oldPn : pn;
-        let customIdx = customKeys.findIndex(ck => String(ck.pn) === searchPn);
+        let customIdx = customKeys.findIndex(ck => String(ck.pn).toLowerCase() === searchPn.toLowerCase());
         // The DB entry and the customKeys entry can be the SAME object (keys
         // created or antique-generated this session, or loaded by older app
         // versions) — in that case the rename above already updated the
         // customKeys copy, so the old-PN lookup misses. Retry by the new PN
         // rather than silently dropping the whole save.
-        if (customIdx < 0) customIdx = customKeys.findIndex(ck => String(ck.pn) === pn);
+        if (customIdx < 0) customIdx = customKeys.findIndex(ck => String(ck.pn).toLowerCase() === pn.toLowerCase());
         if (customIdx >= 0) {
             if (pnChanged) customKeys[customIdx].pn = newPnRaw;
             customKeys[customIdx].keyType = newKeyType;
@@ -27175,10 +27228,23 @@ function saveEditCustomKey() {
             delete keyInfoOverrides[oldPn];
             saveKeyInfoOverrides();
         }
+        // Record the rename so old-named copies from the cloud or other
+        // devices can't resurrect it (see pruneSupersededCustomKeys) and
+        // searches for the old PN still resolve.
+        if (oldPn.toLowerCase() !== newPn.toLowerCase()) {
+            pnSupersessions[oldPn] = newPn;
+            savePnSupersessions();
+        }
     }
 
     // Update all other fields
     key.fccid = document.getElementById('editCustomKeyFCC').value.trim() || null;
+
+    // Keep the non-chip FCC stand-in (PN used as FCC ID) in step with a PN
+    // rename, including any FID assignment riding on it.
+    if (pnChanged && key.fccid && normalizeFccId(key.fccid) === normalizeFccId(oldPn)) {
+        if (!renameFccId(key.fccid, newPn)) key.fccid = newPn;
+    }
     key.keyway = document.getElementById('editCustomKeyKeyway').value.trim() || null;
     key.chip = document.getElementById('editCustomKeyChip').value.trim() || null;
     key.keyType = document.getElementById('editCustomKeyType').value.trim() || null;
@@ -27194,7 +27260,7 @@ function saveEditCustomKey() {
 
     // Update in DB array (search by old PN since key.pn was already updated above)
     const searchPn = pnChanged ? oldPn : newPn || oldPn;
-    const dbIndex = DB.findIndex(k => String(k.pn) === searchPn && k.isCustom);
+    const dbIndex = DB.findIndex(k => String(k.pn).toLowerCase() === searchPn.toLowerCase() && k.isCustom);
     if (dbIndex >= 0) {
         DB[dbIndex] = { ...key };
     }
