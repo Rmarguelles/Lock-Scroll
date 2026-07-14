@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v209</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v210</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v209</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v210</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v209<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v210<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12649,7 +12649,29 @@ function renderEditVehiclesList() {
         return;
     }
 
-    container.innerHTML = editingVehicles.map((v, i) => {
+    // Each vehicle renders collapsed to a single line until clicked open —
+    // long lists stay scannable. Expansion state rides on the entry itself
+    // as _expanded (survives re-renders and splices) and is stripped at save.
+    // Antique catch-all rows (Misc/Most Models) group at the bottom.
+    const isCatchAllModel = m => /^(misc|most)\s+models$/i.test(String(m || '').trim());
+
+    const renderRow = (v, i) => {
+        if (!v._expanded) {
+            let csCount = 0;
+            if (Array.isArray(v.codeSeries)) csCount = v.codeSeries.filter(cs => cs && cs.series).length;
+            else if (typeof v.codeSeries === 'string' && v.codeSeries) csCount = 1;
+            const meta = [
+                v.startYear ? formatYearRange(v) : 'no years',
+                csCount ? '📋' + csCount : '',
+                (Array.isArray(v.keyRoles) && v.keyRoles.length > 0) ? v.keyRoles.map(r => r.charAt(0).toUpperCase() + r.slice(1, 3)).join('/') : ''
+            ].filter(Boolean).join(' • ');
+            return `
+            <div onclick="toggleEditVehicleExpand(${i})" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border-radius:8px;margin-bottom:6px;cursor:pointer;">
+                <span style="font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span style="color:var(--dim);margin-right:6px;">▸</span>${v.make || '(new vehicle)'} ${v.model || ''}</span>
+                <span style="font-size:12px;color:var(--dim);white-space:nowrap;">${meta}</span>
+            </div>`;
+        }
+
         // Generate make options per-vehicle with selected attribute
         const allMakes = vehicleMakesCache.includes(v.make) ? vehicleMakesCache : (v.make ? [...vehicleMakesCache, v.make].sort() : vehicleMakesCache);
         const makeOptions = allMakes.map(m => `<option value="${m}"${m === v.make ? ' selected' : ''}>${m}</option>`).join('');
@@ -12701,7 +12723,11 @@ function renderEditVehiclesList() {
         `}).join('');
 
         return `
-            <div style="padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;">
+            <div style="padding:12px;background:var(--card);border-radius:8px;margin-bottom:8px;border:1px solid var(--accent);">
+                <div onclick="toggleEditVehicleExpand(${i})" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;cursor:pointer;">
+                    <span style="font-size:12px;font-weight:600;color:var(--accent);">▾ ${v.make || 'New vehicle'} ${v.model || ''}</span>
+                    <span style="font-size:11px;color:var(--dim);">collapse ▲</span>
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
                     <select id="editVehMake${i}" onchange="onEditVehicleMakeChange(${i}, this.value)"
                         style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
@@ -12768,7 +12794,21 @@ function renderEditVehiclesList() {
                 </div>`}
             </div>
         `;
-    }).join('');
+    };
+
+    const regularHtml = editingVehicles.map((v, i) => isCatchAllModel(v.model) ? '' : renderRow(v, i)).join('');
+    const miscHtml = editingVehicles.map((v, i) => isCatchAllModel(v.model) ? renderRow(v, i) : '').join('');
+    container.innerHTML =
+        (regularHtml || '<div style="text-align:center;color:var(--dim);padding:12px;font-size:12px;">No specific-model vehicles</div>')
+        + (miscHtml ? `<div style="padding:10px 4px 6px;margin-top:10px;border-top:1px solid var(--border);font-size:12px;font-weight:600;color:var(--dim);">📖 Misc Models <span style="font-weight:normal;">(antique catch-all)</span></div>` + miscHtml : '');
+}
+
+// Expand/collapse one vehicle row in the edit modal
+function toggleEditVehicleExpand(i) {
+    const v = editingVehicles[i];
+    if (!v) return;
+    v._expanded = !v._expanded;
+    renderEditVehiclesList();
 }
 
 // Helper to ensure codeSeries is array format
@@ -12925,7 +12965,7 @@ function updateEditVehicle(index, field, value) {
 }
 
 function addVehicleToKey() {
-    editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [] });
+    editingVehicles.push({ make: '', model: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear(), codeSeries: [], _expanded: true });
     renderEditVehiclesList();
 }
 
@@ -12935,7 +12975,7 @@ function addVehicleToKey() {
 function addEditVehicleYearRange(vehicleIdx) {
     const src = editingVehicles[vehicleIdx];
     if (!src) return;
-    editingVehicles.splice(vehicleIdx + 1, 0, { make: src.make || '', model: src.model || '', startYear: '', endYear: '', codeSeries: [] });
+    editingVehicles.splice(vehicleIdx + 1, 0, { make: src.make || '', model: src.model || '', startYear: '', endYear: '', codeSeries: [], _expanded: true });
     renderEditVehiclesList();
 }
 
@@ -12986,8 +13026,11 @@ function toggleEditVehicleRole(vehicleIdx, role, checked) {
 function saveKeyVehicles() {
     if (editingVehiclesKeyIdx === null) return;
 
-    // Filter out empty entries
-    const validVehicles = editingVehicles.filter(v => v.make && v.model && v.startYear && v.endYear);
+    // Filter out empty entries; strip the UI-only _expanded flag so it never
+    // lands in storage (Firestore rejects undefined, and it's meaningless data)
+    const validVehicles = editingVehicles
+        .filter(v => v.make && v.model && v.startYear && v.endYear)
+        .map(v => { const c = { ...v }; delete c._expanded; return c; });
 
     // Update DB
     DB[editingVehiclesKeyIdx].vehicles = validVehicles;
