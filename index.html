@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v208</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v209</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v208</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v209</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v208<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v209<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12634,9 +12634,10 @@ function renderEditVehiclesList() {
     // Code series only applies to cut keys — hide the editor on Remote Only parts
     const editingKey = editingVehiclesKeyIdx !== null ? DB[editingVehiclesKeyIdx] : null;
     const hideCodeSeries = editingKey && isRemoteOnlyKey(editingKey);
-    // Per-vehicle uses (ignition/door/glovebox/trunk) — mechanical keys only,
-    // same visibility rule as the key-level Uses section in Edit Key Info
-    const showRoles = editingKey && isMechanicalKeyType(editingKey.keyType);
+    // Per-vehicle uses (ignition/door/glovebox/trunk) — always shown; gating
+    // on the key type hid the row whenever the type string wasn't recognized
+    // as mechanical (custom/empty types), which read as the feature missing
+    const showRoles = true;
 
     // Build code series cache if needed
     if (codeSeriesCache.length === 0) {
@@ -13021,10 +13022,11 @@ function openAddSingleVehicleModal(keyIdx) {
     const csGroup = document.getElementById('addVehCodeSeriesGroup');
     if (csGroup) csGroup.style.display = (DB[keyIdx] && isRemoteOnlyKey(DB[keyIdx])) ? 'none' : '';
 
-    // Per-vehicle uses — mechanical keys only, same rule as the Edit Vehicles rows
+    // Per-vehicle uses — always shown (matching the Edit Vehicles rows);
+    // checkboxes reset on every open
     const rolesGroup = document.getElementById('addVehRolesGroup');
     if (rolesGroup) {
-        rolesGroup.style.display = (DB[keyIdx] && isMechanicalKeyType(DB[keyIdx].keyType)) ? '' : 'none';
+        rolesGroup.style.display = '';
         KEY_ROLES.forEach(r => {
             const box = document.getElementById('addVehRole' + r.charAt(0).toUpperCase() + r.slice(1));
             if (box) box.checked = false;
