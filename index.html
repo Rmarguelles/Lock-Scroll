@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v210</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v211</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v210</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v211</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v210<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v211<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10606,6 +10606,28 @@ async function init() {
         try {
             const registration = await navigator.serviceWorker.register('service-worker.js?v=90');
             console.log('Service Worker registered:', registration.scope);
+
+            // ---- Automatic updates ----
+            // The service worker skip-waits and claims, but the running page
+            // keeps executing the OLD cached code until it reloads — on an
+            // installed PWA that stays resident that can be weeks, which
+            // shows up as fixes "not working". Check for a new SW at launch,
+            // whenever the app returns to the foreground, and periodically;
+            // when a new one takes control, reload once onto the new cache.
+            const swHadController = !!navigator.serviceWorker.controller;
+            let reloadingForUpdate = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (reloadingForUpdate || !swHadController) return;
+                reloadingForUpdate = true;
+                toast('App updated — reloading…');
+                setTimeout(() => location.reload(), 600);
+            });
+            const checkForSwUpdate = () => { registration.update().catch(() => {}); };
+            checkForSwUpdate();
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') checkForSwUpdate();
+            });
+            setInterval(checkForSwUpdate, 30 * 60 * 1000);
         } catch (e) {
             console.log('Service Worker registration failed:', e);
         }
@@ -11340,7 +11362,19 @@ function closeEditKeyInfoModal() {
     editingKeyInfoIdx = null;
 }
 
+// Wrapper so a mid-save exception is LOUD instead of looking like the Save
+// button silently did nothing (the modal stays open and nothing persists).
 function saveEditKeyInfo() {
+    try {
+        saveEditKeyInfoInner();
+    } catch (e) {
+        console.error('saveEditKeyInfo failed:', e);
+        alert('⚠️ Save failed with an error:\n\n' + (e && e.message ? e.message : e) +
+            '\n\nYour change was NOT fully saved. Please report this message.');
+    }
+}
+
+function saveEditKeyInfoInner() {
     if (editingKeyInfoIdx === null) return;
 
     const key = DB[editingKeyInfoIdx];
