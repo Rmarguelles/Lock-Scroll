@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v211</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v212</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v211</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v212</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v211<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v212<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -11381,7 +11381,11 @@ function saveEditKeyInfoInner() {
     const oldPn = String(key.pn);
     const pnInput = document.getElementById('editKeyInfoPN');
     const newPnRaw = pnInput.value.trim();
-    const pnChanged = !pnInput.disabled && newPnRaw && newPnRaw !== oldPn;
+    // A different value in the PN field means the user unlocked the field and
+    // typed it (it resets to the key's PN on every modal open). Deliberately
+    // NOT gated on the field still being unlocked: clicking "Lock PN" after
+    // typing reads as "lock in my change", so a re-locked edit must still save.
+    const pnChanged = newPnRaw && newPnRaw !== oldPn;
 
     if (pnChanged) {
         const collision = DB.find(k => String(k.pn).toLowerCase() === newPnRaw.toLowerCase() && String(k.pn) !== oldPn);
@@ -27515,13 +27519,26 @@ function openEditCustomKeyModal(idx) {
     document.getElementById('editCustomKeyModal').classList.add('on');
 }
 
+// Default text of the PN warning boxes (restored on unlock; the re-lock
+// branches repurpose the box to show a pending rename)
+const PN_EDIT_WARNING_TEXT = '⚠ Changing a part number will update the key in the database and migrate any existing stock quantity. Proceed carefully.';
+
 function unlockEditCustomKeyPN() {
     const pnInput = document.getElementById('editCustomKeyPN');
     if (!pnInput.disabled) {
-        // Already unlocked — re-lock it
+        // Re-lock — stops further typing only. A new PN typed while unlocked
+        // still applies on Save; locking must not silently discard it.
         pnInput.disabled = true;
         pnInput.style.opacity = '0.7';
-        document.getElementById('editCustomKeyPNWarning').style.display = 'none';
+        const warnEl = document.getElementById('editCustomKeyPNWarning');
+        const origPn = editingCustomKeyIndex !== null && customKeys[editingCustomKeyIndex] ? String(customKeys[editingCustomKeyIndex].pn) : '';
+        const typed = pnInput.value.trim();
+        if (typed && origPn && typed !== origPn) {
+            warnEl.textContent = '✏️ Part number will change to "' + typed + '" when you save.';
+            warnEl.style.display = 'block';
+        } else {
+            warnEl.style.display = 'none';
+        }
         document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD12 Edit PN';
         document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'var(--accent)';
         return;
@@ -27541,7 +27558,9 @@ function unlockEditCustomKeyPN() {
     pnInput.style.opacity = '1';
     pnInput.focus();
     pnInput.select();
-    document.getElementById('editCustomKeyPNWarning').style.display = 'block';
+    const cwEl = document.getElementById('editCustomKeyPNWarning');
+    cwEl.textContent = PN_EDIT_WARNING_TEXT;
+    cwEl.style.display = 'block';
     document.getElementById('editCustomKeyPNUnlockBtn').textContent = '\uD83D\uDD13 Lock PN';
     document.getElementById('editCustomKeyPNUnlockBtn').style.color = 'orange';
 }
@@ -27550,10 +27569,19 @@ function unlockEditKeyInfoPN() {
     const pnInput = document.getElementById('editKeyInfoPN');
     const btn = document.getElementById('editKeyInfoPNUnlockBtn');
     if (!pnInput.disabled) {
-        // Re-lock
+        // Re-lock \u2014 stops further typing only. A new PN typed while unlocked
+        // still applies on Save; locking must not silently discard it.
         pnInput.disabled = true;
         pnInput.style.opacity = '0.7';
-        document.getElementById('editKeyInfoPNWarning').style.display = 'none';
+        const warnEl = document.getElementById('editKeyInfoPNWarning');
+        const origPn = editingKeyInfoIdx !== null && DB[editingKeyInfoIdx] ? String(DB[editingKeyInfoIdx].pn) : '';
+        const typed = pnInput.value.trim();
+        if (typed && origPn && typed !== origPn) {
+            warnEl.textContent = '\u270F\uFE0F Part number will change to "' + typed + '" when you save.';
+            warnEl.style.display = 'block';
+        } else {
+            warnEl.style.display = 'none';
+        }
         btn.textContent = '\uD83D\uDD12 Edit PN';
         btn.style.color = 'var(--accent)';
         return;
@@ -27573,7 +27601,9 @@ function unlockEditKeyInfoPN() {
     pnInput.style.opacity = '1';
     pnInput.focus();
     pnInput.select();
-    document.getElementById('editKeyInfoPNWarning').style.display = 'block';
+    const kiWarnEl = document.getElementById('editKeyInfoPNWarning');
+    kiWarnEl.textContent = PN_EDIT_WARNING_TEXT;
+    kiWarnEl.style.display = 'block';
     btn.textContent = '\uD83D\uDD13 Lock PN';
     btn.style.color = 'orange';
 }
@@ -27607,8 +27637,9 @@ function saveEditCustomKey() {
     const pnInput = document.getElementById('editCustomKeyPN');
     const newPn = pnInput.value.trim();
 
-    // Validate new PN if it was changed
-    const pnChanged = !pnInput.disabled && newPn && newPn !== oldPn;
+    // Validate new PN if it was changed. Not gated on the field still being
+    // unlocked — "Lock PN" after typing must not silently discard the edit.
+    const pnChanged = newPn && newPn !== oldPn;
     if (pnChanged) {
         if (!newPn) {
             toast('Part number cannot be empty');
