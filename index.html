@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v207</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v208</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5215,7 +5215,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v207</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v208</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5227,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v207<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v208<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5582,6 +5582,23 @@
                     style="padding:4px 10px;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">+ Add Code Series</button>
             </div>
             <div id="addVehCodeSeriesList" style="max-height:150px;overflow-y:auto;"></div>
+        </div>
+        <div style="margin-bottom:16px;display:none;" id="addVehRolesGroup">
+            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Uses on this vehicle <span style="font-size:10px;">(none checked = key's default)</span></label>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="addVehRoleIgnition" style="width:17px;height:17px;cursor:pointer;"> Ignition
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="addVehRoleDoor" style="width:17px;height:17px;cursor:pointer;"> Door
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="addVehRoleGlovebox" style="width:17px;height:17px;cursor:pointer;"> Glovebox
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="addVehRoleTrunk" style="width:17px;height:17px;cursor:pointer;"> Trunk
+                </label>
+            </div>
         </div>
         <div class="modal-buttons">
             <button class="modal-btn" onclick="closeAddSingleVehicleModal()">Cancel</button>
@@ -13004,6 +13021,16 @@ function openAddSingleVehicleModal(keyIdx) {
     const csGroup = document.getElementById('addVehCodeSeriesGroup');
     if (csGroup) csGroup.style.display = (DB[keyIdx] && isRemoteOnlyKey(DB[keyIdx])) ? 'none' : '';
 
+    // Per-vehicle uses — mechanical keys only, same rule as the Edit Vehicles rows
+    const rolesGroup = document.getElementById('addVehRolesGroup');
+    if (rolesGroup) {
+        rolesGroup.style.display = (DB[keyIdx] && isMechanicalKeyType(DB[keyIdx].keyType)) ? '' : 'none';
+        KEY_ROLES.forEach(r => {
+            const box = document.getElementById('addVehRole' + r.charAt(0).toUpperCase() + r.slice(1));
+            if (box) box.checked = false;
+        });
+    }
+
     // Populate make dropdown
     const makeSelect = document.getElementById('addVehMake');
     const makeOptions = vehicleMakesCache.map(m => `<option value="${m}">${m}</option>`).join('');
@@ -13262,6 +13289,14 @@ function saveAddSingleVehicle() {
     const newVehicle = { make, model, startYear, endYear, codeSeries: codeSeries.length > 0 ? codeSeries : [] };
     if (startMonth) newVehicle.startMonth = startMonth;
     if (endMonth) newVehicle.endMonth = endMonth;
+
+    // Per-vehicle uses (checkboxes only shown for mechanical keys; unchecked
+    // = no override, the key's default roles apply)
+    const addVehRoles = KEY_ROLES.filter(r => {
+        const box = document.getElementById('addVehRole' + r.charAt(0).toUpperCase() + r.slice(1));
+        return box && box.checked;
+    });
+    if (addVehRoles.length > 0) newVehicle.keyRoles = addVehRoles;
 
     // Check if this vehicle application already exists on this key
     const key = DB[addingVehicleKeyIdx];
