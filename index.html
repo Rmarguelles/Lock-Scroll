@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v215</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v216</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5216,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v215</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v216</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v215<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v216<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6305,6 +6305,18 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeAddTestKeysModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveTestKeyPurchase()">Add to Stock</button>
+        </div>
+    </div>
+</div>
+
+<!-- Link Test Key Modal (new stock vs join an existing keyway's stock) -->
+<div class="modal" id="linkTestKeyModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">🗝️ Treat as Test Key</div>
+        <div id="linkTestKeySubtitle" style="font-size:12px;color:var(--dim);margin-bottom:12px;"></div>
+        <div id="linkTestKeyOptions"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeLinkTestKeyModal()">Cancel</button>
         </div>
     </div>
 </div>
@@ -12152,10 +12164,10 @@ function renderKeys() {
     }
 
     // PNs linked to the test key inventory show the blank's pooled count + a
-    // badge (map PN -> a keyway in its pool)
+    // badge (map every linked PN -> a keyway in its pool)
     const testKeyPnMap = {};
     Object.entries(testKeyInventory).forEach(([kw, e]) => {
-        if (e && e.linkedPn) testKeyPnMap[String(e.linkedPn).toLowerCase()] = kw;
+        getTestKeyLinkedPns(e).forEach(p => { testKeyPnMap[p.toLowerCase()] = kw; });
     });
 
     list.innerHTML = supersessionBanner + filteredKeys.map((key, i) => {
@@ -12279,6 +12291,11 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
     const tkLink = getTestKeyEntryForKey(key);
     const tkPoolQty = tkLink ? getTestKeyPoolQty(tkLink.keyway) : 0;
     const tkPoolSize = tkLink ? getTestKeyPoolEntries(tkLink.keyway).length : 0;
+    // Sibling bows linked to the same entry (same blank, different key head)
+    const tkSharedPns = tkLink ? getTestKeyLinkedPns(tkLink.entry).filter(p => p.toLowerCase() !== String(key.pn).toLowerCase()) : [];
+    const tkSharedList = tkSharedPns.length > 1
+        ? tkSharedPns.slice(0, -1).map(escapeJobText).join(', ') + ' & ' + escapeJobText(tkSharedPns[tkSharedPns.length - 1])
+        : tkSharedPns.map(escapeJobText).join('');
     // Other keyways this same blank is the test key for (beyond the linked one)
     const tkAllKeyways = getTestKeyKeywaysForKey(key);
     const tkOtherKeyways = tkLink ? tkAllKeyways.filter(kw => kw !== tkLink.keyway) : tkAllKeyways;
@@ -12342,6 +12359,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         <div class="detail-section">
             <h3>Stock Management${tkLink ? ' <span style="display:inline-block;padding:2px 8px;background:var(--accent2);color:#000;border-radius:10px;font-size:10px;font-weight:700;vertical-align:middle;margin-left:6px;">🗝️ TEST KEY</span>' : ''}</h3>
             ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">${tkPoolSize > 1 ? 'Pooled test key stock — a job on any keyway this blank serves deducts from this one count' : `Shared test key stock for the ${escapeJobText(tkLink.keyway)} keyway — completing a job deducts from this same count`}</div>` : ''}
+            ${tkSharedPns.length > 0 ? `<div style="text-align:center;font-size:11px;color:var(--accent2);padding:6px 16px 0;">🔑 Shares this test key stock with: ${tkSharedList}</div>` : ''}
             ${tkOtherKeyways.length > 0 ? `<div style="text-align:center;font-size:11px;color:var(--accent2);padding:${tkLink ? '6px' : '0'} 16px 0;">🗝️ ${tkLink ? 'Also serves' : 'Serves'} as test key for: ${tkKeywayList}</div>` : ''}
             <div style="display:flex;justify-content:center;align-items:center;padding:16px;">
                 <div class="stock-controls">
@@ -16115,6 +16133,7 @@ function goHome() {
     document.getElementById('jobCompleteModal').classList.remove('on');
     document.getElementById('testKeysPanel').classList.remove('on');
     document.getElementById('addTestKeysModal').classList.remove('on');
+    document.getElementById('linkTestKeyModal').classList.remove('on');
     document.getElementById('addCustomKeyPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
@@ -25677,11 +25696,24 @@ function filterJobHistory() {
 // PN — its stock is then the shared test-key count the job flow deducts from.
 // The link lives on the (already-synced) testKeyInventory entry, so no new
 // data store is needed.
+// A keyway's test key entry can be linked to several key PNs — same blank,
+// different bows (e.g. B92 / B96 / B102) — via linkedPn (primary) plus the
+// linkedPns array. All of them show and adjust the same shared stock.
+function getTestKeyLinkedPns(entry) {
+    if (!entry) return [];
+    const pns = [];
+    if (entry.linkedPn) pns.push(String(entry.linkedPn));
+    (Array.isArray(entry.linkedPns) ? entry.linkedPns : []).forEach(p => {
+        if (p && !pns.some(x => x.toLowerCase() === String(p).toLowerCase())) pns.push(String(p));
+    });
+    return pns;
+}
+
 function getTestKeyEntryForKey(key) {
     if (!key) return null;
     const pnLower = String(key.pn).toLowerCase();
     for (const [kw, entry] of Object.entries(testKeyInventory)) {
-        if (entry && entry.linkedPn && String(entry.linkedPn).toLowerCase() === pnLower) {
+        if (entry && getTestKeyLinkedPns(entry).some(p => p.toLowerCase() === pnLower)) {
             return { keyway: kw, entry };
         }
     }
@@ -25695,7 +25727,12 @@ function getTestKeyKeywaysForKey(key) {
     if (!key) return [];
     const pnLower = String(key.pn).toLowerCase();
     return Object.entries(testKeyInventory)
-        .filter(([, e]) => e && String(e.linkedPn || e.pn || '').toLowerCase() === pnLower)
+        .filter(([, e]) => {
+            if (!e) return false;
+            const linked = getTestKeyLinkedPns(e);
+            if (linked.length > 0) return linked.some(p => p.toLowerCase() === pnLower);
+            return String(e.pn || '').toLowerCase() === pnLower;
+        })
         .map(([kw]) => kw)
         .sort((a, b) => a.localeCompare(b));
 }
@@ -25763,19 +25800,98 @@ function adjustTestKeyStockFromDetail(keyway, delta) {
 function toggleTestKeyFlag(idx) {
     const key = DB[idx];
     if (!key) return;
+    const pn = String(key.pn);
+    const pnLower = pn.toLowerCase();
     const existing = getTestKeyEntryForKey(key);
     if (existing) {
-        delete existing.entry.linkedPn;
-        toast(`${key.pn} is a regular key again`);
-    } else {
-        const kw = key.keyway || String(key.pn);
-        if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
-        testKeyInventory[kw].linkedPn = String(key.pn);
-        if (!testKeyInventory[kw].pn) testKeyInventory[kw].pn = String(key.pn);
-        toast(`${key.pn} is now the test key for the ${kw} keyway`);
+        // Unlink only this PN — sibling bows keep sharing the entry's stock
+        const entry = existing.entry;
+        entry.linkedPns = (Array.isArray(entry.linkedPns) ? entry.linkedPns : [])
+            .filter(p => String(p).toLowerCase() !== pnLower);
+        if (String(entry.linkedPn || '').toLowerCase() === pnLower) {
+            if (entry.linkedPns.length > 0) entry.linkedPn = entry.linkedPns.shift();
+            else delete entry.linkedPn;
+        }
+        if (entry.linkedPns.length === 0) delete entry.linkedPns;
+        entry.updatedAt = new Date().toISOString();
+        entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+        toast(`${pn} is a regular key again`);
+        saveTestKeyInventory();
+        openKey(idx);
+        return;
     }
+    // No entry for this key's keyway but other test key stocks exist — let the
+    // user join one of them (same physical keyway can go by different labels,
+    // e.g. B92 vs B96/B102) instead of always starting a separate count
+    const kw = key.keyway || pn;
+    if (!testKeyInventory[kw] && Object.keys(testKeyInventory).length > 0) {
+        openLinkTestKeyModal(idx);
+        return;
+    }
+    linkKeyToTestKeyEntry(idx, kw);
+}
+
+// Link a key PN to a keyway's test key entry — as its primary linked key, or
+// joining the existing linked key(s) as another bow of the same blank
+function linkKeyToTestKeyEntry(idx, kw) {
+    const key = DB[idx];
+    if (!key) return;
+    const pn = String(key.pn);
+    const pnLower = pn.toLowerCase();
+    if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
+    const entry = testKeyInventory[kw];
+    if (entry.linkedPn && String(entry.linkedPn).toLowerCase() !== pnLower) {
+        if (!Array.isArray(entry.linkedPns)) entry.linkedPns = [];
+        if (!entry.linkedPns.some(p => String(p).toLowerCase() === pnLower)) entry.linkedPns.push(pn);
+        toast(`${pn} now shares the ${kw} test key stock with ${entry.linkedPn}`);
+    } else {
+        entry.linkedPn = pn;
+        toast(`${pn} is now the test key for the ${kw} keyway`);
+    }
+    if (!entry.pn) entry.pn = pn;
+    entry.updatedAt = new Date().toISOString();
+    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
     saveTestKeyInventory();
     openKey(idx);
+}
+
+let linkTestKeyIdx = null;
+function openLinkTestKeyModal(idx) {
+    linkTestKeyIdx = idx;
+    const key = DB[idx];
+    const ownKw = key.keyway || String(key.pn);
+    const ownKwEsc = ownKw.replace(/'/g, "\\'");
+    document.getElementById('linkTestKeySubtitle').textContent =
+        `Start a new test key stock for ${key.pn}, or join an existing one if another part number is the same keyway with a different bow.`;
+    const rowStyle = 'padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;';
+    const rows = Object.entries(testKeyInventory).sort((a, b) => a[0].localeCompare(b[0])).map(([kw, e]) => {
+        const kwEsc = kw.replace(/'/g, "\\'");
+        const linked = getTestKeyLinkedPns(e);
+        const sub = linked.length > 0 ? `linked: ${escapeJobText(linked.join(', '))}` : (e.pn ? `PN ${escapeJobText(e.pn)}` : 'no key entry linked yet');
+        return `
+            <div onclick="chooseLinkTestKeyEntry('${kwEsc}')" style="${rowStyle}">
+                <div style="font-weight:700;font-size:14px;">Join ${escapeJobText(kw)} <span style="font-weight:400;color:var(--dim);">— ${getTestKeyPoolQty(kw)} in stock</span></div>
+                <div style="font-size:11px;color:var(--dim);margin-top:2px;">${sub}</div>
+            </div>`;
+    }).join('');
+    document.getElementById('linkTestKeyOptions').innerHTML = `
+        <div onclick="chooseLinkTestKeyEntry('${ownKwEsc}')" style="${rowStyle}border-color:var(--accent2);">
+            <div style="font-weight:700;font-size:14px;color:var(--accent2);">➕ New test key stock for the ${escapeJobText(ownKw)} keyway</div>
+        </div>
+        ${rows}`;
+    document.getElementById('linkTestKeyModal').classList.add('on');
+}
+
+function chooseLinkTestKeyEntry(kw) {
+    const idx = linkTestKeyIdx;
+    closeLinkTestKeyModal();
+    if (idx === null || idx === undefined) return;
+    linkKeyToTestKeyEntry(idx, kw);
+}
+
+function closeLinkTestKeyModal() {
+    document.getElementById('linkTestKeyModal').classList.remove('on');
+    linkTestKeyIdx = null;
 }
 
 // Create a key entry (PN = keyway, Non-Chip) for every test key inventory
@@ -25848,6 +25964,7 @@ function renderTestKeys() {
         const kwEsc = kw.replace(/'/g, "\\'");
         const qty = getTestKeyPoolQty(kw);
         const mates = getTestKeyPoolMates(kw);
+        const linkedPns = getTestKeyLinkedPns(entry);
         return `
             <div class="test-key-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
                 <div style="min-width:0;">
@@ -25855,7 +25972,7 @@ function renderTestKeys() {
                     <div style="font-size:11px;color:var(--dim);">
                         ${entry.pn ? 'PN: ' + escapeJobText(entry.pn) : 'No part number yet'}
                         <button onclick="editTestKeyPN('${kwEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 4px;">✎</button>
-                        ${entry.linkedPn ? '<span style="color:var(--accent2);">• 🗝️ key entry linked</span>' : ''}
+                        ${linkedPns.length > 1 ? `<span style="color:var(--accent2);">• 🗝️ linked: ${escapeJobText(linkedPns.join(', '))}</span>` : entry.linkedPn ? '<span style="color:var(--accent2);">• 🗝️ key entry linked</span>' : ''}
                         ${mates.length > 0 ? `<span style="color:var(--accent2);">• pooled with ${escapeJobText(mates.join(', '))}</span>` : ''}
                     </div>
                 </div>
