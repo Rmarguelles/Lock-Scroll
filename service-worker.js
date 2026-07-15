@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lockscroll-v140';
+const CACHE_NAME = 'lockscroll-v142';
 const urlsToCache = [
   './',
   './index.html',

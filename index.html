@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v213</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v215</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5216,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v213</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v215</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v213<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v215<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12151,16 +12151,18 @@ function renderKeys() {
         return;
     }
 
-    // PNs linked to the test key inventory show its shared count + a badge
+    // PNs linked to the test key inventory show the blank's pooled count + a
+    // badge (map PN -> a keyway in its pool)
     const testKeyPnMap = {};
-    Object.values(testKeyInventory).forEach(e => {
-        if (e && e.linkedPn) testKeyPnMap[String(e.linkedPn).toLowerCase()] = e;
+    Object.entries(testKeyInventory).forEach(([kw, e]) => {
+        if (e && e.linkedPn) testKeyPnMap[String(e.linkedPn).toLowerCase()] = kw;
     });
 
     list.innerHTML = supersessionBanner + filteredKeys.map((key, i) => {
+        const tkKeyway = testKeyPnMap[String(key.pn).toLowerCase()];
+        const tkEntry = tkKeyway !== undefined ? testKeyInventory[tkKeyway] : null;
         const idx = DB.indexOf(key);
-        const tkEntry = testKeyPnMap[String(key.pn).toLowerCase()];
-        const stock = tkEntry ? (tkEntry.qty || 0) : (stockData[key.pn] || 0);
+        const stock = tkEntry ? getTestKeyPoolQty(tkKeyway) : (stockData[key.pn] || 0);
         const stockClass = stock === 0 ? 'stock-out' : stock <= 2 ? 'stock-low' : 'stock-in';
 
         const vehicles = (key.vehicles || []).slice(0, 3).map(v =>
@@ -12273,8 +12275,16 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
 
     const key = DB[idx];
     const stock = stockData[key.pn] || 0;
-    // Test keys share one stock count with the job flow (testKeyInventory)
+    // Test keys share one pooled stock count with the job flow (testKeyInventory)
     const tkLink = getTestKeyEntryForKey(key);
+    const tkPoolQty = tkLink ? getTestKeyPoolQty(tkLink.keyway) : 0;
+    const tkPoolSize = tkLink ? getTestKeyPoolEntries(tkLink.keyway).length : 0;
+    // Other keyways this same blank is the test key for (beyond the linked one)
+    const tkAllKeyways = getTestKeyKeywaysForKey(key);
+    const tkOtherKeyways = tkLink ? tkAllKeyways.filter(kw => kw !== tkLink.keyway) : tkAllKeyways;
+    const tkKeywayList = tkOtherKeyways.length > 1
+        ? tkOtherKeyways.slice(0, -1).map(escapeJobText).join(', ') + ' & ' + escapeJobText(tkOtherKeyways[tkOtherKeyways.length - 1])
+        : tkOtherKeyways.map(escapeJobText).join('');
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
     const allKeyFccs = getKeyFccIds(key);
@@ -12331,11 +12341,12 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         <!-- Stock Section -->
         <div class="detail-section">
             <h3>Stock Management${tkLink ? ' <span style="display:inline-block;padding:2px 8px;background:var(--accent2);color:#000;border-radius:10px;font-size:10px;font-weight:700;vertical-align:middle;margin-left:6px;">🗝️ TEST KEY</span>' : ''}</h3>
-            ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">Shared test key stock for the ${escapeJobText(tkLink.keyway)} keyway — completing a job deducts from this same count</div>` : ''}
+            ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">${tkPoolSize > 1 ? 'Pooled test key stock — a job on any keyway this blank serves deducts from this one count' : `Shared test key stock for the ${escapeJobText(tkLink.keyway)} keyway — completing a job deducts from this same count`}</div>` : ''}
+            ${tkOtherKeyways.length > 0 ? `<div style="text-align:center;font-size:11px;color:var(--accent2);padding:${tkLink ? '6px' : '0'} 16px 0;">🗝️ ${tkLink ? 'Also serves' : 'Serves'} as test key for: ${tkKeywayList}</div>` : ''}
             <div style="display:flex;justify-content:center;align-items:center;padding:16px;">
                 <div class="stock-controls">
                     <button class="stock-btn minus" onclick="${tkLink ? `adjustTestKeyStockFromDetail('${tkLink.keyway.replace(/'/g, "\\'")}', -1)` : `adjustStock('${key.pn}', -1)`}">−</button>
-                    <span class="stock-qty" id="stockQty">${tkLink ? (tkLink.entry.qty || 0) : stock}</span>
+                    <span class="stock-qty" id="stockQty">${tkLink ? tkPoolQty : stock}</span>
                     <button class="stock-btn plus" onclick="${tkLink ? `adjustTestKeyStockFromDetail('${tkLink.keyway.replace(/'/g, "\\'")}', 1)` : `adjustStock('${key.pn}', 1)`}">+</button>
                 </div>
             </div>
@@ -22563,24 +22574,32 @@ function openVehicleDetail(vehicleKey) {
 
     html += `</div>`;
 
-    // Test keys for this vehicle's keyway(s) — shared test-key stock the job
-    // completion form deducts from
+    // Test keys for this vehicle's keyway(s) — pooled test-key stock the job
+    // completion form deducts from; keyways sharing one blank share one card
     const vehicleTestKeys = [];
+    const seenTkPools = new Set();
     keyways.forEach(kw => {
         const entry = testKeyInventory[kw];
-        if (entry && entry.linkedPn) vehicleTestKeys.push({ kw, entry });
+        if (!entry || !entry.linkedPn) return;
+        const poolId = getTestKeyPoolId(kw, entry);
+        if (seenTkPools.has(poolId)) {
+            const prior = vehicleTestKeys.find(t => t.poolId === poolId);
+            if (prior) prior.kws.push(kw);
+            return;
+        }
+        seenTkPools.add(poolId);
+        vehicleTestKeys.push({ kws: [kw], entry, poolId, qty: getTestKeyPoolQty(kw) });
     });
     if (vehicleTestKeys.length > 0) {
         html += `<div class="vehicle-section">
             <div class="vehicle-section-title">🗝️ Test Keys</div>
-            ${vehicleTestKeys.map(({ kw, entry }) => {
+            ${vehicleTestKeys.map(({ kws, entry, qty }) => {
                 const tkIdx = DB.findIndex(k => String(k.pn).toLowerCase() === String(entry.linkedPn).toLowerCase());
-                const qty = entry.qty || 0;
                 return `
                 <div class="vehicle-key-card ${qty > 0 ? 'in-stock' : ''}"${tkIdx >= 0 ? ` onclick="openKeyFromVehicle(${tkIdx}, '${String(entry.linkedPn).replace(/'/g, "\\'")}')" style="cursor:pointer;"` : ''}>
                     <div class="vehicle-key-info">
                         <h4>${escapeJobText(String(entry.linkedPn))}</h4>
-                        <p>Test key • ${escapeJobText(kw)} keyway</p>
+                        <p>Test key • ${escapeJobText(kws.join(', '))} keyway${kws.length !== 1 ? 's' : ''}</p>
                     </div>
                     <div class="vehicle-key-stock">
                         <div class="count" style="color:${qty > 0 ? 'var(--success)' : 'var(--dim)'}">${qty}</div>
@@ -25452,8 +25471,9 @@ function updateJobTestKeyStock() {
         return;
     }
     const entry = testKeyInventory[kw];
-    const qty = entry ? entry.qty : 0;
-    el.innerHTML = `${escapeJobText(kw)} test keys: <span style="color:${qty > 0 ? 'var(--success)' : '#ff4444'};font-weight:600;">${qty} in stock</span>${entry && entry.pn ? ` <span style="color:var(--dim);">• PN ${escapeJobText(entry.pn)}</span>` : ''}`;
+    const qty = getTestKeyPoolQty(kw);
+    const mates = getTestKeyPoolMates(kw);
+    el.innerHTML = `${escapeJobText(kw)} test keys: <span style="color:${qty > 0 ? 'var(--success)' : '#ff4444'};font-weight:600;">${qty} in stock</span>${entry && entry.pn ? ` <span style="color:var(--dim);">• PN ${escapeJobText(entry.pn)}</span>` : ''}${mates.length > 0 ? ` <span style="color:var(--dim);">• pool shared with ${escapeJobText(mates.join(', '))}</span>` : ''}`;
 }
 
 function openJobCompleteModal(jobId) {
@@ -25568,16 +25588,14 @@ function saveJobComplete() {
         saveStock();
     }
 
-    // Deduct test keys from the keyway's stock — clamped at 0 while the record
-    // keeps the true count; create-if-missing so the keyway shows in the panel
+    // Deduct test keys from the blank's shared pool (all keyways using the
+    // same blank draw from one supply) — clamped at 0 while the record keeps
+    // the true count; create-if-missing so the keyway shows in the panel
     if (record.testKeysUsed > 0 && record.testKeyway) {
         if (!testKeyInventory[record.testKeyway]) {
             testKeyInventory[record.testKeyway] = { qty: 0, pn: '', notes: '' };
         }
-        const tkEntry = testKeyInventory[record.testKeyway];
-        tkEntry.qty = Math.max(0, tkEntry.qty - record.testKeysUsed);
-        tkEntry.updatedAt = completedAt;
-        tkEntry.updatedBy = record.completedBy;
+        deductTestKeyPool(record.testKeyway, record.testKeysUsed, completedAt, record.completedBy);
         saveTestKeyInventory();
     }
 
@@ -25670,14 +25688,76 @@ function getTestKeyEntryForKey(key) {
     return null;
 }
 
+// Every keyway this key serves as the test key for — matched by the inventory
+// entry's linkedPn, or by its pn when no key entry has been linked yet (one
+// blank like B106 often covers several keyways: B111, B115, PT04, ...).
+function getTestKeyKeywaysForKey(key) {
+    if (!key) return [];
+    const pnLower = String(key.pn).toLowerCase();
+    return Object.entries(testKeyInventory)
+        .filter(([, e]) => e && String(e.linkedPn || e.pn || '').toLowerCase() === pnLower)
+        .map(([kw]) => kw)
+        .sort((a, b) => a.localeCompare(b));
+}
+
+// Test key blanks are POOLED by part number: every keyway whose inventory
+// entry points at the same blank (linkedPn, or pn when unlinked) shares one
+// physical supply. Counts are summed for display and deductions drain the
+// combined pool no matter which keyway the job was logged against. The
+// per-keyway qty fields stay in the data (sync/export unchanged) — they're
+// just slices of one pool.
+function getTestKeyPoolId(kw, entry) {
+    const e = entry || testKeyInventory[kw];
+    return String((e && (e.linkedPn || e.pn)) || kw).toLowerCase();
+}
+
+// [keyway, entry] pairs sharing the given keyway's blank; the keyway itself
+// sorts first so deductions drain its own entry before its pool mates
+function getTestKeyPoolEntries(kw) {
+    const id = getTestKeyPoolId(kw);
+    return Object.entries(testKeyInventory)
+        .filter(([k, e]) => e && getTestKeyPoolId(k, e) === id)
+        .sort(([a], [b]) => a === kw ? -1 : b === kw ? 1 : a.localeCompare(b));
+}
+
+function getTestKeyPoolQty(kw) {
+    return getTestKeyPoolEntries(kw).reduce((sum, [, e]) => sum + (e.qty || 0), 0);
+}
+
+// Other keyways sharing the given keyway's blank (for display)
+function getTestKeyPoolMates(kw) {
+    return getTestKeyPoolEntries(kw).map(([k]) => k).filter(k => k !== kw);
+}
+
+// Remove `count` blanks from the pool, clamped at 0 like the old per-keyway
+// deduction; only entries actually drained get a fresh sync timestamp
+function deductTestKeyPool(kw, count, when, who) {
+    when = when || new Date().toISOString();
+    who = who || currentUser?.displayName || currentUser?.email || 'Unknown';
+    let remaining = count;
+    getTestKeyPoolEntries(kw).forEach(([, e]) => {
+        const take = Math.min(e.qty || 0, remaining);
+        if (take <= 0) return;
+        e.qty = (e.qty || 0) - take;
+        remaining -= take;
+        e.updatedAt = when;
+        e.updatedBy = who;
+    });
+}
+
 function adjustTestKeyStockFromDetail(keyway, delta) {
     const entry = testKeyInventory[keyway];
     if (!entry) return;
-    entry.qty = Math.max(0, (entry.qty || 0) + delta);
-    entry.updatedAt = new Date().toISOString();
-    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    // + restocks this keyway's slice; − drains the shared pool
+    if (delta > 0) {
+        entry.qty = (entry.qty || 0) + delta;
+        entry.updatedAt = new Date().toISOString();
+        entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    } else {
+        deductTestKeyPool(keyway, -delta);
+    }
     saveTestKeyInventory();
-    document.getElementById('stockQty').textContent = entry.qty;
+    document.getElementById('stockQty').textContent = getTestKeyPoolQty(keyway);
 }
 
 function toggleTestKeyFlag(idx) {
@@ -25766,7 +25846,8 @@ function renderTestKeys() {
     }
     document.getElementById('testKeysList').innerHTML = entries.map(([kw, entry]) => {
         const kwEsc = kw.replace(/'/g, "\\'");
-        const qty = entry.qty || 0;
+        const qty = getTestKeyPoolQty(kw);
+        const mates = getTestKeyPoolMates(kw);
         return `
             <div class="test-key-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
                 <div style="min-width:0;">
@@ -25775,6 +25856,7 @@ function renderTestKeys() {
                         ${entry.pn ? 'PN: ' + escapeJobText(entry.pn) : 'No part number yet'}
                         <button onclick="editTestKeyPN('${kwEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 4px;">✎</button>
                         ${entry.linkedPn ? '<span style="color:var(--accent2);">• 🗝️ key entry linked</span>' : ''}
+                        ${mates.length > 0 ? `<span style="color:var(--accent2);">• pooled with ${escapeJobText(mates.join(', '))}</span>` : ''}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -25797,9 +25879,14 @@ function filterTestKeys() {
 function adjustTestKeyQty(keyway, delta) {
     const entry = testKeyInventory[keyway];
     if (!entry) return;
-    entry.qty = Math.max(0, (entry.qty || 0) + delta);
-    entry.updatedAt = new Date().toISOString();
-    entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    // + restocks this keyway's slice; − drains the shared pool
+    if (delta > 0) {
+        entry.qty = (entry.qty || 0) + delta;
+        entry.updatedAt = new Date().toISOString();
+        entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
+    } else {
+        deductTestKeyPool(keyway, -delta);
+    }
     saveTestKeyInventory();
     renderTestKeys();
 }
