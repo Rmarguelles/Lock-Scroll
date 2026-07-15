@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v216</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v217</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5216,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v216</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v217</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v216<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v217<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7824,7 +7824,7 @@ function renderCloudSyncUI() {
                 <div class="sync-item-row"><span>FID Assignments</span><span class="count">${Object.keys(fidAssignments).length}</span></div>
                 <div class="sync-item-row"><span>Purchase History</span><span class="count">${purchaseHistory.length}</span></div>
                 <div class="sync-item-row"><span>Job History</span><span class="count">${jobHistory.length}</span></div>
-                <div class="sync-item-row"><span>Test Keys</span><span class="count">${Object.keys(testKeyInventory).length}</span></div>
+                <div class="sync-item-row"><span>Test Keys</span><span class="count">${Object.values(testKeyInventory).filter(isLiveTestKeyEntry).length}</span></div>
             </div>
             ${renderSharedUsersSection()}
         `;
@@ -10603,6 +10603,8 @@ async function init() {
     await runAntiqueConsolidationMigration();
     // Heal renamed keys whose old-named copies were resurrected by past syncs
     pruneSupersededCustomKeys();
+    // Move test key entries stranded under old keyway labels by past renames
+    healTestKeyKeywayRenames();
     initializeVendorPricesFromDB();
     buildFilters();
     buildFccidDatalist();
@@ -12167,6 +12169,7 @@ function renderKeys() {
     // badge (map every linked PN -> a keyway in its pool)
     const testKeyPnMap = {};
     Object.entries(testKeyInventory).forEach(([kw, e]) => {
+        if (!isLiveTestKeyEntry(e)) return;
         getTestKeyLinkedPns(e).forEach(p => { testKeyPnMap[p.toLowerCase()] = kw; });
     });
 
@@ -22597,9 +22600,10 @@ function openVehicleDetail(vehicleKey) {
     // completion form deducts from; keyways sharing one blank share one card
     const vehicleTestKeys = [];
     const seenTkPools = new Set();
-    keyways.forEach(kw => {
+    keyways.forEach(rawKw => {
+        const kw = resolveTestKeyKeyway(rawKw);
         const entry = testKeyInventory[kw];
-        if (!entry || !entry.linkedPn) return;
+        if (!isLiveTestKeyEntry(entry) || !entry.linkedPn) return;
         const poolId = getTestKeyPoolId(kw, entry);
         if (seenTkPools.has(poolId)) {
             const prior = vehicleTestKeys.find(t => t.poolId === poolId);
@@ -25483,12 +25487,14 @@ function setupJobTestKeywaySelector(vehicleKey) {
 }
 
 function updateJobTestKeyStock() {
-    const kw = document.getElementById('jobTestKeyway').value;
+    const rawKw = document.getElementById('jobTestKeyway').value;
     const el = document.getElementById('jobTestKeyStock');
-    if (!kw) {
+    if (!rawKw) {
         el.innerHTML = '<span style="color:var(--dim);">No keyway on file for this vehicle — count is recorded but no test key stock is deducted</span>';
         return;
     }
+    // The vehicle may still carry a keyway's old name — follow the rename
+    const kw = resolveTestKeyKeyway(rawKw);
     const entry = testKeyInventory[kw];
     const qty = getTestKeyPoolQty(kw);
     const mates = getTestKeyPoolMates(kw);
@@ -25609,12 +25615,14 @@ function saveJobComplete() {
 
     // Deduct test keys from the blank's shared pool (all keyways using the
     // same blank draw from one supply) — clamped at 0 while the record keeps
-    // the true count; create-if-missing so the keyway shows in the panel
+    // the true count; create-if-missing so the keyway shows in the panel.
+    // Resolve renames first: the vehicle may still carry the old keyway name.
     if (record.testKeysUsed > 0 && record.testKeyway) {
-        if (!testKeyInventory[record.testKeyway]) {
-            testKeyInventory[record.testKeyway] = { qty: 0, pn: '', notes: '' };
+        const tkKw = resolveTestKeyKeyway(record.testKeyway);
+        if (!testKeyInventory[tkKw]) {
+            testKeyInventory[tkKw] = { qty: 0, pn: '', notes: '' };
         }
-        deductTestKeyPool(record.testKeyway, record.testKeysUsed, completedAt, record.completedBy);
+        deductTestKeyPool(tkKw, record.testKeysUsed, completedAt, record.completedBy);
         saveTestKeyInventory();
     }
 
@@ -25713,7 +25721,7 @@ function getTestKeyEntryForKey(key) {
     if (!key) return null;
     const pnLower = String(key.pn).toLowerCase();
     for (const [kw, entry] of Object.entries(testKeyInventory)) {
-        if (entry && getTestKeyLinkedPns(entry).some(p => p.toLowerCase() === pnLower)) {
+        if (isLiveTestKeyEntry(entry) && getTestKeyLinkedPns(entry).some(p => p.toLowerCase() === pnLower)) {
             return { keyway: kw, entry };
         }
     }
@@ -25728,7 +25736,7 @@ function getTestKeyKeywaysForKey(key) {
     const pnLower = String(key.pn).toLowerCase();
     return Object.entries(testKeyInventory)
         .filter(([, e]) => {
-            if (!e) return false;
+            if (!isLiveTestKeyEntry(e)) return false;
             const linked = getTestKeyLinkedPns(e);
             if (linked.length > 0) return linked.some(p => p.toLowerCase() === pnLower);
             return String(e.pn || '').toLowerCase() === pnLower;
@@ -25751,9 +25759,10 @@ function getTestKeyPoolId(kw, entry) {
 // [keyway, entry] pairs sharing the given keyway's blank; the keyway itself
 // sorts first so deductions drain its own entry before its pool mates
 function getTestKeyPoolEntries(kw) {
+    kw = resolveTestKeyKeyway(kw);
     const id = getTestKeyPoolId(kw);
     return Object.entries(testKeyInventory)
-        .filter(([k, e]) => e && getTestKeyPoolId(k, e) === id)
+        .filter(([k, e]) => isLiveTestKeyEntry(e) && getTestKeyPoolId(k, e) === id)
         .sort(([a], [b]) => a === kw ? -1 : b === kw ? 1 : a.localeCompare(b));
 }
 
@@ -25763,6 +25772,7 @@ function getTestKeyPoolQty(kw) {
 
 // Other keyways sharing the given keyway's blank (for display)
 function getTestKeyPoolMates(kw) {
+    kw = resolveTestKeyKeyway(kw);
     return getTestKeyPoolEntries(kw).map(([k]) => k).filter(k => k !== kw);
 }
 
@@ -25782,7 +25792,133 @@ function deductTestKeyPool(kw, count, when, who) {
     });
 }
 
+// ---- Keyway renames ----
+// Renaming a keyway moves its test key entry to the new label and leaves a
+// redirect tombstone ({renamedTo, qty:0, no linked PNs}) behind. The tombstone
+// exists so (a) the cloud copy of the old entry merges onto it instead of
+// resurrecting a duplicate count (the per-keyway sync merge has no other way
+// to see a deletion), and (b) stale references — old keyway strings on
+// vehicles, or devices mid-sync — still reach the moved stock.
+function isLiveTestKeyEntry(e) {
+    return !!e && !e.renamedTo;
+}
+
+// Follow rename redirects to the keyway's current label
+function resolveTestKeyKeyway(kw) {
+    let cur = kw;
+    for (let i = 0; i < 5; i++) {
+        const e = testKeyInventory[cur];
+        if (!e || !e.renamedTo || e.renamedTo === cur) break;
+        cur = e.renamedTo;
+    }
+    return cur;
+}
+
+// Move a test key entry to a new keyway label (merging qty and linked PNs if
+// the new label already has one), leaving a redirect tombstone at the old.
+// Caller saves.
+function moveTestKeyEntry(oldKw, newKw) {
+    const src = testKeyInventory[oldKw];
+    if (!src || src.renamedTo || oldKw === newKw) return false;
+    const now = new Date().toISOString();
+    const who = currentUser?.displayName || currentUser?.email || 'Unknown';
+    const dst = testKeyInventory[newKw];
+    if (isLiveTestKeyEntry(dst)) {
+        dst.qty = (dst.qty || 0) + (src.qty || 0);
+        getTestKeyLinkedPns(src).forEach(p => {
+            if (getTestKeyLinkedPns(dst).some(x => x.toLowerCase() === p.toLowerCase())) return;
+            if (!dst.linkedPn) dst.linkedPn = p;
+            else {
+                if (!Array.isArray(dst.linkedPns)) dst.linkedPns = [];
+                dst.linkedPns.push(p);
+            }
+        });
+        if (!dst.pn && src.pn) dst.pn = src.pn;
+        if (!dst.notes && src.notes) dst.notes = src.notes;
+        dst.updatedAt = now;
+        dst.updatedBy = who;
+    } else {
+        testKeyInventory[newKw] = { ...src, updatedAt: now, updatedBy: who };
+        delete testKeyInventory[newKw].renamedTo;
+    }
+    testKeyInventory[oldKw] = { qty: 0, pn: src.pn || '', notes: '', renamedTo: newKw, updatedAt: now, updatedBy: who };
+    return true;
+}
+
+// Repairs entries stranded under an old keyway label by a rename that didn't
+// go through renameKeywayReferences (per-key edits, older app versions, a
+// rename synced in from another device): if no key in the DB carries the
+// entry's label anymore and every key it's linked to agrees on one current
+// keyway, the entry moves there. Runs at startup and when the panel opens.
+function healTestKeyKeywayRenames() {
+    let changed = false;
+    Object.entries(testKeyInventory).forEach(([kw, e]) => {
+        if (!isLiveTestKeyEntry(e)) return;
+        const linked = getTestKeyLinkedPns(e);
+        if (linked.length === 0) return;
+        if (DB.some(k => String(k.keyway || '') === kw)) return; // label still in use
+        const currentKws = new Set();
+        for (const p of linked) {
+            const k = DB.find(x => String(x.pn).toLowerCase() === p.toLowerCase());
+            if (!k || !k.keyway) return; // can't tell — leave it alone
+            currentKws.add(String(k.keyway));
+        }
+        if (currentKws.size !== 1) return;
+        const newKw = [...currentKws][0];
+        if (newKw !== kw && moveTestKeyEntry(kw, newKw)) changed = true;
+    });
+    if (changed) saveTestKeyInventory();
+    return changed;
+}
+
+// Follows a keyway rename/merge from the Dropdown Data manager through every
+// store that holds the keyway string beyond DB/customKeys (which the callers
+// update): test key stock, Lishi tool data, vehicle records, and the
+// keyway relationships used for auto-population.
+function renameKeywayReferences(oldKw, newKw) {
+    if (!oldKw || !newKw || oldKw === newKw) return;
+    if (moveTestKeyEntry(oldKw, newKw)) saveTestKeyInventory();
+    if (lishiData[oldKw]) {
+        if (!lishiData[newKw]) lishiData[newKw] = lishiData[oldKw];
+        delete lishiData[oldKw];
+        saveLishi();
+    }
+    const renameInVehicle = (v) => {
+        if (!v) return false;
+        let touched = false;
+        ['keyway', 'ignition_keyway', 'door_keyway'].forEach(f => {
+            if (!v[f]) return;
+            const parts = String(v[f]).split(',').map(s => s.trim());
+            if (!parts.includes(oldKw)) return;
+            v[f] = parts.map(s => s === oldKw ? newKw : s)
+                .filter((s, i, a) => s && a.indexOf(s) === i).join(',');
+            touched = true;
+        });
+        ['ignition_keys', 'door_keys'].forEach(f => {
+            if (!Array.isArray(v[f])) return;
+            v[f].forEach(e => {
+                if (e && String(e.keyway || '') === oldKw) { e.keyway = newKw; touched = true; }
+            });
+        });
+        return touched;
+    };
+    let lvTouched = false;
+    Object.values(lishiVehicleData).forEach(v => { if (renameInVehicle(v)) lvTouched = true; });
+    if (lvTouched) saveLishiVehicle();
+    let cvTouched = false;
+    customVehicles.forEach(v => { if (renameInVehicle(v)) cvTouched = true; });
+    if (cvTouched) saveCustomVehicles();
+    let krTouched = false;
+    Object.values(keyRelationships).forEach(r => {
+        if (r && String(r.keyway || '') === oldKw) { r.keyway = newKw; krTouched = true; }
+    });
+    if (krTouched) saveKeyRelationships();
+    // Refresh the Test Keys panel if it's on screen
+    if (document.getElementById('testKeysPanel').classList.contains('on')) renderTestKeys();
+}
+
 function adjustTestKeyStockFromDetail(keyway, delta) {
+    keyway = resolveTestKeyKeyway(keyway);
     const entry = testKeyInventory[keyway];
     if (!entry) return;
     // + restocks this keyway's slice; − drains the shared pool
@@ -25823,8 +25959,8 @@ function toggleTestKeyFlag(idx) {
     // No entry for this key's keyway but other test key stocks exist — let the
     // user join one of them (same physical keyway can go by different labels,
     // e.g. B92 vs B96/B102) instead of always starting a separate count
-    const kw = key.keyway || pn;
-    if (!testKeyInventory[kw] && Object.keys(testKeyInventory).length > 0) {
+    const kw = resolveTestKeyKeyway(key.keyway || pn);
+    if (!isLiveTestKeyEntry(testKeyInventory[kw]) && Object.values(testKeyInventory).some(isLiveTestKeyEntry)) {
         openLinkTestKeyModal(idx);
         return;
     }
@@ -25838,6 +25974,7 @@ function linkKeyToTestKeyEntry(idx, kw) {
     if (!key) return;
     const pn = String(key.pn);
     const pnLower = pn.toLowerCase();
+    kw = resolveTestKeyKeyway(kw);
     if (!testKeyInventory[kw]) testKeyInventory[kw] = { qty: 0, pn: '', notes: '' };
     const entry = testKeyInventory[kw];
     if (entry.linkedPn && String(entry.linkedPn).toLowerCase() !== pnLower) {
@@ -25864,7 +26001,9 @@ function openLinkTestKeyModal(idx) {
     document.getElementById('linkTestKeySubtitle').textContent =
         `Start a new test key stock for ${key.pn}, or join an existing one if another part number is the same keyway with a different bow.`;
     const rowStyle = 'padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;';
-    const rows = Object.entries(testKeyInventory).sort((a, b) => a[0].localeCompare(b[0])).map(([kw, e]) => {
+    const rows = Object.entries(testKeyInventory)
+        .filter(([, e]) => isLiveTestKeyEntry(e))
+        .sort((a, b) => a[0].localeCompare(b[0])).map(([kw, e]) => {
         const kwEsc = kw.replace(/'/g, "\\'");
         const linked = getTestKeyLinkedPns(e);
         const sub = linked.length > 0 ? `linked: ${escapeJobText(linked.join(', '))}` : (e.pn ? `PN ${escapeJobText(e.pn)}` : 'no key entry linked yet');
@@ -25898,7 +26037,7 @@ function closeLinkTestKeyModal() {
 // keyway that doesn't have one yet; existing keys with a matching PN are
 // linked instead of duplicated.
 function createTestKeyEntries() {
-    const pending = Object.entries(testKeyInventory).filter(([, e]) => e && !e.linkedPn);
+    const pending = Object.entries(testKeyInventory).filter(([, e]) => isLiveTestKeyEntry(e) && !e.linkedPn);
     if (pending.length === 0) {
         toast('Every test keyway already has a linked key entry');
         return;
@@ -25945,6 +26084,8 @@ function createTestKeyEntries() {
 }
 
 function openTestKeysPanel() {
+    // Catch keyway renames that happened since the panel was last open
+    healTestKeyKeywayRenames();
     renderTestKeys();
     document.getElementById('testKeysPanel').classList.add('on');
 }
@@ -25954,7 +26095,9 @@ function closeTestKeysPanel() {
 }
 
 function renderTestKeys() {
-    const entries = Object.entries(testKeyInventory).sort((a, b) => a[0].localeCompare(b[0]));
+    const entries = Object.entries(testKeyInventory)
+        .filter(([, e]) => isLiveTestKeyEntry(e))
+        .sort((a, b) => a[0].localeCompare(b[0]));
     if (entries.length === 0) {
         document.getElementById('testKeysList').innerHTML =
             '<div class="add-inv-placeholder">No test keys yet — add your first purchase below</div>';
@@ -25994,6 +26137,7 @@ function filterTestKeys() {
 }
 
 function adjustTestKeyQty(keyway, delta) {
+    keyway = resolveTestKeyKeyway(keyway);
     const entry = testKeyInventory[keyway];
     if (!entry) return;
     // + restocks this keyway's slice; − drains the shared pool
@@ -26040,9 +26184,10 @@ function openAddTestKeysModal() {
 }
 
 function onTestKeyPurchaseKeywayChange() {
-    const kw = document.getElementById('testKeyPurchaseKeyway').value;
+    let kw = document.getElementById('testKeyPurchaseKeyway').value;
     const newInput = document.getElementById('testKeyPurchaseNewKeyway');
     newInput.style.display = kw === '__ADD_NEW__' ? '' : 'none';
+    if (kw && kw !== '__ADD_NEW__') kw = resolveTestKeyKeyway(kw);
     if (kw && kw !== '__ADD_NEW__' && testKeyInventory[kw] && testKeyInventory[kw].pn) {
         document.getElementById('testKeyPurchasePN').value = testKeyInventory[kw].pn;
     }
@@ -26061,6 +26206,7 @@ function saveTestKeyPurchase() {
         toast('Select or enter a keyway');
         return;
     }
+    kw = resolveTestKeyKeyway(kw);
     const qty = parseInt(document.getElementById('testKeyPurchaseQty').value) || 0;
     if (qty <= 0) {
         toast('Enter a quantity');
@@ -29287,6 +29433,9 @@ function saveDropdownValueEdit() {
         const kwIdx = customKeyways.indexOf(oldValue);
         if (kwIdx >= 0) customKeyways[kwIdx] = newValue;
         saveCustomKeyways();
+        // Test key stock, Lishi data, vehicle records, and relationships all
+        // hold the keyway string too — move them to the new name
+        renameKeywayReferences(oldValue, newValue);
     }
 
     // Persist
@@ -29455,6 +29604,9 @@ function executeMergeDropdown() {
     if (category === 'keyway') {
         customKeyways = customKeyways.filter(kw => kw !== source);
         saveCustomKeyways();
+        // Merge the source keyway's test key stock, Lishi data, vehicle
+        // records, and relationships into the target too
+        renameKeywayReferences(source, target);
     }
 
     // Persist
