@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v212</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v213</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4805,6 +4805,7 @@
             <span><strong style="color:var(--accent);">4xx</strong> Fobik</span>
             <span><strong style="color:var(--accent);">5xx</strong> Proximity</span>
             <span><strong style="color:var(--accent);">6xx</strong> Remote Only</span>
+            <span><strong style="color:var(--accent);">7xx</strong> Shell</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;">
             <input type="text" class="fid-search" id="fidSearch" placeholder="Search FCC ID or FID..." oninput="filterFids()" style="flex:1;margin:0;">
@@ -5215,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v212</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v213</p>
         </div>
 
         <div class="settings-section">
@@ -5227,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v212<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v213<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -7241,6 +7242,7 @@
                 <option value="Fobik">Fobik</option>
                 <option value="Chip Key">Chip Key (Transponder)</option>
                 <option value="Non-Chip Key">Non-Chip Key</option>
+                <option value="Shell Key">Shell Key (no chip, removable sleeve)</option>
                 <option value="Remote Only">Remote Only (no key blade)</option>
                 <option value="VATS">VATS</option>
                 <option value="VATS Single-Sided">VATS Single-Sided</option>
@@ -14521,7 +14523,10 @@ function getPrefixForMakes(makes) {
 // The hundreds digit of a FID number encodes the key type, so the number
 // itself identifies the type and the numeric sort groups the list by type:
 // 0xx Non-Chip, 1xx Chip/VATS, 2xx Remote Head, 3xx Flip, 4xx Fobik,
-// 5xx Proximity (incl. PEPS/smart), 6xx Remote Only.
+// 5xx Proximity (incl. PEPS/smart), 6xx Remote Only, 7xx Shell (chipless
+// transponder-style head with removable blade sleeve — takes a spare
+// transponder or an Autel/XHorse super chip, e.g. a TR47 shell covering
+// TOY43/TOY44D/TOY44G/TOY44H).
 const FID_TYPE_DIGITS = {
     'Non-Chip Key': 0,
     'Chip Key': 1, 'VATS': 1, 'VATS Single-Sided': 1, 'VATS Double-Sided': 1,
@@ -14529,14 +14534,18 @@ const FID_TYPE_DIGITS = {
     'Flip Key': 3,
     'Fobik': 4,
     'Proximity': 5,
-    'Remote Only': 6
+    'Remote Only': 6,
+    'Shell Key': 7, 'Shell': 7, 'Key Shell': 7
 };
-const FID_BAND_NAMES = ['Non-Chip', 'Chip / VATS', 'Remote Head', 'Flip', 'Fobik', 'Proximity', 'Remote Only'];
+const FID_BAND_NAMES = ['Non-Chip', 'Chip / VATS', 'Remote Head', 'Flip', 'Fobik', 'Proximity', 'Remote Only', 'Shell'];
 
 function getFidTypeDigit(keyType) {
     const raw = String(keyType || '').trim();
     if (FID_TYPE_DIGITS[raw] !== undefined) return FID_TYPE_DIGITS[raw];
     const kt = raw.toLowerCase();
+    // Shell wins over the styling words that may follow it ("Flip Key Shell",
+    // "Remote Head Shell") — a chipless shell is a shell regardless of shape
+    if (kt.includes('shell')) return 7;
     if (kt.includes('remote only') || kt === 'remote') return 6;
     if (kt.includes('non-chip') || kt.includes('non chip')) return 0;
     if (kt.includes('vats')) return 1;
@@ -14595,7 +14604,7 @@ function formatFidNumber(num) {
 }
 
 function getKeyTypePriority(keyType) {
-    // The band digit doubles as the sort priority (0=Non-chip … 6=Remote Only)
+    // The band digit doubles as the sort priority (0=Non-chip … 7=Shell)
     return getFidTypeDigit(keyType);
 }
 
@@ -26630,7 +26639,7 @@ let customKeyFidNumberAutofilled = false;
 
 // Fill the manual-FID number with the next free number for the chosen prefix,
 // in the type band matching the form's selected Key Type (0xx Non-Chip …
-// 6xx Remote Only). Runs when the prefix is picked (fromPrefix=true) and
+// 7xx Shell). Runs when the prefix is picked (fromPrefix=true) and
 // again whenever the Key Type changes, so the suggestion follows the type.
 function suggestManualFidNumber(fromPrefix) {
     const prefixEl = document.getElementById('customKeyManualPrefix');
@@ -26646,7 +26655,7 @@ function suggestManualFidNumber(fromPrefix) {
         // Can't know the band yet — the key type picks the first digit
         if (customKeyFidNumberAutofilled) numInput.value = '';
         customKeyFidNumberAutofilled = false;
-        if (fromPrefix) toast('Select the Key Type first — it sets the FID number group (0xx–6xx)');
+        if (fromPrefix) toast('Select the Key Type first — it sets the FID number group (0xx–7xx)');
         return;
     }
 
@@ -28905,6 +28914,11 @@ function getDropdownValuesForCategory(category) {
     // Include default brand options
     if (category === 'brand') {
         BRAND_OPTIONS.forEach(b => values.add(b));
+    }
+    // Shell Key (chipless head, removable sleeve — 7xx FID band) is always
+    // offered even before any shell key exists in the data
+    if (category === 'keyType') {
+        values.add('Shell Key');
     }
     // Include custom keyways (user-added keyways that persist even without keys)
     if (category === 'keyway') {
