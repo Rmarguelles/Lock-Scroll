@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v213</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v214</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5216,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v213</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v214</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v213<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v214<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12275,6 +12275,12 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
     const stock = stockData[key.pn] || 0;
     // Test keys share one stock count with the job flow (testKeyInventory)
     const tkLink = getTestKeyEntryForKey(key);
+    // Other keyways this same blank is the test key for (beyond the linked one)
+    const tkAllKeyways = getTestKeyKeywaysForKey(key);
+    const tkOtherKeyways = tkLink ? tkAllKeyways.filter(kw => kw !== tkLink.keyway) : tkAllKeyways;
+    const tkKeywayList = tkOtherKeyways.length > 1
+        ? tkOtherKeyways.slice(0, -1).map(escapeJobText).join(', ') + ' & ' + escapeJobText(tkOtherKeyways[tkOtherKeyways.length - 1])
+        : tkOtherKeyways.map(escapeJobText).join('');
     const keyway = key.keyway || '';
     const lishi = lishiData[keyway] || {};
     const allKeyFccs = getKeyFccIds(key);
@@ -12332,6 +12338,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         <div class="detail-section">
             <h3>Stock Management${tkLink ? ' <span style="display:inline-block;padding:2px 8px;background:var(--accent2);color:#000;border-radius:10px;font-size:10px;font-weight:700;vertical-align:middle;margin-left:6px;">🗝️ TEST KEY</span>' : ''}</h3>
             ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">Shared test key stock for the ${escapeJobText(tkLink.keyway)} keyway — completing a job deducts from this same count</div>` : ''}
+            ${tkOtherKeyways.length > 0 ? `<div style="text-align:center;font-size:11px;color:var(--accent2);padding:${tkLink ? '6px' : '0'} 16px 0;">🗝️ ${tkLink ? 'Also serves' : 'Serves'} as test key for: ${tkKeywayList}</div>` : ''}
             <div style="display:flex;justify-content:center;align-items:center;padding:16px;">
                 <div class="stock-controls">
                     <button class="stock-btn minus" onclick="${tkLink ? `adjustTestKeyStockFromDetail('${tkLink.keyway.replace(/'/g, "\\'")}', -1)` : `adjustStock('${key.pn}', -1)`}">−</button>
@@ -25668,6 +25675,18 @@ function getTestKeyEntryForKey(key) {
         }
     }
     return null;
+}
+
+// Every keyway this key serves as the test key for — matched by the inventory
+// entry's linkedPn, or by its pn when no key entry has been linked yet (one
+// blank like B106 often covers several keyways: B111, B115, PT04, ...).
+function getTestKeyKeywaysForKey(key) {
+    if (!key) return [];
+    const pnLower = String(key.pn).toLowerCase();
+    return Object.entries(testKeyInventory)
+        .filter(([, e]) => e && String(e.linkedPn || e.pn || '').toLowerCase() === pnLower)
+        .map(([kw]) => kw)
+        .sort((a, b) => a.localeCompare(b));
 }
 
 function adjustTestKeyStockFromDetail(keyway, delta) {
