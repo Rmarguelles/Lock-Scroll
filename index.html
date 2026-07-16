@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v219</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v220</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5216,7 +5216,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v219</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v220</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5228,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v219<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v220<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5588,7 +5588,7 @@
             <div id="addVehCodeSeriesList" style="max-height:150px;overflow-y:auto;"></div>
         </div>
         <div style="margin-bottom:16px;display:none;" id="addVehRolesGroup">
-            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Uses on this vehicle <span style="font-size:10px;">(none checked = key's default)</span></label>
+            <label style="display:block;font-size:12px;color:var(--dim);margin-bottom:6px;">Uses on this vehicle <span style="font-size:10px;">(main year range; none checked = key's default — added ranges have their own)</span></label>
             <div style="display:flex;gap:14px;flex-wrap:wrap;">
                 <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
                     <input type="checkbox" id="addVehRoleIgnition" style="width:17px;height:17px;cursor:pointer;"> Ignition
@@ -12538,13 +12538,23 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                         }).join('');
                     }
 
-                    // Per-vehicle uses badges — union of the ranges' overrides
-                    const roleSet = new Set();
-                    g.entries.forEach(v => (Array.isArray(v.keyRoles) ? v.keyRoles : []).forEach(r => roleSet.add(r)));
-                    const vehRolesHtml = roleSet.size > 0
-                        ? `<div style="margin-top:4px;">${KEY_ROLES.filter(r => roleSet.has(r)).map(r =>
-                            `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;">${r.toUpperCase()}</span>`).join('')}</div>`
-                        : '';
+                    // Per-vehicle uses badges. When every range has the same
+                    // uses, show one badge row; when they differ (e.g. door +
+                    // glovebox early years, glovebox only later), show each
+                    // year range with its own badges.
+                    const roleBadges = roles => roles.map(r =>
+                        `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;">${r.toUpperCase()}</span>`).join('');
+                    const entryRoles = v => KEY_ROLES.filter(r => Array.isArray(v.keyRoles) && v.keyRoles.includes(r));
+                    const rolesDiffer = g.entries.some(v => entryRoles(v).join(',') !== entryRoles(g.entries[0]).join(','));
+                    let vehRolesHtml = '';
+                    if (rolesDiffer) {
+                        vehRolesHtml = `<div style="margin-top:4px;">${g.entries.map(v => {
+                            const roles = entryRoles(v);
+                            return `<div style="margin-top:2px;"><span style="font-size:10px;color:var(--dim);margin-right:6px;">${formatYearRange(v)}:</span>${roles.length > 0 ? roleBadges(roles) : '<span style="font-size:10px;color:var(--dim);">key default</span>'}</div>`;
+                        }).join('')}</div>`;
+                    } else if (entryRoles(g.entries[0]).length > 0) {
+                        vehRolesHtml = `<div style="margin-top:4px;">${roleBadges(entryRoles(g.entries[0]))}</div>`;
+                    }
                     return `
                 <div class="detail-row" style="flex-wrap:wrap;flex-direction:column;align-items:flex-start;">
                     <div style="display:flex;justify-content:space-between;width:100%;gap:8px;">
@@ -13190,8 +13200,23 @@ function closeAddSingleVehicleModal() {
 // how addEditVehicleYearRange works in the Edit Vehicles modal.
 function addAddVehicleYearRange() {
     if (!addingVehicle.extraRanges) addingVehicle.extraRanges = [];
-    addingVehicle.extraRanges.push({ startMonth: 0, startYear: '', endMonth: 0, endYear: '' });
+    addingVehicle.extraRanges.push({ startMonth: 0, startYear: '', endMonth: 0, endYear: '', keyRoles: [] });
     renderAddVehicleExtraRanges();
+}
+
+// Toggle one use (ignition/door/glovebox/trunk) on an extra year range.
+// Each range keeps its own uses so the same key can e.g. be door+glovebox
+// for early years and glovebox only later.
+function toggleAddVehExtraRangeRole(idx, role, checked) {
+    const r = addingVehicle.extraRanges && addingVehicle.extraRanges[idx];
+    if (!r) return;
+    let roles = Array.isArray(r.keyRoles) ? r.keyRoles.slice() : [];
+    if (checked) {
+        if (!roles.includes(role)) roles.push(role);
+    } else {
+        roles = roles.filter(x => x !== role);
+    }
+    r.keyRoles = KEY_ROLES.filter(x => roles.includes(x));
 }
 
 function removeAddVehicleYearRange(idx) {
@@ -13239,6 +13264,14 @@ function renderAddVehicleExtraRanges() {
                     style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
             </div>
             <button onclick="removeAddVehicleYearRange(${j})" style="padding:10px 12px;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128465;</button>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:-2px 0 10px;padding-left:2px;">
+            <span style="font-size:11px;color:var(--dim);">Uses for this range:</span>
+            ${KEY_ROLES.map(role => `
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;">
+                <input type="checkbox" ${Array.isArray(r.keyRoles) && r.keyRoles.includes(role) ? 'checked' : ''} onchange="toggleAddVehExtraRangeRole(${j}, '${role}', this.checked)" style="width:16px;height:16px;cursor:pointer;">
+                ${role.charAt(0).toUpperCase() + role.slice(1)}
+            </label>`).join('')}
         </div>
     `}).join('');
 }
@@ -13482,7 +13515,7 @@ function saveAddSingleVehicle() {
             alert(`Start year cannot be after end year (${rs}-${re})`);
             return;
         }
-        ranges.push({ startYear: rs, endYear: re, startMonth: parseInt(r.startMonth) || 0, endMonth: parseInt(r.endMonth) || 0 });
+        ranges.push({ startYear: rs, endYear: re, startMonth: parseInt(r.startMonth) || 0, endMonth: parseInt(r.endMonth) || 0, keyRoles: KEY_ROLES.filter(x => Array.isArray(r.keyRoles) && r.keyRoles.includes(x)) });
     }
 
     // Reject duplicate ranges within the modal itself
@@ -13495,8 +13528,9 @@ function saveAddSingleVehicle() {
         }
     }
 
-    // Per-vehicle uses (checkboxes only shown for mechanical keys; unchecked
-    // = no override, the key's default roles apply)
+    // Per-vehicle uses for the MAIN range (unchecked = no override, the
+    // key's default roles apply); extra ranges carry their own keyRoles so
+    // uses can differ across year ranges of the same vehicle.
     const addVehRoles = KEY_ROLES.filter(r => {
         const box = document.getElementById('addVehRole' + r.charAt(0).toUpperCase() + r.slice(1));
         return box && box.checked;
@@ -13545,7 +13579,8 @@ function saveAddSingleVehicle() {
         const nv = { make, model, startYear: r.startYear, endYear: r.endYear, codeSeries: (ri === 0 && codeSeries.length > 0) ? codeSeries : [] };
         if (r.startMonth) nv.startMonth = r.startMonth;
         if (r.endMonth) nv.endMonth = r.endMonth;
-        if (addVehRoles.length > 0) nv.keyRoles = addVehRoles.slice();
+        const rangeRoles = ri === 0 ? addVehRoles : (r.keyRoles || []);
+        if (rangeRoles.length > 0) nv.keyRoles = rangeRoles.slice();
         return nv;
     });
 
@@ -21627,12 +21662,19 @@ function getVehicleRolesArray(key, vehicleEntry) {
     return key ? getKeyRolesArray(key) : [];
 }
 
-// The key's vehicle application covering the given make/model/year range
+// The key's vehicle application covering the given make/model/year range.
+// An exact-range match wins: with per-range uses, applications with
+// overlapping years can carry different keyRoles, and the application for
+// exactly this range is the one whose uses should show.
 function findKeyVehicleEntry(key, make, model, startYear, endYear) {
     const s = parseInt(startYear) || 0;
     const e = parseInt(endYear) || s || 9999;
-    return ((key && key.vehicles) || []).find(v =>
-        v.make === make && v.model === model &&
+    const apps = ((key && key.vehicles) || []).filter(v => v.make === make && v.model === model);
+    const exact = apps.find(v =>
+        (parseInt(v.startYear) || 0) === s &&
+        (parseInt(v.endYear) || parseInt(v.startYear) || 0) === e);
+    if (exact) return exact;
+    return apps.find(v =>
         (parseInt(v.startYear) || 0) <= e &&
         (parseInt(v.endYear) || parseInt(v.startYear) || 9999) >= s);
 }
