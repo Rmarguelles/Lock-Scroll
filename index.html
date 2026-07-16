@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v220</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v221</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4701,6 +4701,7 @@
             <button onclick="generateAntiquePartNumbers()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔑 Generate Part Numbers</button>
             <button onclick="openAntiqueInventoryPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📦 Count Inventory</button>
         </div>
+        <button onclick="openIlcoImportModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Ilco Reference</button>
     </div>
     <div class="vehicle-list" id="antiqueMakeList"></div>
 </div>
@@ -4750,6 +4751,25 @@
             <button class="modal-btn secondary" onclick="deleteAntiqueEntry()" id="antiqueDeleteBtn" style="background:#5a1f1f;color:#fff;">Delete</button>
             <button class="modal-btn secondary" onclick="closeAntiqueEditModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveAntiqueEditModal()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ilco Reference Paste Import Modal -->
+<div class="modal" id="ilcoImportModal" style="z-index:300;">
+    <div class="modal-content" style="max-width:480px;">
+        <div class="modal-title">📋 Paste Ilco Reference</div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:8px;line-height:1.5;">
+            One row per line, columns separated by <b>|</b> or a tab:<br>
+            <code style="color:var(--text);">Make | Model | Years | Application | Code Series</code><br>
+            Application and Code Series are optional. A make on its own line becomes a header for the rows under it.
+        </div>
+        <textarea id="ilcoImportText" class="modal-input" style="width:100%;min-height:140px;font-family:monospace;font-size:12px;box-sizing:border-box;" placeholder="Ford&#10;Mustang | 1965-1968 | Ignition | 1A-1500A&#10;Mustang | 1965-1968 | Door/Trunk | B1-B1500&#10;Toyota | Camry | 1992-1996 | All | 00001-30000"></textarea>
+        <div id="ilcoImportPreview" style="margin-top:8px;max-height:180px;overflow-y:auto;"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeIlcoImportModal()">Cancel</button>
+            <button class="modal-btn secondary" onclick="previewIlcoImport()">Preview</button>
+            <button class="modal-btn primary" onclick="importIlcoReference()">Import</button>
         </div>
     </div>
 </div>
@@ -5216,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v220</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v221</p>
         </div>
 
         <div class="settings-section">
@@ -5228,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v220<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v221<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8153,6 +8173,8 @@ async function uploadToCloud() {
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
+                antiqueOverrides: antiqueOverrides,
+                antiqueCustom: antiqueCustom,
                 lastUpdatedBy: currentUser.email
             });
             sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -8184,7 +8206,9 @@ async function uploadToCloud() {
                 vehicleYearNotes: vehicleYearNotes,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
-                fccRelationships: fccRelationships
+                fccRelationships: fccRelationships,
+                antiqueOverrides: antiqueOverrides,
+                antiqueCustom: antiqueCustom
             });
             allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             await personalDocRef.set(allData, { merge: true });
@@ -16290,6 +16314,7 @@ function goHome() {
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiqueDetailPanel').classList.remove('on');
     document.getElementById('antiqueInventoryPanel').classList.remove('on');
+    document.getElementById('ilcoImportModal').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -18695,6 +18720,7 @@ function closeAntiquePanel() {
     document.getElementById('antiqueDetailPanel').classList.remove('on');
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
+    document.getElementById('ilcoImportModal').classList.remove('on');
 }
 
 function closeAntiqueModelsPanel() {
@@ -18907,6 +18933,310 @@ function deleteAntiqueEntry() {
     renderAntiqueDetail(selectedAntiqueMake, selectedAntiqueModel);
     renderAntiqueModelsList(selectedAntiqueMake);
     toast('Antique entry deleted');
+}
+
+// ===================== ILCO REFERENCE PASTE IMPORT =====================
+// Bulk-import Ilco key reference rows from a standardized pasted list, the same
+// way "Paste Vehicle List" (parseVehicleListText) works for vehicles. The
+// standard format is one row per line, columns separated by "|" or a TAB:
+//     Make | Model | Years | Application | Code Series
+// Trailing columns are optional. A single-field line with no digits is a make
+// header — following lines may omit the Make column. Parsed rows land in the
+// reference store (antiqueCustom) and any matching existing key gets the code
+// series attached (attachIlcoCodeSeriesToKeys). No key blank column this round,
+// so the importer never creates new key records.
+
+// Editable alias map — fold guide spelling variants into ONE canonical make so
+// we don't end up with e.g. "Ford" and "Ford Trucks" as separate makes. Keys
+// are lowercased. Extend this as the Ilco guide throws new variants at us.
+const ILCO_MAKE_ALIASES = {
+    'ford truck': 'Ford', 'ford trucks': 'Ford',
+    'chevy': 'Chevrolet', 'chev': 'Chevrolet', 'chevrolet truck': 'Chevrolet', 'chevrolet trucks': 'Chevrolet',
+    'gmc truck': 'GMC', 'gmc trucks': 'GMC',
+    'dodge truck': 'Dodge', 'dodge trucks': 'Dodge',
+    'chrysler truck': 'Chrysler',
+    'toyota truck': 'Toyota', 'toyota trucks': 'Toyota',
+    'nissan truck': 'Nissan',
+    'vw': 'Volkswagen',
+    'mercedes': 'Mercedes Benz', 'mercedes-benz': 'Mercedes Benz', 'mercedes benz': 'Mercedes Benz',
+    'datsun': 'Nissan', 'datsun (nissan)': 'Nissan',
+    'international harvester': 'International', 'international truck': 'International',
+    'rolls-royce': 'Rolls Royce'
+};
+
+// Canonical application vocabulary matching what ANTIQUE_REFERENCE already uses.
+const ILCO_APPLICATION_CANON = {
+    'ignition': 'Ignition',
+    'door': 'Door', 'doors': 'Door',
+    'trunk': 'Trunk',
+    'glovebox': 'GB', 'glove box': 'GB', 'gb': 'GB',
+    'door/trunk': 'Door/Trunk', 'trunk/door': 'Door/Trunk',
+    'ignition/door': 'Ignition/Door', 'door/ignition': 'Ignition/Door',
+    'trunk/gb': 'Trunk/GB', 'gb/trunk': 'Trunk/GB',
+    'door/gb': 'Door/GB',
+    'all': 'All', 'valet': 'Valet'
+};
+
+// All make spellings already known to the app, so normalization can snap to an
+// existing canonical spelling instead of spawning a near-duplicate.
+function getExistingMakes() {
+    const set = new Set();
+    DB.forEach(k => (k.vehicles || []).forEach(v => { if (v.make) set.add(v.make); }));
+    customVehicles.forEach(v => { if (v.make) set.add(v.make); });
+    getAntiqueRows().forEach(r => { if (r.make) set.add(r.make); });
+    return Array.from(set);
+}
+
+function normalizeIlcoMake(make, existingMakes) {
+    let m = String(make || '').trim().replace(/\s+/g, ' ');
+    if (!m) return '';
+    const lower = m.toLowerCase();
+    if (ILCO_MAKE_ALIASES[lower]) return ILCO_MAKE_ALIASES[lower];
+    // Generic "<X> Truck" / "<X> Trucks" -> "<X>"
+    const truck = m.match(/^(.*?)[\s-]+trucks?$/i);
+    if (truck && truck[1].trim()) m = truck[1].trim();
+    const known = existingMakes || getExistingMakes();
+    const hit = known.find(e => e.toLowerCase() === m.toLowerCase());
+    return hit || m;
+}
+
+function normalizeIlcoModel(model, existingModels) {
+    let m = String(model || '').trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '');
+    if (!m) return '';
+    if (existingModels && existingModels.length) {
+        const hit = existingModels.find(e => e.toLowerCase() === m.toLowerCase());
+        if (hit) return hit;
+    }
+    return m;
+}
+
+function normalizeIlcoApplication(app) {
+    const a = String(app || '').trim();
+    if (!a) return '';
+    const key = a.toLowerCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ');
+    return ILCO_APPLICATION_CANON[key] || a; // keep unknown values verbatim
+}
+
+// Map an application string onto the app's KEY_ROLES set (ignition/door/
+// glovebox/trunk) for the key-attach step.
+function ilcoApplicationToRoles(app) {
+    const a = String(app || '').toLowerCase();
+    if (!a) return [];
+    if (a.includes('all') && !a.includes('except')) return KEY_ROLES.slice();
+    const want = [];
+    if (a.includes('ign')) want.push('ignition');
+    if (a.includes('door')) want.push('door');
+    if (a.includes('trunk') || a.includes('hatch') || a.includes('tailgate')) want.push('trunk');
+    if (a.includes('gb') || a.includes('glove')) want.push('glovebox');
+    return KEY_ROLES.filter(r => want.includes(r));
+}
+
+// Extract a start/end year from a token. Handles 4-digit years, 2- or 4-digit
+// ranges ("1965-68", "65-68", "1998 to 2003"), and single years. Mirrors the
+// 2-digit expansion used by parseVehicleListText (>=30 => 19xx, else 20xx).
+function parseIlcoYears(raw) {
+    const s = String(raw || '').trim();
+    const expand = y => { y = parseInt(y, 10); return y < 100 ? (y >= 30 ? 1900 + y : 2000 + y) : y; };
+    const m = s.match(/(\d{2,4})\s*(?:[-–—~]|to)\s*(\d{2,4})/i);
+    if (m) {
+        let a = expand(m[1]);
+        let b;
+        if (m[2].length === 2) { b = Math.floor(a / 100) * 100 + parseInt(m[2], 10); if (b < a) b += 100; }
+        else b = expand(m[2]);
+        if (b < a) { const t = a; a = b; b = t; }
+        return { startYear: a, endYear: b };
+    }
+    const one = s.match(/\d{2,4}/);
+    if (one) { const y = expand(one[0]); return { startYear: y, endYear: y }; }
+    return { startYear: null, endYear: null };
+}
+
+// A column "looks like a year" only if it carries a 4-digit 18/19/20xx year or
+// an explicit range — so model numbers like "944" aren't mistaken for years.
+function ilcoLooksLikeYear(s) {
+    if (/(?:^|\D)(?:18|19|20)\d{2}(?:\D|$)/.test(s)) return true;
+    if (/\d{2,4}\s*(?:[-–—~]|to)\s*\d{2,4}/i.test(s)) return true;
+    return false;
+}
+
+function parseIlcoReferenceText(text) {
+    const rows = [];
+    const failed = [];
+
+    const existingMakes = getExistingMakes();
+    const existingModelsByMake = {}; // lowercased make -> Set of model spellings
+    const addModel = (mk, md) => {
+        if (!mk) return;
+        const k = mk.toLowerCase();
+        (existingModelsByMake[k] = existingModelsByMake[k] || new Set());
+        if (md) existingModelsByMake[k].add(md);
+    };
+    DB.forEach(k => (k.vehicles || []).forEach(v => addModel(v.make, v.model)));
+    customVehicles.forEach(v => addModel(v.make, v.model));
+    getAntiqueRows().forEach(r => addModel(r.make, r.model));
+
+    let currentMake = '';
+
+    (text || '').split(/\r?\n/).forEach(rawLine => {
+        const line = rawLine.replace(/["<>]/g, '').trim();
+        if (!line) return;
+
+        const cols = line.split(/\s*\|\s*|\t/).map(c => c.trim());
+        // Drop empty trailing columns while keeping interior positions
+        while (cols.length && cols[cols.length - 1] === '') cols.pop();
+
+        // A single-field line with no digits sets the current make (header mode)
+        if (cols.length === 1) {
+            if (!/\d/.test(cols[0])) { currentMake = normalizeIlcoMake(cols[0], existingMakes); return; }
+            failed.push(rawLine); return;
+        }
+
+        // Years column = first column that looks like a year
+        let yi = -1;
+        for (let i = 0; i < cols.length; i++) { if (ilcoLooksLikeYear(cols[i])) { yi = i; break; } }
+        if (yi < 1) { failed.push(rawLine); return; }
+
+        const nameCols = cols.slice(0, yi).filter(Boolean);
+        const yr = parseIlcoYears(cols[yi]);
+        const application = normalizeIlcoApplication(cols[yi + 1] || '');
+        const codeSeries = String(cols[yi + 2] || '').trim();
+
+        let make, model;
+        if (nameCols.length >= 2) { make = nameCols[0]; model = nameCols.slice(1).join(' '); }
+        else if (nameCols.length === 1) {
+            if (currentMake) { make = currentMake; model = nameCols[0]; }
+            else { make = nameCols[0]; model = ''; }
+        } else { failed.push(rawLine); return; }
+
+        make = normalizeIlcoMake(make, existingMakes);
+        const model2 = normalizeIlcoModel(model, Array.from(existingModelsByMake[make.toLowerCase()] || []));
+        rows.push({
+            make,
+            model: model2 || 'All Models',
+            years: String(cols[yi]).trim(),
+            startYear: yr.startYear,
+            endYear: yr.endYear,
+            application,
+            codeSeries
+        });
+    });
+
+    return { rows, failed };
+}
+
+// Add a code-series value to a vehicle application, respecting the existing
+// string-or-array shape. Returns true when the value was newly added.
+function addCodeSeriesToVehicle(v, cs) {
+    cs = String(cs || '').trim();
+    if (!cs) return false;
+    if (Array.isArray(v.codeSeries)) {
+        const has = v.codeSeries.some(it => (typeof it === 'string' ? it : (it && it.series)) === cs);
+        if (has) return false;
+        v.codeSeries.push(cs);
+        return true;
+    }
+    const cur = String(v.codeSeries || '').trim();
+    if (!cur) { v.codeSeries = cs; return true; }
+    if (cur === cs) return false;
+    v.codeSeries = [cur, cs];
+    return true;
+}
+
+// Conservatively attach each row's code series to existing keys whose vehicle
+// applications already cover the same make + model with overlapping years.
+// Never creates keys; skips remote-only parts (code series is a cut-key idea).
+// Returns the count of distinct keys enriched.
+function attachIlcoCodeSeriesToKeys(rows) {
+    const dirtyBasePNs = new Set();
+    const dirtyCustom = new Set(); // DB indexes of custom keys
+    const overlaps = (aS, aE, bS, bE) => (aS || 0) <= (bE || bS || 9999) && (aE || aS || 9999) >= (bS || 0);
+
+    rows.forEach(row => {
+        if (!row.codeSeries || !row.make || !row.model) return;
+        const roles = ilcoApplicationToRoles(row.application);
+        DB.forEach((key, ki) => {
+            if (isRemoteOnlyKey(key)) return;
+            let changed = false;
+            (key.vehicles || []).forEach(v => {
+                if (!v.make || !v.model) return;
+                if (v.make.toLowerCase() !== row.make.toLowerCase()) return;
+                if (v.model.toLowerCase() !== row.model.toLowerCase()) return;
+                if (!overlaps(row.startYear, row.endYear, v.startYear, v.endYear)) return;
+                if (addCodeSeriesToVehicle(v, row.codeSeries)) changed = true;
+                if (roles.length && !Array.isArray(v.keyRoles)) { v.keyRoles = roles.slice(); changed = true; }
+            });
+            if (changed) { if (key.isCustom) dirtyCustom.add(ki); else dirtyBasePNs.add(key.pn); }
+        });
+    });
+
+    dirtyBasePNs.forEach(pn => { const key = DB.find(k => k.pn === pn); if (key) vehicleOverrides[pn] = key.vehicles; });
+    if (dirtyBasePNs.size) saveVehicleOverrides();
+    dirtyCustom.forEach(ki => persistCustomKeyVehicles(DB[ki], DB[ki].vehicles));
+
+    return dirtyBasePNs.size + dirtyCustom.size;
+}
+
+function openIlcoImportModal() {
+    document.getElementById('ilcoImportText').value = '';
+    document.getElementById('ilcoImportPreview').innerHTML = '';
+    document.getElementById('ilcoImportModal').classList.add('on');
+}
+
+function closeIlcoImportModal() {
+    document.getElementById('ilcoImportModal').classList.remove('on');
+}
+
+function previewIlcoImport() {
+    const { rows, failed } = parseIlcoReferenceText(document.getElementById('ilcoImportText').value);
+    const el = document.getElementById('ilcoImportPreview');
+    if (!rows.length) {
+        el.innerHTML = `<div style="color:var(--dim);padding:8px 0;font-size:12px;">No rows recognized. Use: <b>Make | Model | Years | Application | Code Series</b></div>`;
+        return;
+    }
+    const line = r => `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border);">`
+        + `${escapeJobText(r.make)} — ${escapeJobText(r.model)} — ${r.startYear}${r.endYear && r.endYear !== r.startYear ? '-' + r.endYear : ''}`
+        + `${r.application ? ' — ' + escapeJobText(r.application) : ''}`
+        + `${r.codeSeries ? ' — <b>' + escapeJobText(r.codeSeries) + '</b>' : ''}</div>`;
+    const shown = rows.slice(0, 8).map(line).join('');
+    el.innerHTML = `<div style="margin-bottom:6px;color:var(--accent);font-weight:600;font-size:12px;">`
+        + `${rows.length} row${rows.length !== 1 ? 's' : ''} recognized${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
+        + shown
+        + (rows.length > 8 ? `<div style="color:var(--dim);font-size:11px;margin-top:4px;">…and ${rows.length - 8} more</div>` : '');
+}
+
+function importIlcoReference() {
+    const { rows, failed } = parseIlcoReferenceText(document.getElementById('ilcoImportText').value);
+    if (!rows.length) {
+        toast('No rows recognized — use "Make | Model | Years | Application | Code Series"');
+        return;
+    }
+
+    // Dedupe against reference rows already present
+    const seen = new Set(getAntiqueRows().map(r => [r.make, r.model, r.years, r.application, r.codeSeries].join('|').toLowerCase()));
+    let added = 0;
+    rows.forEach(r => {
+        const sig = [r.make, r.model, r.years, r.application, r.codeSeries].join('|').toLowerCase();
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        antiqueCustom.push({
+            _id: 'c' + (++antiqueCustomSeq),
+            make: r.make, model: r.model, years: r.years,
+            startYear: r.startYear, endYear: r.endYear,
+            application: r.application, codeSeries: r.codeSeries,
+            blank: '', substitutes: '', source: 'ilco-import'
+        });
+        added++;
+    });
+    saveAntiqueData();
+
+    const enriched = attachIlcoCodeSeriesToKeys(rows);
+    triggerAutoSync();
+    closeIlcoImportModal();
+    if (document.getElementById('antiquePanel').classList.contains('on')) renderAntiqueMakeList();
+
+    toast(`${added} reference row${added !== 1 ? 's' : ''} imported`
+        + ` · ${enriched} key${enriched !== 1 ? 's' : ''} enriched`
+        + (failed.length ? ` · ${failed.length} line${failed.length !== 1 ? 's' : ''} skipped` : ''));
 }
 
 function closeVehiclePanel() {
