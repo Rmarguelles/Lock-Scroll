@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v221</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v222</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4761,10 +4761,10 @@
         <div class="modal-title">📋 Paste Ilco Reference</div>
         <div style="font-size:12px;color:var(--dim);margin-bottom:8px;line-height:1.5;">
             One row per line, columns separated by <b>|</b> or a tab:<br>
-            <code style="color:var(--text);">Make | Model | Years | Application | Code Series</code><br>
-            Application and Code Series are optional. A make on its own line becomes a header for the rows under it.
+            <code style="color:var(--text);">Make | Model | Years | Application | Code Series | Key Blank | Substitutes</code><br>
+            A row with a <b>Key Blank</b> becomes a searchable key record (find it later by typing the blank). Later columns are optional; a make on its own line becomes a header for the rows under it.
         </div>
-        <textarea id="ilcoImportText" class="modal-input" style="width:100%;min-height:140px;font-family:monospace;font-size:12px;box-sizing:border-box;" placeholder="Ford&#10;Mustang | 1965-1968 | Ignition | 1A-1500A&#10;Mustang | 1965-1968 | Door/Trunk | B1-B1500&#10;Toyota | Camry | 1992-1996 | All | 00001-30000"></textarea>
+        <textarea id="ilcoImportText" class="modal-input" style="width:100%;min-height:140px;font-family:monospace;font-size:12px;box-sizing:border-box;" placeholder="Toyota Trucks, Vans, SUVs&#10;4 Runner | 1999-2002 | All | 10001-15000 | TOY43-GTK | EK3-TOY43&#10;4 Runner | 1996-1998 | All | 10001-15000 | X217/TR47 | X225/B80&#10;Toyota | Camry | 1992-1996 | All | 00001-30000 | X217/TR47"></textarea>
         <div id="ilcoImportPreview" style="margin-top:8px;max-height:180px;overflow-y:auto;"></div>
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeIlcoImportModal()">Cancel</button>
@@ -5236,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v221</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v222</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v221<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v222<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -18393,8 +18393,12 @@ function findKeysByAnyName(names) {
 // Ilco-style name; else a newly created Non-Chip key), absorb duplicate
 // antique-generated entries into it, and attach the blank's vehicle
 // applications and alternate names. Idempotent — reruns change nothing.
-function syncAntiqueReferenceToKeys() {
-    const rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
+// onlyBlanks (optional): a Set of normalized blank strings ("/"→"-"); when
+// given, only those blanks are synced. Used by the Ilco paste import so
+// importing a few rows doesn't sweep the entire reference book into keys.
+function syncAntiqueReferenceToKeys(onlyBlanks) {
+    let rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
+    if (onlyBlanks) rows = rows.filter(r => onlyBlanks.has(String(r.blank).trim().replace(/\//g, '-')));
     const byBlank = {};
     rows.forEach(r => {
         const b = String(r.blank).trim().replace(/\//g, '-');
@@ -19100,6 +19104,12 @@ function parseIlcoReferenceText(text) {
         const yr = parseIlcoYears(cols[yi]);
         const application = normalizeIlcoApplication(cols[yi + 1] || '');
         const codeSeries = String(cols[yi + 2] || '').trim();
+        // Key blank(s) and substitute blanks — the searchable part numbers. The
+        // blank column may itself list several names ("X217/TR47" or
+        // "TOY43/TOY43-GTK"); they're kept as-is and split into searchable
+        // aliases downstream by splitAntiqueBlankNames during the key sync.
+        const blank = String(cols[yi + 3] || '').trim();
+        const substitutes = String(cols[yi + 4] || '').trim();
 
         let make, model;
         if (nameCols.length >= 2) { make = nameCols[0]; model = nameCols.slice(1).join(' '); }
@@ -19117,7 +19127,9 @@ function parseIlcoReferenceText(text) {
             startYear: yr.startYear,
             endYear: yr.endYear,
             application,
-            codeSeries
+            codeSeries,
+            blank,
+            substitutes
         });
     });
 
@@ -19190,13 +19202,14 @@ function previewIlcoImport() {
     const { rows, failed } = parseIlcoReferenceText(document.getElementById('ilcoImportText').value);
     const el = document.getElementById('ilcoImportPreview');
     if (!rows.length) {
-        el.innerHTML = `<div style="color:var(--dim);padding:8px 0;font-size:12px;">No rows recognized. Use: <b>Make | Model | Years | Application | Code Series</b></div>`;
+        el.innerHTML = `<div style="color:var(--dim);padding:8px 0;font-size:12px;">No rows recognized. Use: <b>Make | Model | Years | Application | Code Series | Key Blank</b></div>`;
         return;
     }
     const line = r => `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border);">`
         + `${escapeJobText(r.make)} — ${escapeJobText(r.model)} — ${r.startYear}${r.endYear && r.endYear !== r.startYear ? '-' + r.endYear : ''}`
         + `${r.application ? ' — ' + escapeJobText(r.application) : ''}`
-        + `${r.codeSeries ? ' — <b>' + escapeJobText(r.codeSeries) + '</b>' : ''}</div>`;
+        + `${r.codeSeries ? ' — CS ' + escapeJobText(r.codeSeries) : ''}`
+        + `${r.blank ? ' — <b>' + escapeJobText(r.blank) + '</b>' : ''}</div>`;
     const shown = rows.slice(0, 8).map(line).join('');
     el.innerHTML = `<div style="margin-bottom:6px;color:var(--accent);font-weight:600;font-size:12px;">`
         + `${rows.length} row${rows.length !== 1 ? 's' : ''} recognized${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
@@ -19211,11 +19224,13 @@ function importIlcoReference() {
         return;
     }
 
-    // Dedupe against reference rows already present
-    const seen = new Set(getAntiqueRows().map(r => [r.make, r.model, r.years, r.application, r.codeSeries].join('|').toLowerCase()));
+    // Dedupe against reference rows already present (blank is part of identity)
+    const sigOf = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank || ''].join('|').toLowerCase();
+    const seen = new Set(getAntiqueRows().map(sigOf));
     let added = 0;
+    const importedBlanks = new Set(); // normalized blanks from THIS import only
     rows.forEach(r => {
-        const sig = [r.make, r.model, r.years, r.application, r.codeSeries].join('|').toLowerCase();
+        const sig = sigOf(r);
         if (seen.has(sig)) return;
         seen.add(sig);
         antiqueCustom.push({
@@ -19223,20 +19238,37 @@ function importIlcoReference() {
             make: r.make, model: r.model, years: r.years,
             startYear: r.startYear, endYear: r.endYear,
             application: r.application, codeSeries: r.codeSeries,
-            blank: '', substitutes: '', source: 'ilco-import'
+            blank: r.blank || '', substitutes: r.substitutes || '', source: 'ilco-import'
         });
         added++;
+        if (r.blank) importedBlanks.add(String(r.blank).trim().replace(/\//g, '-'));
     });
     saveAntiqueData();
 
+    // Rows that carry a key blank become searchable key records via the existing
+    // blank-driven sync — scoped to only the blanks from THIS import so we don't
+    // sweep the whole reference book into keys. Each becomes a key searchable by
+    // every blank name, with vehicles + code series attached. Rows without a
+    // blank still enrich any key whose vehicles already match.
+    let created = 0, syncUpdated = 0;
+    if (importedBlanks.size > 0) {
+        const stats = syncAntiqueReferenceToKeys(importedBlanks);
+        if (stats) { created = stats.created || 0; syncUpdated = stats.updated || 0; }
+        buildFilters();
+        applyFilters();
+        const totalEl = document.getElementById('totalCount');
+        if (totalEl) totalEl.textContent = DB.length;
+    }
+    const withBlank = importedBlanks.size;
     const enriched = attachIlcoCodeSeriesToKeys(rows);
     triggerAutoSync();
     closeIlcoImportModal();
     if (document.getElementById('antiquePanel').classList.contains('on')) renderAntiqueMakeList();
 
-    toast(`${added} reference row${added !== 1 ? 's' : ''} imported`
-        + ` · ${enriched} key${enriched !== 1 ? 's' : ''} enriched`
-        + (failed.length ? ` · ${failed.length} line${failed.length !== 1 ? 's' : ''} skipped` : ''));
+    toast(`${added} row${added !== 1 ? 's' : ''} imported`
+        + (withBlank > 0 ? ` · ${created} key${created !== 1 ? 's' : ''} created, ${syncUpdated} updated` : '')
+        + ` · ${enriched} enriched`
+        + (failed.length ? ` · ${failed.length} skipped` : ''));
 }
 
 function closeVehiclePanel() {
