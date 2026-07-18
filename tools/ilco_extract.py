@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.0-geometry"
+EXTRACTOR_VERSION = "2.1-geometry"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -176,6 +176,10 @@ def normalize_application(app):
 
 def normalize_model(raw):
     s = " ".join(str(raw or "").split()).strip(" ,.")
+    # The guide's catch-all rows ("Models and Years not referenced elsewhere")
+    s_low = s.lower()
+    if "not referenced" in s_low or s_low == "elsewhere" or s_low == "all":
+        return "All Models"
     s = _title_words(s)
     return re.sub(r"\bW/", "w/", s)
 
@@ -192,11 +196,13 @@ def is_make_text(text):
 # Blank / substitutes cell cleanup
 # --------------------------------------------------------------------------
 
-def _expand_slash_suffixes(parts):
-    """['72147-TZ5-A01', 'A11'] -> ['72147-TZ5-A01', '72147-TZ5-A11']"""
+def _expand_oem_suffixes(names):
+    """['72147-TZ5-A01', 'A11'] -> ['72147-TZ5-A01', '72147-TZ5-A11'].
+    Only OEM-style PNs (two or more dashes) spawn suffix variants, so a short
+    code after a normal blank ('HU66-GTS', 'T48') is left alone."""
     out = []
-    for p in parts:
-        if out and "-" in out[-1] and "-" not in p and re.fullmatch(r"[A-Z]\d{2}", p):
+    for p in names:
+        if out and out[-1].count("-") >= 2 and "-" not in p and re.fullmatch(r"[A-Z]\d{2}", p):
             out.append(out[-1].rsplit("-", 1)[0] + "-" + p)
         else:
             out.append(p)
@@ -221,11 +227,17 @@ def clean_part_tokens(tokens, drop):
         t = t.strip("/")            # continuation slashes at either end
         if not t or not re.search(r"\d", t):
             continue                # real part names always carry a digit
-        for piece in _expand_slash_suffixes([p for p in t.split("/") if p]):
+        for piece in t.split("/"):
             piece = piece.rstrip("*#")
-            if piece and piece not in names:
-                names.append(piece)
-    return names
+            # Drop shrapnel from wrapped part-number lists ("13", "9", "0")
+            if len(piece) < 2 or (piece.isdigit() and len(piece) < 4):
+                continue
+            names.append(piece)
+    out = []
+    for n in _expand_oem_suffixes(names):
+        if n not in out:
+            out.append(n)
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -291,8 +303,33 @@ def _is_header_or_footer(line):
     return False
 
 
-def parse_page(words, width, state):
-    """One page of words -> row dicts. `state` carries make/model across pages."""
+def _rules_crossing(edges, col, width):
+    """Y positions of horizontal table borders that span the given column —
+    these are the real cell boundaries, better than any midpoint guess."""
+    if not edges:
+        return []
+    scale = width / REF_WIDTH if width else 1.0
+    lo, hi = next((l, h) for n, l, h in COLUMNS if n == col)
+    ys = sorted(e["top"] for e in edges
+                if e.get("x0", 0) <= (lo + 6) * scale and e.get("x1", 0) >= (hi - 6) * scale)
+    out = []
+    for y in ys:
+        if not out or y - out[-1] > 2:
+            out.append(y)
+    return out
+
+
+def _cell_extent(y, rules):
+    """(top, bottom) rule pair enclosing y; None side = unbounded."""
+    above = max((r for r in rules if r <= y), default=None)
+    below = min((r for r in rules if r > y), default=None)
+    return above, below
+
+
+def parse_page(words, width, state, edges=None):
+    """One page of words -> row dicts. `state` carries make/model across pages.
+    `edges` (pdfplumber horizontal_edges) supplies the table's real cell
+    borders when available; heuristics fill in when they're missing."""
     lines = [ln for ln in cluster_lines(words, width)]
 
     # Page-label make hint: a header like "ACURA - ALFA ROMEO" or footer "ACURA"
@@ -328,10 +365,20 @@ def parse_page(words, width, state):
         if is_make_text(mtext):
             make_anchors.append((ln["y"], normalize_make(mtext)))
         else:
-            if model_anchors and ln["y"] - model_anchors[-1][0] <= MODEL_MERGE_TOL:
+            # A wrapped label continues the one above: very close vertically,
+            # or a bit farther when the text itself signals continuation
+            # ("Caprice PPV (police &" + "Detective)").
+            merged = False
+            if model_anchors:
                 py, ptext = model_anchors[-1]
-                model_anchors[-1] = ((py + ln["y"]) / 2, ptext + " " + mtext)
-            else:
+                dy = ln["y"] - py
+                cont = (ptext.rstrip().endswith(("&", ",", "(", "-", "/"))
+                        or mtext[:1].islower()
+                        or (mtext.endswith(")") and "(" not in mtext))
+                if dy <= MODEL_MERGE_TOL or (dy <= 24 and cont):
+                    model_anchors[-1] = ((py + ln["y"]) / 2, ptext + " " + mtext)
+                    merged = True
+            if not merged:
                 model_anchors.append((ln["y"], mtext))
     # A model label printed ON an anchor line starts its model there — earlier
     # bands can't belong to it. Centered labels (between anchor lines) can be
@@ -344,11 +391,38 @@ def parse_page(words, width, state):
 
     year_lines = [(ln["y"], _line_years(ln)) for ln in lines if _line_years(ln)]
 
-    # ---- band boundaries: midpoints between consecutive anchors ----
+    # Series values, page-wide. A long range can wrap onto two lines
+    # ("HB10001-" / "HB241009") — re-join fragments before assignment.
+    raw_series = [(ln["y"], _col_text(ln, "series")) for ln in lines if _col_text(ln, "series")]
+    series_items = []
+    j = 0
+    while j < len(raw_series):
+        y, t = raw_series[j]
+        if (t.rstrip().endswith("-") and j + 1 < len(raw_series)
+                and raw_series[j + 1][0] - y <= 16):
+            y2, t2 = raw_series[j + 1]
+            series_items.append(((y + y2) / 2, t.rstrip() + t2.strip()))
+            j += 2
+        else:
+            series_items.append((y, t))
+            j += 1
+
+    # Cell-border rules per column (empty lists when the PDF has none)
+    apps_rules = _rules_crossing(edges, "apps", width)
+    model_rules = _rules_crossing(edges, "model", width)
+    start_rules = _rules_crossing(edges, "start", width)
+
+    # ---- band boundaries: real cell borders when present, else midpoints ----
     bounds = []
     for i, ay in enumerate(anchor_ys):
         lo = (anchor_ys[i - 1] + ay) / 2 if i > 0 else ay - BAND_CAP
         hi = (ay + anchor_ys[i + 1]) / 2 if i + 1 < len(anchor_ys) else ay + BAND_CAP
+        if apps_rules:
+            above, below = _cell_extent(ay, apps_rules)
+            if above is not None and ay - above <= 40:
+                lo = above
+            if below is not None and below - ay <= 40:
+                hi = below
         bounds.append((lo, hi))
 
     def band_index(y):
@@ -382,9 +456,16 @@ def parse_page(words, width, state):
 
         application = normalize_application(_col_text(anchor, "apps"))
 
-        # Years: on the anchor line, else the nearest year line (year cells
-        # are vertically centered across the rows they span).
+        # Years: on the anchor line; else the year cell whose borders contain
+        # this row; else the nearest year line (year cells are vertically
+        # centered across the rows they span).
         years = _line_years(anchor)
+        if not years and start_rules:
+            for yy, yr in year_lines:
+                above, below = _cell_extent(yy, start_rules)
+                if (above is None or above <= ay) and (below is None or ay < below):
+                    years = yr
+                    break
         if not years:
             cands = [(abs(yy - ay), yr) for yy, yr in year_lines if abs(yy - ay) <= YEAR_REACH]
             if cands:
@@ -395,13 +476,18 @@ def parse_page(words, width, state):
             continue
         state["last_years"] = years
 
-        # Code series: nearest series-cell value inside the band.
+        # Code series: value on the anchor line, else the (fragment-joined)
+        # value centered beside this row. Kept tight so a row with a genuinely
+        # empty series cell doesn't borrow its neighbor's.
         series = ""
-        best = None
-        for ln in band:
-            s = _col_text(ln, "series")
-            if s and (best is None or abs(ln["y"] - ay) < best):
-                best, series = abs(ln["y"] - ay), s
+        on_line = [t for y, t in series_items if abs(y - ay) <= ON_LINE_TOL]
+        if on_line:
+            series = on_line[0]
+        else:
+            near = [(abs(y - ay), t) for y, t in series_items
+                    if abs(y - ay) <= 14 and lo - 2 <= y < hi + 2]
+            if near:
+                series = min(near)[1]
 
         # Key blanks / substitutes: every part token inside the band.
         blank_tokens, subs_tokens = [], []
@@ -419,24 +505,37 @@ def parse_page(words, width, state):
         if not state.get("make"):
             state["make"] = page_make_hint
 
-        # Model: nearest label. An on-line label starts its model at its own
-        # line, so it can't claim earlier bands — and it acts as a barrier: a
-        # centered label below it can't reach back past it either.
-        def blocked(mark):
-            if mark["on_line"] and ay < mark["y"] - ON_LINE_TOL:
-                return True
-            if mark["y"] > ay:  # any on-line label strictly between?
-                return any(m["on_line"] and ay < m["y"] - ON_LINE_TOL and m["y"] < mark["y"]
-                           for m in model_marks)
-            return False
+        # Model. Preferred: the label whose model-column cell (real table
+        # borders) contains this row. Fallback: nearest label, where an
+        # on-line label starts its model at its own line — it can't claim
+        # earlier bands and acts as a barrier for labels below it.
+        assigned = None
+        if model_rules:
+            for mark in model_marks:
+                m_top, m_bot = _cell_extent(mark["y"], model_rules)
+                if (m_top is None or m_top <= ay) and (m_bot is None or ay < m_bot):
+                    assigned = mark["text"]
+                    break
 
-        cands = [(abs(m["y"] - ay), m["text"]) for m in model_marks if not blocked(m)]
-        if cands:
-            state["model"] = min(cands)[1]
-        elif not state.get("model") and model_marks:
-            # Page-top rows continuing a model from the previous page, with no
-            # carryover available: fall back to the first label below.
-            state["model"] = min((abs(m["y"] - ay), m["text"]) for m in model_marks)[1]
+        if assigned is None:
+            def blocked(mark):
+                if mark["on_line"] and ay < mark["y"] - ON_LINE_TOL:
+                    return True
+                if mark["y"] > ay:  # any on-line label strictly between?
+                    return any(m["on_line"] and ay < m["y"] - ON_LINE_TOL and m["y"] < mark["y"]
+                               for m in model_marks)
+                return False
+
+            cands = [(abs(m["y"] - ay), m["text"]) for m in model_marks if not blocked(m)]
+            if cands:
+                assigned = min(cands)[1]
+            elif not state.get("model") and model_marks:
+                # Page-top rows continuing a model from the previous page, with
+                # no carryover available: fall back to the nearest label below.
+                assigned = min((abs(m["y"] - ay), m["text"]) for m in model_marks)[1]
+
+        if assigned is not None:
+            state["model"] = assigned
         model = state.get("model") or "All Models"
 
         rows.append({
@@ -448,6 +547,14 @@ def parse_page(words, width, state):
             "blank": "/".join(blanks),
             "substitutes": "/".join(subs),
         })
+
+    # A make header printed BELOW the last data row (a new section starting at
+    # the bottom of the page, e.g. "ALFA ROMEO") applies to the next page.
+    last_ay = anchor_ys[-1]
+    for my, mk in make_anchors:
+        if my > last_ay:
+            state["make"] = mk
+            state["model"] = ""
     return rows
 
 
@@ -473,7 +580,11 @@ def parse_pdf(pdf_path, pages=None):
             page_list = pdf.pages[lo - 1:hi]
         for page in page_list:
             words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
-            rows += parse_page(words, page.width, state)
+            try:
+                h_edges = page.horizontal_edges
+            except Exception:
+                h_edges = None
+            rows += parse_page(words, page.width, state, edges=h_edges)
     return rows
 
 
