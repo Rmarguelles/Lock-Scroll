@@ -4,7 +4,7 @@
 the format Lock & Scroll's **Paste Ilco Reference** importer accepts:
 
 ```
-Make | Model | Years | Application | Code Series | Key Blank | Substitutes
+Make | Model | Years | Application | Code Series | Key Blank
 ```
 
 You run it on **your own computer** against the full PDF, then paste the output

@@ -4,7 +4,7 @@ ilco_extract.py — pull vehicle key data out of the Ilco key reference guide PD
 and write it in the pipe-delimited format that Lock & Scroll's
 "Paste Ilco Reference" importer understands:
 
-    Make | Model | Years | Application | Code Series | Key Blank | Substitutes
+    Make | Model | Years | Application | Code Series | Key Blank
 
 Fully offline: the only dependency is pdfplumber. You run this on your own
 computer against the full PDF, then paste the output into the app
@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.2-geometry"
+EXTRACTOR_VERSION = "2.3-clean"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -126,7 +126,6 @@ HEADER_WORDS = {"apps", "series", "(plastic)", "substitues", "substitutes",
                 "transponder", "equipment"}
 # Blank-cell tokens that are markers/noise, never part numbers.
 BLANK_DROP = {"oem#", "or", "-", "–"}
-SUBS_DROP = {"service", "key", "-", "–", "emerg.", "emerg", "emergency"}
 
 
 # --------------------------------------------------------------------------
@@ -196,6 +195,27 @@ def is_make_text(text):
 # Blank / substitutes cell cleanup
 # --------------------------------------------------------------------------
 
+# Packaging variants of the same physical blank: EK3P-B111, EK3LB-B111,
+# B111-PT, B111-GTK are all the B111. Reduce every name to its core blank so
+# the import matches the user's existing clean key names instead of creating
+# noisy variants.
+BLANK_PREFIX_RE = re.compile(r"^(EK3P|EK3LB|EK3)-", re.IGNORECASE)
+BLANK_SUFFIX_RE = re.compile(r"-(PT5|PT|GTK|GTS|SVC|NP|PC|P)$", re.IGNORECASE)
+BLANK_FOOTNOTE_RE = re.compile(r"-\d+/\d+$")  # "(B62-P-1/15)" page footnote
+
+
+def simplify_blank_name(name):
+    r = BLANK_FOOTNOTE_RE.sub("", name)
+    r = BLANK_PREFIX_RE.sub("", r)
+    prev = None
+    while prev != r:
+        prev = r
+        stripped = BLANK_SUFFIX_RE.sub("", r)
+        if stripped != r and re.search(r"\d", stripped) and len(stripped) >= 2:
+            r = stripped
+    return r if re.search(r"\d", r) else name
+
+
 def _expand_oem_suffixes(names):
     """['72147-TZ5-A01', 'A11'] -> ['72147-TZ5-A01', '72147-TZ5-A11'].
     Only OEM-style PNs (two or more dashes) spawn suffix variants, so a short
@@ -219,11 +239,15 @@ def clean_part_tokens(tokens, drop):
         # variant brackets like "[-P]", "[-P,", "-PC]"
         if t.startswith("[") or t.endswith("]"):
             continue
-        # parenthetical notes: "(LAL)", or inline "HO03-PT(V)" -> "HO03-PT"
+        # A fully parenthesized part like "(B62-P-1/15)" is unwrapped; inline
+        # parenthetical notes ("(LAL)", "HO03-PT(V)") are removed.
+        if t.startswith("(") and t.endswith(")"):
+            t = t[1:-1]
         t = re.sub(r"\([^)]*\)", "", t).strip().strip(",")
         if not t or t.lower() in drop:
             continue
         t = t.rstrip("*#")          # footnote markers
+        t = BLANK_FOOTNOTE_RE.sub("", t)  # "B62-P-1/15" page footnote
         t = t.strip("/")            # continuation slashes at either end
         if not t or not re.search(r"\d", t):
             continue                # real part names always carry a digit
@@ -235,6 +259,7 @@ def clean_part_tokens(tokens, drop):
             names.append(piece)
     out = []
     for n in _expand_oem_suffixes(names):
+        n = simplify_blank_name(n)
         if n not in out:
             out.append(n)
     return out
@@ -489,13 +514,13 @@ def parse_page(words, width, state, edges=None):
             if near:
                 series = min(near)[1]
 
-        # Key blanks / substitutes: every part token inside the band.
-        blank_tokens, subs_tokens = [], []
+        # Key blanks: every part token inside the band. (The guide's
+        # Substitutes column is deliberately ignored — it adds noisy alternate
+        # part numbers the user doesn't want in their database.)
+        blank_tokens = []
         for ln in band:
             blank_tokens += [t for _, t in ln["cols"].get("blank", [])]
-            subs_tokens += [t for _, t in ln["cols"].get("subs", [])]
         blanks = clean_part_tokens(blank_tokens, BLANK_DROP)
-        subs = clean_part_tokens(subs_tokens, SUBS_DROP)
 
         # Make: last make header above this row (carries across pages).
         for my, mk in make_anchors:
@@ -557,7 +582,6 @@ def parse_page(words, width, state, edges=None):
             "application": application,
             "codeSeries": series,
             "blank": "/".join(blanks),
-            "substitutes": "/".join(subs),
         })
 
     # A make header printed BELOW the last data row (a new section starting at
@@ -573,7 +597,7 @@ def parse_page(words, width, state, edges=None):
 def format_row(r):
     return " | ".join([
         r["make"], r["model"], r["years"], r["application"],
-        r["codeSeries"], r["blank"], r["substitutes"],
+        r["codeSeries"], r["blank"],
     ]).rstrip(" |")
 
 
@@ -639,14 +663,16 @@ def selftest():
         return any(g.startswith(prefix) for g in got)
 
     checks = [
-        # Merged model cell + years centered across All/Valet rows
-        "Acura | MDX | 2007-2013 | All | K001-N718 | HO03-PT/EK3P-HO03/EK3LB-HO03/HO03-GTK | HO01-SVC",
-        "Acura | MDX | 2001-2006 | All | 5001-8442 | HD106-PT/HD106-PT5 | HD103-NP",
-        "Acura | MDX | 2001-2006 | Valet | 5001-8442 | HD107-PT/HD107-PT5 | HD103-NP",
-        # OEM# multi-line cell with A01/A11 suffix expansion
-        "Acura | MDX | 2014-2017 | All | K001-N718 | 72147-TZ5-A01/72147-TZ5-A11 | HO01-SVC",
-        # Model label centered over its whole span (NSX), old X-style blanks
-        "Acura | NSX | 1991-1996 | All | 5001-8442 | X204/HD99 | X214/HD103",
+        # Merged model cell + years centered; packaging variants reduced to
+        # the core blank (HO03-PT/EK3P-HO03/EK3LB-HO03/HO03-GTK -> HO03)
+        "Acura | MDX | 2007-2013 | All | K001-N718 | HO03",
+        "Acura | MDX | 2001-2006 | All | 5001-8442 | HD106",
+        "Acura | MDX | 2001-2006 | Valet | 5001-8442 | HD107",
+        # OEM# multi-line cell with A01/A11 suffix expansion (kept verbatim)
+        "Acura | MDX | 2014-2017 | All | K001-N718 | 72147-TZ5-A01/72147-TZ5-A11",
+        # Model label centered over its whole span (NSX), old X-style blanks;
+        # the guide's Substitutes column is ignored entirely
+        "Acura | NSX | 1991-1996 | All | 5001-8442 | X204/HD99",
         "Acura | NSX | 1991-1996 | Valet | 5001-8442 | X205/HD100",
         # Band with no code series at all (2022+ prox)
         "Acura | RDX | 2022-2025 | All |  | 72147-TJB-A21/72147-TJB-A31",
@@ -654,23 +680,24 @@ def selftest():
         "Acura | TL | 1995-1998 | All | 5001-8442 | X214/HD103",
         "Acura | TLX Base | 2021-2025 | All | K001-N718 | 72147-TGV-A01/72147-TGV-A11",
         # Model between two candidates resolves by distance (TSX not TLX)
-        "Acura | TSX | 2009-2014 | All | K001-N718 | HO03-PT/EK3P-HO03/EK3LB-HO03/HO03-GTK",
-        # Substitutes column with X-style names
-        "Acura | Vigor | 1992-1994 | All | 3001-4481 | X208/HD101 | X183/HD92",
-        "Acura | Vigor | 1992-1994 | Valet | 3001-4481 | X209/HD102 | X189/HD93",
+        "Acura | TSX | 2009-2014 | All | K001-N718 | HO03",
+        "Acura | Vigor | 1992-1994 | All | 3001-4481 | X208/HD101",
+        "Acura | Vigor | 1992-1994 | Valet | 3001-4481 | X209/HD102",
         # Wrapped model label ("ZDX W/ REGULAR" + "IGNITION")
         "Acura | ZDX w/ Regular Ignition | 2010-2012 | All | K001-N718",
         # Model label on its own anchor line (prox variant vs base model)
         "Acura | TL w/ Prox | 2009-2014 | All | K001-N718 | 72147-TK4-A71/72147-TK4-A81",
-        # Trailing-"/" continuation must not leak into the next band (Vigor
-        # keeps only its own X-blanks; TSX keeps its GTK line)
-        "Acura | TSX | 2004-2008 | All | 5001-8442 | HD111-PT/EK3P-HD111/EK3LB-HD111/HD111-GTK",
+        # Trailing-"/" continuation stays in its band; variants reduce to HD111
+        "Acura | TSX | 2004-2008 | All | 5001-8442 | HD111",
     ]
     ok = True
     for c in checks:
         if not has(c):
             print("FAIL missing:", c)
             ok = False
+    if any("HO01-SVC" in g or "HD103-NP" in g for g in got):
+        print("FAIL: substitutes column leaked into output")
+        ok = False
     # The Alfa Romeo blank-board and legend lines must produce no rows
     if any(g.startswith("Alfa Romeo") for g in got):
         print("FAIL: Alfa Romeo section header leaked rows")

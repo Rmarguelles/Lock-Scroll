@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v223</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v224</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5236,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v223</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v224</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v223<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v224<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -18559,10 +18559,13 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
             if (r.codeSeries) {
                 if (!veh.codeSeries) veh.codeSeries = [];
                 if (!Array.isArray(veh.codeSeries)) veh.codeSeries = [{ years: `${sy}-${ey}`, series: veh.codeSeries }];
-                if (!veh.codeSeries.some(cs => cs.series === r.codeSeries)) {
-                    veh.codeSeries.push({ years: r.years || `${sy}-${ey}`, series: r.codeSeries });
-                    touched = true;
-                }
+                // "L, M" is TWO code series (L and M), not one combined value
+                String(r.codeSeries).split(',').map(s => s.trim()).filter(Boolean).forEach(csVal => {
+                    if (!veh.codeSeries.some(cs => cs.series === csVal)) {
+                        veh.codeSeries.push({ years: r.years || `${sy}-${ey}`, series: csVal });
+                        touched = true;
+                    }
+                });
             }
             if (r.application) appLines.add(`${r.make} ${model} ${r.years || ''}: ${r.application}`.replace(/\s+/g, ' ').trim());
             if (r.substitutes) String(r.substitutes).split(',').map(s => s.trim()).filter(Boolean).forEach(s => substitutes.add(s));
@@ -19187,6 +19190,8 @@ function attachIlcoCodeSeriesToKeys(rows) {
     rows.forEach(row => {
         if (!row.codeSeries || !row.make || !row.model) return;
         const roles = ilcoApplicationToRoles(row.application);
+        // "L, M" is TWO code series (L and M), not one combined value
+        const csParts = String(row.codeSeries).split(',').map(s => s.trim()).filter(Boolean);
         DB.forEach((key, ki) => {
             if (isRemoteOnlyKey(key)) return;
             let changed = false;
@@ -19195,7 +19200,7 @@ function attachIlcoCodeSeriesToKeys(rows) {
                 if (v.make.toLowerCase() !== row.make.toLowerCase()) return;
                 if (v.model.toLowerCase() !== row.model.toLowerCase()) return;
                 if (!overlaps(row.startYear, row.endYear, v.startYear, v.endYear)) return;
-                if (addCodeSeriesToVehicle(v, row.codeSeries)) changed = true;
+                csParts.forEach(csVal => { if (addCodeSeriesToVehicle(v, csVal)) changed = true; });
                 if (roles.length && !Array.isArray(v.keyRoles)) { v.keyRoles = roles.slice(); changed = true; }
             });
             if (changed) { if (key.isCustom) dirtyCustom.add(ki); else dirtyBasePNs.add(key.pn); }
@@ -19219,6 +19224,11 @@ function closeIlcoImportModal() {
     document.getElementById('ilcoImportModal').classList.remove('on');
 }
 
+// The import "sorting funnel", made visible before anything is committed:
+// each row is checked against the EXISTING database — does the make exist,
+// does the model exist under that make, and does the key blank resolve to a
+// key already in the DB (via every name it's known by)? Rows that would
+// create anything new are flagged so clean data stays clean.
 function previewIlcoImport() {
     const { rows, failed } = parseIlcoReferenceText(document.getElementById('ilcoImportText').value);
     const el = document.getElementById('ilcoImportPreview');
@@ -19226,16 +19236,60 @@ function previewIlcoImport() {
         el.innerHTML = `<div style="color:var(--dim);padding:8px 0;font-size:12px;">No rows recognized. Use: <b>Make | Model | Years | Application | Code Series | Key Blank</b></div>`;
         return;
     }
-    const line = r => `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border);">`
-        + `${escapeJobText(r.make)} — ${escapeJobText(r.model)} — ${r.startYear}${r.endYear && r.endYear !== r.startYear ? '-' + r.endYear : ''}`
-        + `${r.application ? ' — ' + escapeJobText(r.application) : ''}`
-        + `${r.codeSeries ? ' — CS ' + escapeJobText(r.codeSeries) : ''}`
-        + `${r.blank ? ' — <b>' + escapeJobText(r.blank) + '</b>' : ''}</div>`;
-    const shown = rows.slice(0, 8).map(line).join('');
+
+    // Existing make/model universe (same sources the importer snaps to)
+    const makes = new Set();
+    const modelsByMake = {};
+    const addMM = (mk, md) => {
+        if (!mk) return;
+        const k = mk.toLowerCase();
+        makes.add(k);
+        (modelsByMake[k] = modelsByMake[k] || new Set());
+        if (md) modelsByMake[k].add(md.toLowerCase());
+    };
+    DB.forEach(k => (k.vehicles || []).forEach(v => addMM(v.make, v.model)));
+    customVehicles.forEach(v => addMM(v.make, v.model));
+
+    let matchedKeys = 0, newKeys = 0;
+    const newMakes = new Set(), newModels = new Set();
+    const verdicts = rows.map(r => {
+        const mkKnown = makes.has(r.make.toLowerCase());
+        const mdKnown = mkKnown && (modelsByMake[r.make.toLowerCase()] || new Set()).has(r.model.toLowerCase());
+        if (!mkKnown) newMakes.add(r.make);
+        else if (!mdKnown) newModels.add(r.make + ' ' + r.model);
+        let keyBadge = '';
+        if (r.blank) {
+            const hits = findKeysByAnyName(splitAntiqueBlankNames(r.blank));
+            if (hits.length > 0) {
+                matchedKeys++;
+                keyBadge = `<span style="color:var(--accent);">→ ${escapeJobText(String(DB[hits[0]].pn))}</span>`;
+            } else {
+                newKeys++;
+                keyBadge = `<span style="color:#e5a50a;">→ NEW key</span>`;
+            }
+        }
+        return { r, mkKnown, mdKnown, keyBadge };
+    });
+
+    const line = v => `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border);">`
+        + `<span style="${v.mkKnown ? '' : 'color:#e5a50a;'}">${escapeJobText(v.r.make)}</span> — `
+        + `<span style="${v.mkKnown && !v.mdKnown ? 'color:#e5a50a;' : ''}">${escapeJobText(v.r.model)}</span>`
+        + ` — ${v.r.startYear}${v.r.endYear && v.r.endYear !== v.r.startYear ? '-' + v.r.endYear : ''}`
+        + `${v.r.application ? ' — ' + escapeJobText(v.r.application) : ''}`
+        + `${v.r.codeSeries ? ' — CS ' + escapeJobText(v.r.codeSeries) : ''}`
+        + `${v.r.blank ? ' — <b>' + escapeJobText(v.r.blank) + '</b> ' + v.keyBadge : ''}</div>`;
+
+    const warn = [];
+    if (newMakes.size) warn.push(`<div style="color:#e5a50a;font-size:11px;margin-top:4px;">⚠ New makes: ${escapeJobText(Array.from(newMakes).join(', '))}</div>`);
+    if (newModels.size) warn.push(`<div style="color:#e5a50a;font-size:11px;margin-top:2px;">⚠ New models: ${escapeJobText(Array.from(newModels).slice(0, 10).join(', '))}${newModels.size > 10 ? ` …and ${newModels.size - 10} more` : ''}</div>`);
+
+    const shown = verdicts.slice(0, 12).map(line).join('');
     el.innerHTML = `<div style="margin-bottom:6px;color:var(--accent);font-weight:600;font-size:12px;">`
-        + `${rows.length} row${rows.length !== 1 ? 's' : ''} recognized${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
+        + `${rows.length} row${rows.length !== 1 ? 's' : ''} · ${matchedKeys} match existing keys · ${newKeys} would create new keys`
+        + `${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
+        + warn.join('')
         + shown
-        + (rows.length > 8 ? `<div style="color:var(--dim);font-size:11px;margin-top:4px;">…and ${rows.length - 8} more</div>` : '');
+        + (rows.length > 12 ? `<div style="color:var(--dim);font-size:11px;margin-top:4px;">…and ${rows.length - 12} more</div>` : '');
 }
 
 function importIlcoReference() {
