@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.1-geometry"
+EXTRACTOR_VERSION = "2.2-geometry"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -511,11 +511,23 @@ def parse_page(words, width, state, edges=None):
         # earlier bands and acts as a barrier for labels below it.
         assigned = None
         if model_rules:
+            first_rule = model_rules[0]
             for mark in model_marks:
                 m_top, m_bot = _cell_extent(mark["y"], model_rules)
-                if (m_top is None or m_top <= ay) and (m_bot is None or ay < m_bot):
+                if m_top is None:
+                    # Label sits above the page's first cell border — it only
+                    # claims rows that are also in that unruled top zone.
+                    top_ok = ay < first_rule and mark["y"] < first_rule
+                else:
+                    top_ok = m_top <= ay
+                bot_ok = m_bot is None or ay < m_bot
+                if top_ok and bot_ok:
                     assigned = mark["text"]
                     break
+            if assigned is None and ay < first_rule and state.get("model"):
+                # Continuation rows at the top of a page (their model label
+                # stayed on the previous page) keep the carried-over model.
+                assigned = state["model"]
 
         if assigned is None:
             def blocked(mark):
