@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v226</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v227</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4702,6 +4702,7 @@
             <button onclick="openAntiqueInventoryPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📦 Count Inventory</button>
         </div>
         <button onclick="openIlcoImportModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Ilco Reference</button>
+        <button onclick="openIlcoReviewPanel()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📥 Import Review</button>
     </div>
     <div class="vehicle-list" id="antiqueMakeList"></div>
 </div>
@@ -4770,6 +4771,45 @@
             <button class="modal-btn secondary" onclick="closeIlcoImportModal()">Cancel</button>
             <button class="modal-btn secondary" onclick="previewIlcoImport()">Preview</button>
             <button class="modal-btn primary" onclick="importIlcoReference()">Import</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ilco Import Review: unmatched entries + FCC pairing -->
+<div class="vehicle-panel" id="ilcoReviewPanel" style="z-index:254;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeIlcoReviewPanel()">←</button>
+        <div class="vehicle-title">📥 Ilco Import Review</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button id="ilcoTabQueueBtn" onclick="switchIlcoReviewTab('queue')" style="flex:1;padding:10px;border:1px solid var(--accent);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Unmatched</button>
+            <button id="ilcoTabFccBtn" onclick="switchIlcoReviewTab('fcc')" style="flex:1;padding:10px;border:1px solid var(--accent);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Pair FCC IDs</button>
+        </div>
+    </div>
+    <div class="vehicle-list" id="ilcoReviewList"></div>
+</div>
+
+<!-- Ilco Review Edit / Attach Modal -->
+<div class="modal" id="ilcoReviewEditModal" style="z-index:300;">
+    <div class="modal-content" style="max-width:440px;">
+        <div class="modal-title">Review Entry</div>
+        <div class="modal-input-group"><label>Make</label><input type="text" class="modal-input" id="ilcoRevMake"></div>
+        <div class="modal-input-group"><label>Model</label><input type="text" class="modal-input" id="ilcoRevModel"></div>
+        <div class="modal-input-group"><label>Years <span style="color:var(--dim);font-size:11px;">(e.g. 2019-2020)</span></label><input type="text" class="modal-input" id="ilcoRevYears"></div>
+        <div class="modal-input-group"><label>Application</label><input type="text" class="modal-input" id="ilcoRevApp"></div>
+        <div class="modal-input-group"><label>Code Series <span style="color:var(--dim);font-size:11px;">(comma = separate series)</span></label><input type="text" class="modal-input" id="ilcoRevSeries"></div>
+        <div class="modal-input-group"><label>Key Blank / PNs <span style="color:var(--dim);font-size:11px;">("/" separates names)</span></label><input type="text" class="modal-input" id="ilcoRevBlank"></div>
+        <div class="modal-input-group" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="ilcoRevProx" style="width:auto;"><label for="ilcoRevProx" style="margin:0;">Proximity key</label></div>
+        <div class="modal-input-group"><label>Attach to existing key <span style="color:var(--dim);font-size:11px;">(type its PN)</span></label>
+            <div style="display:flex;gap:8px;">
+                <input type="text" class="modal-input" id="ilcoRevAttachPn" placeholder="e.g. B111" style="flex:1;">
+                <button class="modal-btn primary" onclick="attachIlcoReviewEntry()" style="white-space:nowrap;">Attach</button>
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="dismissIlcoReviewEntry(ilcoReviewEditingId)" style="background:#5a1f1f;color:#fff;">Discard</button>
+            <button class="modal-btn secondary" onclick="closeIlcoReviewEdit()">Cancel</button>
+            <button class="modal-btn secondary" onclick="saveIlcoReviewEdit()">Save</button>
+            <button class="modal-btn primary" onclick="createKeyFromIlcoReview()">Create Key</button>
         </div>
     </div>
 </div>
@@ -5236,7 +5276,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v226</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v227</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5288,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v226<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v227<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8175,6 +8215,7 @@ async function uploadToCloud() {
                 fccRelationships: fccRelationships,
                 antiqueOverrides: antiqueOverrides,
                 antiqueCustom: antiqueCustom,
+                ilcoReviewQueue: ilcoReviewQueue,
                 lastUpdatedBy: currentUser.email
             });
             sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -8208,7 +8249,8 @@ async function uploadToCloud() {
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
                 antiqueOverrides: antiqueOverrides,
-                antiqueCustom: antiqueCustom
+                antiqueCustom: antiqueCustom,
+                ilcoReviewQueue: ilcoReviewQueue
             });
             allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             await personalDocRef.set(allData, { merge: true });
@@ -8435,6 +8477,21 @@ async function downloadFromCloud() {
         if (data.fccRelationships) {
             fccRelationships = { ...fccRelationships, ...data.fccRelationships };
             saveToIndexedDB('fccRelationships', fccRelationships);
+        }
+
+        if (data.antiqueOverrides && typeof data.antiqueOverrides === 'object') {
+            antiqueOverrides = data.antiqueOverrides;
+            saveToIndexedDB('antiqueOverrides', antiqueOverrides);
+        }
+        if (Array.isArray(data.antiqueCustom)) {
+            antiqueCustom = data.antiqueCustom;
+            antiqueCustomSeq = antiqueCustom.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^c/, '')) || 0), 0);
+            saveToIndexedDB('antiqueCustom', antiqueCustom);
+        }
+        if (Array.isArray(data.ilcoReviewQueue)) {
+            ilcoReviewQueue = data.ilcoReviewQueue;
+            ilcoReviewSeq = ilcoReviewQueue.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^q/, '')) || 0), 0);
+            saveToIndexedDB('ilcoReviewQueue', ilcoReviewQueue);
         }
 
         // The customKeys merge above is by PN, so a rename done here can be
@@ -10612,6 +10669,7 @@ async function init() {
     await loadCustomKeys();
     await loadCustomVehicles();
     await loadAntiqueData();
+    await loadIlcoReviewQueue();
     await loadKeyRelationships();
     await runFrequencyBucketMigration();
     await runVatsChipMergeMigration();
@@ -16316,6 +16374,8 @@ function goHome() {
     document.getElementById('antiqueDetailPanel').classList.remove('on');
     document.getElementById('antiqueInventoryPanel').classList.remove('on');
     document.getElementById('ilcoImportModal').classList.remove('on');
+    document.getElementById('ilcoReviewPanel').classList.remove('on');
+    document.getElementById('ilcoReviewEditModal').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -18052,7 +18112,8 @@ function exportData() {
         keyRelationships: keyRelationships,
         fccRelationships: fccRelationships,
         antiqueOverrides: antiqueOverrides,
-        antiqueCustom: antiqueCustom
+        antiqueCustom: antiqueCustom,
+        ilcoReviewQueue: ilcoReviewQueue
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -18188,6 +18249,11 @@ function importData(event) {
                 if (Array.isArray(data.antiqueCustom)) {
                     antiqueCustom = data.antiqueCustom;
                     antiqueCustomSeq = antiqueCustom.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^c/, '')) || 0), 0);
+                }
+                if (Array.isArray(data.ilcoReviewQueue)) {
+                    ilcoReviewQueue = data.ilcoReviewQueue;
+                    ilcoReviewSeq = ilcoReviewQueue.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^q/, '')) || 0), 0);
+                    saveIlcoReviewQueue();
                 }
                 saveAntiqueData();
             }
@@ -18752,6 +18818,8 @@ function closeAntiquePanel() {
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
     document.getElementById('ilcoImportModal').classList.remove('on');
+    document.getElementById('ilcoReviewPanel').classList.remove('on');
+    document.getElementById('ilcoReviewEditModal').classList.remove('on');
 }
 
 function closeAntiqueModelsPanel() {
@@ -19283,7 +19351,7 @@ function previewIlcoImport() {
                            : ' <span style="color:var(--dim);font-size:10px;">+ adds vehicle</span>');
             } else {
                 newKeys++;
-                keyBadge = `<span style="color:#e5a50a;">→ NEW key</span>`;
+                keyBadge = `<span style="color:#e5a50a;">→ review list</span>`;
             }
         }
         return { r, mkKnown, mdKnown, keyBadge };
@@ -19306,7 +19374,7 @@ function previewIlcoImport() {
     el.innerHTML = `<div style="margin-bottom:6px;color:var(--accent);font-weight:600;font-size:12px;">`
         + `${rows.length} row${rows.length !== 1 ? 's' : ''} · ${matchedKeys} match existing keys`
         + `${alreadyListed ? ` (${alreadyListed} already listed)` : ''}`
-        + ` · ${newKeys} would create new keys`
+        + ` · ${newKeys} to review list`
         + `${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
         + warn.join('')
         + shown
@@ -19320,15 +19388,35 @@ function importIlcoReference() {
         return;
     }
 
-    // Dedupe against reference rows already present (blank is part of identity)
+    // Dedupe against reference rows AND queue entries already present
     const sigOf = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank || '', r.keyType || ''].join('|').toLowerCase();
     const seen = new Set(getAntiqueRows().map(sigOf));
-    let added = 0;
-    const importedBlanks = new Set(); // normalized blanks from THIS import only
+    ilcoReviewQueue.forEach(q => seen.add(sigOf(q)));
+
+    let added = 0, queued = 0;
+    const importedBlanks = new Set(); // normalized MATCHED blanks from THIS import
+    const acceptedRows = [];
     rows.forEach(r => {
         const sig = sigOf(r);
         if (seen.has(sig)) return;
         seen.add(sig);
+
+        // The funnel gate: a blank that doesn't resolve to ANY existing key
+        // goes to the review queue for manual pairing — it never auto-creates
+        // a key, so the clean database stays clean.
+        const matched = r.blank && findKeysByAnyName(splitAntiqueBlankNames(r.blank)).length > 0;
+        if (r.blank && !matched) {
+            ilcoReviewQueue.push({
+                _id: 'q' + (++ilcoReviewSeq),
+                make: r.make, model: r.model, years: r.years,
+                startYear: r.startYear, endYear: r.endYear,
+                application: r.application, codeSeries: r.codeSeries,
+                blank: r.blank, keyType: r.keyType || ''
+            });
+            queued++;
+            return;
+        }
+
         antiqueCustom.push({
             _id: 'c' + (++antiqueCustomSeq),
             make: r.make, model: r.model, years: r.years,
@@ -19336,35 +19424,325 @@ function importIlcoReference() {
             application: r.application, codeSeries: r.codeSeries,
             blank: r.blank || '', keyType: r.keyType || '', substitutes: '', source: 'ilco-import'
         });
+        acceptedRows.push(r);
         added++;
         if (r.blank) importedBlanks.add(String(r.blank).trim().replace(/\//g, '-'));
     });
     saveAntiqueData();
+    if (queued > 0) saveIlcoReviewQueue();
 
-    // Rows that carry a key blank become searchable key records via the existing
-    // blank-driven sync — scoped to only the blanks from THIS import so we don't
-    // sweep the whole reference book into keys. Each becomes a key searchable by
-    // every blank name, with vehicles + code series attached. Rows without a
-    // blank still enrich any key whose vehicles already match.
-    let created = 0, syncUpdated = 0;
+    // Matched blanks attach their vehicles/aliases to the existing keys via
+    // the blank-driven sync (scoped to this import). Rows without a blank
+    // still enrich any key whose vehicles already match.
+    let syncUpdated = 0;
     if (importedBlanks.size > 0) {
         const stats = syncAntiqueReferenceToKeys(importedBlanks);
-        if (stats) { created = stats.created || 0; syncUpdated = stats.updated || 0; }
+        if (stats) syncUpdated = stats.updated || 0;
         buildFilters();
         applyFilters();
         const totalEl = document.getElementById('totalCount');
         if (totalEl) totalEl.textContent = DB.length;
     }
-    const withBlank = importedBlanks.size;
-    const enriched = attachIlcoCodeSeriesToKeys(rows);
+    const enriched = attachIlcoCodeSeriesToKeys(acceptedRows);
     triggerAutoSync();
     closeIlcoImportModal();
     if (document.getElementById('antiquePanel').classList.contains('on')) renderAntiqueMakeList();
 
-    toast(`${added} row${added !== 1 ? 's' : ''} imported`
-        + (withBlank > 0 ? ` · ${created} key${created !== 1 ? 's' : ''} created, ${syncUpdated} updated` : '')
-        + ` · ${enriched} enriched`
+    toast(`${added} row${added !== 1 ? 's' : ''} imported · ${syncUpdated} key${syncUpdated !== 1 ? 's' : ''} updated · ${enriched} enriched`
+        + (queued ? ` · ${queued} to review` : '')
         + (failed.length ? ` · ${failed.length} skipped` : ''));
+}
+
+// ===================== ILCO IMPORT REVIEW QUEUE =====================
+// Rows whose key blank matched nothing in the database wait here for manual
+// review: edit any field, attach to an existing key by PN, approve as a new
+// key, or dismiss. Nothing in the queue touches the key database until acted
+// on. A second tab lists imported keys still missing a real FCC ID so they
+// can be paired later.
+let ilcoReviewQueue = [];
+let ilcoReviewSeq = 0;
+let ilcoReviewTab = 'queue';
+let ilcoReviewEditingId = null;
+
+function saveIlcoReviewQueue() {
+    saveToIndexedDB('ilcoReviewQueue', ilcoReviewQueue);
+    triggerAutoSync();
+}
+
+async function loadIlcoReviewQueue() {
+    try {
+        const q = await loadFromIndexedDB('ilcoReviewQueue');
+        if (Array.isArray(q)) {
+            ilcoReviewQueue = q;
+            ilcoReviewSeq = q.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^q/, '')) || 0), 0);
+        }
+    } catch (e) {
+        console.error('Error loading ilco review queue:', e);
+    }
+}
+
+function openIlcoReviewPanel() {
+    ilcoReviewTab = 'queue';
+    renderIlcoReviewPanel();
+    document.getElementById('ilcoReviewPanel').classList.add('on');
+}
+
+function closeIlcoReviewPanel() {
+    document.getElementById('ilcoReviewPanel').classList.remove('on');
+    document.getElementById('ilcoReviewEditModal').classList.remove('on');
+}
+
+function switchIlcoReviewTab(tab) {
+    ilcoReviewTab = tab;
+    renderIlcoReviewPanel();
+}
+
+function renderIlcoReviewPanel() {
+    const qBtn = document.getElementById('ilcoTabQueueBtn');
+    const fBtn = document.getElementById('ilcoTabFccBtn');
+    if (qBtn) {
+        qBtn.style.background = ilcoReviewTab === 'queue' ? 'var(--accent)' : 'var(--bg)';
+        qBtn.style.color = ilcoReviewTab === 'queue' ? '#000' : 'var(--accent)';
+        qBtn.textContent = `Unmatched (${ilcoReviewQueue.length})`;
+    }
+    if (fBtn) {
+        fBtn.style.background = ilcoReviewTab === 'fcc' ? 'var(--accent)' : 'var(--bg)';
+        fBtn.style.color = ilcoReviewTab === 'fcc' ? '#000' : 'var(--accent)';
+        fBtn.textContent = `Pair FCC IDs (${getIlcoFccPairable().length})`;
+    }
+    if (ilcoReviewTab === 'queue') renderIlcoReviewList();
+    else renderIlcoFccList();
+}
+
+function renderIlcoReviewList() {
+    const el = document.getElementById('ilcoReviewList');
+    if (ilcoReviewQueue.length === 0) {
+        el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No unmatched entries — everything paired to existing keys.</div>`;
+        return;
+    }
+    el.innerHTML = ilcoReviewQueue.map(q => `
+        <div class="vehicle-card">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title">${escapeJobText(q.make)} ${escapeJobText(q.model)} ${escapeJobText(q.years || '')}</div>
+                ${q.keyType === 'Prox' ? '<span style="color:var(--accent2);font-size:10px;">PROX</span>' : ''}
+            </div>
+            <div style="font-size:12px;color:var(--dim);margin:2px 0 8px;">
+                ${q.application ? escapeJobText(q.application) + ' · ' : ''}${q.codeSeries ? 'CS ' + escapeJobText(q.codeSeries) + ' · ' : ''}<b style="color:var(--text);">${escapeJobText(q.blank)}</b>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="openIlcoReviewEdit('${q._id}')" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✎ Review / Attach</button>
+                <button onclick="dismissIlcoReviewEntry('${q._id}')" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;">🗑</button>
+            </div>
+        </div>`).join('');
+}
+
+// Imported keys still carrying their PN as an FCC stand-in (no real FCC ID)
+function getIlcoFccPairable() {
+    const out = [];
+    DB.forEach((k, i) => {
+        if (!k.isCustom || !k.antiqueGenerated) return;
+        if (!k.fccid || String(k.fccid) === String(k.pn)) out.push(i);
+    });
+    return out;
+}
+
+function renderIlcoFccList() {
+    const el = document.getElementById('ilcoReviewList');
+    const idxs = getIlcoFccPairable();
+    if (idxs.length === 0) {
+        el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No imported keys are missing an FCC ID.</div>`;
+        return;
+    }
+    el.innerHTML = idxs.map(ki => {
+        const k = DB[ki];
+        const v = (k.vehicles || [])[0];
+        return `
+        <div class="vehicle-card">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title">${escapeJobText(String(k.pn))}</div>
+                <span style="color:var(--dim);font-size:11px;">${escapeJobText(k.keyType || '')}</span>
+            </div>
+            <div style="font-size:12px;color:var(--dim);margin:2px 0 8px;">
+                ${v ? escapeJobText(`${v.make} ${v.model} ${v.startYear}-${v.endYear}`) : 'no vehicles'}
+                ${(k.vehicles || []).length > 1 ? ` +${k.vehicles.length - 1} more` : ''}
+            </div>
+            <div style="display:flex;gap:8px;">
+                <input id="ilcoFccInput_${ki}" placeholder="FCC ID..." style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;">
+                <button onclick="saveIlcoFccPair(${ki})" style="padding:8px 14px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">Pair</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function saveIlcoFccPair(ki) {
+    const input = document.getElementById('ilcoFccInput_' + ki);
+    const val = (input && input.value || '').trim();
+    if (!val) { toast('Enter an FCC ID first'); return; }
+    const key = DB[ki];
+    key.fccid = val;
+    const ck = customKeys.findIndex(k => String(k.pn) === String(key.pn));
+    if (ck >= 0) {
+        customKeys[ck].fccid = val;
+        customKeys[ck].lastEdited = new Date().toISOString();
+    }
+    saveCustomKeys();
+    toast(`${key.pn} paired to FCC ${val}`);
+    renderIlcoReviewPanel();
+}
+
+// ---- Review edit modal ----
+function openIlcoReviewEdit(id) {
+    const q = ilcoReviewQueue.find(e => e._id === id);
+    if (!q) return;
+    ilcoReviewEditingId = id;
+    document.getElementById('ilcoRevMake').value = q.make || '';
+    document.getElementById('ilcoRevModel').value = q.model || '';
+    document.getElementById('ilcoRevYears').value = q.years || '';
+    document.getElementById('ilcoRevApp').value = q.application || '';
+    document.getElementById('ilcoRevSeries').value = q.codeSeries || '';
+    document.getElementById('ilcoRevBlank').value = q.blank || '';
+    document.getElementById('ilcoRevProx').checked = q.keyType === 'Prox';
+    document.getElementById('ilcoRevAttachPn').value = '';
+    document.getElementById('ilcoReviewEditModal').classList.add('on');
+}
+
+function closeIlcoReviewEdit() {
+    document.getElementById('ilcoReviewEditModal').classList.remove('on');
+    ilcoReviewEditingId = null;
+}
+
+// Read the modal fields back onto the queue entry (used by every action)
+function readIlcoReviewFields() {
+    const q = ilcoReviewQueue.find(e => e._id === ilcoReviewEditingId);
+    if (!q) return null;
+    q.make = document.getElementById('ilcoRevMake').value.trim();
+    q.model = document.getElementById('ilcoRevModel').value.trim();
+    q.years = document.getElementById('ilcoRevYears').value.trim();
+    const [sy, ey] = parseAntiqueYears(q.years);
+    q.startYear = sy; q.endYear = ey;
+    q.application = document.getElementById('ilcoRevApp').value.trim();
+    q.codeSeries = document.getElementById('ilcoRevSeries').value.trim();
+    q.blank = document.getElementById('ilcoRevBlank').value.trim();
+    q.keyType = document.getElementById('ilcoRevProx').checked ? 'Prox' : '';
+    return q;
+}
+
+function saveIlcoReviewEdit() {
+    const q = readIlcoReviewFields();
+    if (!q) return;
+    saveIlcoReviewQueue();
+    closeIlcoReviewEdit();
+    renderIlcoReviewPanel();
+    toast('Entry updated');
+}
+
+function dismissIlcoReviewEntry(id) {
+    if (!confirm('Discard this entry? It will not be imported.')) return;
+    ilcoReviewQueue = ilcoReviewQueue.filter(e => e._id !== id);
+    saveIlcoReviewQueue();
+    closeIlcoReviewEdit();
+    renderIlcoReviewPanel();
+    toast('Entry discarded');
+}
+
+// Record an accepted entry in the reference book (shared by attach + create)
+function ilcoReviewToReferenceRow(q) {
+    antiqueCustom.push({
+        _id: 'c' + (++antiqueCustomSeq),
+        make: q.make, model: q.model, years: q.years,
+        startYear: q.startYear, endYear: q.endYear,
+        application: q.application, codeSeries: q.codeSeries,
+        blank: q.blank, keyType: q.keyType || '', substitutes: '', source: 'ilco-import'
+    });
+    saveAntiqueData();
+}
+
+// Attach the entry's vehicle, code series, and blank names to a key the user
+// picked by PN.
+function attachIlcoReviewEntry() {
+    const q = readIlcoReviewFields();
+    if (!q) return;
+    const pnQuery = document.getElementById('ilcoRevAttachPn').value.trim();
+    if (!pnQuery) { toast('Type the PN of the key to attach to'); return; }
+
+    let idxs = findKeysByAnyName([pnQuery]);
+    if (idxs.length === 0) {
+        const ql = pnQuery.toLowerCase();
+        idxs = [];
+        DB.forEach((k, i) => { if (String(k.pn).toLowerCase().includes(ql)) idxs.push(i); });
+    }
+    if (idxs.length === 0) { toast(`No key found matching "${pnQuery}"`); return; }
+    const ki = idxs[0];
+    const key = DB[ki];
+
+    // Vehicle application
+    if (!Array.isArray(key.vehicles)) key.vehicles = [];
+    const sy = q.startYear || 0, ey = q.endYear || q.startYear || 0;
+    let veh = key.vehicles.find(v => v.make === q.make && v.model === q.model
+        && (parseInt(v.startYear) || 0) === sy && (parseInt(v.endYear) || 0) === ey);
+    if (!veh) {
+        veh = { make: q.make, model: q.model, startYear: sy, endYear: ey };
+        key.vehicles.push(veh);
+    }
+    String(q.codeSeries || '').split(',').map(s => s.trim()).filter(Boolean)
+        .forEach(cs => addCodeSeriesToVehicle(veh, cs));
+    const roles = ilcoApplicationToRoles(q.application);
+    if (roles.length && !Array.isArray(veh.keyRoles)) veh.keyRoles = roles.slice();
+
+    // Blank names become searchable aliases on the key
+    const pnL = String(key.pn).toLowerCase();
+    const ilcoL = String(key.ilco || '').toLowerCase();
+    splitAntiqueBlankNames(q.blank).forEach(n => {
+        const nl = n.toLowerCase();
+        if (nl === pnL || nl === ilcoL) return;
+        if (!Array.isArray(key.mergedPNs)) key.mergedPNs = [];
+        if (!key.mergedPNs.some(p => String(p).toLowerCase() === nl)) key.mergedPNs.push(n);
+    });
+
+    // Persist through the right store for the key's kind
+    if (key.isCustom) {
+        const ck = customKeys.findIndex(k => String(k.pn) === String(key.pn));
+        if (ck >= 0) {
+            customKeys[ck].vehicles = key.vehicles;
+            customKeys[ck].mergedPNs = key.mergedPNs;
+            customKeys[ck].lastEdited = new Date().toISOString();
+        }
+        saveCustomKeys();
+    } else {
+        const orig = getOriginalCatalogPn(String(key.pn));
+        vehicleOverrides[orig] = key.vehicles;
+        saveVehicleOverrides();
+        const ov = keyInfoOverrides[orig] || {};
+        if (Array.isArray(key.mergedPNs) && key.mergedPNs.length > 0) ov.mergedPNs = key.mergedPNs;
+        keyInfoOverrides[orig] = ov;
+        saveKeyInfoOverrides();
+    }
+
+    ilcoReviewToReferenceRow(q);
+    ilcoReviewQueue = ilcoReviewQueue.filter(e => e._id !== q._id);
+    saveIlcoReviewQueue();
+    closeIlcoReviewEdit();
+    renderIlcoReviewPanel();
+    toast(`Attached to ${key.pn}`);
+}
+
+// Approve the entry as a brand-new key (explicit user action)
+function createKeyFromIlcoReview() {
+    const q = readIlcoReviewFields();
+    if (!q) return;
+    if (!q.blank) { toast('A key blank / PN is required to create a key'); return; }
+    ilcoReviewToReferenceRow(q);
+    const stats = syncAntiqueReferenceToKeys(new Set([String(q.blank).trim().replace(/\//g, '-')]));
+    buildFilters();
+    applyFilters();
+    const totalEl = document.getElementById('totalCount');
+    if (totalEl) totalEl.textContent = DB.length;
+    ilcoReviewQueue = ilcoReviewQueue.filter(e => e._id !== q._id);
+    saveIlcoReviewQueue();
+    triggerAutoSync();
+    closeIlcoReviewEdit();
+    renderIlcoReviewPanel();
+    toast(stats && stats.created ? `Key ${q.blank.split('/')[0]} created` : 'Key updated from entry');
 }
 
 function closeVehiclePanel() {
