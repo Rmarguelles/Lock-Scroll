@@ -53,6 +53,8 @@ import os
 import re
 import sys
 
+EXTRACTOR_VERSION = "2.0-geometry"
+
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
 # Each column is (name, x_start, x_end) in that reference width.
@@ -597,7 +599,8 @@ def main(argv=None):
     if args.preview:
         for r in rows[:args.preview]:
             print(format_row(r))
-        print(f"\n--- {len(rows)} rows, {len(makes)} makes, {with_blank} with a key blank ---")
+        print(f"\n--- extractor v{EXTRACTOR_VERSION}: {len(rows)} rows, "
+              f"{len(makes)} makes, {with_blank} with a key blank ---")
         return 0
 
     if args.split_by_make:
