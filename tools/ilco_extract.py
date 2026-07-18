@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.3-clean"
+EXTRACTOR_VERSION = "2.4-clean"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -181,6 +181,48 @@ def normalize_model(raw):
         return "All Models"
     s = _title_words(s)
     return re.sub(r"\bW/", "w/", s)
+
+
+# Key-SYSTEM modifiers in model labels ("TL w/ Prox", "Regal w/O Peps",
+# "ZDX w/ Regular Ignition") describe the KEY, not the vehicle — strip them
+# from the model and carry the fact on the row instead. Hardware modifiers
+# like "w/O Tilt Wheel" stay on the model (different ignition = different key).
+KEYSYS_RE = re.compile(r"\s*\bw/\s*(o\b)?\s*(prox|peps|regular\s+ignition)\b\.?", re.IGNORECASE)
+# OEM part numbers (72147-TZ5-A01, 13584504) are prox/smart fobs.
+OEM_BLANK_RE = re.compile(r"^\d{5}")
+
+
+def split_model_variants(model):
+    """'Camaro, Z28' -> (['Camaro', 'Z28'], None)
+    'Beretta, Corsica w/O Tilt Wheel' -> both keep the tilt modifier
+    'Lucerne - CX, CXL V6' -> ['Lucerne CX', 'Lucerne CXL V6']
+    'TL w/ Prox' -> (['TL'], True);  'Regal w/O Peps' -> (['Regal'], False)
+    Returns (model_list, prox) where prox is True/False/None(unknown)."""
+    prox = [None]
+
+    def _sub(m):
+        neg = bool(m.group(1))
+        kind = m.group(2).lower()
+        prox[0] = False if "ignition" in kind else (not neg)
+        return ""
+
+    base = KEYSYS_RE.sub(_sub, model).strip(" ,-")
+    pieces = [p.strip() for p in base.split(",") if p.strip()]
+    if not pieces:
+        pieces = [base or model]
+    if len(pieces) > 1:
+        # Distribute a shared base name: "Lucerne - CX, CXL V6" -> Lucerne *
+        m = re.match(r"^(.+?)\s*-\s+(.+)$", pieces[0])
+        if m and not re.search(r"\d{3}", m.group(1)):
+            prefix = m.group(1).strip()
+            pieces = [f"{prefix} {m.group(2).strip()}"] + [f"{prefix} {p}" for p in pieces[1:]]
+        # Distribute a trailing hardware modifier: "Beretta, Corsica w/O Tilt
+        # Wheel" -> both models get "w/O Tilt Wheel"
+        mod = re.search(r"\s(w/\S.*)$", pieces[-1], re.IGNORECASE)
+        if mod:
+            tail = mod.group(1)
+            pieces = [p if p.lower().endswith(tail.lower()) else f"{p} {tail}" for p in pieces]
+    return pieces, prox[0]
 
 
 def is_make_text(text):
@@ -575,14 +617,23 @@ def parse_page(words, width, state, edges=None):
             state["model"] = assigned
         model = state.get("model") or "All Models"
 
-        rows.append({
-            "make": state.get("make", ""),
-            "model": model,
-            "years": f"{years[0]}-{years[1]}" if years[0] != years[1] else str(years[0]),
-            "application": application,
-            "codeSeries": series,
-            "blank": "/".join(blanks),
-        })
+        model_pieces, prox = split_model_variants(model)
+        key_type = ""
+        if prox is True:
+            key_type = "Prox"
+        elif prox is None and blanks and all(OEM_BLANK_RE.match(b) for b in blanks):
+            key_type = "Prox"  # every blank is an OEM fob part number
+
+        for mp in model_pieces:
+            rows.append({
+                "make": state.get("make", ""),
+                "model": mp,
+                "years": f"{years[0]}-{years[1]}" if years[0] != years[1] else str(years[0]),
+                "application": application,
+                "codeSeries": series,
+                "blank": "/".join(blanks),
+                "keyType": key_type,
+            })
 
     # A make header printed BELOW the last data row (a new section starting at
     # the bottom of the page, e.g. "ALFA ROMEO") applies to the next page.
@@ -597,7 +648,7 @@ def parse_page(words, width, state, edges=None):
 def format_row(r):
     return " | ".join([
         r["make"], r["model"], r["years"], r["application"],
-        r["codeSeries"], r["blank"],
+        r["codeSeries"], r["blank"], r.get("keyType", ""),
     ]).rstrip(" |")
 
 
@@ -668,14 +719,15 @@ def selftest():
         "Acura | MDX | 2007-2013 | All | K001-N718 | HO03",
         "Acura | MDX | 2001-2006 | All | 5001-8442 | HD106",
         "Acura | MDX | 2001-2006 | Valet | 5001-8442 | HD107",
-        # OEM# multi-line cell with A01/A11 suffix expansion (kept verbatim)
-        "Acura | MDX | 2014-2017 | All | K001-N718 | 72147-TZ5-A01/72147-TZ5-A11",
+        # OEM# multi-line cell with A01/A11 suffix expansion (kept verbatim);
+        # all-OEM blanks auto-tag the row as a Prox key
+        "Acura | MDX | 2014-2017 | All | K001-N718 | 72147-TZ5-A01/72147-TZ5-A11 | Prox",
         # Model label centered over its whole span (NSX), old X-style blanks;
         # the guide's Substitutes column is ignored entirely
         "Acura | NSX | 1991-1996 | All | 5001-8442 | X204/HD99",
         "Acura | NSX | 1991-1996 | Valet | 5001-8442 | X205/HD100",
         # Band with no code series at all (2022+ prox)
-        "Acura | RDX | 2022-2025 | All |  | 72147-TJB-A21/72147-TJB-A31",
+        "Acura | RDX | 2022-2025 | All |  | 72147-TJB-A21/72147-TJB-A31 | Prox",
         # On-line model label must not claim earlier bands (TL vs TLX)
         "Acura | TL | 1995-1998 | All | 5001-8442 | X214/HD103",
         "Acura | TLX Base | 2021-2025 | All | K001-N718 | 72147-TGV-A01/72147-TGV-A11",
@@ -683,10 +735,11 @@ def selftest():
         "Acura | TSX | 2009-2014 | All | K001-N718 | HO03",
         "Acura | Vigor | 1992-1994 | All | 3001-4481 | X208/HD101",
         "Acura | Vigor | 1992-1994 | Valet | 3001-4481 | X209/HD102",
-        # Wrapped model label ("ZDX W/ REGULAR" + "IGNITION")
-        "Acura | ZDX w/ Regular Ignition | 2010-2012 | All | K001-N718",
-        # Model label on its own anchor line (prox variant vs base model)
-        "Acura | TL w/ Prox | 2009-2014 | All | K001-N718 | 72147-TK4-A71/72147-TK4-A81",
+        # "w/ Regular Ignition" is a KEY modifier — model is just ZDX, keyed
+        "Acura | ZDX | 2010-2012 | All | K001-N718 | HO03",
+        # "w/ Prox" strips off the model; row tagged Prox instead
+        "Acura | TL | 2009-2014 | All | K001-N718 | 72147-TK4-A71/72147-TK4-A81 | Prox",
+        "Acura | ZDX | 2010-2013 | All | K001-N718 | 72147-SZN-A71/72147-SZN-A81 | Prox",
         # Trailing-"/" continuation stays in its band; variants reduce to HD111
         "Acura | TSX | 2004-2008 | All | 5001-8442 | HD111",
     ]
@@ -698,6 +751,25 @@ def selftest():
     if any("HO01-SVC" in g or "HD103-NP" in g for g in got):
         print("FAIL: substitutes column leaked into output")
         ok = False
+    if any("w/ Prox" in g or "Regular Ignition" in g for g in got):
+        print("FAIL: key-system modifier leaked into a model name")
+        ok = False
+
+    # Model splitting unit checks
+    splits = [
+        (split_model_variants("Camaro, Z28"), (["Camaro", "Z28"], None)),
+        (split_model_variants("Beretta, Corsica w/O Tilt Wheel"),
+         (["Beretta w/O Tilt Wheel", "Corsica w/O Tilt Wheel"], None)),
+        (split_model_variants("Lucerne - CX, CXL V6"),
+         (["Lucerne CX", "Lucerne CXL V6"], None)),
+        (split_model_variants("TL w/ Prox"), (["TL"], True)),
+        (split_model_variants("Regal w/O Peps"), (["Regal"], False)),
+        (split_model_variants("ZDX w/ Regular Ignition"), (["ZDX"], False)),
+    ]
+    for gotv, want in splits:
+        if gotv != want:
+            print("FAIL split:", gotv, "!=", want)
+            ok = False
     # The Alfa Romeo blank-board and legend lines must produce no rows
     if any(g.startswith("Alfa Romeo") for g in got):
         print("FAIL: Alfa Romeo section header leaked rows")

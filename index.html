@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v224</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v225</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5236,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v224</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v225</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v224<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v225<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -18445,6 +18445,9 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
         if (targetIdx === undefined) targetIdx = matchIdxs[0];
 
         if (targetIdx === undefined) {
+            // A blank whose reference rows are tagged Prox is a proximity fob,
+            // not a cut blank
+            const isProx = byBlank[blank].some(r => r.keyType === 'Prox');
             const newKey = {
                 pn: preferred,
                 ilco: null,
@@ -18454,7 +18457,7 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
                 fccid: String(preferred),
                 keyway: null,
                 chip: null,
-                keyType: 'Non-Chip Key',
+                keyType: isProx ? 'Proximity' : 'Non-Chip Key',
                 buttons: null,
                 frequency: null,
                 battery: null,
@@ -19133,7 +19136,10 @@ function parseIlcoReferenceText(text) {
         // "TOY43/TOY43-GTK"); they're kept as-is and split into searchable
         // aliases downstream by splitAntiqueBlankNames during the key sync.
         const blank = String(cols[yi + 3] || '').trim();
-        const substitutes = String(cols[yi + 4] || '').trim();
+        // Optional 7th column: "Prox" marks the row's key as a proximity fob
+        // (the vehicle may ALSO have keyed-ignition rows with overlapping
+        // years — both are kept; they're different keys on the same vehicle).
+        const keyType = /^prox/i.test(String(cols[yi + 4] || '').trim()) ? 'Prox' : '';
 
         let make, model;
         if (nameCols.length >= 2) { make = nameCols[0]; model = nameCols.slice(1).join(' '); }
@@ -19153,7 +19159,7 @@ function parseIlcoReferenceText(text) {
             application,
             codeSeries,
             blank,
-            substitutes
+            keyType
         });
     });
 
@@ -19277,7 +19283,8 @@ function previewIlcoImport() {
         + ` — ${v.r.startYear}${v.r.endYear && v.r.endYear !== v.r.startYear ? '-' + v.r.endYear : ''}`
         + `${v.r.application ? ' — ' + escapeJobText(v.r.application) : ''}`
         + `${v.r.codeSeries ? ' — CS ' + escapeJobText(v.r.codeSeries) : ''}`
-        + `${v.r.blank ? ' — <b>' + escapeJobText(v.r.blank) + '</b> ' + v.keyBadge : ''}</div>`;
+        + `${v.r.blank ? ' — <b>' + escapeJobText(v.r.blank) + '</b> ' + v.keyBadge : ''}`
+        + `${v.r.keyType === 'Prox' ? ' <span style="color:var(--accent2);font-size:10px;">PROX</span>' : ''}</div>`;
 
     const warn = [];
     if (newMakes.size) warn.push(`<div style="color:#e5a50a;font-size:11px;margin-top:4px;">⚠ New makes: ${escapeJobText(Array.from(newMakes).join(', '))}</div>`);
@@ -19300,7 +19307,7 @@ function importIlcoReference() {
     }
 
     // Dedupe against reference rows already present (blank is part of identity)
-    const sigOf = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank || ''].join('|').toLowerCase();
+    const sigOf = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank || '', r.keyType || ''].join('|').toLowerCase();
     const seen = new Set(getAntiqueRows().map(sigOf));
     let added = 0;
     const importedBlanks = new Set(); // normalized blanks from THIS import only
@@ -19313,7 +19320,7 @@ function importIlcoReference() {
             make: r.make, model: r.model, years: r.years,
             startYear: r.startYear, endYear: r.endYear,
             application: r.application, codeSeries: r.codeSeries,
-            blank: r.blank || '', substitutes: r.substitutes || '', source: 'ilco-import'
+            blank: r.blank || '', keyType: r.keyType || '', substitutes: '', source: 'ilco-import'
         });
         added++;
         if (r.blank) importedBlanks.add(String(r.blank).trim().replace(/\//g, '-'));
