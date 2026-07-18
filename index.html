@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v225</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v226</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5236,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v225</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v226</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v225<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v226<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19256,7 +19256,7 @@ function previewIlcoImport() {
     DB.forEach(k => (k.vehicles || []).forEach(v => addMM(v.make, v.model)));
     customVehicles.forEach(v => addMM(v.make, v.model));
 
-    let matchedKeys = 0, newKeys = 0;
+    let matchedKeys = 0, newKeys = 0, alreadyListed = 0;
     const newMakes = new Set(), newModels = new Set();
     const verdicts = rows.map(r => {
         const mkKnown = makes.has(r.make.toLowerCase());
@@ -19268,7 +19268,19 @@ function previewIlcoImport() {
             const hits = findKeysByAnyName(splitAntiqueBlankNames(r.blank));
             if (hits.length > 0) {
                 matchedKeys++;
-                keyBadge = `<span style="color:var(--accent);">→ ${escapeJobText(String(DB[hits[0]].pn))}</span>`;
+                const key = DB[hits[0]];
+                // Deeper check: does this key ALREADY list this vehicle with
+                // overlapping years? Then importing changes nothing — no
+                // double entries.
+                const dup = (key.vehicles || []).some(v => v.make && v.model
+                    && v.make.toLowerCase() === r.make.toLowerCase()
+                    && v.model.toLowerCase() === r.model.toLowerCase()
+                    && (parseInt(v.startYear) || 0) <= (r.endYear || r.startYear || 9999)
+                    && (parseInt(v.endYear) || parseInt(v.startYear) || 9999) >= (r.startYear || 0));
+                if (dup) alreadyListed++;
+                keyBadge = `<span style="color:var(--accent);">→ ${escapeJobText(String(key.pn))}</span>`
+                    + (dup ? ' <span style="color:#2ec27e;font-size:10px;">✓ already listed</span>'
+                           : ' <span style="color:var(--dim);font-size:10px;">+ adds vehicle</span>');
             } else {
                 newKeys++;
                 keyBadge = `<span style="color:#e5a50a;">→ NEW key</span>`;
@@ -19292,7 +19304,9 @@ function previewIlcoImport() {
 
     const shown = verdicts.slice(0, 12).map(line).join('');
     el.innerHTML = `<div style="margin-bottom:6px;color:var(--accent);font-weight:600;font-size:12px;">`
-        + `${rows.length} row${rows.length !== 1 ? 's' : ''} · ${matchedKeys} match existing keys · ${newKeys} would create new keys`
+        + `${rows.length} row${rows.length !== 1 ? 's' : ''} · ${matchedKeys} match existing keys`
+        + `${alreadyListed ? ` (${alreadyListed} already listed)` : ''}`
+        + ` · ${newKeys} would create new keys`
         + `${failed.length ? ` · ${failed.length} skipped` : ''}</div>`
         + warn.join('')
         + shown

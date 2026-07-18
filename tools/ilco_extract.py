@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.4-clean"
+EXTRACTOR_VERSION = "2.5-clean"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -207,15 +207,20 @@ def split_model_variants(model):
         return ""
 
     base = KEYSYS_RE.sub(_sub, model).strip(" ,-")
+
+    # "Base - Trim1, Trim2, ..." is ONE model in several trims — and since the
+    # key data is identical for all of them, it collapses to just the base
+    # ("Lucerne - CX, CXL V6, CXS" -> "Lucerne"; "3 Series- 318i, ..." ->
+    # "3 Series"). Requires a space after the dash so hyphenated model names
+    # (CTS-V, F-150) are untouched.
+    m = re.match(r"^(.+?)\s*-\s+.+,", base)
+    if m:
+        return [m.group(1).strip()], prox[0]
+
     pieces = [p.strip() for p in base.split(",") if p.strip()]
     if not pieces:
         pieces = [base or model]
     if len(pieces) > 1:
-        # Distribute a shared base name: "Lucerne - CX, CXL V6" -> Lucerne *
-        m = re.match(r"^(.+?)\s*-\s+(.+)$", pieces[0])
-        if m and not re.search(r"\d{3}", m.group(1)):
-            prefix = m.group(1).strip()
-            pieces = [f"{prefix} {m.group(2).strip()}"] + [f"{prefix} {p}" for p in pieces[1:]]
         # Distribute a trailing hardware modifier: "Beretta, Corsica w/O Tilt
         # Wheel" -> both models get "w/O Tilt Wheel"
         mod = re.search(r"\s(w/\S.*)$", pieces[-1], re.IGNORECASE)
@@ -645,6 +650,20 @@ def parse_page(words, width, state, edges=None):
     return rows
 
 
+def dedupe_rows(rows):
+    """Collapsed trim lists and repeated table cells can yield identical rows
+    — keep the first of each."""
+    seen = set()
+    out = []
+    for r in rows:
+        sig = (r["make"], r["model"], r["years"], r["application"],
+               r["codeSeries"], r["blank"], r.get("keyType", ""))
+        if sig not in seen:
+            seen.add(sig)
+            out.append(r)
+    return out
+
+
 def format_row(r):
     return " | ".join([
         r["make"], r["model"], r["years"], r["application"],
@@ -672,7 +691,7 @@ def parse_pdf(pdf_path, pages=None):
             except Exception:
                 h_edges = None
             rows += parse_page(words, page.width, state, edges=h_edges)
-    return rows
+    return dedupe_rows(rows)
 
 
 # --------------------------------------------------------------------------
@@ -706,6 +725,7 @@ def selftest():
     rows = []
     for p in pages:
         rows += parse_page(p["words"], p["width"], state)
+    rows = dedupe_rows(rows)
     got = [format_row(r) for r in rows]
     for line in got:
         print("  ", line)
@@ -760,8 +780,10 @@ def selftest():
         (split_model_variants("Camaro, Z28"), (["Camaro", "Z28"], None)),
         (split_model_variants("Beretta, Corsica w/O Tilt Wheel"),
          (["Beretta w/O Tilt Wheel", "Corsica w/O Tilt Wheel"], None)),
-        (split_model_variants("Lucerne - CX, CXL V6"),
-         (["Lucerne CX", "Lucerne CXL V6"], None)),
+        (split_model_variants("Lucerne - CX, CXL V6, CXL V8, CXS"),
+         (["Lucerne"], None)),
+        (split_model_variants("3 Series- 318i, 323i,323iC,323iS, 335i"),
+         (["3 Series"], None)),
         (split_model_variants("TL w/ Prox"), (["TL"], True)),
         (split_model_variants("Regal w/O Peps"), (["Regal"], False)),
         (split_model_variants("ZDX w/ Regular Ignition"), (["ZDX"], False)),
