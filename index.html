@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v222</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v223</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5236,7 +5236,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v222</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v223</p>
         </div>
 
         <div class="settings-section">
@@ -5248,7 +5248,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v222<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v223<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -12090,6 +12090,7 @@ function applyFilters() {
             const searchStr = [
                 key.pn,
                 key.ilco,
+                ...(key.mergedPNs || []),
                 ...getKeyFccIds(key),
                 ...keyFids,
                 ...keyFids.map(f => String(f).replace(/-/g, '')),
@@ -18351,10 +18352,28 @@ async function loadAntiqueData() {
 }
 
 // ===== Antique blank <-> key database sync =====
-// A blank string carries every name the blank is known by ("P1098E-B44").
+// A blank string carries every name the blank is known by. "/" always
+// separates alternate names ("X26/MZ9"). "-" separates names only in the
+// antique book's combined spellings ("P1098E-B44") — modern Ilco names keep
+// their hyphen intact ("HD106-PT", "TOY43-GTK", "72147-TZ5-A01") so typing the
+// full name finds the key.
+const MODERN_BLANK_SUFFIXES = new Set(['pt', 'pt5', 'gtk', 'gts', 'svc', 'np', 'gtht80', 'gtht128c']);
+// An antique catalog code: letters+digits (X59, BMW2, P1098V, 1970AM, 01122A)
+const ANTIQUE_CODE_RE = /^([A-Z]{0,4}\d{1,4}[A-Z]{0,2}|\d{4,6}[A-Z]{1,2})$/i;
 function splitAntiqueBlankNames(blank) {
-    const parts = String(blank || '').trim().replace(/\//g, '-').split('-').map(s => s.trim()).filter(Boolean);
-    return [...new Set(parts)];
+    const out = [];
+    String(blank || '').trim().split('/').forEach(piece => {
+        piece = piece.trim().replace(/[*#]+$/, '')
+            .replace(/-(P|PC)$/, ''); // plastic-head variant suffix, not a name
+        if (!piece) return;
+        const dashes = piece.split('-').map(s => s.trim()).filter(Boolean);
+        const antiqueStyle = dashes.length > 1
+            && dashes.every(d => ANTIQUE_CODE_RE.test(d))
+            && !dashes.some(d => MODERN_BLANK_SUFFIXES.has(d.toLowerCase()));
+        if (antiqueStyle) out.push(...dashes);
+        else out.push(piece);
+    });
+    return [...new Set(out)];
 }
 
 // The most widely used name wins as the PN: Ilco-style short codes, preferring
@@ -18409,7 +18428,9 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
     let customDirty = false, overridesDirty = false, vehOverridesDirty = false, supersessionsDirty = false, fidDirty = false;
 
     Object.keys(byBlank).sort().forEach(blank => {
-        const names = splitAntiqueBlankNames(blank);
+        // Split the RAW blank (slashes intact) — the group key has "/" folded
+        // to "-", which would shred modern hyphenated names like HD106-PT.
+        const names = splitAntiqueBlankNames(String(byBlank[blank][0].blank).trim());
         if (names.length === 0) return;
         const preferred = pickPreferredAntiquePn(names);
         // Include the full blank string — old-generator keys could carry the

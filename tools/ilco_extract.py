@@ -6,71 +6,109 @@ and write it in the pipe-delimited format that Lock & Scroll's
 
     Make | Model | Years | Application | Code Series | Key Blank | Substitutes
 
-You run this on YOUR computer against the full PDF (no size/network limits),
-then paste the output into the app (Vehicle Lookup -> Antique Reference ->
-"Paste Ilco Reference").
+Fully offline: the only dependency is pdfplumber. You run this on your own
+computer against the full PDF, then paste the output into the app
+(Vehicle Lookup -> Antique Reference -> "Paste Ilco Reference").
 
 Quick start
 -----------
     pip install pdfplumber
-    python ilco_extract.py GUIDE.pdf --out ilco_output.txt          # whole guide
-    python ilco_extract.py GUIDE.pdf --pages 10-14 --preview 40     # sample first
-    python ilco_extract.py GUIDE.pdf --split-by-make                # one file per make
-    python ilco_extract.py --selftest                              # no PDF needed
+    python ilco_extract.py GUIDE.pdf --pages 13-14 --preview 40   # sample first
+    python ilco_extract.py GUIDE.pdf --out ilco_output.txt        # whole guide
+    python ilco_extract.py GUIDE.pdf --split-by-make              # file per make
+    python ilco_extract.py --selftest                             # no PDF needed
 
-How it works (two layers)
--------------------------
-1. EXTRACT (needs the PDF): pdfplumber gives every word with x/y coordinates.
-   We cluster words into physical rows by their vertical position, so each
-   printed table row becomes one clean line string. (A naive text copy loses
-   these row boundaries — that's why columns run together when you paste.)
-2. PARSE (testable without the PDF): each physical line is classified as a
-   make/section header, a data row, a Valet/application sub-row, or ignorable
-   continuation text, then the fields are pulled out with the same rules the
-   app's JS parser uses. `--selftest` exercises this layer on real sample rows.
+How it works
+------------
+The guide is a bordered table with merged cells: a model name like "MDX" is
+printed once, roughly centered beside all its rows; year ranges are centered
+beside their All/Valet application rows; a key-blank cell often spans several
+text lines ("OEM# 72147-TZ5-A01/A11 or" / "72147-TZ5-A11"). Reading the text
+in stream order scrambles all of that.
 
-The MODEL of a year-only row is inherited from the row above it; a Valet row
-inherits the year range of the row above it; make/section headers (ALL CAPS,
-no year on the line) set the current make and are consolidated
-(TOYOTA TRUCKS, VANS, SUVS -> Toyota).
+Instead, this script uses word COORDINATES (pdfplumber gives every word an
+x/y position):
 
-The KEY BLANK column of this transponder guide is the messy part (each row
-lists cutting blanks, service keys, OEM PNs and transponder verbiage). The
-heuristic below is a first cut meant to be tuned against real --preview output.
+1. Words are bucketed into the table's columns by x-position. The column
+   x-boundaries were measured from the real guide (783pt-wide pages) and are
+   scaled to the page width.
+2. Words are clustered into physical text lines by y-position.
+3. Every line with a Lock-Apps value (All / Valet / ...) anchors one output
+   row ("band"). Midpoints between anchors decide which neighboring lines
+   (blank-cell continuations, OEM# lines) belong to which band.
+4. Yearless bands inherit the nearest year line (year cells are vertically
+   centered across the All+Valet rows they cover). Models come from the
+   nearest model-column label; a label printed on an anchor line starts its
+   model there, so earlier bands can't claim it. Make headers (a known make
+   name in the model column, e.g. ALFA ROMEO) switch the current make, which
+   also carries across pages.
+
+The --selftest runs this engine over a captured word dump of the guide's real
+Acura pages (tools/fixtures/acura_p13_p14.txt) and checks the output rows, so
+the parsing logic is verified without needing the PDF.
 """
 
 import argparse
+import os
 import re
 import sys
 
 # --------------------------------------------------------------------------
-# Normalization (kept in sync with the JS side in index.html)
+# Reference geometry (measured from the real guide; pages are 783pt wide).
+# Each column is (name, x_start, x_end) in that reference width.
 # --------------------------------------------------------------------------
+REF_WIDTH = 783.0
+COLUMNS = [
+    ("model", 0, 115),
+    ("start", 115, 146),
+    ("end", 146, 166),
+    ("apps", 166, 193),
+    ("series", 193, 246),
+    ("blank", 246, 339),
+    ("equip", 339, 485),   # cloning tools — ignored
+    ("subs", 485, 562),
+    ("notes", 562, 728),   # transponder text — ignored
+    ("card", 728, 10000),  # card number — ignored
+]
 
+LINE_TOL = 2.5        # y-distance for words to count as the same text line
+MODEL_MERGE_TOL = 12  # wrapped model labels ("ZDX W/ REGULAR" + "IGNITION")
+BAND_CAP = 26         # band reach when not bounded by a neighboring anchor
+YEAR_REACH = 40       # how far a band may look for its year line
+ON_LINE_TOL = 2       # model label counts as "on" an anchor line within this
+
+KNOWN_MAKES = [
+    "Acura", "Alfa Romeo", "AMC", "American Motors", "Aston Martin", "Audi",
+    "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler", "Daewoo", "Daihatsu",
+    "Dodge", "Eagle", "Ferrari", "Fiat", "Ford", "Freightliner", "Genesis",
+    "Geo", "GMC", "Honda", "Hummer", "Hyundai", "Infiniti", "International",
+    "Isuzu", "Jaguar", "Jeep", "Kenworth", "Kia", "Lamborghini", "Land Rover",
+    "Lexus", "Lincoln", "Lotus", "Mack Truck", "Maserati", "Mazda",
+    "Mercedes", "Mercedes Benz", "Mercury", "Merkur", "MG", "Mini",
+    "Mitsubishi", "Nissan", "Oldsmobile", "Peterbilt", "Peugeot", "Plymouth",
+    "Pontiac", "Porsche", "Ram", "Renault", "Rolls Royce", "Rover", "Saab",
+    "Saturn", "Scion", "Smart", "Sterling", "Subaru", "Suzuki", "Tesla",
+    "Toyota", "Triumph", "Volkswagen", "Volvo", "White-GMC-Volvo", "Yugo",
+]
+KNOWN_MAKES_LOWER = {m.lower(): m for m in KNOWN_MAKES}
+
+# Fold guide spelling variants into ONE canonical make (same table as the app).
 MAKE_ALIASES = {
-    "ford truck": "Ford", "ford trucks": "Ford",
     "chevy": "Chevrolet", "chev": "Chevrolet",
-    "chevrolet truck": "Chevrolet", "chevrolet trucks": "Chevrolet",
-    "gmc truck": "GMC", "gmc trucks": "GMC",
-    "dodge truck": "Dodge", "dodge trucks": "Dodge",
-    "chrysler truck": "Chrysler",
-    "toyota truck": "Toyota", "toyota trucks": "Toyota",
-    "nissan truck": "Nissan",
     "vw": "Volkswagen",
     "mercedes": "Mercedes Benz", "mercedes-benz": "Mercedes Benz",
     "datsun": "Nissan", "datsun (nissan)": "Nissan",
     "international harvester": "International",
     "rolls-royce": "Rolls Royce",
 }
-
-# Section suffixes stripped so "TOYOTA TRUCKS, VANS, SUVS" -> "Toyota".
+# Section suffixes: "TOYOTA TRUCKS, VANS, SUVS" -> "Toyota".
 SECTION_SUFFIX_RE = re.compile(
     r"[\s,]+(trucks?|vans?|suvs?|minivans?|cars?|passenger|imports?)\b.*$",
     re.IGNORECASE,
 )
 
 APPLICATION_CANON = {
-    "ignition": "Ignition",
+    "ignition": "Ignition", "ign": "Ignition", "ign.": "Ignition",
     "door": "Door", "doors": "Door",
     "trunk": "Trunk",
     "glovebox": "GB", "glove box": "GB", "gb": "GB",
@@ -80,43 +118,27 @@ APPLICATION_CANON = {
     "door/gb": "Door/GB",
     "all": "All", "valet": "Valet",
 }
-APPLICATION_TOKENS = {"all", "valet", "ignition", "door", "doors", "trunk", "gb"}
 
-# A single 4-digit year in the plausible automotive range.
-YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
-# "MID2010" style start.
-MID_YEAR_RE = re.compile(r"\bMID\s*((?:19|20)\d{2})\b", re.IGNORECASE)
-
-# Code-series shapes seen in the guide: 10001-15000, 50000-69999, X1-X2248,
-# R5001-R6924, K1-K4570, S1-S2878, W1-W2409.
-CODE_SERIES_RE = re.compile(r"\b([A-Z]?\d{1,6}-[A-Z]?\d{1,6})\b")
-
-# A blank/part token: has letters AND digits, Ilco/Silca style, may join names
-# with "/" or "-" (X217/TR47, TOY43-GTK, TOY44D-PT, EK3-TOY43). OEM PNs like
-# 89904-0T050 also match (digit-led with a letter later).
-BLANK_TOKEN_RE = re.compile(r"^(?=[A-Z0-9/\-]*[A-Z])(?=[A-Z0-9/\-]*\d)[A-Z0-9]+(?:[/\-][A-Z0-9]+)*[*#]?$")
-
-# Words/markers that end the key-blank region (transponder / tooling verbiage).
-BLANK_STOPWORDS = {
-    "service", "smart", "pro", "tcp", "mvpp", "tko", "sdd", "obp", "program",
-    "emerg", "emerg.", "emergency", "oem", "oem#", "optional", "texas",
-    "instruments", "encrypted", "system", "bit", "transponder", "w/",
-    "rw5", "rw4", "sa+", "ez", "clone", "plus", "box",
-}
-# Cloning-tool / non-blank tokens that still contain a digit (must not be
-# captured as blanks).
-BLANK_BLACKLIST = {"rw5", "rw4", "rw3"}
+YEAR_RE = re.compile(r"^(19|20)\d{2}$")
+HEADER_WORDS = {"apps", "series", "(plastic)", "substitues", "substitutes",
+                "transponder", "equipment"}
+# Blank-cell tokens that are markers/noise, never part numbers.
+BLANK_DROP = {"oem#", "or", "-", "–"}
+SUBS_DROP = {"service", "key", "-", "–", "emerg.", "emerg", "emergency"}
 
 
-# Makes that stay upper-cased instead of being Title-cased.
+# --------------------------------------------------------------------------
+# Normalization helpers
+# --------------------------------------------------------------------------
+
 ACRONYM_MAKES = {"BMW", "GMC", "VW", "MG", "AMC", "AM"}
 
 
-def _title_make(s):
+def _title_words(s, keep_len=3):
     out = []
     for w in s.split():
-        if w.upper() in ACRONYM_MAKES:
-            out.append(w.upper())
+        if w.upper() in ACRONYM_MAKES or (w.isupper() and len(w) <= keep_len):
+            out.append(w.upper() if w.upper() in ACRONYM_MAKES else w)
         elif w.isupper():
             out.append(w.capitalize())
         else:
@@ -125,244 +147,306 @@ def _title_make(s):
 
 
 def normalize_make(raw):
-    m = " ".join(str(raw or "").split())
+    m = " ".join(str(raw or "").split()).strip(" ,")
     if not m:
         return ""
     low = m.lower()
     if low in MAKE_ALIASES:
         return MAKE_ALIASES[low]
+    if low in KNOWN_MAKES_LOWER:
+        return KNOWN_MAKES_LOWER[low]
     stripped = SECTION_SUFFIX_RE.sub("", m).strip(" ,")
-    if stripped and stripped.lower() in MAKE_ALIASES:
-        return MAKE_ALIASES[stripped.lower()]
-    return _title_make(stripped or m)
+    slow = stripped.lower()
+    if slow in MAKE_ALIASES:
+        return MAKE_ALIASES[slow]
+    if slow in KNOWN_MAKES_LOWER:
+        return KNOWN_MAKES_LOWER[slow]
+    return _title_words(stripped or m)
 
 
 def normalize_application(app):
-    a = str(app or "").strip()
+    a = " ".join(str(app or "").split())
     if not a:
         return ""
-    key = re.sub(r"\s+", " ", re.sub(r"\s*/\s*", "/", a.lower()))
+    key = re.sub(r"\s*/\s*", "/", a.lower())
     return APPLICATION_CANON.get(key, a)
 
 
-def looks_like_year(s):
-    return bool(YEAR_RE.search(s) or MID_YEAR_RE.search(s))
+def normalize_model(raw):
+    s = " ".join(str(raw or "").split()).strip(" ,.")
+    s = _title_words(s)
+    return re.sub(r"\bW/", "w/", s)
 
 
-def parse_years(text):
-    """Return (start, end, label) or None from a chunk of text."""
-    mid = MID_YEAR_RE.search(text)
-    years = [int(y) for y in re.findall(r"(?:19|20)\d{2}", text)]
-    if mid and years:
-        start = int(mid.group(1))
-        end = max(years)
-        return start, end, f"{start}-{end}"
-    if len(years) >= 2:
-        start, end = years[0], years[1]
-        if end < start:
-            start, end = end, start
-        return start, end, f"{start}-{end}"
-    if len(years) == 1:
-        return years[0], years[0], f"{years[0]}"
+def is_make_text(text):
+    t = " ".join(text.split()).strip(" ,").lower()
+    if t in KNOWN_MAKES_LOWER or t in MAKE_ALIASES:
+        return True
+    stripped = SECTION_SUFFIX_RE.sub("", t).strip(" ,")
+    return stripped in KNOWN_MAKES_LOWER or stripped in MAKE_ALIASES
+
+
+# --------------------------------------------------------------------------
+# Blank / substitutes cell cleanup
+# --------------------------------------------------------------------------
+
+def _expand_slash_suffixes(parts):
+    """['72147-TZ5-A01', 'A11'] -> ['72147-TZ5-A01', '72147-TZ5-A11']"""
+    out = []
+    for p in parts:
+        if out and "-" in out[-1] and "-" not in p and re.fullmatch(r"[A-Z]\d{2}", p):
+            out.append(out[-1].rsplit("-", 1)[0] + "-" + p)
+        else:
+            out.append(p)
+    return out
+
+
+def clean_part_tokens(tokens, drop):
+    """Blank/subs cell tokens -> list of part names (slash groups expanded)."""
+    names = []
+    for tok in tokens:
+        t = tok.strip().strip(",")
+        if not t or t.lower() in drop:
+            continue
+        # variant brackets like "[-P]", "[-P,", "-PC]"
+        if t.startswith("[") or t.endswith("]"):
+            continue
+        # parenthetical notes: "(LAL)", or inline "HO03-PT(V)" -> "HO03-PT"
+        t = re.sub(r"\([^)]*\)", "", t).strip().strip(",")
+        if not t or t.lower() in drop:
+            continue
+        t = t.rstrip("*#")          # footnote markers
+        t = t.strip("/")            # continuation slashes at either end
+        if not t or not re.search(r"\d", t):
+            continue                # real part names always carry a digit
+        for piece in _expand_slash_suffixes([p for p in t.split("/") if p]):
+            piece = piece.rstrip("*#")
+            if piece and piece not in names:
+                names.append(piece)
+    return names
+
+
+# --------------------------------------------------------------------------
+# Geometry engine: words -> rows
+# --------------------------------------------------------------------------
+
+def _col_of(x, width):
+    scale = width / REF_WIDTH if width else 1.0
+    for name, lo, hi in COLUMNS:
+        if lo * scale <= x < hi * scale:
+            return name
+    return "card"
+
+
+def cluster_lines(words, width):
+    """Words ({x0, top, text}) -> [{y, cols:{col:[(x,text)]}, texts:set}]."""
+    lines = []
+    cur = None
+    for w in sorted(words, key=lambda w: (w["top"], w["x0"])):
+        if cur is None or w["top"] - cur["y0"] > LINE_TOL:
+            cur = {"y0": w["top"], "ys": [w["top"]], "words": [w]}
+            lines.append(cur)
+        else:
+            cur["ys"].append(w["top"])
+            cur["words"].append(w)
+    out = []
+    for ln in lines:
+        cols = {}
+        for w in sorted(ln["words"], key=lambda w: w["x0"]):
+            cols.setdefault(_col_of(w["x0"], width), []).append((w["x0"], w["text"]))
+        out.append({
+            "y": sum(ln["ys"]) / len(ln["ys"]),
+            "cols": cols,
+            "text": " ".join(w["text"] for w in sorted(ln["words"], key=lambda w: w["x0"])),
+        })
+    return out
+
+
+def _col_text(line, col):
+    return " ".join(t for _, t in line["cols"].get(col, []))
+
+
+def _line_years(line):
+    """(startYear, endYear) if the line carries year cells, else None."""
+    sy = [t for _, t in line["cols"].get("start", []) if YEAR_RE.match(t)]
+    ey = [t for _, t in line["cols"].get("end", []) if YEAR_RE.match(t)]
+    if sy and ey:
+        a, b = int(sy[0]), int(ey[0])
+        return (min(a, b), max(a, b))
+    if sy:
+        return (int(sy[0]), int(sy[0]))
     return None
 
 
-def extract_code_series(text):
-    m = CODE_SERIES_RE.search(text)
-    return m.group(1) if m else ""
+def _is_header_or_footer(line):
+    words = {t.lower().strip(",.") for _, ws in line["cols"].items() for _, t in ws}
+    if words & HEADER_WORDS:
+        return True
+    if "page" in words and any(t.isdigit() for t in words):
+        return True
+    if "(lal):" in words or "look-alike" in words:
+        return True
+    return False
 
 
-def extract_blanks(tokens):
-    """
-    Given the tokens AFTER the code series, return (blank, substitutes).
-    Heuristic (tunable): collect Ilco/Silca-style part tokens up to the first
-    stopword; drop bracketed variant groups ([-P, -PC]), parenthetical notes
-    ((LAL), (4C)) and lone trailing numbers. First token = blank, rest = subs.
-    """
-    found = []
-    depth = 0
-    for tok in tokens:
-        low = tok.lower().strip(",")
-        # Track and skip bracket/paren groups like "[-P," ... "-PC]" or "(LAL)"
-        depth += tok.count("(") + tok.count("[")
-        closed = tok.count(")") + tok.count("]")
-        if depth > 0 or "(" in tok or "[" in tok:
-            depth = max(0, depth - closed)
+def parse_page(words, width, state):
+    """One page of words -> row dicts. `state` carries make/model across pages."""
+    lines = [ln for ln in cluster_lines(words, width)]
+
+    # Page-label make hint: a header like "ACURA - ALFA ROMEO" or footer "ACURA"
+    page_make_hint = ""
+    for ln in lines:
+        m = re.match(r"^(?:Page \d+ )?([A-Z][A-Z .,&-]+)$", ln["text"].strip())
+        if m and ln["cols"].get("model") is None:
+            first = re.split(r"\s+-\s+", m.group(1))[0].strip()
+            if is_make_text(first):
+                page_make_hint = normalize_make(first)
+                break
+
+    lines = [ln for ln in lines if not _is_header_or_footer(ln)]
+
+    # ---- anchors ----
+    # Application anchors: a Lock-Apps value marks one output row.
+    anchors = []
+    for ln in lines:
+        app = _col_text(ln, "apps")
+        if app and re.sub(r"\s*/\s*", "/", app.lower()) in APPLICATION_CANON:
+            anchors.append(ln)
+    if not anchors:
+        return []  # index/front-matter page
+
+    # Make headers: a known make name sitting in the model column.
+    make_anchors = []
+    # Model labels (may wrap onto two lines -> merge close ones).
+    model_anchors = []
+    for ln in lines:
+        mtext = _col_text(ln, "model")
+        if not mtext:
             continue
-        depth = max(0, depth - closed)
-        if low in BLANK_STOPWORDS:
-            break
-        if low in BLANK_BLACKLIST:
-            continue
-        clean = tok.strip(",")
-        if BLANK_TOKEN_RE.match(clean):
-            found.append(clean)
-    if not found:
-        return "", ""
-    return found[0], ", ".join(found[1:])
+        if is_make_text(mtext):
+            make_anchors.append((ln["y"], normalize_make(mtext)))
+        else:
+            if model_anchors and ln["y"] - model_anchors[-1][0] <= MODEL_MERGE_TOL:
+                py, ptext = model_anchors[-1]
+                model_anchors[-1] = ((py + ln["y"]) / 2, ptext + " " + mtext)
+            else:
+                model_anchors.append((ln["y"], mtext))
+    # A model label printed ON an anchor line starts its model there — earlier
+    # bands can't belong to it. Centered labels (between anchor lines) can be
+    # claimed from either direction.
+    anchor_ys = [a["y"] for a in anchors]
+    model_marks = []
+    for my, mtext in model_anchors:
+        on_line = any(abs(my - ay) <= ON_LINE_TOL for ay in anchor_ys)
+        model_marks.append({"y": my, "text": normalize_model(mtext), "on_line": on_line})
 
+    year_lines = [(ln["y"], _line_years(ln)) for ln in lines if _line_years(ln)]
 
-# --------------------------------------------------------------------------
-# PARSE layer — physical line strings -> rows (unit-testable)
-# --------------------------------------------------------------------------
+    # ---- band boundaries: midpoints between consecutive anchors ----
+    bounds = []
+    for i, ay in enumerate(anchor_ys):
+        lo = (anchor_ys[i - 1] + ay) / 2 if i > 0 else ay - BAND_CAP
+        hi = (ay + anchor_ys[i + 1]) / 2 if i + 1 < len(anchor_ys) else ay + BAND_CAP
+        bounds.append((lo, hi))
 
-def _split_tokens(line):
-    return line.split()
+    def band_index(y):
+        for i, (lo, hi) in enumerate(bounds):
+            if lo <= y < hi:
+                return i
+        return None
 
+    # Multi-line blank cells mark continuation explicitly: a token ending in
+    # "/" (EK3P-HO03/EK3LB-HO03*/) or an "or" (OEM# 72147-TZ5-A01 or) means the
+    # next blank line belongs to the SAME row even if the midpoint puts it in
+    # the neighboring band. Record those forced assignments.
+    forced = {}  # id(line) -> band index
+    blank_lines = [ln for ln in lines if ln["cols"].get("blank")]
+    for j, ln in enumerate(blank_lines):
+        toks = [t for _, t in ln["cols"]["blank"]]
+        continues = toks[-1].endswith("/") or toks[-1].lower() == "or"
+        if continues and j + 1 < len(blank_lines):
+            nxt = blank_lines[j + 1]
+            if 0 < nxt["y"] - ln["y"] <= 14:
+                bi = forced.get(id(ln), band_index(ln["y"]))
+                if bi is not None:
+                    forced[id(nxt)] = bi
 
-def _is_header(line):
-    """A make/section header: mostly caps letters, no year on the line."""
-    if looks_like_year(line):
-        return False
-    letters = [c for c in line if c.isalpha()]
-    if not letters:
-        return False
-    upper_ratio = sum(1 for c in letters if c.isupper()) / len(letters)
-    # Headers are all/mostly caps and short-ish (a make name, maybe with a
-    # ", VANS, SUVS" tail); avoid catching a stray note line.
-    return upper_ratio > 0.85
-
-
-def parse_lines(lines, known_makes=None):
-    """
-    Turn an ordered list of physical line strings into row dicts:
-      {make, model, years, startYear, endYear, application, codeSeries,
-       blank, substitutes}
-    Emits one row per (year range x application) line. `known_makes` (optional)
-    lets a header be recognized as a make even without a section suffix.
-    """
-    known = {m.lower() for m in (known_makes or [])}
     rows = []
-    cur_make = ""
-    cur_model = ""
-    last_years = None  # (start, end, label) for Valet inheritance
+    for i, anchor in enumerate(anchors):
+        ay = anchor["y"]
+        lo, hi = bounds[i]
+        band = [ln for ln in lines
+                if forced.get(id(ln), band_index(ln["y"])) == i]
 
-    for raw in lines:
-        line = " ".join(str(raw).replace('"', "").split())
-        if not line:
+        application = normalize_application(_col_text(anchor, "apps"))
+
+        # Years: on the anchor line, else the nearest year line (year cells
+        # are vertically centered across the rows they span).
+        years = _line_years(anchor)
+        if not years:
+            cands = [(abs(yy - ay), yr) for yy, yr in year_lines if abs(yy - ay) <= YEAR_REACH]
+            if cands:
+                years = min(cands)[1]
+        if not years:
+            years = state.get("last_years")
+        if not years:
             continue
+        state["last_years"] = years
 
-        # Header?  ALL-CAPS, no year.  But a bare model header (no year, e.g. a
-        # model whose data wrapped) is rare; treat caps-no-year as make/section.
-        if _is_header(line):
-            base = SECTION_SUFFIX_RE.sub("", line).strip(" ,")
-            # Only treat as MAKE header when it looks like a manufacturer, not a
-            # model: known make, or contains a section suffix word.
-            if base.lower() in known or SECTION_SUFFIX_RE.search(line) or " " not in base:
-                cur_make = normalize_make(line)
-                cur_model = ""
-                last_years = None
-                continue
-            # Otherwise assume it's a model header line
-            cur_model = _title_model(line)
-            continue
+        # Code series: nearest series-cell value inside the band.
+        series = ""
+        best = None
+        for ln in band:
+            s = _col_text(ln, "series")
+            if s and (best is None or abs(ln["y"] - ay) < best):
+                best, series = abs(ln["y"] - ay), s
 
-        tokens = _split_tokens(line)
+        # Key blanks / substitutes: every part token inside the band.
+        blank_tokens, subs_tokens = [], []
+        for ln in band:
+            blank_tokens += [t for _, t in ln["cols"].get("blank", [])]
+            subs_tokens += [t for _, t in ln["cols"].get("subs", [])]
+        blanks = clean_part_tokens(blank_tokens, BLANK_DROP)
+        subs = clean_part_tokens(subs_tokens, SUBS_DROP)
 
-        # Find the first token index that starts the year field.
-        yi = None
-        for i, t in enumerate(tokens):
-            if looks_like_year(t):
-                yi = i
-                break
+        # Make: last make header above this row (carries across pages).
+        for my, mk in make_anchors:
+            if my <= ay:
+                state["make"] = mk
+                state["model"] = ""
+        if not state.get("make"):
+            state["make"] = page_make_hint
 
-        app_only = tokens and tokens[0].lower().strip(",") in APPLICATION_TOKENS
+        # Model: nearest label. An on-line label starts its model at its own
+        # line, so it can't claim earlier bands — and it acts as a barrier: a
+        # centered label below it can't reach back past it either.
+        def blocked(mark):
+            if mark["on_line"] and ay < mark["y"] - ON_LINE_TOL:
+                return True
+            if mark["y"] > ay:  # any on-line label strictly between?
+                return any(m["on_line"] and ay < m["y"] - ON_LINE_TOL and m["y"] < mark["y"]
+                           for m in model_marks)
+            return False
 
-        if yi is None and not app_only:
-            # Continuation line (extra key blank / transponder text) — skip.
-            continue
+        cands = [(abs(m["y"] - ay), m["text"]) for m in model_marks if not blocked(m)]
+        if cands:
+            state["model"] = min(cands)[1]
+        elif not state.get("model") and model_marks:
+            # Page-top rows continuing a model from the previous page, with no
+            # carryover available: fall back to the first label below.
+            state["model"] = min((abs(m["y"] - ay), m["text"]) for m in model_marks)[1]
+        model = state.get("model") or "All Models"
 
-        if app_only and yi is None:
-            # Valet/application sub-row: inherit model + previous year range.
-            if not last_years:
-                continue
-            application = normalize_application(tokens[0])
-            rest = tokens[1:]
-            code = extract_code_series(" ".join(rest))
-            after = _tokens_after_code(rest, code)
-            blank, subs = extract_blanks(after)
-            start, end, label = last_years
-            rows.append(_row(cur_make, cur_model, label, start, end,
-                             application, code, blank, subs))
-            continue
-
-        # Data row.  Name tokens are everything before the year field.
-        name_tokens = tokens[:yi]
-        # Years: consume the year tokens (handle "MID2010 2015" and "YYYY YYYY").
-        year_text, consumed = _consume_years(tokens, yi)
-        yr = parse_years(year_text)
-        if not yr:
-            continue
-        start, end, label = yr
-        rest = tokens[yi + consumed:]
-
-        # Application is the first app token in the rest (default blank).
-        application = ""
-        ri = 0
-        while ri < len(rest):
-            if rest[ri].lower().strip(",") in APPLICATION_TOKENS:
-                application = normalize_application(rest[ri])
-                ri += 1
-                break
-            ri += 1
-        after_app = rest[ri:] if application else rest
-
-        code = extract_code_series(" ".join(after_app))
-        after_code = _tokens_after_code(after_app, code)
-        blank, subs = extract_blanks(after_code)
-
-        if name_tokens:
-            cur_model = _title_model(" ".join(name_tokens))
-        model = cur_model or "All Models"
-        last_years = (start, end, label)
-        rows.append(_row(cur_make, model, label, start, end,
-                         application, code, blank, subs))
-
+        rows.append({
+            "make": state.get("make", ""),
+            "model": model,
+            "years": f"{years[0]}-{years[1]}" if years[0] != years[1] else str(years[0]),
+            "application": application,
+            "codeSeries": series,
+            "blank": "/".join(blanks),
+            "substitutes": "/".join(subs),
+        })
     return rows
-
-
-def _consume_years(tokens, yi):
-    """From index yi, gather the year tokens; return (text, count consumed)."""
-    text = tokens[yi]
-    count = 1
-    # A second consecutive year token (the end year) if present.
-    if yi + 1 < len(tokens) and re.fullmatch(r"(?:19|20)\d{2}", tokens[yi + 1].strip(",")):
-        text += " " + tokens[yi + 1]
-        count = 2
-    return text, count
-
-
-def _tokens_after_code(tokens, code):
-    if not code:
-        return tokens
-    joined = " ".join(tokens)
-    idx = joined.find(code)
-    if idx < 0:
-        return tokens
-    tail = joined[idx + len(code):].split()
-    return tail
-
-
-def _title_model(s):
-    s = " ".join(str(s).split()).strip(" ,.")
-    # Keep as-is if it has lowercase already; otherwise Title-Case the caps.
-    if any(c.islower() for c in s):
-        return s
-    return " ".join(w.capitalize() if w.isalpha() else w for w in s.split())
-
-
-def _row(make, model, label, start, end, application, code, blank, subs):
-    return {
-        "make": normalize_make(make) if make else "",
-        "model": model,
-        "years": label,
-        "startYear": start,
-        "endYear": end,
-        "application": application,
-        "codeSeries": code,
-        "blank": blank,
-        "substitutes": subs,
-    }
 
 
 def format_row(r):
@@ -373,69 +457,100 @@ def format_row(r):
 
 
 # --------------------------------------------------------------------------
-# EXTRACT layer — PDF -> physical line strings (needs pdfplumber + the PDF)
+# PDF input
 # --------------------------------------------------------------------------
 
-def pdf_to_lines(pdf_path, pages=None, y_tol=3.0):
+def parse_pdf(pdf_path, pages=None):
     import pdfplumber
+    rows = []
+    state = {}
     with pdfplumber.open(pdf_path) as pdf:
-        page_iter = pdf.pages
+        page_list = pdf.pages
         if pages:
             lo, hi = pages
-            page_iter = pdf.pages[lo - 1:hi]
-        for page in page_iter:
+            page_list = pdf.pages[lo - 1:hi]
+        for page in page_list:
             words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
-            words.sort(key=lambda w: (round(w["top"] / y_tol), w["x0"]))
-            line, cur_top = [], None
-            for w in words:
-                if cur_top is None or abs(w["top"] - cur_top) <= y_tol:
-                    line.append(w)
-                    cur_top = w["top"] if cur_top is None else cur_top
-                else:
-                    yield " ".join(x["text"] for x in sorted(line, key=lambda x: x["x0"]))
-                    line, cur_top = [w], w["top"]
-            if line:
-                yield " ".join(x["text"] for x in sorted(line, key=lambda x: x["x0"]))
+            rows += parse_page(words, page.width, state)
+    return rows
 
 
 # --------------------------------------------------------------------------
-# Self-test — validates the PARSE layer on real sample rows (no PDF needed)
+# Self-test: run the engine over the captured Acura pages fixture
 # --------------------------------------------------------------------------
 
-SAMPLE_LINES = [
-    "TOYOTA TRUCKS, VANS, SUVS",
-    "4 RUNNER 1999 2002 All 10001-15000 TOY43AT4 (LAL) OBP Program E, Smart Pro/TCP/MVPP/TKO/ SDD Service Key TR47 Texas Instruments (4C) Encrypted System 514",
-    "1996 1998 All 10001-15000 X217/TR47 [-P, -PC] X225/B80 514",
-    "Valet 10001-15000 X220/TR50-514",
-    "1990 1995 All W1-W2409 X211/TR44 [-P] X174/TR40 264",
-    "1984 1989 All K1-K4570 X137/TR33 [-P, -PC]-89",
-    "4 RUNNER LTD. 1999 2002 All 10001-15000 EK3-TOY43/EK3LB-TOY43*/ TOY43-GTK# RW5, SA+ Service Key TR47",
-]
+FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "fixtures", "acura_p13_p14.txt")
+
+
+def load_fixture(path):
+    """Fixture format: 'PAGE <n> <width>' then '<x> <y> <text>' lines."""
+    pages = []
+    with open(path) as fh:
+        for raw in fh:
+            raw = raw.rstrip("\n")
+            if not raw.strip():
+                continue
+            if raw.startswith("PAGE "):
+                _, _, width = raw.split()
+                pages.append({"width": float(width), "words": []})
+            else:
+                x, y, text = raw.split(None, 2)
+                pages[-1]["words"].append({"x0": float(x), "top": float(y), "text": text})
+    return pages
 
 
 def selftest():
-    rows = parse_lines(SAMPLE_LINES, known_makes=["Toyota"])
+    pages = load_fixture(FIXTURE)
+    state = {}
+    rows = []
+    for p in pages:
+        rows += parse_page(p["words"], p["width"], state)
     got = [format_row(r) for r in rows]
     for line in got:
         print("  ", line)
 
-    # Exact checks for the clean fields (make/model/years/application/code +
-    # primary blank). Substitute over-capture is fine — "capture all part-like
-    # numbers" is the goal — so these assert a startswith prefix.
-    prefix_checks = [
-        ("row0 make/case + blank", got[0], "Toyota | 4 Runner | 1999-2002 | All | 10001-15000 | TOY43AT4"),
-        ("row1 primary+substitute", got[1], "Toyota | 4 Runner | 1996-1998 | All | 10001-15000 | X217/TR47 | X225/B80"),
-        ("row2 valet inherits 1996-1998", got[2], "Toyota | 4 Runner | 1996-1998 | Valet | 10001-15000"),
-        ("row3 blank captured", got[3], "Toyota | 4 Runner | 1990-1995 | All | W1-W2409 | X211/TR44"),
-        ("row4 blank captured", got[4], "Toyota | 4 Runner | 1984-1989 | All | K1-K4570 | X137/TR33"),
-        ("row5 ltd model", got[5], "Toyota | 4 Runner Ltd | 1999-2002 | All | 10001-15000"),
+    def has(prefix):
+        return any(g.startswith(prefix) for g in got)
+
+    checks = [
+        # Merged model cell + years centered across All/Valet rows
+        "Acura | MDX | 2007-2013 | All | K001-N718 | HO03-PT/EK3P-HO03/EK3LB-HO03/HO03-GTK | HO01-SVC",
+        "Acura | MDX | 2001-2006 | All | 5001-8442 | HD106-PT/HD106-PT5 | HD103-NP",
+        "Acura | MDX | 2001-2006 | Valet | 5001-8442 | HD107-PT/HD107-PT5 | HD103-NP",
+        # OEM# multi-line cell with A01/A11 suffix expansion
+        "Acura | MDX | 2014-2017 | All | K001-N718 | 72147-TZ5-A01/72147-TZ5-A11 | HO01-SVC",
+        # Model label centered over its whole span (NSX), old X-style blanks
+        "Acura | NSX | 1991-1996 | All | 5001-8442 | X204/HD99 | X214/HD103",
+        "Acura | NSX | 1991-1996 | Valet | 5001-8442 | X205/HD100",
+        # Band with no code series at all (2022+ prox)
+        "Acura | RDX | 2022-2025 | All |  | 72147-TJB-A21/72147-TJB-A31",
+        # On-line model label must not claim earlier bands (TL vs TLX)
+        "Acura | TL | 1995-1998 | All | 5001-8442 | X214/HD103",
+        "Acura | TLX Base | 2021-2025 | All | K001-N718 | 72147-TGV-A01/72147-TGV-A11",
+        # Model between two candidates resolves by distance (TSX not TLX)
+        "Acura | TSX | 2009-2014 | All | K001-N718 | HO03-PT/EK3P-HO03/EK3LB-HO03/HO03-GTK",
+        # Substitutes column with X-style names
+        "Acura | Vigor | 1992-1994 | All | 3001-4481 | X208/HD101 | X183/HD92",
+        "Acura | Vigor | 1992-1994 | Valet | 3001-4481 | X209/HD102 | X189/HD93",
+        # Wrapped model label ("ZDX W/ REGULAR" + "IGNITION")
+        "Acura | ZDX w/ Regular Ignition | 2010-2012 | All | K001-N718",
+        # Model label on its own anchor line (prox variant vs base model)
+        "Acura | TL w/ Prox | 2009-2014 | All | K001-N718 | 72147-TK4-A71/72147-TK4-A81",
+        # Trailing-"/" continuation must not leak into the next band (Vigor
+        # keeps only its own X-blanks; TSX keeps its GTK line)
+        "Acura | TSX | 2004-2008 | All | 5001-8442 | HD111-PT/EK3P-HD111/EK3LB-HD111/HD111-GTK",
     ]
     ok = True
-    for label, actual, expect in prefix_checks:
-        if not actual.startswith(expect):
-            print(f"FAIL {label}:\n  expected prefix:", expect, "\n  got:           ", actual)
+    for c in checks:
+        if not has(c):
+            print("FAIL missing:", c)
             ok = False
-    print("\nSELFTEST", "PASS" if ok else "FAIL")
+    # The Alfa Romeo blank-board and legend lines must produce no rows
+    if any(g.startswith("Alfa Romeo") for g in got):
+        print("FAIL: Alfa Romeo section header leaked rows")
+        ok = False
+    print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
 
@@ -456,11 +571,13 @@ def parse_pages_arg(s):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Extract Ilco reference data to the paste format.")
     ap.add_argument("pdf", nargs="?", help="path to the Ilco reference PDF")
-    ap.add_argument("--pages", help="page range, e.g. 10-14 or 12")
+    ap.add_argument("--pages", help="page range, e.g. 13-14 or 13")
     ap.add_argument("--out", default="ilco_output.txt", help="output file")
-    ap.add_argument("--preview", type=int, metavar="N", help="print first N rows and stats, don't write")
+    ap.add_argument("--preview", type=int, metavar="N",
+                    help="print first N rows and stats, don't write a file")
     ap.add_argument("--split-by-make", action="store_true", help="write one file per make")
-    ap.add_argument("--selftest", action="store_true", help="validate the parser on built-in samples")
+    ap.add_argument("--selftest", action="store_true",
+                    help="validate the engine on the captured Acura pages")
     args = ap.parse_args(argv)
 
     if args.selftest:
@@ -469,23 +586,21 @@ def main(argv=None):
         ap.error("a PDF path is required (or use --selftest)")
 
     try:
-        lines = list(pdf_to_lines(args.pdf, parse_pages_arg(args.pages)))
+        rows = parse_pdf(args.pdf, parse_pages_arg(args.pages))
     except ImportError:
         print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
         return 2
 
-    rows = parse_lines(lines)
     makes = sorted({r["make"] for r in rows if r["make"]})
+    with_blank = sum(1 for r in rows if r["blank"])
 
     if args.preview:
         for r in rows[:args.preview]:
             print(format_row(r))
-        print(f"\n--- {len(rows)} rows, {len(makes)} makes, "
-              f"{sum(1 for r in rows if r['blank'])} with a key blank ---")
+        print(f"\n--- {len(rows)} rows, {len(makes)} makes, {with_blank} with a key blank ---")
         return 0
 
     if args.split_by_make:
-        import os
         os.makedirs("ilco_by_make", exist_ok=True)
         for mk in makes:
             safe = re.sub(r"[^A-Za-z0-9]+", "_", mk)
@@ -496,8 +611,7 @@ def main(argv=None):
 
     with open(args.out, "w") as fh:
         fh.write("\n".join(format_row(r) for r in rows) + "\n")
-    print(f"Wrote {len(rows)} rows ({len(makes)} makes, "
-          f"{sum(1 for r in rows if r['blank'])} with a key blank) to {args.out}")
+    print(f"Wrote {len(rows)} rows ({len(makes)} makes, {with_blank} with a key blank) to {args.out}")
     return 0
 
 
