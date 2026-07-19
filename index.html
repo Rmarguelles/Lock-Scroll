@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v230</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v231</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v230</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v231</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v230<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v231<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -27579,6 +27579,7 @@ function openAddCustomKey(prefillFcc = null) {
         }
         customKeyVehicleCount = 0;
         customKeyVehicleCodeSeries = {};
+        customKeyVehicleRangeCount = {};
 
         // Populate keyway dropdown
         populateCustomKeyDropdown('customKeyKeyway', 'keyway', 'Select keyway...');
@@ -28503,12 +28504,68 @@ function addCustomKeyVehiclesFromPaste() {
 
         document.getElementById('customVehicleStart' + num).value = v.startYear;
         document.getElementById('customVehicleEnd' + num).value = v.endYear;
+
+        // Ilco guide pipe rows carry uses + code series — apply them
+        if (Array.isArray(v.keyRoles)) {
+            v.keyRoles.forEach(r => {
+                const box = document.getElementById('customVehicleRole' + num + '_' + r);
+                if (box) box.checked = true;
+            });
+        }
+        if (Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
+            customKeyVehicleCodeSeries[num] = v.codeSeries.map(s =>
+                typeof s === 'string' ? { series: s, years: '' } : s);
+            renderCustomKeyCodeSeriesList(num);
+        }
     });
 
     textEl.value = '';
     document.getElementById('customKeyVehiclePasteBox').style.display = 'none';
     toast(`${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} added` +
         (failed.length ? ` — ${failed.length} line${failed.length !== 1 ? 's' : ''} not recognized` : ''));
+}
+
+// Shared "uses" checkbox strip for custom-key vehicle rows and their extra
+// year ranges. All unchecked = whole vehicle (the key's default roles apply).
+function customKeyRolesHtml(idPrefix) {
+    return '<div style="margin-top:6px;">' +
+        '<span style="font-size:11px;color:var(--dim);">Uses (all unchecked = whole vehicle):</span>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">' +
+        KEY_ROLES.map(r =>
+            '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text);cursor:pointer;">' +
+            '<input type="checkbox" id="' + idPrefix + '_' + r + '" style="width:auto;">' +
+            r.charAt(0).toUpperCase() + r.slice(1) + '</label>').join('') +
+        '</div></div>';
+}
+
+// Extra (e.g. non-consecutive) year ranges on a custom-key vehicle row. Each
+// range keeps its OWN uses — applications can change between year ranges —
+// and becomes its own vehicle application on save, mirroring the Edit
+// Vehicles and Add Vehicle modals.
+let customKeyVehicleRangeCount = {};
+
+function addCustomKeyYearRange(vehicleNum) {
+    const container = document.getElementById('customVehicleExtraRanges' + vehicleNum);
+    if (!container) return;
+    const i = (customKeyVehicleRangeCount[vehicleNum] = (customKeyVehicleRangeCount[vehicleNum] || 0) + 1);
+    const suffix = vehicleNum + '_' + i;
+    container.insertAdjacentHTML('beforeend',
+        '<div class="custom-vehicle-extra-range" id="customVehicleExtra' + suffix + '" style="margin-top:8px;border-top:1px dashed var(--border);padding-top:8px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<span style="font-size:11px;color:var(--dim);">Additional Year Range</span>' +
+                '<button onclick="removeCustomKeyYearRange(\'' + suffix + '\')" style="background:transparent;border:none;color:var(--dim);font-size:14px;cursor:pointer;">×</button>' +
+            '</div>' +
+            '<div class="custom-vehicle-years">' +
+                '<input type="number" id="customVehicleExtraStart' + suffix + '" placeholder="Start Year">' +
+                '<input type="number" id="customVehicleExtraEnd' + suffix + '" placeholder="End Year">' +
+            '</div>' +
+            customKeyRolesHtml('customVehicleExtraRole' + suffix) +
+        '</div>');
+}
+
+function removeCustomKeyYearRange(suffix) {
+    const el = document.getElementById('customVehicleExtra' + suffix);
+    if (el) el.remove();
 }
 
 function addCustomKeyVehicle() {
@@ -28568,6 +28625,9 @@ function addCustomKeyVehicle() {
                 '<input type="number" id="customVehicleStart' + customKeyVehicleCount + '" placeholder="Start Year" value="' + currentYear + '">' +
                 '<input type="number" id="customVehicleEnd' + customKeyVehicleCount + '" placeholder="End Year" value="' + currentYear + '">' +
             '</div>' +
+            customKeyRolesHtml('customVehicleRole' + customKeyVehicleCount) +
+            '<div id="customVehicleExtraRanges' + customKeyVehicleCount + '"></div>' +
+            '<button onclick="addCustomKeyYearRange(' + customKeyVehicleCount + ')" style="margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed var(--accent2);border-radius:6px;color:var(--accent2);font-size:11px;cursor:pointer;">+ Add Year Range</button>' +
             '<div class="customKeyCodeSeriesSection" style="' + csHiddenStyle + 'margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                     '<span style="font-size:11px;color:var(--dim);">Code Series (optional)</span>' +
@@ -28835,12 +28895,34 @@ function saveCustomKey() {
         const codeSeries = csEntries.length > 0 ? csEntries : [];
 
         if (make && make !== '__other__') {
-            vehicles.push({
+            const mainVeh = {
                 make: make,
                 model: model || 'Unknown',
                 startYear: startYear,
                 endYear: endYear,
                 codeSeries: codeSeries.length > 0 ? codeSeries : null
+            };
+            const mainRoles = KEY_ROLES.filter(r => document.getElementById('customVehicleRole' + num + '_' + r)?.checked);
+            if (mainRoles.length > 0 && mainRoles.length < KEY_ROLES.length) mainVeh.keyRoles = mainRoles;
+            vehicles.push(mainVeh);
+
+            // Each extra year range is its own vehicle application with its
+            // own uses — applications can change between ranges.
+            row.querySelectorAll('.custom-vehicle-extra-range').forEach(er => {
+                const suffix = er.id.replace('customVehicleExtra', '');
+                const exStart = parseInt(document.getElementById('customVehicleExtraStart' + suffix)?.value);
+                if (!exStart) return;
+                const exEnd = parseInt(document.getElementById('customVehicleExtraEnd' + suffix)?.value) || exStart;
+                const exVeh = {
+                    make: make,
+                    model: model || 'Unknown',
+                    startYear: exStart,
+                    endYear: exEnd,
+                    codeSeries: null
+                };
+                const exRoles = KEY_ROLES.filter(r => document.getElementById('customVehicleExtraRole' + suffix + '_' + r)?.checked);
+                if (exRoles.length > 0 && exRoles.length < KEY_ROLES.length) exVeh.keyRoles = exRoles;
+                vehicles.push(exVeh);
             });
         }
     });
