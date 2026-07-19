@@ -1,0 +1,7 @@
+# Python bytecode cache from tools/
+__pycache__/
+*.pyc
+
+# Extractor output (generated locally from the Ilco PDF)
+ilco_output.txt
+ilco_by_make/
