@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v228</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v229</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4782,6 +4782,7 @@
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeIlcoRefPanel()">←</button>
         <div class="vehicle-title">📗 Ilco Key Reference</div>
+        <input type="text" id="ilcoRefSearch" placeholder="Search key blank (e.g. TR33), make, model..." oninput="renderIlcoRefList()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
         <div style="display:flex;gap:8px;margin-top:8px;">
             <button onclick="openIlcoImportModal()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Reference</button>
             <button onclick="openIlcoReviewPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📥 Import Review</button>
@@ -5291,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v228</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v229</p>
         </div>
 
         <div class="settings-section">
@@ -5303,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v228<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v229<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19579,6 +19580,32 @@ function selectIlcoRefMake(make) {
 function renderIlcoRefList() {
     const el = document.getElementById('ilcoRefList');
     if (!el) return;
+    const q = (document.getElementById('ilcoRefSearch')?.value || '').trim().toLowerCase();
+    if (q) {
+        // Blank-name matches first (typing "TR33" finds X137/TR33 but ranks
+        // it above rows that merely contain the text somewhere)
+        const nameHit = r => String(r.blank || '').split('/').some(p => p.trim().toLowerCase() === q);
+        const textHit = r => [r.make, r.model, r.blank, r.codeSeries].join(' ').toLowerCase().includes(q);
+        const exact = ilcoRef.filter(nameHit);
+        const rest = ilcoRef.filter(r => !nameHit(r) && textHit(r));
+        const hits = exact.concat(rest);
+        if (hits.length === 0) {
+            el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No guide entries reference "${escapeJobText(q)}".</div>`;
+            return;
+        }
+        el.innerHTML = `<div style="padding:8px 12px;color:var(--accent);font-size:12px;font-weight:600;">${hits.length} entr${hits.length !== 1 ? 'ies' : 'y'} reference "${escapeJobText(q)}"${exact.length ? ` (${exact.length} exact)` : ''}</div>`
+            + hits.map(r => `
+            <div class="vehicle-card">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${escapeJobText(r.make)} ${escapeJobText(r.model || '')} ${escapeJobText(r.years || '')}</div>
+                    ${r.keyType === 'Prox' ? '<span style="color:var(--accent2);font-size:10px;">PROX</span>' : ''}
+                </div>
+                <div style="font-size:12px;color:var(--dim);margin:2px 0;">
+                    ${r.application ? escapeJobText(r.application) + ' · ' : ''}${r.codeSeries ? 'CS ' + escapeJobText(r.codeSeries) + ' · ' : ''}<b style="color:var(--text);">${escapeJobText(r.blank || '')}</b>
+                </div>
+            </div>`).join('');
+        return;
+    }
     if (ilcoRef.length === 0) {
         el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No Ilco guide entries yet — use Paste Ilco Reference to import.</div>`;
         return;

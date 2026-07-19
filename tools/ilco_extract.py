@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.5-clean"
+EXTRACTOR_VERSION = "2.6-clean"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -804,6 +804,18 @@ def selftest():
 # CLI
 # --------------------------------------------------------------------------
 
+def rows_for_key(rows, name):
+    """All rows whose key-blank names include `name`. Exact name match first
+    (TR33 matches X137/TR33 but not TR330); falls back to substring when
+    nothing matches exactly. Returns (rows, exact?)."""
+    q = name.strip().lower()
+    exact = [r for r in rows
+             if any(p.lower() == q for p in r["blank"].split("/") if p)]
+    if exact:
+        return exact, True
+    return [r for r in rows if q and q in r["blank"].lower()], False
+
+
 def parse_pages_arg(s):
     if not s:
         return None
@@ -822,6 +834,8 @@ def main(argv=None):
     ap.add_argument("--preview", type=int, metavar="N",
                     help="print first N rows and stats, don't write a file")
     ap.add_argument("--split-by-make", action="store_true", help="write one file per make")
+    ap.add_argument("--key", metavar="NAME",
+                    help="print only rows whose key blank includes NAME (e.g. --key TR33)")
     ap.add_argument("--selftest", action="store_true",
                     help="validate the engine on the captured Acura pages")
     args = ap.parse_args(argv)
@@ -839,6 +853,15 @@ def main(argv=None):
 
     makes = sorted({r["make"] for r in rows if r["make"]})
     with_blank = sum(1 for r in rows if r["blank"])
+
+    if args.key:
+        hits, exact = rows_for_key(rows, args.key)
+        for r in hits:
+            print(format_row(r))
+        kind = "exact" if exact else "substring"
+        print(f"\n--- extractor v{EXTRACTOR_VERSION}: {len(hits)} row(s) reference "
+              f"'{args.key}' ({kind} match) ---")
+        return 0
 
     if args.preview:
         for r in rows[:args.preview]:
