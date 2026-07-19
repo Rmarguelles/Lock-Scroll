@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v227</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v228</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4673,7 +4673,10 @@
     <div class="vehicle-header">
         <div style="position:relative;height:34px;margin-bottom:8px;">
             <button class="back-btn" style="position:absolute;left:0;top:50%;transform:translateY(-50%);" onclick="closeVehiclePanel()">←</button>
-            <button onclick="openAntiquePanel()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--accent);color:#000;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Antiques: 1940-1985</button>
+            <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;">
+                <button onclick="openAntiquePanel()" style="background:var(--accent);color:#000;border:none;border-radius:14px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Antiques 1940-85</button>
+                <button onclick="openIlcoRefPanel()" style="background:var(--accent2);color:#000;border:none;border-radius:14px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">📗 Ilco Guide</button>
+            </div>
         </div>
         <div class="vehicle-title">🚗 Vehicle Lookup</div>
         <div class="vehicle-filters">
@@ -4701,8 +4704,7 @@
             <button onclick="generateAntiquePartNumbers()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">🔑 Generate Part Numbers</button>
             <button onclick="openAntiqueInventoryPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📦 Count Inventory</button>
         </div>
-        <button onclick="openIlcoImportModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Ilco Reference</button>
-        <button onclick="openIlcoReviewPanel()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📥 Import Review</button>
+
     </div>
     <div class="vehicle-list" id="antiqueMakeList"></div>
 </div>
@@ -4773,6 +4775,19 @@
             <button class="modal-btn primary" onclick="importIlcoReference()">Import</button>
         </div>
     </div>
+</div>
+
+<!-- Ilco Key Reference (modern guide) — separate from the antique classic-car book -->
+<div class="vehicle-panel" id="ilcoRefPanel" style="z-index:250;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeIlcoRefPanel()">←</button>
+        <div class="vehicle-title">📗 Ilco Key Reference</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button onclick="openIlcoImportModal()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Reference</button>
+            <button onclick="openIlcoReviewPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📥 Import Review</button>
+        </div>
+    </div>
+    <div class="vehicle-list" id="ilcoRefList"></div>
 </div>
 
 <!-- Ilco Import Review: unmatched entries + FCC pairing -->
@@ -5276,7 +5291,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v227</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v228</p>
         </div>
 
         <div class="settings-section">
@@ -5288,7 +5303,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v227<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v228<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8216,6 +8231,7 @@ async function uploadToCloud() {
                 antiqueOverrides: antiqueOverrides,
                 antiqueCustom: antiqueCustom,
                 ilcoReviewQueue: ilcoReviewQueue,
+                ilcoRef: ilcoRef,
                 lastUpdatedBy: currentUser.email
             });
             sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -8250,7 +8266,8 @@ async function uploadToCloud() {
                 fccRelationships: fccRelationships,
                 antiqueOverrides: antiqueOverrides,
                 antiqueCustom: antiqueCustom,
-                ilcoReviewQueue: ilcoReviewQueue
+                ilcoReviewQueue: ilcoReviewQueue,
+                ilcoRef: ilcoRef
             });
             allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             await personalDocRef.set(allData, { merge: true });
@@ -8493,6 +8510,12 @@ async function downloadFromCloud() {
             ilcoReviewSeq = ilcoReviewQueue.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^q/, '')) || 0), 0);
             saveToIndexedDB('ilcoReviewQueue', ilcoReviewQueue);
         }
+        if (Array.isArray(data.ilcoRef)) {
+            ilcoRef = data.ilcoRef;
+            ilcoRefSeq = ilcoRef.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^m/, '')) || 0), 0);
+            saveToIndexedDB('ilcoRef', ilcoRef);
+        }
+        migrateIlcoRowsOutOfAntique();
 
         // The customKeys merge above is by PN, so a rename done here can be
         // silently undone: a copy still carrying the old PN (stale cloud doc,
@@ -10670,6 +10693,7 @@ async function init() {
     await loadCustomVehicles();
     await loadAntiqueData();
     await loadIlcoReviewQueue();
+    await loadIlcoRef();
     await loadKeyRelationships();
     await runFrequencyBucketMigration();
     await runVatsChipMergeMigration();
@@ -16376,6 +16400,7 @@ function goHome() {
     document.getElementById('ilcoImportModal').classList.remove('on');
     document.getElementById('ilcoReviewPanel').classList.remove('on');
     document.getElementById('ilcoReviewEditModal').classList.remove('on');
+    document.getElementById('ilcoRefPanel').classList.remove('on');
     // Close tools panels
     document.getElementById('toolsPanel').classList.remove('on');
     document.getElementById('programmersPanel').classList.remove('on');
@@ -18113,7 +18138,8 @@ function exportData() {
         fccRelationships: fccRelationships,
         antiqueOverrides: antiqueOverrides,
         antiqueCustom: antiqueCustom,
-        ilcoReviewQueue: ilcoReviewQueue
+        ilcoReviewQueue: ilcoReviewQueue,
+        ilcoRef: ilcoRef
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -18254,6 +18280,14 @@ function importData(event) {
                     ilcoReviewQueue = data.ilcoReviewQueue;
                     ilcoReviewSeq = ilcoReviewQueue.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^q/, '')) || 0), 0);
                     saveIlcoReviewQueue();
+                }
+                if (Array.isArray(data.ilcoRef)) {
+                    ilcoRef = data.ilcoRef;
+                    ilcoRefSeq = ilcoRef.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^m/, '')) || 0), 0);
+                    saveIlcoRef();
+                }
+                if (true) {
+                    migrateIlcoRowsOutOfAntique();
                 }
                 saveAntiqueData();
             }
@@ -18484,6 +18518,30 @@ function findKeysByAnyName(names) {
 function syncAntiqueReferenceToKeys(onlyBlanks) {
     let rows = getAntiqueRows().filter(r => r.blank && String(r.blank).trim());
     if (onlyBlanks) rows = rows.filter(r => onlyBlanks.has(String(r.blank).trim().replace(/\//g, '-')));
+    return syncBlankRowsToKeys(rows, {
+        generatedFlag: 'antiqueGenerated',
+        blankProp: 'antiqueBlank',
+        mergedProp: 'antiqueBlanksMerged',
+        notesTag: 'ILCO antique',
+        notesText: 'From ILCO antique key blank reference (1940-1985).'
+    });
+}
+
+// Same sync for the MODERN Ilco key reference guide — separate flags so these
+// keys never show up in the antique book or Antique Key Inventory features.
+function syncIlcoRefToKeys(onlyBlanks) {
+    let rows = ilcoRef.filter(r => r.blank && String(r.blank).trim());
+    if (onlyBlanks) rows = rows.filter(r => onlyBlanks.has(String(r.blank).trim().replace(/\//g, '-')));
+    return syncBlankRowsToKeys(rows, {
+        generatedFlag: 'ilcoImported',
+        blankProp: 'ilcoBlank',
+        mergedProp: 'ilcoBlanksMerged',
+        notesTag: 'ILCO key reference guide',
+        notesText: 'From ILCO key reference guide.'
+    });
+}
+
+function syncBlankRowsToKeys(rows, opts) {
     const byBlank = {};
     rows.forEach(r => {
         const b = String(r.blank).trim().replace(/\//g, '-');
@@ -18514,6 +18572,8 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
             // A blank whose reference rows are tagged Prox is a proximity fob,
             // not a cut blank
             const isProx = byBlank[blank].some(r => r.keyType === 'Prox');
+            const flagged = {};
+            flagged[opts.generatedFlag] = true;
             const newKey = {
                 pn: preferred,
                 ilco: null,
@@ -18530,12 +18590,12 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
                 notes: null,
                 vehicles: [],
                 isCustom: true,
-                antiqueGenerated: true,
-                antiqueBlank: blank,
+                ...flagged,
                 addedDate: new Date().toISOString(),
                 isVATS: false,
                 removableSleeve: false
             };
+            newKey[opts.blankProp] = blank;
             customKeys.push(newKey);
             DB.push({ ...newKey });
             customDirty = true;
@@ -18548,7 +18608,7 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
             while (guard++ < 25) {
                 const targetPnNow = String(DB[targetIdx].pn);
                 const dupIdx = findKeysByAnyName(lookupNames).find(i =>
-                    i !== targetIdx && DB[i].isCustom && DB[i].antiqueGenerated);
+                    i !== targetIdx && DB[i].isCustom && DB[i][opts.generatedFlag]);
                 if (dupIdx === undefined) break;
                 executeKeyMerge(DB[targetIdx], DB[dupIdx], dupIdx);
                 stats.merged++;
@@ -18567,7 +18627,7 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
         // key carries a preferred-style name it keeps it, so blanks that share
         // a name can't rename the same key back and forth.
         const pnAlreadyStyled = /^[A-Z]{1,2}\d{1,4}[A-Z]?$/i.test(String(target.pn));
-        if (target.isCustom && target.antiqueGenerated && !pnAlreadyStyled
+        if (target.isCustom && target[opts.generatedFlag] && !pnAlreadyStyled
             && String(target.pn).toLowerCase() !== preferred.toLowerCase()
             && !DB.some(k => k !== target && String(k.pn).toLowerCase() === preferred.toLowerCase())) {
             renamedFrom = String(target.pn);
@@ -18641,8 +18701,8 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
         });
 
         // Notes: append the reference block once
-        if (!String(target.notes || '').includes('ILCO antique')) {
-            let notes = 'From ILCO antique key blank reference (1940-1985).';
+        if (!String(target.notes || '').includes(opts.notesTag)) {
+            let notes = opts.notesText;
             if (substitutes.size > 0) notes += '\nSubstitutes: ' + Array.from(substitutes).join(', ') + '.';
             if (appLines.size > 0) notes += '\nApplications: ' + Array.from(appLines).join('; ');
             target.notes = target.notes ? target.notes + '\n' + notes : notes;
@@ -18651,13 +18711,13 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
 
         // Blank bookkeeping keeps this sync and the generator idempotent
         const blankNorm = b => String(b).replace(/\//g, '-');
-        if (!target.antiqueBlank) {
-            target.antiqueBlank = blank;
+        if (!target[opts.blankProp]) {
+            target[opts.blankProp] = blank;
             touched = true;
-        } else if (blankNorm(target.antiqueBlank) !== blank) {
-            if (!Array.isArray(target.antiqueBlanksMerged)) target.antiqueBlanksMerged = [];
-            if (!target.antiqueBlanksMerged.some(b => blankNorm(b) === blank)) {
-                target.antiqueBlanksMerged.push(blank);
+        } else if (blankNorm(target[opts.blankProp]) !== blank) {
+            if (!Array.isArray(target[opts.mergedProp])) target[opts.mergedProp] = [];
+            if (!target[opts.mergedProp].some(b => blankNorm(b) === blank)) {
+                target[opts.mergedProp].push(blank);
                 touched = true;
             }
         }
@@ -18680,8 +18740,8 @@ function syncAntiqueReferenceToKeys(onlyBlanks) {
             const ov = keyInfoOverrides[orig] || {};
             if (target.ilco) ov.ilco = target.ilco;
             if (Array.isArray(target.mergedPNs) && target.mergedPNs.length > 0) ov.mergedPNs = target.mergedPNs;
-            if (target.antiqueBlank) ov.antiqueBlank = target.antiqueBlank;
-            if (Array.isArray(target.antiqueBlanksMerged) && target.antiqueBlanksMerged.length > 0) ov.antiqueBlanksMerged = target.antiqueBlanksMerged;
+            if (target[opts.blankProp]) ov[opts.blankProp] = target[opts.blankProp];
+            if (Array.isArray(target[opts.mergedProp]) && target[opts.mergedProp].length > 0) ov[opts.mergedProp] = target[opts.mergedProp];
             if (target.notes) ov.notes = target.notes;
             keyInfoOverrides[orig] = ov;
             overridesDirty = true;
@@ -18817,9 +18877,6 @@ function closeAntiquePanel() {
     document.getElementById('antiqueDetailPanel').classList.remove('on');
     document.getElementById('antiqueModelsPanel').classList.remove('on');
     document.getElementById('antiquePanel').classList.remove('on');
-    document.getElementById('ilcoImportModal').classList.remove('on');
-    document.getElementById('ilcoReviewPanel').classList.remove('on');
-    document.getElementById('ilcoReviewEditModal').classList.remove('on');
 }
 
 function closeAntiqueModelsPanel() {
@@ -19390,7 +19447,7 @@ function importIlcoReference() {
 
     // Dedupe against reference rows AND queue entries already present
     const sigOf = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank || '', r.keyType || ''].join('|').toLowerCase();
-    const seen = new Set(getAntiqueRows().map(sigOf));
+    const seen = new Set(ilcoRef.map(sigOf));
     ilcoReviewQueue.forEach(q => seen.add(sigOf(q)));
 
     let added = 0, queued = 0;
@@ -19417,18 +19474,18 @@ function importIlcoReference() {
             return;
         }
 
-        antiqueCustom.push({
-            _id: 'c' + (++antiqueCustomSeq),
+        ilcoRef.push({
+            _id: 'm' + (++ilcoRefSeq),
             make: r.make, model: r.model, years: r.years,
             startYear: r.startYear, endYear: r.endYear,
             application: r.application, codeSeries: r.codeSeries,
-            blank: r.blank || '', keyType: r.keyType || '', substitutes: '', source: 'ilco-import'
+            blank: r.blank || '', keyType: r.keyType || '', source: 'ilco-import'
         });
         acceptedRows.push(r);
         added++;
         if (r.blank) importedBlanks.add(String(r.blank).trim().replace(/\//g, '-'));
     });
-    saveAntiqueData();
+    saveIlcoRef();
     if (queued > 0) saveIlcoReviewQueue();
 
     // Matched blanks attach their vehicles/aliases to the existing keys via
@@ -19436,7 +19493,7 @@ function importIlcoReference() {
     // still enrich any key whose vehicles already match.
     let syncUpdated = 0;
     if (importedBlanks.size > 0) {
-        const stats = syncAntiqueReferenceToKeys(importedBlanks);
+        const stats = syncIlcoRefToKeys(importedBlanks);
         if (stats) syncUpdated = stats.updated || 0;
         buildFilters();
         applyFilters();
@@ -19446,7 +19503,7 @@ function importIlcoReference() {
     const enriched = attachIlcoCodeSeriesToKeys(acceptedRows);
     triggerAutoSync();
     closeIlcoImportModal();
-    if (document.getElementById('antiquePanel').classList.contains('on')) renderAntiqueMakeList();
+    if (document.getElementById('ilcoRefPanel').classList.contains('on')) renderIlcoRefList();
 
     toast(`${added} row${added !== 1 ? 's' : ''} imported · ${syncUpdated} key${syncUpdated !== 1 ? 's' : ''} updated · ${enriched} enriched`
         + (queued ? ` · ${queued} to review` : '')
@@ -19461,6 +19518,108 @@ function importIlcoReference() {
 // can be paired later.
 let ilcoReviewQueue = [];
 let ilcoReviewSeq = 0;
+
+// The MODERN Ilco key reference guide rows live here — deliberately separate
+// from the antique (classic car, 1940-1985) book's antiqueCustom store.
+let ilcoRef = [];
+let ilcoRefSeq = 0;
+let ilcoRefSelectedMake = null;
+
+function saveIlcoRef() {
+    saveToIndexedDB('ilcoRef', ilcoRef);
+    triggerAutoSync();
+}
+
+async function loadIlcoRef() {
+    try {
+        const rows = await loadFromIndexedDB('ilcoRef');
+        if (Array.isArray(rows)) {
+            ilcoRef = rows;
+            ilcoRefSeq = rows.reduce((mx, r) => Math.max(mx, parseInt(String(r._id).replace(/^m/, '')) || 0), 0);
+        }
+    } catch (e) {
+        console.error('Error loading ilco reference:', e);
+    }
+    migrateIlcoRowsOutOfAntique();
+}
+
+// One-time cleanup: earlier imports filed modern guide rows into the antique
+// book's store. Move them where they belong.
+function migrateIlcoRowsOutOfAntique() {
+    const moved = antiqueCustom.filter(r => r.source === 'ilco-import');
+    if (moved.length === 0) return;
+    antiqueCustom = antiqueCustom.filter(r => r.source !== 'ilco-import');
+    moved.forEach(r => {
+        const row = Object.assign({}, r, { _id: 'm' + (++ilcoRefSeq) });
+        ilcoRef.push(row);
+    });
+    saveAntiqueData();
+    saveIlcoRef();
+    console.log(`Migrated ${moved.length} Ilco guide rows out of the antique book`);
+}
+
+function openIlcoRefPanel() {
+    ilcoRefSelectedMake = null;
+    renderIlcoRefList();
+    document.getElementById('ilcoRefPanel').classList.add('on');
+}
+
+function closeIlcoRefPanel() {
+    document.getElementById('ilcoRefPanel').classList.remove('on');
+    document.getElementById('ilcoImportModal').classList.remove('on');
+    document.getElementById('ilcoReviewPanel').classList.remove('on');
+    document.getElementById('ilcoReviewEditModal').classList.remove('on');
+}
+
+function selectIlcoRefMake(make) {
+    ilcoRefSelectedMake = make;
+    renderIlcoRefList();
+}
+
+function renderIlcoRefList() {
+    const el = document.getElementById('ilcoRefList');
+    if (!el) return;
+    if (ilcoRef.length === 0) {
+        el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--dim);font-size:14px;">No Ilco guide entries yet — use Paste Ilco Reference to import.</div>`;
+        return;
+    }
+    if (!ilcoRefSelectedMake) {
+        const byMake = {};
+        ilcoRef.forEach(r => { (byMake[r.make] = byMake[r.make] || []).push(r); });
+        el.innerHTML = Object.keys(byMake).sort((a, b) => a.localeCompare(b)).map(make => `
+            <div class="vehicle-card" onclick="selectIlcoRefMake('${make.replace(/'/g, "\\'")}')">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${escapeJobText(make)}</div>
+                    <span style="color:var(--dim);font-size:12px;">${byMake[make].length} entr${byMake[make].length !== 1 ? 'ies' : 'y'}</span>
+                </div>
+            </div>`).join('');
+        return;
+    }
+    const entries = ilcoRef.filter(r => r.make === ilcoRefSelectedMake)
+        .sort((a, b) => (a.model || '').localeCompare(b.model || '') || (b.startYear || 0) - (a.startYear || 0));
+    el.innerHTML = `
+        <div class="vehicle-card" onclick="selectIlcoRefMake(null)">
+            <div class="vehicle-card-title" style="color:var(--accent);">← All Makes</div>
+        </div>` + entries.map(r => `
+        <div class="vehicle-card">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title">${escapeJobText(r.model || '')} ${escapeJobText(r.years || '')}</div>
+                ${r.keyType === 'Prox' ? '<span style="color:var(--accent2);font-size:10px;">PROX</span>' : ''}
+            </div>
+            <div style="font-size:12px;color:var(--dim);margin:2px 0 6px;">
+                ${r.application ? escapeJobText(r.application) + ' · ' : ''}${r.codeSeries ? 'CS ' + escapeJobText(r.codeSeries) + ' · ' : ''}<b style="color:var(--text);">${escapeJobText(r.blank || '')}</b>
+            </div>
+            <button onclick="deleteIlcoRefEntry('${r._id}')" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:11px;cursor:pointer;">🗑 Remove</button>
+        </div>`).join('');
+}
+
+function deleteIlcoRefEntry(id) {
+    if (!confirm('Remove this reference entry? (Keys already created/enriched are not changed.)')) return;
+    ilcoRef = ilcoRef.filter(r => r._id !== id);
+    saveIlcoRef();
+    renderIlcoRefList();
+    toast('Reference entry removed');
+}
 let ilcoReviewTab = 'queue';
 let ilcoReviewEditingId = null;
 
@@ -19540,7 +19699,7 @@ function renderIlcoReviewList() {
 function getIlcoFccPairable() {
     const out = [];
     DB.forEach((k, i) => {
-        if (!k.isCustom || !k.antiqueGenerated) return;
+        if (!k.isCustom || !k.ilcoImported) return;
         if (!k.fccid || String(k.fccid) === String(k.pn)) out.push(i);
     });
     return out;
@@ -19647,14 +19806,14 @@ function dismissIlcoReviewEntry(id) {
 
 // Record an accepted entry in the reference book (shared by attach + create)
 function ilcoReviewToReferenceRow(q) {
-    antiqueCustom.push({
-        _id: 'c' + (++antiqueCustomSeq),
+    ilcoRef.push({
+        _id: 'm' + (++ilcoRefSeq),
         make: q.make, model: q.model, years: q.years,
         startYear: q.startYear, endYear: q.endYear,
         application: q.application, codeSeries: q.codeSeries,
-        blank: q.blank, keyType: q.keyType || '', substitutes: '', source: 'ilco-import'
+        blank: q.blank, keyType: q.keyType || '', source: 'ilco-import'
     });
-    saveAntiqueData();
+    saveIlcoRef();
 }
 
 // Attach the entry's vehicle, code series, and blank names to a key the user
@@ -19732,7 +19891,7 @@ function createKeyFromIlcoReview() {
     if (!q) return;
     if (!q.blank) { toast('A key blank / PN is required to create a key'); return; }
     ilcoReviewToReferenceRow(q);
-    const stats = syncAntiqueReferenceToKeys(new Set([String(q.blank).trim().replace(/\//g, '-')]));
+    const stats = syncIlcoRefToKeys(new Set([String(q.blank).trim().replace(/\//g, '-')]));
     buildFilters();
     applyFilters();
     const totalEl = document.getElementById('totalCount');
