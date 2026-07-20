@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v231</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v232</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v231</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v232</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v231<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v232<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19160,14 +19160,47 @@ function normalizeIlcoMake(make, existingMakes) {
     return hit || m;
 }
 
+// Distinct model spellings already known for a make (case-insensitive make).
+function getModelsForMake(make) {
+    const set = new Set();
+    const mkL = String(make || '').toLowerCase();
+    DB.forEach(k => (k.vehicles || []).forEach(v => { if (v.make && v.make.toLowerCase() === mkL && v.model) set.add(v.model); }));
+    customVehicles.forEach(v => { if (v.make && v.make.toLowerCase() === mkL && v.model) set.add(v.model); });
+    return Array.from(set);
+}
+
+// Best existing-model match for a pasted/extracted model. Exact (case-
+// insensitive) wins; otherwise a whole-word prefix where one name is a prefix
+// of the other AND the shorter side has >= 2 words — so "Corolla Station"
+// snaps to an existing "Corolla Station Wagon", but bare "Corolla" never snaps
+// to a longer trim. Only snaps when exactly ONE existing model qualifies, to
+// avoid ambiguous merges. Returns the canonical existing spelling or null.
+function matchModelInList(model, list) {
+    if (!list || !list.length) return null;
+    const ml = String(model || '').toLowerCase();
+    const exact = list.find(e => e.toLowerCase() === ml);
+    if (exact) return exact;
+    if (ml.split(' ').filter(Boolean).length < 2) return null;
+    // Case A — pasted is a clipped/prefix of a fuller existing name
+    // ("Corolla Station" -> "Corolla Station Wagon"): snap to the shortest
+    // existing name that begins with the pasted name.
+    const supersets = list.filter(e => e.toLowerCase().startsWith(ml + ' '))
+        .sort((a, b) => a.length - b.length);
+    if (supersets.length) return supersets[0];
+    // Case B — pasted is fuller than an existing name ("Corolla Station Wagon
+    // SR5" -> "Corolla Station Wagon"): snap to the longest existing name the
+    // pasted one begins with, but never collapse down to a one-word base.
+    const prefixes = list.filter(e => ml.startsWith(e.toLowerCase() + ' ')
+            && e.split(' ').filter(Boolean).length >= 2)
+        .sort((a, b) => b.length - a.length);
+    if (prefixes.length) return prefixes[0];
+    return null;
+}
+
 function normalizeIlcoModel(model, existingModels) {
     let m = String(model || '').trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '');
     if (!m) return '';
-    if (existingModels && existingModels.length) {
-        const hit = existingModels.find(e => e.toLowerCase() === m.toLowerCase());
-        if (hit) return hit;
-    }
-    return m;
+    return matchModelInList(m, existingModels) || m;
 }
 
 function normalizeIlcoApplication(app) {
@@ -28464,10 +28497,37 @@ function toggleCustomKeyVehiclePaste() {
 
 function addCustomKeyVehiclesFromPaste() {
     const textEl = document.getElementById('customKeyVehiclePasteText');
-    const { vehicles, failed } = parseVehicleListText(textEl.value);
+    const parsed = parseVehicleListText(textEl.value);
+    const failed = parsed.failed;
+    let vehicles = parsed.vehicles;
     if (vehicles.length === 0) {
         toast('No vehicles recognized — use one per line like "2004-2006 Scion xB"');
         return;
+    }
+
+    // Guardrail: snap each model to an existing spelling for its make where we
+    // can, then warn before adding any that are still brand-new to the
+    // database — so a clipped name like "Corolla Station" can't silently
+    // create a near-duplicate of "Corolla Station Wagon".
+    const modelsCache = {};
+    const modelsFor = mk => (modelsCache[mk.toLowerCase()] = modelsCache[mk.toLowerCase()] || getModelsForMake(mk));
+    vehicles.forEach(v => { const snap = matchModelInList(v.model, modelsFor(v.make)); if (snap) v.model = snap; });
+
+    const brandNew = vehicles.filter(v => !modelsFor(v.make).some(e => e.toLowerCase() === String(v.model).toLowerCase()));
+    if (brandNew.length > 0) {
+        const shown = brandNew.slice(0, 12).map(v => `  • ${v.make} ${v.model}`).join('\n');
+        const more = brandNew.length > 12 ? `\n  …and ${brandNew.length - 12} more` : '';
+        const ok = confirm(`${brandNew.length} vehicle${brandNew.length !== 1 ? 's don\'t' : " doesn't"} match an existing make/model in your database and will be added as NEW:\n\n${shown}${more}\n\nOK = add them anyway.\nCancel = add only the ${vehicles.length - brandNew.length} that matched existing models.`);
+        if (!ok) {
+            const newSet = new Set(brandNew);
+            vehicles = vehicles.filter(v => !newSet.has(v));
+            if (vehicles.length === 0) {
+                textEl.value = '';
+                document.getElementById('customKeyVehiclePasteBox').style.display = 'none';
+                toast('Nothing added — all were new models. Fix spelling and paste again.');
+                return;
+            }
+        }
     }
 
     // Drop untouched blank rows so the pasted list doesn't sit under an empty one
