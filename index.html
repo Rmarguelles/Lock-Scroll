@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v233</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v234</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v233</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v234</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v233<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v234<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8236,6 +8236,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
@@ -8272,6 +8273,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
@@ -8428,6 +8430,25 @@ async function downloadFromCloud() {
         if (data.pnSupersessions) {
             pnSupersessions = { ...pnSupersessions, ...data.pnSupersessions };
             savePnSupersessions();
+        }
+        // Merge deletion tombstones, then drop any tombstoned mapping the
+        // additive merge above may have re-introduced. Without this, a
+        // supersession removed on one device comes back on the next sync.
+        if (Array.isArray(data.deletedPnSupersessions)) {
+            data.deletedPnSupersessions.forEach(op => {
+                if (!deletedPnSupersessions.some(x => String(x).toLowerCase() === String(op).toLowerCase())) {
+                    deletedPnSupersessions.push(op);
+                }
+            });
+            saveDeletedPnSupersessions();
+        }
+        if (deletedPnSupersessions.length > 0) {
+            const tomb = new Set(deletedPnSupersessions.map(x => String(x).toLowerCase()));
+            let prunedAny = false;
+            Object.keys(pnSupersessions).forEach(k => {
+                if (tomb.has(k.toLowerCase())) { delete pnSupersessions[k]; prunedAny = true; }
+            });
+            if (prunedAny) savePnSupersessions();
         }
         if (data.fidPrefixes) {
             fidPrefixes = { ...fidPrefixes, ...data.fidPrefixes };
@@ -10179,6 +10200,11 @@ let fidAssignments = {"SY5KHFNA433":"HY-514","KBRASTU15, CWTWB1U733, CWTWB1U821"
 let fidMerges = {};
 // Map of obsolete part number -> replacement part number (case-insensitive lookup)
 let pnSupersessions = {};
+// Tombstones: old PNs whose supersession was deliberately removed. Needed
+// because the cloud sync merges pnSupersessions additively AND Firestore
+// set({merge:true}) never drops a map key from the server doc — so without a
+// record of the removal, the next download resurrects the deleted mapping.
+let deletedPnSupersessions = [];
 // Map of original catalog PN -> current display PN, for renames of base (non-custom) keys
 let pnRenames = {};
 // Feature flags — set to true to re-enable
@@ -10898,6 +10924,8 @@ async function loadLocalData() {
 
             const savedPnSupersessions = await loadFromIndexedDB('pnSupersessions');
             if (savedPnSupersessions) pnSupersessions = savedPnSupersessions;
+            const savedDeletedPnSupersessions = await loadFromIndexedDB('deletedPnSupersessions');
+            if (Array.isArray(savedDeletedPnSupersessions)) deletedPnSupersessions = savedDeletedPnSupersessions;
 
             const savedPnRenames = await loadFromIndexedDB('pnRenames');
             if (savedPnRenames) pnRenames = savedPnRenames;
@@ -11054,6 +11082,34 @@ function saveFidMerges() {
 function savePnSupersessions() {
     saveToIndexedDB('pnSupersessions', pnSupersessions);
     triggerAutoSync();
+}
+
+function saveDeletedPnSupersessions() {
+    saveToIndexedDB('deletedPnSupersessions', deletedPnSupersessions);
+    triggerAutoSync();
+}
+
+// Remove the supersession for `oldPn` AND remember the removal, so cloud sync
+// can't resurrect it. Returns true if a mapping was actually removed.
+function tombstonePnSupersession(oldPn) {
+    const lc = String(oldPn).toLowerCase();
+    let removed = false;
+    Object.keys(pnSupersessions).forEach(k => {
+        if (k.toLowerCase() === lc) { delete pnSupersessions[k]; removed = true; }
+    });
+    if (!deletedPnSupersessions.some(x => String(x).toLowerCase() === lc)) {
+        deletedPnSupersessions.push(String(oldPn));
+    }
+    return removed;
+}
+
+// Clear any tombstone for `oldPn` — call whenever a supersession is (re)created
+// so a fresh mapping isn't immediately suppressed by its own past deletion.
+function clearPnSupersessionTombstone(oldPn) {
+    const lc = String(oldPn).toLowerCase();
+    const before = deletedPnSupersessions.length;
+    deletedPnSupersessions = deletedPnSupersessions.filter(x => String(x).toLowerCase() !== lc);
+    if (deletedPnSupersessions.length !== before) saveDeletedPnSupersessions();
 }
 
 function savePnRenames() {
@@ -11589,6 +11645,7 @@ function saveEditKeyInfoInner() {
             // searches for the old PN still resolve.
             if (oldPn.toLowerCase() !== newPnRaw.toLowerCase()) {
                 pnSupersessions[oldPn] = newPnRaw;
+                clearPnSupersessionTombstone(oldPn);
                 savePnSupersessions();
             }
         } else {
@@ -11773,16 +11830,21 @@ function saveEditKeyInfoInner() {
     const desiredOldPns = gatherEditKeyInfoOldPns().filter(op => op.toLowerCase() !== pn.toLowerCase());
     const desiredSet = new Set(desiredOldPns.map(s => s.toLowerCase()));
     let supersessionsChanged = false;
-    // Drop mappings that used to point here but were removed in the form
+    let tombstonesChanged = false;
+    // Drop mappings that used to point here but were removed in the form.
+    // Tombstone each removal so cloud sync doesn't resurrect it.
     Object.keys(pnSupersessions).forEach(op => {
         if (String(pnSupersessions[op]).toLowerCase() === pn.toLowerCase() && !desiredSet.has(op.toLowerCase())) {
-            delete pnSupersessions[op];
+            tombstonePnSupersession(op);
             supersessionsChanged = true;
+            tombstonesChanged = true;
         }
     });
     // Add (or repoint, with confirmation) the mappings the user entered
     desiredOldPns.forEach(op => {
         const existingKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === op.toLowerCase());
+        // A freshly (re)entered mapping must clear any prior tombstone for it
+        clearPnSupersessionTombstone(op);
         if (existingKey && String(pnSupersessions[existingKey]).toLowerCase() === pn.toLowerCase()) return; // already here
         if (existingKey && pnSupersessions[existingKey] && String(pnSupersessions[existingKey]).toLowerCase() !== pn.toLowerCase()) {
             if (!confirm(`${op} is already marked as replaced by ${pnSupersessions[existingKey]}. Overwrite to point at ${pn}?`)) {
@@ -11794,6 +11856,7 @@ function saveEditKeyInfoInner() {
         supersessionsChanged = true;
     });
     if (supersessionsChanged) savePnSupersessions();
+    if (tombstonesChanged) saveDeletedPnSupersessions();
 
     // Persist any new custom dropdown values into the dropdown data for future keys
     registerDropdownValue('buttons', newButtons);
@@ -14321,6 +14384,7 @@ function executeKeyMerge(target, source, absorbedIdx) {
         if (k.toLowerCase() === sourcePn.toLowerCase()) delete pnSupersessions[k];
     }
     pnSupersessions[sourcePn] = targetPn;
+    clearPnSupersessionTombstone(sourcePn);
     savePnSupersessions();
 
     // A PN-as-FCC stand-in (non-chip keys) dies with the absorbed PN. Move
@@ -17609,6 +17673,7 @@ function addPnSupersessionFromInputs() {
     }
 
     pnSupersessions[oldPn] = newPn;
+    clearPnSupersessionTombstone(oldPn);
     savePnSupersessions();
     oldEl.value = '';
     newEl.value = '';
@@ -17624,8 +17689,9 @@ function removePnSupersession(oldPn) {
     if (!confirm('Remove the supersession for ' + oldPn + '?')) return;
     const matchedKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === String(oldPn).toLowerCase());
     if (matchedKey) {
-        delete pnSupersessions[matchedKey];
+        tombstonePnSupersession(matchedKey);
         savePnSupersessions();
+        saveDeletedPnSupersessions();
         renderPnSupersessionsList();
         toast('Removed');
     }
@@ -29338,6 +29404,7 @@ function saveCustomKey() {
                 delete pnSupersessions[existingKey];
             }
             pnSupersessions[op] = pn;
+            clearPnSupersessionTombstone(op);
             supersessionsChanged = true;
         });
         if (supersessionsChanged) savePnSupersessions();
