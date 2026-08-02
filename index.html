@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v232</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v233</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4782,11 +4782,12 @@
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeIlcoRefPanel()">←</button>
         <div class="vehicle-title">📗 Ilco Key Reference</div>
-        <input type="text" id="ilcoRefSearch" placeholder="Search key blank (e.g. TR33), make, model..." oninput="renderIlcoRefList()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
+        <input type="text" id="ilcoRefSearch" placeholder="Search vehicle, make, model, key blank (TR33), or code series…" oninput="renderIlcoRefList()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;">
         <div style="display:flex;gap:8px;margin-top:8px;">
             <button onclick="openIlcoImportModal()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">📋 Paste Reference</button>
             <button onclick="openIlcoReviewPanel()" style="flex:1;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">📥 Import Review</button>
         </div>
+        <div id="ilcoPdfBar" style="display:flex;gap:8px;margin-top:8px;"></div>
     </div>
     <div class="vehicle-list" id="ilcoRefList"></div>
 </div>
@@ -5292,7 +5293,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v232</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v233</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5305,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v232<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v233<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19598,7 +19599,75 @@ function migrateIlcoRowsOutOfAntique() {
 function openIlcoRefPanel() {
     ilcoRefSelectedMake = null;
     renderIlcoRefList();
+    refreshIlcoPdfState();
     document.getElementById('ilcoRefPanel').classList.add('on');
+}
+
+// Source PDFs (modern guide + antique book) are linked from the device and
+// stored locally in IndexedDB — never synced to the cloud (like stockData),
+// since they're large per-device binaries. Works on phone and computer.
+const ILCO_PDF_KEYS = { guide: 'ilcoGuidePdf', antique: 'ilcoAntiquePdf' };
+const ILCO_PDF_LABELS = { guide: 'Modern Guide', antique: 'Antique Book' };
+let ilcoPdfLinked = { guide: false, antique: false };
+
+async function refreshIlcoPdfState() {
+    for (const k of Object.keys(ILCO_PDF_KEYS)) {
+        try {
+            const b = await loadFromIndexedDB(ILCO_PDF_KEYS[k]);
+            ilcoPdfLinked[k] = !!(b && b.size);
+        } catch (e) { ilcoPdfLinked[k] = false; }
+    }
+    renderIlcoPdfBar();
+}
+
+function renderIlcoPdfBar() {
+    const el = document.getElementById('ilcoPdfBar');
+    if (!el) return;
+    el.innerHTML = Object.keys(ILCO_PDF_KEYS).map(k => {
+        const linked = ilcoPdfLinked[k];
+        return `<div style="flex:1;display:flex;gap:4px;">
+            <button onclick="${linked ? "openIlcoPdf('" + k + "')" : "linkIlcoPdf('" + k + "')"}" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:${linked ? 'var(--text)' : 'var(--dim)'};font-size:12px;cursor:pointer;">${linked ? '📖 Open ' : '🔗 Link '}${ILCO_PDF_LABELS[k]}</button>
+            ${linked ? `<button onclick="linkIlcoPdf('${k}')" title="Replace linked PDF" style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:12px;cursor:pointer;">↻</button>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function linkIlcoPdf(which) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,.pdf';
+    input.onchange = async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        try {
+            await saveToIndexedDB(ILCO_PDF_KEYS[which], f);
+            ilcoPdfLinked[which] = true;
+            renderIlcoPdfBar();
+            toast(`${ILCO_PDF_LABELS[which]} PDF linked (${Math.round(f.size / 1048576)} MB)`);
+        } catch (e) {
+            console.error(e);
+            alert('Could not store the PDF (it may be too large for this device): ' + e.message);
+        }
+    };
+    input.click();
+}
+
+async function openIlcoPdf(which) {
+    try {
+        const blob = await loadFromIndexedDB(ILCO_PDF_KEYS[which]);
+        if (!blob || !blob.size) { linkIlcoPdf(which); return; }
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, '_blank');
+        if (!w) {  // popup blocked (common on iOS) — fall back to an anchor click
+            const a = document.createElement('a');
+            a.href = url; a.target = '_blank'; a.rel = 'noopener';
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+        console.error(e);
+        alert('Could not open the PDF: ' + e.message);
+    }
 }
 
 function closeIlcoRefPanel() {
@@ -19618,10 +19687,18 @@ function renderIlcoRefList() {
     if (!el) return;
     const q = (document.getElementById('ilcoRefSearch')?.value || '').trim().toLowerCase();
     if (q) {
-        // Blank-name matches first (typing "TR33" finds X137/TR33 but ranks
-        // it above rows that merely contain the text somewhere)
-        const nameHit = r => String(r.blank || '').split('/').some(p => p.trim().toLowerCase() === q);
-        const textHit = r => [r.make, r.model, r.blank, r.codeSeries].join(' ').toLowerCase().includes(q);
+        // Unified search: every whitespace-separated token must appear
+        // somewhere across the row's fields (vehicle = make+model+years,
+        // code series, key blank, application, prox). So "toyota camry",
+        // "crown victoria", "K1-K4570", or "TR33" all narrow correctly.
+        // A token that exactly equals a key-blank part ranks its rows first
+        // (typing "TR33" surfaces X137/TR33 above incidental text matches).
+        const tokens = q.split(/\s+/).filter(Boolean);
+        const blankParts = r => String(r.blank || '').split('/').map(p => p.trim().toLowerCase()).filter(Boolean);
+        const nameHit = r => { const bp = blankParts(r); return bp.includes(q) || tokens.some(t => bp.includes(t)); };
+        const hay = r => [r.make, r.model, r.years, r.application, r.codeSeries, r.blank, r.keyType]
+            .join(' ').toLowerCase();
+        const textHit = r => { const h = hay(r); return tokens.every(t => h.includes(t)); };
         const exact = ilcoRef.filter(nameHit);
         const rest = ilcoRef.filter(r => !nameHit(r) && textHit(r));
         const hits = exact.concat(rest);
