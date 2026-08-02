@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.6-clean"
+EXTRACTOR_VERSION = "2.7-appwrap"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -78,6 +78,7 @@ MODEL_MERGE_TOL = 12  # wrapped model labels ("ZDX W/ REGULAR" + "IGNITION")
 BAND_CAP = 26         # band reach when not bounded by a neighboring anchor
 YEAR_REACH = 40       # how far a band may look for its year line
 ON_LINE_TOL = 2       # model label counts as "on" an anchor line within this
+APP_WRAP_GAP = 14     # a wrapped app fragment ("Ignition/") sits this close
 
 KNOWN_MAKES = [
     "Acura", "Alfa Romeo", "AMC", "American Motors", "Aston Martin", "Audi",
@@ -463,6 +464,13 @@ def parse_page(words, width, state, edges=None):
 
     year_lines = [(ln["y"], _line_years(ln)) for ln in lines if _line_years(ln)]
 
+    # Apps-column fragments, page-wide. A wide application label wraps upward
+    # across physical lines, each fragment but the last ending in "/":
+    # "Ignition/" (own line) sits above "Door" (the anchor) = "Ignition/Door";
+    # "Door/" + "Trunk/" + "GB" = "Door/Trunk/GB". The anchor only carries the
+    # final fragment, so the wrap prefix is reassembled per row below.
+    apps_frags = [(ln["y"], _col_text(ln, "apps")) for ln in lines if _col_text(ln, "apps")]
+
     # Series values, page-wide. A long range can wrap onto two lines
     # ("HB10001-" / "HB241009") — re-join fragments before assignment.
     raw_series = [(ln["y"], _col_text(ln, "series")) for ln in lines if _col_text(ln, "series")]
@@ -526,7 +534,24 @@ def parse_page(words, width, state, edges=None):
         band = [ln for ln in lines
                 if forced.get(id(ln), band_index(ln["y"])) == i]
 
-        application = normalize_application(_col_text(anchor, "apps"))
+        # Application: the anchor's own apps text, prefixed by any wrapped
+        # fragments directly above it (each ending in "/"). Walk up the apps
+        # column while fragments stay contiguous and slash-terminated.
+        app_text = _col_text(anchor, "apps")
+        prefix = []
+        prev_y = ay
+        for fy, ftext in sorted(apps_frags, key=lambda t: -t[0]):
+            if fy >= prev_y - 0.5:
+                continue
+            if prev_y - fy > APP_WRAP_GAP:
+                break
+            if not ftext.rstrip().endswith("/"):
+                break
+            prefix.append(ftext.strip())
+            prev_y = fy
+        if prefix:
+            app_text = "".join(reversed(prefix)) + app_text
+        application = normalize_application(app_text)
 
         # Years: on the anchor line; else the year cell whose borders contain
         # this row; else the nearest year line (year cells are vertically
@@ -700,6 +725,8 @@ def parse_pdf(pdf_path, pages=None):
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "fixtures", "acura_p13_p14.txt")
+FIXTURE_CROWNVIC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "fixtures", "ford_crownvic_p49.txt")
 
 
 def load_fixture(path):
@@ -796,6 +823,30 @@ def selftest():
     if any(g.startswith("Alfa Romeo") for g in got):
         print("FAIL: Alfa Romeo section header leaked rows")
         ok = False
+
+    # Wrapped application cells: a wide app label ("Ignition/Door") splits
+    # across physical lines, the "/"-terminated fragment sitting a row above
+    # the anchor. The Crown Victoria page carries 2- and 3-line wraps.
+    cv_state = {}
+    cv_rows = []
+    for p in load_fixture(FIXTURE_CROWNVIC):
+        cv_rows += parse_page(p["words"], p["width"], cv_state)
+    cv = [format_row(r) for r in dedupe_rows(cv_rows)]
+    for line in cv:
+        print("  ", line)
+    cv_checks = [
+        "Ford | Crown Victoria | 1993-1996 | Ignition/Door | A-B-C-D-E | 1193FD/H67",
+        "Ford | Crown Victoria | 1990-1992 | Trunk/GB | FB0-FB1863 | S1167FD/H50",
+        "Ford | Crown Victoria | 1981-1989 | Door/Trunk/GB | FB0-FB1863 | S1167FD/H50",
+    ]
+    for c in cv_checks:
+        if c not in cv:
+            print("FAIL missing:", c)
+            ok = False
+    if any("H67" in g and "| Door |" in g for g in cv):
+        print("FAIL: H67 lost its wrapped 'Ignition/' fragment (shows plain Door)")
+        ok = False
+
     print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
