@@ -174,6 +174,13 @@ def normalize_application(app):
     return APPLICATION_CANON.get(key, a)
 
 
+def _first_token(s):
+    """Leading word of a model label, lowercased, punctuation stripped.
+    'COROLLA WAGON,' -> 'corolla';  'Wagon 2WD' -> 'wagon'."""
+    m = re.match(r"\s*([^\s,]+)", str(s or ""))
+    return m.group(1).strip(",.").lower() if m else ""
+
+
 def normalize_model(raw):
     s = " ".join(str(raw or "").split()).strip(" ,.")
     # The guide's catch-all rows ("Models and Years not referenced elsewhere")
@@ -445,10 +452,15 @@ def parse_page(words, width, state, edges=None):
             if model_anchors:
                 py, ptext = model_anchors[-1]
                 dy = ln["y"] - py
+                # A line repeating the first word of the label above starts a
+                # NEW model ("Corolla Wagon" then "Corolla Station Wagon"), so
+                # it is never a wrap of it, however close — don't merge. A true
+                # continuation ("Coupe, Hardtop", "Wagon 2WD") never does.
+                new_model = _first_token(mtext) == _first_token(ptext)
                 cont = (ptext.rstrip().endswith(("&", ",", "(", "-", "/"))
                         or mtext[:1].islower()
                         or (mtext.endswith(")") and "(" not in mtext))
-                if dy <= MODEL_MERGE_TOL or (dy <= 24 and cont):
+                if not new_model and (dy <= MODEL_MERGE_TOL or (dy <= 24 and cont)):
                     model_anchors[-1] = ((py + ln["y"]) / 2, ptext + " " + mtext)
                     merged = True
             if not merged:
@@ -727,6 +739,8 @@ FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "fixtures", "acura_p13_p14.txt")
 FIXTURE_CROWNVIC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "fixtures", "ford_crownvic_p49.txt")
+FIXTURE_COROLLA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "fixtures", "toyota_corolla_p127.txt")
 
 
 def load_fixture(path):
@@ -845,6 +859,25 @@ def selftest():
             ok = False
     if any("H67" in g and "| Door |" in g for g in cv):
         print("FAIL: H67 lost its wrapped 'Ignition/' fragment (shows plain Door)")
+        ok = False
+
+    # Wrapped MODEL labels: adjacent short models pack ~10pt apart, so a
+    # distance-only merge glued "Corolla Wagon" + "Corolla Station" and
+    # orphaned "Wagon 2WD". A continuation line never repeats the model's
+    # first word, so "Corolla Station" + "Wagon 2WD" is the real wrap.
+    cr_state = {}
+    cr_rows = []
+    for p in load_fixture(FIXTURE_COROLLA):
+        cr_rows += parse_page(p["words"], p["width"], cr_state)
+    cr = [format_row(r) for r in dedupe_rows(cr_rows)]
+    cr_models = {r["model"] for r in dedupe_rows(cr_rows)}
+    if not any("Corolla Station Wagon 2WD" == m for m in cr_models):
+        print("FAIL: Corolla Station Wagon 2WD not reassembled")
+        for line in cr:
+            print("  ", line)
+        ok = False
+    if "Corolla Station" in cr_models or "Wagon 2WD" in cr_models:
+        print("FAIL: Corolla Station Wagon split into mangled models")
         ok = False
 
     print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
