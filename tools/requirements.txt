@@ -1,0 +1,5 @@
+# Ilco extractor + desktop app dependencies.
+# tkinter ships with the standard python.org Python install (no pip needed).
+pdfplumber>=0.11
+# Only needed to build the standalone Windows .exe:
+# pyinstaller>=6.0
