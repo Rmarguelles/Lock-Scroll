@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.12-antique"
+EXTRACTOR_VERSION = "2.13-antblanks"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -817,9 +817,11 @@ def _antique_is_noise(text):
 
 
 def _antique_blanks(text):
+    # Split on whitespace and "/", dropping bracketed packaging notes
+    # ("[-P]", "(-PC)") and bare dashes so "X116/RN24/[-P]" -> "X116/RN24".
     out = []
     for t in re.split(r"[\s/]+", str(text or "").strip()):
-        if t and t != "-" and not t.startswith("("):
+        if t and t != "-" and not t.startswith(("(", "[")):
             out.append(t)
     return out
 
@@ -1160,6 +1162,9 @@ def selftest():
     h26 = rows_for_key(an, "H26")[0]
     if not h26:
         print("FAIL: antique key search for H26 found nothing")
+        ok = False
+    if _antique_blanks("X116/RN24/[-P]") != ["X116", "RN24"]:
+        print("FAIL: antique blank kept bracket noise:", _antique_blanks("X116/RN24/[-P]"))
         ok = False
 
     print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
