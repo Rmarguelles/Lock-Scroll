@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.8-modelwrap"
+EXTRACTOR_VERSION = "2.9-notes"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -172,6 +172,18 @@ def normalize_application(app):
         return ""
     key = re.sub(r"\s*/\s*", "/", a.lower())
     return APPLICATION_CANON.get(key, a)
+
+
+def _dedupe_repeat(s):
+    """A vertically-centered note cell often yields its text twice within a
+    band ("… System … System"). Collapse a string that is an exact k-fold
+    repetition of a base phrase back to the base; leave others untouched."""
+    words = s.split()
+    n = len(words)
+    for p in range(1, n // 2 + 1):
+        if n % p == 0 and words[:p] * (n // p) == words:
+            return " ".join(words[:p])
+    return s
 
 
 def _first_token(s):
@@ -606,6 +618,14 @@ def parse_page(words, width, state, edges=None):
             blank_tokens += [t for _, t in ln["cols"].get("blank", [])]
         blanks = clean_part_tokens(blank_tokens, BLANK_DROP)
 
+        # Notes: the guide's transponder/chip column (TR47, "Texas Instruments
+        # Encrypted Code System", cloning notes, …). Captured verbatim so it is
+        # searchable in the desktop tool; not part of the app import format.
+        note_tokens = []
+        for ln in band:
+            note_tokens += [t for _, t in ln["cols"].get("notes", [])]
+        notes = _dedupe_repeat(" ".join(" ".join(note_tokens).split()))
+
         # Make: last make header above this row (carries across pages).
         for my, mk in make_anchors:
             if my <= ay:
@@ -675,6 +695,7 @@ def parse_page(words, width, state, edges=None):
                 "codeSeries": series,
                 "blank": "/".join(blanks),
                 "keyType": key_type,
+                "notes": notes,
             })
 
     # A make header printed BELOW the last data row (a new section starting at
@@ -880,6 +901,15 @@ def selftest():
         print("FAIL: Corolla Station Wagon split into mangled models")
         ok = False
 
+    # Notes column: transponder/chip text is captured (searchable in the
+    # desktop tool) and its centered-cell duplication is collapsed.
+    rows_full = dedupe_rows(rows)
+    mdx = next((r for r in rows_full if r["model"] == "MDX" and r["years"] == "2007-2013"
+                and r["application"] == "All"), None)
+    if not mdx or mdx.get("notes") != "High Security Key. Philips (46) Encrypted System":
+        print("FAIL: MDX notes not captured/deduped:", mdx and mdx.get("notes"))
+        ok = False
+
     print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -898,6 +928,48 @@ def rows_for_key(rows, name):
     if exact:
         return exact, True
     return [r for r in rows if q and q in r["blank"].lower()], False
+
+
+def dump_coords(pdf_path, term, window=80, max_x=560):
+    """Diagnostic: for every page mentioning `term` (a single keyword, e.g.
+    'ecosport' or 'da31'; index pages skipped) print the full model column
+    (so make headers + model order are visible) and the word coordinates
+    within `window` points of the term. Run it and paste the output back so
+    extraction bugs can be fixed at the source."""
+    try:
+        import pdfplumber
+    except ImportError:
+        print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
+        return 2
+    q = term.strip().lower()
+    print(f">>> coord dump for {term!r} (extractor v{EXTRACTOR_VERSION})")
+    with pdfplumber.open(pdf_path) as pdf:
+        for pi, page in enumerate(pdf.pages):
+            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
+            joined = " ".join(w["text"] for w in words).lower()
+            if q not in joined:
+                continue
+            if "model index" in joined or "make page" in joined:
+                continue
+            print(f"\n===== PAGE {pi + 1} (0-indexed {pi}) width={page.width} =====")
+            model_col = [w for w in words if w["x0"] < 118]
+            model_col.sort(key=lambda w: (round(w["top"]), w["x0"]))
+            print("--- model column (x0<118), whole page: headers + model order ---")
+            for w in model_col:
+                print(f"  x0={w['x0']:7.1f}  top={w['top']:7.1f}  {w['text']!r}")
+            hits = [w for w in words if q in w["text"].lower()]
+            shown = []
+            for h in hits:
+                ytop = h["top"]
+                if any(abs(ytop - s) < 4 for s in shown):
+                    continue
+                shown.append(ytop)
+                near = [w for w in words if abs(w["top"] - ytop) < window and w["x0"] < max_x]
+                near.sort(key=lambda w: (round(w["top"]), w["x0"]))
+                print(f"\n--- within {window}pt of {h['text']!r} at top={ytop:.1f} ---")
+                for w in near:
+                    print(f"  x0={w['x0']:7.1f}  top={w['top']:7.1f}  {w['text']!r}")
+    return 0
 
 
 def parse_pages_arg(s):
@@ -922,12 +994,16 @@ def main(argv=None):
                     help="print only rows whose key blank includes NAME (e.g. --key TR33)")
     ap.add_argument("--selftest", action="store_true",
                     help="validate the engine on the captured Acura pages")
+    ap.add_argument("--dump", metavar="TERM",
+                    help="diagnostic: print word coordinates near TERM (e.g. --dump da31)")
     args = ap.parse_args(argv)
 
     if args.selftest:
         return selftest()
     if not args.pdf:
         ap.error("a PDF path is required (or use --selftest)")
+    if args.dump:
+        return dump_coords(args.pdf, args.dump)
 
     try:
         rows = parse_pdf(args.pdf, parse_pages_arg(args.pages))

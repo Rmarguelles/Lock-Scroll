@@ -40,7 +40,7 @@ import ilco_extract  # noqa: E402
 
 APP_NAME = "Ilco Lookup"
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".ilco_lookup")
-FIELDS = ("make", "model", "years", "application", "codeSeries", "blank", "keyType")
+FIELDS = ("make", "model", "years", "application", "codeSeries", "blank", "keyType", "notes")
 
 
 # --------------------------------------------------------------------------
@@ -148,7 +148,8 @@ def selftest():
         {"make": "Toyota", "model": "Corolla Station Wagon 2WD", "years": "1981-1987",
          "application": "All", "codeSeries": "G1-G2377", "blank": "X174/TR40", "keyType": ""},
         {"make": "Honda", "model": "Accord", "years": "2018-2022", "application": "All",
-         "codeSeries": "K001-N718", "blank": "72147-TVA-A01", "keyType": "Prox"},
+         "codeSeries": "K001-N718", "blank": "72147-TVA-A01", "keyType": "Prox",
+         "notes": "Megamos (13) Fixed Code System"},
     ]
     ok = True
 
@@ -167,6 +168,7 @@ def selftest():
     check("by code series", [r["model"] for r in search_rows(rows, "k001-n718")] == ["Accord"])
     check("negative (toyota accord)", search_rows(rows, "toyota accord") == [])
     check("prox token", [r["model"] for r in search_rows(rows, "prox")] == ["Accord"])
+    check("by notes text (megamos)", [r["model"] for r in search_rows(rows, "megamos")] == ["Accord"])
     check("pipe export round-trips through the app's parser format",
           rows_to_pipe(rows[:1]) == "Toyota | Camry | 2007-2011 | All | 10001-15000 | EK3-TOY43/TOY43")
     print("\nSELFTEST", "PASS" if ok else "FAIL")
@@ -220,9 +222,9 @@ def run_gui():
             self.count.pack(side="left", padx=6)
 
             # --- results table ---
-            cols = ("ok", "make", "model", "years", "application", "codeSeries", "blank", "keyType", "source")
-            heads = ("✓", "Make", "Model", "Years", "Application", "Code Series", "Key Blank", "Prox", "Source")
-            widths = (26, 90, 190, 90, 110, 110, 150, 46, 70)
+            cols = ("ok", "make", "model", "years", "application", "codeSeries", "blank", "keyType", "notes", "source")
+            heads = ("✓", "Make", "Model", "Years", "Application", "Code Series", "Key Blank", "Prox", "Notes", "Source")
+            widths = (26, 84, 170, 84, 100, 100, 130, 42, 220, 64)
             wrap = ttk.Frame(root, padding=8)
             wrap.pack(fill="both", expand=True)
             self.tree = ttk.Treeview(wrap, columns=cols, show="headings", selectmode="extended")
@@ -333,7 +335,7 @@ def run_gui():
                 self.tree.insert("", "end", iid=str(i),
                                  values=(mark, r.get("make", ""), r.get("model", ""), r.get("years", ""),
                                          r.get("application", ""), r.get("codeSeries", ""), r.get("blank", ""),
-                                         r.get("keyType", ""), r.get("source", "")))
+                                         r.get("keyType", ""), r.get("notes", ""), r.get("source", "")))
             n = len(self.view)
             self.count.config(text=f"{n} result{'' if n == 1 else 's'} · {len(self.approved)} approved")
 
