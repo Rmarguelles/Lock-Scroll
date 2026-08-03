@@ -1012,6 +1012,40 @@ def dump_coords(pdf_path, term, window=80, max_x=560):
     return 0
 
 
+def trace_makes(pdf_path):
+    """Diagnostic: one line per page — the make(s) the parser resolved and the
+    first models — so a make that carries over wrong (Nissan rows landing under
+    Mitsubishi) shows up as the exact page where the label stops changing."""
+    try:
+        import pdfplumber
+    except ImportError:
+        print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
+        return 2
+    print(f">>> make trace (extractor v{EXTRACTOR_VERSION})")
+    state = {}
+    with pdfplumber.open(pdf_path) as pdf:
+        for pi, page in enumerate(pdf.pages):
+            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
+            try:
+                h_edges = page.horizontal_edges
+            except Exception:
+                h_edges = None
+            rows = parse_page(words, page.width, state, edges=h_edges)
+            makes = []
+            for r in rows:
+                if r["make"] and r["make"] not in makes:
+                    makes.append(r["make"])
+            models = []
+            for r in rows:
+                if r["model"] and r["model"] not in models:
+                    models.append(r["model"])
+                if len(models) >= 4:
+                    break
+            print(f"  p{pi + 1:<4} {'/'.join(makes) or '-':22} {len(rows):>3} rows | "
+                  + ", ".join(models))
+    return 0
+
+
 def parse_pages_arg(s):
     if not s:
         return None
@@ -1036,6 +1070,8 @@ def main(argv=None):
                     help="validate the engine on the captured Acura pages")
     ap.add_argument("--dump", metavar="TERM",
                     help="diagnostic: print word coordinates near TERM (e.g. --dump da31)")
+    ap.add_argument("--trace-makes", action="store_true",
+                    help="diagnostic: print the resolved make per page")
     args = ap.parse_args(argv)
 
     if args.selftest:
@@ -1044,6 +1080,8 @@ def main(argv=None):
         ap.error("a PDF path is required (or use --selftest)")
     if args.dump:
         return dump_coords(args.pdf, args.dump)
+    if args.trace_makes:
+        return trace_makes(args.pdf)
 
     try:
         rows = parse_pdf(args.pdf, parse_pages_arg(args.pages))
