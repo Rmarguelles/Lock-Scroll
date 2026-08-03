@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.10-modelcell"
+EXTRACTOR_VERSION = "2.11-compoundmake"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -148,6 +148,20 @@ def _title_words(s, keep_len=3):
     return " ".join(out)
 
 
+def _make_from_compound(t):
+    """A section header can name two marques with a slash ("NISSAN/DATSUN").
+    Return the leading component when it is a known make (lowercased), else
+    None. Only the first part counts — the guide leads with the primary make —
+    so slashed part numbers or model names don't false-positive."""
+    first = re.split(r"\s*/\s*", t)[0].strip(" ,")
+    if first in KNOWN_MAKES_LOWER or first in MAKE_ALIASES:
+        return first
+    fs = SECTION_SUFFIX_RE.sub("", first).strip(" ,")
+    if fs in KNOWN_MAKES_LOWER or fs in MAKE_ALIASES:
+        return fs
+    return None
+
+
 def normalize_make(raw):
     m = " ".join(str(raw or "").split()).strip(" ,")
     if not m:
@@ -163,6 +177,9 @@ def normalize_make(raw):
         return MAKE_ALIASES[slow]
     if slow in KNOWN_MAKES_LOWER:
         return KNOWN_MAKES_LOWER[slow]
+    comp = _make_from_compound(low)
+    if comp:
+        return MAKE_ALIASES.get(comp) or KNOWN_MAKES_LOWER.get(comp) or _title_words(comp)
     return _title_words(stripped or m)
 
 
@@ -255,7 +272,9 @@ def is_make_text(text):
     if t in KNOWN_MAKES_LOWER or t in MAKE_ALIASES:
         return True
     stripped = SECTION_SUFFIX_RE.sub("", t).strip(" ,")
-    return stripped in KNOWN_MAKES_LOWER or stripped in MAKE_ALIASES
+    if stripped in KNOWN_MAKES_LOWER or stripped in MAKE_ALIASES:
+        return True
+    return _make_from_compound(t) is not None
 
 
 # --------------------------------------------------------------------------
@@ -869,6 +888,23 @@ def selftest():
         (split_model_variants("Regal w/O Peps"), (["Regal"], False)),
         (split_model_variants("ZDX w/ Regular Ignition"), (["ZDX"], False)),
     ]
+    # Compound section header ("NISSAN/DATSUN") resolves to its leading make,
+    # so Nissan pages stop inheriting Mitsubishi; part numbers and slashed
+    # model names must NOT be mistaken for makes.
+    make_checks = [
+        ("NISSAN/DATSUN", True, "Nissan"),
+        ("NISSAN / DATSUN", True, "Nissan"),
+        ("X210/DA31", False, None),
+        ("NV 1500/2500/3500", False, None),
+    ]
+    for text, want_make, want_norm in make_checks:
+        if is_make_text(text) != want_make:
+            print(f"FAIL make-detect: is_make_text({text!r})={is_make_text(text)} != {want_make}")
+            ok = False
+        if want_norm and normalize_make(text) != want_norm:
+            print(f"FAIL make-norm: normalize_make({text!r})={normalize_make(text)!r} != {want_norm!r}")
+            ok = False
+
     for gotv, want in splits:
         if gotv != want:
             print("FAIL split:", gotv, "!=", want)
