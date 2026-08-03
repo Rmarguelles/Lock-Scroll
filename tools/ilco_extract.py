@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.9-notes"
+EXTRACTOR_VERSION = "2.10-modelcell"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -418,6 +418,14 @@ def _cell_extent(y, rules):
     return above, below
 
 
+def _rule_between(y1, y2, rules):
+    """True if a table border falls strictly between two rows — i.e. they sit
+    in different cells. Used to stop a distinct model below a border from being
+    merged into the label above it, however close they print."""
+    lo, hi = sorted((y1, y2))
+    return any(lo + 1.5 < r < hi - 1.5 for r in rules)
+
+
 def parse_page(words, width, state, edges=None):
     """One page of words -> row dicts. `state` carries make/model across pages.
     `edges` (pdfplumber horizontal_edges) supplies the table's real cell
@@ -446,6 +454,11 @@ def parse_page(words, width, state, edges=None):
     if not anchors:
         return []  # index/front-matter page
 
+    # Model-column cell borders (empty when the PDF has none). A wrapped label
+    # shares one cell (no border between its lines); two distinct models are
+    # separated by a border, so a border between candidates blocks the merge.
+    model_rules = _rules_crossing(edges, "model", width)
+
     # Make headers: a known make name sitting in the model column.
     make_anchors = []
     # Model labels (may wrap onto two lines -> merge close ones).
@@ -467,8 +480,12 @@ def parse_page(words, width, state, edges=None):
                 # A line repeating the first word of the label above starts a
                 # NEW model ("Corolla Wagon" then "Corolla Station Wagon"), so
                 # it is never a wrap of it, however close — don't merge. A true
-                # continuation ("Coupe, Hardtop", "Wagon 2WD") never does.
-                new_model = _first_token(mtext) == _first_token(ptext)
+                # continuation ("Coupe, Hardtop", "Wagon 2WD") never does. A
+                # model-column border between the two also means separate cells
+                # ("Ecosport w/ Prox" | "Edge w/ Reg Ignition"), so never merge.
+                new_model = (_first_token(mtext) == _first_token(ptext)
+                             or _rule_between(py, ln["y"], model_rules)
+                             or bool(re.match(r"\S+\s+W/", mtext)))
                 cont = (ptext.rstrip().endswith(("&", ",", "(", "-", "/"))
                         or mtext[:1].islower()
                         or (mtext.endswith(")") and "(" not in mtext))
@@ -511,9 +528,9 @@ def parse_page(words, width, state, edges=None):
             series_items.append((y, t))
             j += 1
 
-    # Cell-border rules per column (empty lists when the PDF has none)
+    # Cell-border rules per column (empty lists when the PDF has none;
+    # model_rules already computed above for the merge step)
     apps_rules = _rules_crossing(edges, "apps", width)
-    model_rules = _rules_crossing(edges, "model", width)
     start_rules = _rules_crossing(edges, "start", width)
 
     # ---- band boundaries: real cell borders when present, else midpoints ----
@@ -762,6 +779,8 @@ FIXTURE_CROWNVIC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "fixtures", "ford_crownvic_p49.txt")
 FIXTURE_COROLLA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                "fixtures", "toyota_corolla_p127.txt")
+FIXTURE_ECOSPORT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "fixtures", "ford_ecosport_edge_p49.txt")
 
 
 def load_fixture(path):
@@ -899,6 +918,27 @@ def selftest():
         ok = False
     if "Corolla Station" in cr_models or "Wagon 2WD" in cr_models:
         print("FAIL: Corolla Station Wagon split into mangled models")
+        ok = False
+
+    # Distinct models packed ~9pt apart must not merge across their cell
+    # border: "Ecosport w/ Prox" and "Edge w/ Reg Ignition" stayed one row
+    # before ("…Prox Edge w/ Reg Ignition"). A model line with "W/" after a
+    # real token is always a new model; wraps ("Ignition", "Liftgate") aren't.
+    ec_state = {}
+    ec_rows = []
+    for p in load_fixture(FIXTURE_ECOSPORT):
+        ec_rows += parse_page(p["words"], p["width"], ec_state)
+    ec = dedupe_rows(ec_rows)
+    ec_models = {r["model"] for r in ec}
+    if any("Ecosport" in m and "Edge" in m for m in ec_models):
+        print("FAIL: Ecosport and Edge merged into one model:",
+              [m for m in ec_models if "Ecosport" in m and "Edge" in m])
+        ok = False
+    if not any(m.startswith("Edge w/") for m in ec_models):
+        print("FAIL: Edge w/ ... model not recovered:", sorted(ec_models))
+        ok = False
+    if not any(r["model"] == "Ecosport" and r.get("keyType") == "Prox" for r in ec):
+        print("FAIL: Ecosport w/ Prox not tagged as its own Prox row")
         ok = False
 
     # Notes column: transponder/chip text is captured (searchable in the
