@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.11-compoundmake"
+EXTRACTOR_VERSION = "2.12-antique"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -744,6 +744,147 @@ def parse_page(words, width, state, edges=None):
     return rows
 
 
+# --------------------------------------------------------------------------
+# Antique parser — the classic-car "Ilco Classic Auto Truck" cross-reference
+# is a different document (portrait, width ~612) with its own columns, so it
+# gets a dedicated, simpler engine selected by page width in parse_pdf.
+#   model  x0 0-130   | years 130-195 ("1957-58") | apps 195-268
+#   series 268-355    | key blank 355-462 ("1127ES-H26") | substitutes 462+
+# Each year band prints two application rows (Ignition/Door, Trunk/GB); the
+# second inherits the year of the first. Key blanks keep their full token so
+# searching the Ilco number ("H26" in "1127ES-H26") matches as a substring.
+# --------------------------------------------------------------------------
+
+ANTIQUE_REF_WIDTH = 612.0
+ANTIQUE_COLUMNS = [
+    ("model", 0, 130),
+    ("years", 130, 195),
+    ("apps", 195, 268),
+    ("series", 268, 355),
+    ("blank", 355, 462),
+    ("sub", 462, 100000),   # substitutes — ignored, like the modern guide
+]
+ANTIQUE_YEAR_RANGE_RE = re.compile(r"(19|20)(\d{2})\s*-\s*(\d{2,4})")
+ANTIQUE_YEAR_ONE_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+
+
+def _antique_col_of(x0, width):
+    scale = width / ANTIQUE_REF_WIDTH if width else 1.0
+    xr = x0 / scale
+    for name, lo, hi in ANTIQUE_COLUMNS:
+        if lo <= xr < hi:
+            return name
+    return None
+
+
+def parse_antique_years(text):
+    """'1957-58' -> (1957, 1958); '1968-95' -> (1968, 1995); '1940' -> (1940,
+    1940). A two-digit end takes the start's century, rolling forward if it
+    lands before the start ('1998-02' -> 2002)."""
+    m = ANTIQUE_YEAR_RANGE_RE.search(text or "")
+    if m:
+        start = int(m.group(1) + m.group(2))
+        endraw = m.group(3)
+        if len(endraw) == 4:
+            end = int(endraw)
+        else:
+            end = (start // 100) * 100 + int(endraw)
+            if end < start:
+                end += 100
+        return (start, end)
+    m = ANTIQUE_YEAR_ONE_RE.search(text or "")
+    if m:
+        y = int(m.group(0))
+        return (y, y)
+    return None
+
+
+def _antique_model_norm(text):
+    low = " ".join(str(text or "").split()).lower()
+    if not low:
+        return ""
+    if ("referenced" in low or "other than" in low or "not listed" in low
+            or low in ("all models", "all")):
+        return "All Models"
+    return normalize_model(text)
+
+
+def _antique_is_noise(text):
+    low = " ".join(str(text or "").split()).lower()
+    if not re.search(r"[a-z]", low):        # page numbers / stray glyphs
+        return True
+    return low in ("model",) or "ilco" in low or "classic auto" in low
+
+
+def _antique_blanks(text):
+    out = []
+    for t in re.split(r"[\s/]+", str(text or "").strip()):
+        if t and t != "-" and not t.startswith("("):
+            out.append(t)
+    return out
+
+
+def _antique_lines(words, width):
+    ws = sorted(words, key=lambda w: w["top"])
+    groups = []
+    for w in ws:
+        if groups and w["top"] - groups[-1]["_t0"] <= 3:
+            groups[-1]["words"].append(w)
+        else:
+            groups.append({"_t0": w["top"], "top": w["top"], "words": [w]})
+    out = []
+    for g in groups:
+        cols = {}
+        for w in sorted(g["words"], key=lambda w: w["x0"]):
+            c = _antique_col_of(w["x0"], width)
+            if c:
+                cols.setdefault(c, []).append(w["text"])
+        out.append({"top": g["top"], "cols": {k: " ".join(v) for k, v in cols.items()}})
+    return out
+
+
+def parse_antique_page(words, width, state):
+    rows = []
+    for ln in _antique_lines(words, width):
+        mt = ln["cols"].get("model", "").strip()
+        if mt and not _antique_is_noise(mt):
+            if is_make_text(mt):
+                state["make"] = normalize_make(mt)
+                state["model"] = ""
+                state["pending"] = ""
+            else:
+                # A model label may wrap over lines; a lowercase leading word
+                # ("referenced below", "other") continues the label above.
+                first = mt.split()[0]
+                if first[:1].islower() and state.get("pending"):
+                    state["pending"] = state["pending"] + " " + mt
+                else:
+                    state["pending"] = mt
+                state["model"] = _antique_model_norm(state["pending"])
+
+        appkey = re.sub(r"\s*/\s*", "/", ln["cols"].get("apps", "").strip().lower())
+        if appkey not in APPLICATION_CANON:
+            continue
+        years = parse_antique_years(ln["cols"].get("years", "")) or state.get("ant_years")
+        if not years:
+            continue
+        state["ant_years"] = years
+        blanks = _antique_blanks(ln["cols"].get("blank", ""))
+        if not blanks:
+            continue
+        rows.append({
+            "make": state.get("make", ""),
+            "model": state.get("model", "") or "All Models",
+            "years": f"{years[0]}-{years[1]}" if years[0] != years[1] else str(years[0]),
+            "application": APPLICATION_CANON[appkey],
+            "codeSeries": ln["cols"].get("series", "").strip(),
+            "blank": "/".join(blanks),
+            "keyType": "",
+            "notes": "",
+        })
+    return rows
+
+
 def dedupe_rows(rows):
     """Collapsed trim lists and repeated table cells can yield identical rows
     — keep the first of each."""
@@ -780,6 +921,11 @@ def parse_pdf(pdf_path, pages=None):
             page_list = pdf.pages[lo - 1:hi]
         for page in page_list:
             words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
+            # The classic book is portrait (~612 wide); the modern guide is
+            # landscape (~783). Route each page to the matching engine.
+            if page.width and page.width < 700:
+                rows += parse_antique_page(words, page.width, state)
+                continue
             try:
                 h_edges = page.horizontal_edges
             except Exception:
@@ -800,6 +946,8 @@ FIXTURE_COROLLA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                "fixtures", "toyota_corolla_p127.txt")
 FIXTURE_ECOSPORT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "fixtures", "ford_ecosport_edge_p49.txt")
+FIXTURE_CLASSIC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "fixtures", "classic_ford_p8.txt")
 
 
 def load_fixture(path):
@@ -984,6 +1132,34 @@ def selftest():
                 and r["application"] == "All"), None)
     if not mdx or mdx.get("notes") != "High Security Key. Philips (46) Encrypted System":
         print("FAIL: MDX notes not captured/deduped:", mdx and mdx.get("notes"))
+        ok = False
+
+    # Antique book (classic-car cross-reference): a different portrait layout
+    # parsed by the width-selected antique engine. Year format "1957-58",
+    # Trunk/GB rows inherit the Ignition/Door year, blanks keep their full
+    # token so the Ilco number is substring-searchable ("H26" in "1127ES-H26").
+    an_state = {}
+    an_rows = []
+    for p in load_fixture(FIXTURE_CLASSIC):
+        an_rows += parse_antique_page(p["words"], p["width"], an_state)
+    an = dedupe_rows(an_rows)
+    an_fmt = [format_row(r) for r in an]
+    an_checks = [
+        "Ford | All Models | 1959-1964 | Trunk/GB |  | 1127ES-H26",
+        "Ford | Falcon | 1959-1966 | Ignition/Door |  | 1127FL",
+        "Ford | Fairlane | 1962-1966 | Trunk/GB |  | S1127FR",
+        "Ford | Thunderbird | 1970-1984 | Ignition | FA0-FA1863 | 1167FD-H51",
+    ]
+    for c in an_checks:
+        if c not in an_fmt:
+            print("FAIL antique missing:", c)
+            for line in an_fmt:
+                print("   ", line)
+            ok = False
+            break
+    h26 = rows_for_key(an, "H26")[0]
+    if not h26:
+        print("FAIL: antique key search for H26 found nothing")
         ok = False
 
     print(f"\n{len(got)} rows.  SELFTEST", "PASS" if ok else "FAIL")
