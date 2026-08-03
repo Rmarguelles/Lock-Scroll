@@ -91,8 +91,10 @@ def _cache_path(pdf_path):
 
 def load_or_extract(pdf_path, source_label, progress=None, force=False):
     """Return extracted rows for a PDF, tagged with their source book. Caches
-    to JSON keyed by path+mtime so re-opening the app is instant; re-extracts
-    when the PDF changes or force=True. `progress` is an optional callable."""
+    to JSON keyed by path+mtime+extractor-version so re-opening the app is
+    instant, yet updating the extractor (new EXTRACTOR_VERSION) or the PDF
+    auto-invalidates the cache. force=True always re-parses. `progress` is an
+    optional callable."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     cache = _cache_path(pdf_path)
     mtime = os.path.getmtime(pdf_path)
@@ -100,7 +102,9 @@ def load_or_extract(pdf_path, source_label, progress=None, force=False):
         try:
             with open(cache, encoding="utf-8") as fh:
                 blob = json.load(fh)
-            if blob.get("mtime") == mtime and blob.get("path") == os.path.abspath(pdf_path):
+            if (blob.get("mtime") == mtime
+                    and blob.get("path") == os.path.abspath(pdf_path)
+                    and blob.get("version") == ilco_extract.EXTRACTOR_VERSION):
                 return blob["rows"]
         except Exception:
             pass
@@ -112,7 +116,8 @@ def load_or_extract(pdf_path, source_label, progress=None, force=False):
         r["source"] = source_label
     try:
         with open(cache, "w", encoding="utf-8") as fh:
-            json.dump({"path": os.path.abspath(pdf_path), "mtime": mtime, "rows": rows}, fh)
+            json.dump({"path": os.path.abspath(pdf_path), "mtime": mtime,
+                       "version": ilco_extract.EXTRACTOR_VERSION, "rows": rows}, fh)
     except Exception:
         pass
     return rows
@@ -206,7 +211,7 @@ def run_gui():
                                           foreground="#888", width=52)
                 self.lbl[key].grid(row=i, column=1, sticky="w")
                 ttk.Button(top, text="Link…", command=lambda k=key: self.link(k)).grid(row=i, column=2, padx=2)
-                ttk.Button(top, text="Extract", command=lambda k=key: self.extract(k)).grid(row=i, column=3, padx=2)
+                ttk.Button(top, text="Re-extract", command=lambda k=key: self.extract(k, force=True)).grid(row=i, column=3, padx=2)
                 ttk.Button(top, text="Open PDF", command=lambda k=key: self.open_pdf(k)).grid(row=i, column=4, padx=2)
 
             # --- search bar ---
