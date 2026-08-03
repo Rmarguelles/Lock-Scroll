@@ -41,6 +41,8 @@ import ilco_extract  # noqa: E402
 APP_NAME = "Ilco Lookup"
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".ilco_lookup")
 FIELDS = ("make", "model", "years", "application", "codeSeries", "blank", "keyType", "notes")
+# Internal source tag -> friendly label shown in the Source column / search.
+SOURCE_DISPLAY = {"guide": "Modern", "antique": "Antique"}
 
 
 # --------------------------------------------------------------------------
@@ -52,8 +54,15 @@ def blank_parts(row):
     return [p.strip().lower() for p in str(row.get("blank", "")).split("/") if p.strip()]
 
 
+def source_label(row):
+    src = row.get("source", "")
+    return SOURCE_DISPLAY.get(src, src)
+
+
 def haystack(row):
-    return " ".join(str(row.get(f, "")) for f in FIELDS).lower()
+    parts = [str(row.get(f, "")) for f in FIELDS]
+    parts.append(source_label(row))  # so "modern"/"antique" are searchable
+    return " ".join(parts).lower()
 
 
 def search_rows(rows, query):
@@ -154,8 +163,9 @@ def selftest():
          "application": "All", "codeSeries": "G1-G2377", "blank": "X174/TR40", "keyType": ""},
         {"make": "Honda", "model": "Accord", "years": "2018-2022", "application": "All",
          "codeSeries": "K001-N718", "blank": "72147-TVA-A01", "keyType": "Prox",
-         "notes": "Megamos (13) Fixed Code System"},
+         "notes": "Megamos (13) Fixed Code System", "source": "guide"},
     ]
+    rows[0]["source"] = "antique"
     ok = True
 
     def check(name, cond):
@@ -174,6 +184,9 @@ def selftest():
     check("negative (toyota accord)", search_rows(rows, "toyota accord") == [])
     check("prox token", [r["model"] for r in search_rows(rows, "prox")] == ["Accord"])
     check("by notes text (megamos)", [r["model"] for r in search_rows(rows, "megamos")] == ["Accord"])
+    check("source shows friendly label", source_label(rows[-1]) == "Modern" and source_label(rows[0]) == "Antique")
+    check("by source word (modern)", "Accord" in [r["model"] for r in search_rows(rows, "modern")]
+          and "Camry" not in [r["model"] for r in search_rows(rows, "modern")])
     check("pipe export round-trips through the app's parser format",
           rows_to_pipe(rows[:1]) == "Toyota | Camry | 2007-2011 | All | 10001-15000 | EK3-TOY43/TOY43")
     print("\nSELFTEST", "PASS" if ok else "FAIL")
@@ -314,6 +327,8 @@ def run_gui():
                     m = re.search(r"\d{4}", str(r.get("years", "")))
                     return int(m.group()) if m else 0
                 return yk
+            if col == "source":  # sort by the friendly label shown in the column
+                return lambda r: source_label(r).lower()
             return lambda r: str(r.get(col, "")).lower()
 
         def sort_by(self, col):
@@ -340,7 +355,7 @@ def run_gui():
                 self.tree.insert("", "end", iid=str(i),
                                  values=(mark, r.get("make", ""), r.get("model", ""), r.get("years", ""),
                                          r.get("application", ""), r.get("codeSeries", ""), r.get("blank", ""),
-                                         r.get("keyType", ""), r.get("notes", ""), r.get("source", "")))
+                                         r.get("keyType", ""), r.get("notes", ""), source_label(r)))
             n = len(self.view)
             self.count.config(text=f"{n} result{'' if n == 1 else 's'} · {len(self.approved)} approved")
 
