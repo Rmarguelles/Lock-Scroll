@@ -26,6 +26,7 @@ Build a Windows .exe (run on the Windows machine, see README-ilco.md):
 import argparse
 import json
 import os
+import re
 import sys
 import hashlib
 
@@ -225,8 +226,11 @@ def run_gui():
             wrap = ttk.Frame(root, padding=8)
             wrap.pack(fill="both", expand=True)
             self.tree = ttk.Treeview(wrap, columns=cols, show="headings", selectmode="extended")
+            self.headmap = dict(zip(cols, heads))
+            self.sort_col = None
+            self.sort_desc = False
             for c, h, w in zip(cols, heads, widths):
-                self.tree.heading(c, text=h)
+                self.tree.heading(c, text=h, command=lambda col=c: self.sort_by(col))
                 self.tree.column(c, width=w, anchor="center" if c in ("ok", "keyType") else "w")
             vs = ttk.Scrollbar(wrap, orient="vertical", command=self.tree.yview)
             self.tree.configure(yscrollcommand=vs.set)
@@ -295,8 +299,34 @@ def run_gui():
             self.set_status(f"{len(self.rows)} rows loaded ({key}: {len(new)})")
             self.refresh()
 
+        def _sort_key(self, col):
+            if col == "ok":  # approved rows group together
+                return lambda r: 0 if id(r) in self.approved else 1
+            if col == "years":  # sort by the first 4-digit year, numerically
+                def yk(r):
+                    m = re.search(r"\d{4}", str(r.get("years", "")))
+                    return int(m.group()) if m else 0
+                return yk
+            return lambda r: str(r.get(col, "")).lower()
+
+        def sort_by(self, col):
+            # Click a header to sort by it; click the same header again to
+            # reverse. Sorting is stable, so ties keep their search order.
+            if self.sort_col == col:
+                self.sort_desc = not self.sort_desc
+            else:
+                self.sort_col = col
+                self.sort_desc = False
+            self.refresh()
+
         def refresh(self):
             self.view = search_rows(self.rows, self.q.get())
+            if self.sort_col:
+                self.view = sorted(self.view, key=self._sort_key(self.sort_col),
+                                   reverse=self.sort_desc)
+            for c, base in self.headmap.items():
+                arrow = ("  ▼" if self.sort_desc else "  ▲") if c == self.sort_col else ""
+                self.tree.heading(c, text=base + arrow)
             self.tree.delete(*self.tree.get_children())
             for i, r in enumerate(self.view):
                 mark = "✓" if id(r) in self.approved else ""
