@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.13-antblanks"
+EXTRACTOR_VERSION = "2.14-modelborders"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -421,8 +421,17 @@ def _rules_crossing(edges, col, width):
         return []
     scale = width / REF_WIDTH if width else 1.0
     lo, hi = next((l, h) for n, l, h in COLUMNS if n == col)
+    left_tol = (lo + 6) * scale
+    if lo == 0:
+        # The model column is defined from x=0, but full-width table rules
+        # begin at the table's physical left margin, not the page edge. Use
+        # that margin so per-MODEL boundaries qualify — while per-BAND rules
+        # (which start at the years column and don't cross the model cell)
+        # still don't, which is exactly the merged-cell signal we want.
+        margin = min((e.get("x0", 0) for e in edges), default=0)
+        left_tol = margin + 8 * scale
     ys = sorted(e["top"] for e in edges
-                if e.get("x0", 0) <= (lo + 6) * scale and e.get("x1", 0) >= (hi - 6) * scale)
+                if e.get("x0", 0) <= left_tol and e.get("x1", 0) >= (hi - 6) * scale)
     out = []
     for y in ys:
         if not out or y - out[-1] > 2:
@@ -1162,6 +1171,33 @@ def selftest():
     h26 = rows_for_key(an, "H26")[0]
     if not h26:
         print("FAIL: antique key search for H26 found nothing")
+        ok = False
+
+    # Merged model cell via borders: a model label at the BOTTOM of its bands
+    # (Diamante's 3 year-ranges) must claim the bands above it, not leak them
+    # to the previous model (3000GT). Needs table rules, so it runs with
+    # synthetic edges — model-column rules were never detected before.
+    mit_words = [{"x0": x, "top": t, "text": s} for x, t, s in [
+        (37.9, 100.5, "MITSUBISHI"),
+        (167.4, 297.8, "All"), (194.2, 297.8, "E5001-E7679"), (247.1, 297.8, "X176/MIT1"),
+        (37.9, 306.4, "3000GT"), (119.8, 306.4, "1991"), (146.0, 306.4, "1999"),
+        (167.4, 315.0, "Valet"), (194.2, 315.0, "E5001-E7679"), (247.1, 315.0, "X213/MIT2"),
+        (119.8, 332.2, "2001"), (146.0, 332.2, "2006"), (167.4, 332.2, "All"),
+        (194.2, 332.2, "E5001-E7679"), (247.1, 332.2, "MIT12-PT"), (278.0, 332.2, "(LAL)"),
+        (119.8, 358.0, "2000"), (146.0, 358.0, "2000"), (167.4, 358.0, "All"),
+        (194.2, 358.0, "E5001-E7679"), (247.1, 358.0, "X176/MIT8"),
+        (37.9, 383.8, "DIAMANTE"), (167.4, 383.8, "All"), (194.2, 383.8, "E5001-E7679"),
+        (247.1, 383.8, "X245/MIT4"), (119.8, 392.4, "1997"), (146.0, 392.4, "1999"),
+        (167.4, 401.0, "Valet"), (194.2, 401.0, "E5001-E7679"), (247.1, 401.0, "X213/MIT2"),
+    ]]
+    mit_edges = [{"top": y, "x0": 32, "x1": 560} for y in (292, 324, 407)]
+    mit_edges += [{"top": y, "x0": 115, "x1": 560} for y in (306, 323, 345, 371, 392)]
+    mit = dedupe_rows(parse_page(mit_words, 783.0, {}, edges=mit_edges))
+    mit12 = [r for r in mit if "MIT12" in r["blank"]]
+    if not (mit12 and all(r["model"] == "Diamante" for r in mit12)):
+        print("FAIL: MIT12 not bound to Diamante:", [(r["model"], r["blank"]) for r in mit12])
+        for line in (format_row(r) for r in mit):
+            print("   ", line)
         ok = False
     if _antique_blanks("X116/RN24/[-P]") != ["X116", "RN24"]:
         print("FAIL: antique blank kept bracket noise:", _antique_blanks("X116/RN24/[-P]"))
