@@ -53,7 +53,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.14-modelborders"
+EXTRACTOR_VERSION = "2.15-yearquals"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -391,6 +391,22 @@ def _col_text(line, col):
     return " ".join(t for _, t in line["cols"].get(col, []))
 
 
+_MONTHS = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"}
+
+
+def _year_qualifier(text):
+    """A 'MID-'/'EARLY'/'LATE' or month token qualifying a year (the guide
+    prints e.g. 'MID-2001'). Returns a normalized prefix with a trailing space
+    ('Mid ', 'Mar '), else '' — so it can be prepended to the year range.
+    Matches month abbreviations and full names ('Mar', 'March', 'June')."""
+    key = str(text or "").strip().rstrip("-.").lower()
+    if key in ("mid", "early", "late"):
+        return key.capitalize() + " "
+    if key.isalpha() and len(key) <= 9 and key[:3] in _MONTHS:
+        return key[:3].capitalize() + " "
+    return ""
+
+
 def _line_years(line):
     """(startYear, endYear) if the line carries year cells, else None."""
     sy = [t for _, t in line["cols"].get("start", []) if YEAR_RE.match(t)]
@@ -642,6 +658,32 @@ def parse_page(words, width, state, edges=None):
             continue
         state["last_years"] = years
 
+        # Year qualifiers and split cells. The guide prints "MID-2001" (or a
+        # month) to mark part-year model changes, and can put the end year on
+        # the anchor line with "MID-2001" wrapped onto the line below (Montero
+        # Sport: end 2006 on the row, MID-2001 beneath). Preserve the qualifier
+        # and recover the full range so the app's month/Mid year fields get it.
+        start_y, end_y = years[0], years[1]
+        win = [ln for ln in lines if abs(ln["y"] - ay) <= 11]
+        qual = ""
+        for ln in win:
+            for _, t in list(ln["cols"].get("start", [])) + list(ln["cols"].get("end", [])):
+                q = _year_qualifier(t)
+                if q:
+                    qual = q
+        anchor_start = any(YEAR_RE.match(t) for _, t in anchor["cols"].get("start", []))
+        anchor_end = [int(t) for _, t in anchor["cols"].get("end", []) if YEAR_RE.match(t)]
+        if anchor_end and not anchor_start:
+            win_start = [int(t) for ln in win
+                         for _, t in ln["cols"].get("start", []) if YEAR_RE.match(t)]
+            if win_start:
+                start_y, end_y = min(win_start), max(anchor_end)
+                if start_y > end_y:
+                    start_y, end_y = end_y, start_y
+                years = (start_y, end_y)
+                state["last_years"] = years
+        year_str = f"{qual}{start_y}-{end_y}" if start_y != end_y else f"{qual}{start_y}"
+
         # Code series: value on the anchor line, else the (fragment-joined)
         # value centered beside this row. Kept tight so a row with a genuinely
         # empty series cell doesn't borrow its neighbor's.
@@ -735,7 +777,7 @@ def parse_page(words, width, state, edges=None):
             rows.append({
                 "make": state.get("make", ""),
                 "model": mp,
-                "years": f"{years[0]}-{years[1]}" if years[0] != years[1] else str(years[0]),
+                "years": year_str,
                 "application": application,
                 "codeSeries": series,
                 "blank": "/".join(blanks),
@@ -1199,6 +1241,24 @@ def selftest():
         for line in (format_row(r) for r in mit):
             print("   ", line)
         ok = False
+
+    # Year qualifier + split start/end cell: Montero Sport prints "2006" on the
+    # anchor line with "MID-2001" wrapped below — keep the "Mid" and the range.
+    ms_words = [{"x0": x, "top": t, "text": s} for x, t, s in [
+        (37.9, 100.5, "MITSUBISHI"),
+        (122.9, 370.4, "MID-"),
+        (40.8, 375.2, "MONTERO"), (76.4, 375.2, "SPORT"), (148.9, 375.2, "2006"),
+        (170.3, 375.2, "All"), (197.0, 375.2, "E5001-E7679"), (250.0, 375.2, "MIT12-PT"),
+        (122.7, 380.0, "2001"),
+    ]]
+    ms = dedupe_rows(parse_page(ms_words, 783.0, {}))
+    if not any(r["model"] == "Montero Sport" and r["years"] == "Mid 2001-2006" for r in ms):
+        print("FAIL: Montero Sport year not 'Mid 2001-2006':", [(r["model"], r["years"]) for r in ms])
+        ok = False
+    for txt, want in [("MID-", "Mid "), ("EARLY", "Early "), ("March", "Mar "), ("2001", ""), ("X176", "")]:
+        if _year_qualifier(txt) != want:
+            print(f"FAIL year-qualifier({txt!r})={_year_qualifier(txt)!r} != {want!r}")
+            ok = False
     if _antique_blanks("X116/RN24/[-P]") != ["X116", "RN24"]:
         print("FAIL: antique blank kept bracket noise:", _antique_blanks("X116/RN24/[-P]"))
         ok = False
