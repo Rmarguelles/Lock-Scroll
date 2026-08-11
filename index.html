@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v234</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v235</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v234</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v235</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v234<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v235<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -27919,6 +27919,10 @@ function addCustomKeyVehicleFromData(v) {
     const endEl = document.getElementById('customVehicleEnd' + num);
     if (startEl && v && v.startYear != null) startEl.value = v.startYear;
     if (endEl && v && v.endYear != null) endEl.value = v.endYear;
+    const smEl = document.getElementById('customVehicleStartMonth' + num);
+    const emEl = document.getElementById('customVehicleEndMonth' + num);
+    if (smEl && v && v.startMonth) smEl.value = v.startMonth;
+    if (emEl && v && v.endMonth) emEl.value = v.endMonth;
 
     if (v && Array.isArray(v.codeSeries) && v.codeSeries.length > 0) {
         customKeyVehicleCodeSeries[num] = v.codeSeries.map(cs => ({
@@ -28564,6 +28568,8 @@ function addCustomKeyVehiclesFromPaste() {
 
         document.getElementById('customVehicleStart' + num).value = v.startYear;
         document.getElementById('customVehicleEnd' + num).value = v.endYear;
+        if (v.startMonth) { const el = document.getElementById('customVehicleStartMonth' + num); if (el) el.value = v.startMonth; }
+        if (v.endMonth) { const el = document.getElementById('customVehicleEndMonth' + num); if (el) el.value = v.endMonth; }
 
         // Ilco guide pipe rows carry uses + code series — apply them
         if (Array.isArray(v.keyRoles)) {
@@ -28604,6 +28610,23 @@ function customKeyRolesHtml(idPrefix) {
 // Vehicles and Add Vehicle modals.
 let customKeyVehicleRangeCount = {};
 
+// A vehicle year range with optional month on each end, mirroring the
+// code-series year fields — some models change mid-year ("Mid-2001") so the
+// month is occasionally needed. Year inputs keep the ids the save/prefill
+// code already reads; the month <select>s add ...Month to those ids.
+function customVehicleYearRangeHtml(syId, eyId, smId, emId, syVal, eyVal, smVal, emVal) {
+    const mStyle = 'padding:8px 2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;';
+    const yStyle = 'width:100%;min-width:0;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;';
+    const val = v => (v != null && v !== '') ? ' value="' + v + '"' : '';
+    return '<div style="grid-column:span 2;display:grid;grid-template-columns:auto 1fr auto auto 1fr;gap:6px;align-items:center;">' +
+        '<select id="' + smId + '" title="Start month (optional)" style="' + mStyle + '">' + monthSelectOptions(smVal || '') + '</select>' +
+        '<input type="number" id="' + syId + '" placeholder="Start Year"' + val(syVal) + ' style="' + yStyle + '">' +
+        '<span style="color:var(--dim);font-size:11px;">to</span>' +
+        '<select id="' + emId + '" title="End month (optional)" style="' + mStyle + '">' + monthSelectOptions(emVal || '') + '</select>' +
+        '<input type="number" id="' + eyId + '" placeholder="End Year"' + val(eyVal) + ' style="' + yStyle + '">' +
+    '</div>';
+}
+
 function addCustomKeyYearRange(vehicleNum) {
     const container = document.getElementById('customVehicleExtraRanges' + vehicleNum);
     if (!container) return;
@@ -28616,8 +28639,7 @@ function addCustomKeyYearRange(vehicleNum) {
                 '<button onclick="removeCustomKeyYearRange(\'' + suffix + '\')" style="background:transparent;border:none;color:var(--dim);font-size:14px;cursor:pointer;">×</button>' +
             '</div>' +
             '<div class="custom-vehicle-years">' +
-                '<input type="number" id="customVehicleExtraStart' + suffix + '" placeholder="Start Year">' +
-                '<input type="number" id="customVehicleExtraEnd' + suffix + '" placeholder="End Year">' +
+                customVehicleYearRangeHtml('customVehicleExtraStart' + suffix, 'customVehicleExtraEnd' + suffix, 'customVehicleExtraStartMonth' + suffix, 'customVehicleExtraEndMonth' + suffix, '', '', '', '') +
             '</div>' +
             customKeyRolesHtml('customVehicleExtraRole' + suffix) +
         '</div>');
@@ -28681,10 +28703,7 @@ function addCustomKeyVehicle() {
                 '<option value="">Model (select make first)</option>' +
             '</select>' +
             '<input type="text" id="customVehicleModelOther' + customKeyVehicleCount + '" placeholder="Enter model name" style="display:none;">' +
-            '<div class="custom-vehicle-years">' +
-                '<input type="number" id="customVehicleStart' + customKeyVehicleCount + '" placeholder="Start Year" value="' + currentYear + '">' +
-                '<input type="number" id="customVehicleEnd' + customKeyVehicleCount + '" placeholder="End Year" value="' + currentYear + '">' +
-            '</div>' +
+            customVehicleYearRangeHtml('customVehicleStart' + customKeyVehicleCount, 'customVehicleEnd' + customKeyVehicleCount, 'customVehicleStartMonth' + customKeyVehicleCount, 'customVehicleEndMonth' + customKeyVehicleCount, currentYear, currentYear, '', '') +
             customKeyRolesHtml('customVehicleRole' + customKeyVehicleCount) +
             '<div id="customVehicleExtraRanges' + customKeyVehicleCount + '"></div>' +
             '<button onclick="addCustomKeyYearRange(' + customKeyVehicleCount + ')" style="margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed var(--accent2);border-radius:6px;color:var(--accent2);font-size:11px;cursor:pointer;">+ Add Year Range</button>' +
@@ -28948,6 +28967,8 @@ function saveCustomKey() {
         const model = (modelSelect === '__other__' ? modelOther : modelSelect)?.trim();
         const startYear = parseInt(document.getElementById('customVehicleStart' + num)?.value) || new Date().getFullYear();
         const endYear = parseInt(document.getElementById('customVehicleEnd' + num)?.value) || startYear;
+        const startMonth = parseInt(document.getElementById('customVehicleStartMonth' + num)?.value) || 0;
+        const endMonth = parseInt(document.getElementById('customVehicleEndMonth' + num)?.value) || 0;
 
         // Gather multiple code series entries for this vehicle (dropped for
         // Remote Only parts — code series only applies to cut keys)
@@ -28962,6 +28983,8 @@ function saveCustomKey() {
                 endYear: endYear,
                 codeSeries: codeSeries.length > 0 ? codeSeries : null
             };
+            if (startMonth) mainVeh.startMonth = startMonth;
+            if (endMonth) mainVeh.endMonth = endMonth;
             const mainRoles = KEY_ROLES.filter(r => document.getElementById('customVehicleRole' + num + '_' + r)?.checked);
             if (mainRoles.length > 0 && mainRoles.length < KEY_ROLES.length) mainVeh.keyRoles = mainRoles;
             vehicles.push(mainVeh);
@@ -28973,6 +28996,8 @@ function saveCustomKey() {
                 const exStart = parseInt(document.getElementById('customVehicleExtraStart' + suffix)?.value);
                 if (!exStart) return;
                 const exEnd = parseInt(document.getElementById('customVehicleExtraEnd' + suffix)?.value) || exStart;
+                const exStartMonth = parseInt(document.getElementById('customVehicleExtraStartMonth' + suffix)?.value) || 0;
+                const exEndMonth = parseInt(document.getElementById('customVehicleExtraEndMonth' + suffix)?.value) || 0;
                 const exVeh = {
                     make: make,
                     model: model || 'Unknown',
@@ -28980,6 +29005,8 @@ function saveCustomKey() {
                     endYear: exEnd,
                     codeSeries: null
                 };
+                if (exStartMonth) exVeh.startMonth = exStartMonth;
+                if (exEndMonth) exVeh.endMonth = exEndMonth;
                 const exRoles = KEY_ROLES.filter(r => document.getElementById('customVehicleExtraRole' + suffix + '_' + r)?.checked);
                 if (exRoles.length > 0 && exRoles.length < KEY_ROLES.length) exVeh.keyRoles = exRoles;
                 vehicles.push(exVeh);
