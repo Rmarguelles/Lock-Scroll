@@ -39,9 +39,9 @@ python ilco_extract.py "Ilco Guide.pdf" --split-by-make
 ```
 
 Then open `ilco_output.txt`, copy it, and paste into the app under
-**Vehicle Lookup → 📖 Antique Reference → 📋 Paste Ilco Reference** (use
-**Preview** there before **Import**). Rows with a key blank become searchable
-key records — type the blank in the app to pull them up.
+**📗 Ilco Guide → 📋 Paste Reference** (use **Preview** there before
+**Import**). Rows with a key blank become searchable key records — type the
+blank in the app to pull them up.
 
 ## Tuning (expected)
 
@@ -51,3 +51,50 @@ layout. Run step 2 above, paste the `--preview` output back to Claude, and the
 heuristics (which tokens count as blanks, where a row ends) get adjusted for
 your specific guide. The clean fields — make, model, years, application, code
 series — are already validated by `--selftest`.
+
+---
+
+# Ilco Lookup — desktop app (`ilco_desktop.py`)
+
+A standalone **offline GUI** for your PC that wraps the extractor with a
+search-and-verify workflow, and can be packaged as a single **Windows `.exe`**.
+Use it to eyeball each extracted row against the source PDF before it ever
+reaches the app — it is the verification gate for what you import.
+
+> **Computer only.** A `.exe` runs on Windows (and the script runs on Mac/Linux
+> too). Phones cannot run a `.exe` — on your phone use the Lock & Scroll PWA.
+
+### What it does
+- **Link both PDFs** — the modern guide and the antique book — from anywhere on
+  the computer. Paths are remembered; extracted rows are cached, so re-opening
+  is instant (it re-extracts only when a PDF changes).
+- **Search** by vehicle, make, model, key blank (e.g. `TR33`), or code series —
+  the same unified, multi-word search the app uses.
+- **Verify** — **Open PDF** to check a row against the source, **Edit…** to fix
+  any field, then **Approve** the rows you trust (double-click a row).
+- **Export** approved rows to a `.txt` file (or **Copy approved**), then paste
+  into **📗 Ilco Guide → 📋 Paste Reference** in the app.
+
+### Run it from Python (no build needed)
+```
+pip install pdfplumber
+python ilco_desktop.py            # opens the GUI
+python ilco_desktop.py --selftest # validates search logic, no PDF/display
+python ilco_desktop.py --search "TR33" --guide "Ilco Guide.pdf"   # headless
+```
+`ilco_desktop.py` and `ilco_extract.py` must sit in the same folder.
+
+### Build the Windows `.exe`
+On the **Windows** machine (so the `.exe` is a Windows binary), in a terminal in
+this `tools` folder:
+```
+pip install pdfplumber pyinstaller
+pyinstaller --onefile --windowed --name IlcoLookup ^
+    --collect-all pdfplumber --collect-all pdfminer ^
+    --add-data "ilco_extract.py;." ilco_desktop.py
+```
+The finished program is `dist\IlcoLookup.exe` — double-click to run; no Python
+install needed on the machine you copy it to. (On macOS/Linux use `:` instead
+of `;` in `--add-data`, and drop the `^` line-continuations / put it on one
+line.) The first launch after linking a PDF spends a minute extracting, then
+caches; later launches are instant.
