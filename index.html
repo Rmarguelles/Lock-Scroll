@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v235</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v236</small></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v235</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v236</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v235<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v236<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5803,6 +5803,26 @@
             <div id="editKeyInfoPNWarning" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(255,165,0,0.13);border:1px solid orange;border-radius:6px;font-size:12px;color:orange;">
                 &#9888; Changing a part number will update the key in the database and migrate any existing stock quantity. Proceed carefully.
             </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Additional Part Numbers <span style="font-size:11px;color:var(--dim);font-weight:normal;">(cross-references)</span></label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Cross-reference PNs for this same key (e.g., an OEM number for an aftermarket key). Comma-separate to add several at once.
+            </div>
+            <div id="editKeyInfoAltParts"></div>
+            <button type="button" onclick="addEditKeyInfoAltPart()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Part Number
+            </button>
+        </div>
+        <div class="modal-input-group">
+            <label>Replaces Old Part Numbers <span style="font-size:11px;color:var(--dim);font-weight:normal;">(superseded PNs)</span></label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Old/discontinued PNs this key replaces. Searching an old PN will redirect to this one. Comma-separate to add several at once.
+            </div>
+            <div id="editKeyInfoOldPns"></div>
+            <button type="button" onclick="addEditKeyInfoOldPn()" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Old Part Number
+            </button>
         </div>
         <div class="modal-input-group">
             <label>Key Type</label>
@@ -8216,6 +8236,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
@@ -8252,6 +8273,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
                 jobHistory: jobHistory,
@@ -8408,6 +8430,25 @@ async function downloadFromCloud() {
         if (data.pnSupersessions) {
             pnSupersessions = { ...pnSupersessions, ...data.pnSupersessions };
             savePnSupersessions();
+        }
+        // Merge deletion tombstones, then drop any tombstoned mapping the
+        // additive merge above may have re-introduced. Without this, a
+        // supersession removed on one device comes back on the next sync.
+        if (Array.isArray(data.deletedPnSupersessions)) {
+            data.deletedPnSupersessions.forEach(op => {
+                if (!deletedPnSupersessions.some(x => String(x).toLowerCase() === String(op).toLowerCase())) {
+                    deletedPnSupersessions.push(op);
+                }
+            });
+            saveDeletedPnSupersessions();
+        }
+        if (deletedPnSupersessions.length > 0) {
+            const tomb = new Set(deletedPnSupersessions.map(x => String(x).toLowerCase()));
+            let prunedAny = false;
+            Object.keys(pnSupersessions).forEach(k => {
+                if (tomb.has(k.toLowerCase())) { delete pnSupersessions[k]; prunedAny = true; }
+            });
+            if (prunedAny) savePnSupersessions();
         }
         if (data.fidPrefixes) {
             fidPrefixes = { ...fidPrefixes, ...data.fidPrefixes };
@@ -10159,6 +10200,11 @@ let fidAssignments = {"SY5KHFNA433":"HY-514","KBRASTU15, CWTWB1U733, CWTWB1U821"
 let fidMerges = {};
 // Map of obsolete part number -> replacement part number (case-insensitive lookup)
 let pnSupersessions = {};
+// Tombstones: old PNs whose supersession was deliberately removed. Needed
+// because the cloud sync merges pnSupersessions additively AND Firestore
+// set({merge:true}) never drops a map key from the server doc — so without a
+// record of the removal, the next download resurrects the deleted mapping.
+let deletedPnSupersessions = [];
 // Map of original catalog PN -> current display PN, for renames of base (non-custom) keys
 let pnRenames = {};
 // Feature flags — set to true to re-enable
@@ -10878,6 +10924,8 @@ async function loadLocalData() {
 
             const savedPnSupersessions = await loadFromIndexedDB('pnSupersessions');
             if (savedPnSupersessions) pnSupersessions = savedPnSupersessions;
+            const savedDeletedPnSupersessions = await loadFromIndexedDB('deletedPnSupersessions');
+            if (Array.isArray(savedDeletedPnSupersessions)) deletedPnSupersessions = savedDeletedPnSupersessions;
 
             const savedPnRenames = await loadFromIndexedDB('pnRenames');
             if (savedPnRenames) pnRenames = savedPnRenames;
@@ -11034,6 +11082,34 @@ function saveFidMerges() {
 function savePnSupersessions() {
     saveToIndexedDB('pnSupersessions', pnSupersessions);
     triggerAutoSync();
+}
+
+function saveDeletedPnSupersessions() {
+    saveToIndexedDB('deletedPnSupersessions', deletedPnSupersessions);
+    triggerAutoSync();
+}
+
+// Remove the supersession for `oldPn` AND remember the removal, so cloud sync
+// can't resurrect it. Returns true if a mapping was actually removed.
+function tombstonePnSupersession(oldPn) {
+    const lc = String(oldPn).toLowerCase();
+    let removed = false;
+    Object.keys(pnSupersessions).forEach(k => {
+        if (k.toLowerCase() === lc) { delete pnSupersessions[k]; removed = true; }
+    });
+    if (!deletedPnSupersessions.some(x => String(x).toLowerCase() === lc)) {
+        deletedPnSupersessions.push(String(oldPn));
+    }
+    return removed;
+}
+
+// Clear any tombstone for `oldPn` — call whenever a supersession is (re)created
+// so a fresh mapping isn't immediately suppressed by its own past deletion.
+function clearPnSupersessionTombstone(oldPn) {
+    const lc = String(oldPn).toLowerCase();
+    const before = deletedPnSupersessions.length;
+    deletedPnSupersessions = deletedPnSupersessions.filter(x => String(x).toLowerCase() !== lc);
+    if (deletedPnSupersessions.length !== before) saveDeletedPnSupersessions();
 }
 
 function savePnRenames() {
@@ -11418,6 +11494,18 @@ function openEditKeyInfoModal(idx) {
 
     document.getElementById('editKeyInfoNotes').value = key.notes || '';
 
+    // Additional part numbers (cross-references stored on the key object)
+    editKeyInfoAltPartCount = 0;
+    document.getElementById('editKeyInfoAltParts').innerHTML = '';
+    (Array.isArray(key.altParts) ? key.altParts : []).forEach(ap => {
+        if (ap && ap.pn) addEditKeyInfoAltPart(ap.pn, ap.brand || null);
+    });
+
+    // Replaces old part numbers (reverse-lookup of the supersession map)
+    editKeyInfoOldPnCount = 0;
+    document.getElementById('editKeyInfoOldPns').innerHTML = '';
+    getSupersededByPn(key.pn).forEach(op => addEditKeyInfoOldPn(op));
+
     // VATS checkbox
     document.getElementById('editKeyInfoIsVATS').checked = key.isVATS || false;
     toggleEditKeyInfoVATS();
@@ -11557,6 +11645,7 @@ function saveEditKeyInfoInner() {
             // searches for the old PN still resolve.
             if (oldPn.toLowerCase() !== newPnRaw.toLowerCase()) {
                 pnSupersessions[oldPn] = newPnRaw;
+                clearPnSupersessionTombstone(oldPn);
                 savePnSupersessions();
             }
         } else {
@@ -11594,6 +11683,9 @@ function saveEditKeyInfoInner() {
     const newBattery = getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther') || null;
     const newEmergencyPN = getDropdownValue('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther') || null;
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
+    const gatheredAltParts = gatherEditKeyInfoAltParts();
+    // Drop any alt part that equals this key's own PN (self-reference)
+    const newAltParts = gatheredAltParts.filter(ap => ap.pn.toLowerCase() !== pn.toLowerCase());
     let newIsVATS = document.getElementById('editKeyInfoIsVATS').checked;
     let newSecondaryPN = getDropdownValue('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther') || null;
     // A non-chip key has no chip and can't be VATS. The Chip Type / VATS
@@ -11646,6 +11738,7 @@ function saveEditKeyInfoInner() {
         if (customIdx >= 0) {
             if (pnChanged) customKeys[customIdx].pn = newPnRaw;
             customKeys[customIdx].keyType = newKeyType;
+            customKeys[customIdx].altParts = newAltParts.length > 0 ? newAltParts : null;
             customKeys[customIdx].keyway = newKeyway;
             customKeys[customIdx].chip = newChip;
             customKeys[customIdx].fccid = newFccid;
@@ -11670,6 +11763,8 @@ function saveEditKeyInfoInner() {
         }
         // Also update DB entry in memory
         key.keyType = newKeyType;
+        if (newAltParts.length > 0) key.altParts = newAltParts;
+        else delete key.altParts;
         key.keyway = newKeyway;
         key.chip = newChip;
         key.fccid = newFccid;
@@ -11692,6 +11787,7 @@ function saveEditKeyInfoInner() {
         // bookkeeping from the consolidation sync) survive a key-info save.
         const overrides = keyInfoOverrides[getOriginalCatalogPn(pn)] || {};
         overrides.keyType = newKeyType;
+        overrides.altParts = newAltParts.length > 0 ? newAltParts : null;
         overrides.keyway = newKeyway;
         overrides.chip = newChip;
         overrides.fccid = newFccid;
@@ -11723,7 +11819,44 @@ function saveEditKeyInfoInner() {
         }
         // fccids should be removed from the key when null so getKeyFccIds falls back to fccid alone
         if (overrides.fccids === null || overrides.fccids === undefined) delete key.fccids;
+        // Same for altParts — a null override means "no alt parts", not the literal null
+        if (overrides.altParts === null || overrides.altParts === undefined) delete key.altParts;
     }
+
+    // Reconcile "Replaces Old Part Numbers" against the global supersession map.
+    // `pn` is the final PN here; if the PN was renamed above, migratePnLiveStores
+    // already repointed any existing entries to it, so we compare the form's
+    // desired list against the current mappings that point at this key.
+    const desiredOldPns = gatherEditKeyInfoOldPns().filter(op => op.toLowerCase() !== pn.toLowerCase());
+    const desiredSet = new Set(desiredOldPns.map(s => s.toLowerCase()));
+    let supersessionsChanged = false;
+    let tombstonesChanged = false;
+    // Drop mappings that used to point here but were removed in the form.
+    // Tombstone each removal so cloud sync doesn't resurrect it.
+    Object.keys(pnSupersessions).forEach(op => {
+        if (String(pnSupersessions[op]).toLowerCase() === pn.toLowerCase() && !desiredSet.has(op.toLowerCase())) {
+            tombstonePnSupersession(op);
+            supersessionsChanged = true;
+            tombstonesChanged = true;
+        }
+    });
+    // Add (or repoint, with confirmation) the mappings the user entered
+    desiredOldPns.forEach(op => {
+        const existingKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === op.toLowerCase());
+        // A freshly (re)entered mapping must clear any prior tombstone for it
+        clearPnSupersessionTombstone(op);
+        if (existingKey && String(pnSupersessions[existingKey]).toLowerCase() === pn.toLowerCase()) return; // already here
+        if (existingKey && pnSupersessions[existingKey] && String(pnSupersessions[existingKey]).toLowerCase() !== pn.toLowerCase()) {
+            if (!confirm(`${op} is already marked as replaced by ${pnSupersessions[existingKey]}. Overwrite to point at ${pn}?`)) {
+                return;
+            }
+            delete pnSupersessions[existingKey];
+        }
+        pnSupersessions[op] = pn;
+        supersessionsChanged = true;
+    });
+    if (supersessionsChanged) savePnSupersessions();
+    if (tombstonesChanged) saveDeletedPnSupersessions();
 
     // Persist any new custom dropdown values into the dropdown data for future keys
     registerDropdownValue('buttons', newButtons);
@@ -14251,6 +14384,7 @@ function executeKeyMerge(target, source, absorbedIdx) {
         if (k.toLowerCase() === sourcePn.toLowerCase()) delete pnSupersessions[k];
     }
     pnSupersessions[sourcePn] = targetPn;
+    clearPnSupersessionTombstone(sourcePn);
     savePnSupersessions();
 
     // A PN-as-FCC stand-in (non-chip keys) dies with the absorbed PN. Move
@@ -17539,6 +17673,7 @@ function addPnSupersessionFromInputs() {
     }
 
     pnSupersessions[oldPn] = newPn;
+    clearPnSupersessionTombstone(oldPn);
     savePnSupersessions();
     oldEl.value = '';
     newEl.value = '';
@@ -17554,8 +17689,9 @@ function removePnSupersession(oldPn) {
     if (!confirm('Remove the supersession for ' + oldPn + '?')) return;
     const matchedKey = Object.keys(pnSupersessions).find(k => k.toLowerCase() === String(oldPn).toLowerCase());
     if (matchedKey) {
-        delete pnSupersessions[matchedKey];
+        tombstonePnSupersession(matchedKey);
         savePnSupersessions();
+        saveDeletedPnSupersessions();
         renderPnSupersessionsList();
         toast('Removed');
     }
@@ -28231,6 +28367,117 @@ function gatherCustomKeyAltParts() {
     return altParts;
 }
 
+// ---- Edit Key Info modal: Additional Part Numbers + Replaces Old PNs ----
+// Mirrors the Add-Custom-Key rows above, but with their own IDs so the two
+// forms don't collide. altParts live on the key object; old PNs are recorded
+// in the global pnSupersessions map (old PN -> this key's PN).
+let editKeyInfoAltPartCount = 0;
+let editKeyInfoOldPnCount = 0;
+
+function addEditKeyInfoAltPart(prefillPn = '', brand = null) {
+    editKeyInfoAltPartCount++;
+    const idx = editKeyInfoAltPartCount;
+    const container = document.getElementById('editKeyInfoAltParts');
+    const row = document.createElement('div');
+    row.className = 'editkeyinfo-altpart-row';
+    row.id = 'editKeyInfoAltPart' + idx;
+    if (brand) row.dataset.brand = brand;
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    row.innerHTML =
+        '<input type="text" class="modal-input" id="editKeyInfoAltPartPN' + idx + '" placeholder="Part Number (e.g., 164-R8370)" style="flex:1;min-width:0;font-family:monospace;">' +
+        '<button type="button" onclick="removeEditKeyInfoAltPart(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>';
+    container.appendChild(row);
+    const pnInput = document.getElementById('editKeyInfoAltPartPN' + idx);
+    pnInput.addEventListener('paste', handleEditKeyInfoAltPartBulkPaste);
+    if (prefillPn) pnInput.value = prefillPn;
+}
+
+function removeEditKeyInfoAltPart(idx) {
+    const row = document.getElementById('editKeyInfoAltPart' + idx);
+    if (row) row.remove();
+}
+
+function handleEditKeyInfoAltPartBulkPaste(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text || text.indexOf(',') === -1) return;
+    const parts = text.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return;
+    e.preventDefault();
+    const target = e.target;
+    if (!target.value.trim()) target.value = parts.shift();
+    parts.forEach(pn => addEditKeyInfoAltPart(pn));
+}
+
+function gatherEditKeyInfoAltParts() {
+    const altParts = [];
+    const seen = new Set();
+    document.querySelectorAll('.editkeyinfo-altpart-row').forEach(row => {
+        const idx = row.id.replace('editKeyInfoAltPart', '');
+        if (!idx) return;
+        const pnEl = document.getElementById('editKeyInfoAltPartPN' + idx);
+        if (!pnEl) return;
+        // Support comma-separated values typed into a single row
+        const brand = row.dataset.brand || null;
+        pnEl.value.split(',').map(s => s.trim()).filter(Boolean).forEach(pn => {
+            const lc = pn.toLowerCase();
+            if (seen.has(lc)) return;
+            seen.add(lc);
+            altParts.push({ pn: pn, brand: brand });
+        });
+    });
+    return altParts;
+}
+
+function addEditKeyInfoOldPn(prefillPn = '') {
+    editKeyInfoOldPnCount++;
+    const idx = editKeyInfoOldPnCount;
+    const container = document.getElementById('editKeyInfoOldPns');
+    const row = document.createElement('div');
+    row.className = 'editkeyinfo-oldpn-row';
+    row.id = 'editKeyInfoOldPn' + idx;
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    row.innerHTML =
+        '<input type="text" class="modal-input" id="editKeyInfoOldPnInput' + idx + '" placeholder="Old part number (e.g., 5915392)" style="flex:1;min-width:0;font-family:monospace;">' +
+        '<button type="button" onclick="removeEditKeyInfoOldPn(' + idx + ')" title="Remove" style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#ff6464;cursor:pointer;font-size:14px;">×</button>';
+    container.appendChild(row);
+    const pnInput = document.getElementById('editKeyInfoOldPnInput' + idx);
+    pnInput.addEventListener('paste', handleEditKeyInfoOldPnBulkPaste);
+    if (prefillPn) pnInput.value = prefillPn;
+}
+
+function removeEditKeyInfoOldPn(idx) {
+    const row = document.getElementById('editKeyInfoOldPn' + idx);
+    if (row) row.remove();
+}
+
+function handleEditKeyInfoOldPnBulkPaste(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text || text.indexOf(',') === -1) return;
+    const parts = text.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return;
+    e.preventDefault();
+    const target = e.target;
+    if (!target.value.trim()) target.value = parts.shift();
+    parts.forEach(pn => addEditKeyInfoOldPn(pn));
+}
+
+function gatherEditKeyInfoOldPns() {
+    const oldPns = [];
+    const seen = new Set();
+    document.querySelectorAll('.editkeyinfo-oldpn-row').forEach(row => {
+        const idx = row.id.replace('editKeyInfoOldPn', '');
+        const input = document.getElementById('editKeyInfoOldPnInput' + idx);
+        if (!input) return;
+        input.value.split(',').map(s => s.trim()).filter(Boolean).forEach(pn => {
+            const lc = pn.toLowerCase();
+            if (seen.has(lc)) return;
+            seen.add(lc);
+            oldPns.push(pn);
+        });
+    });
+    return oldPns;
+}
+
 function populateCustomKeyFidOptions() {
     const existingSelect = document.getElementById('customKeyExistingFid');
     if (existingSelect) {
@@ -29184,6 +29431,7 @@ function saveCustomKey() {
                 delete pnSupersessions[existingKey];
             }
             pnSupersessions[op] = pn;
+            clearPnSupersessionTombstone(op);
             supersessionsChanged = true;
         });
         if (supersessionsChanged) savePnSupersessions();
