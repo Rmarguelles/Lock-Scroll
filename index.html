@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v237</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v238</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v237</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v238</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v237<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v238<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6374,6 +6374,38 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeJobCompleteModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveJobComplete()">Save & Complete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Completed Job Modal -->
+<div class="modal" id="jobEditModal">
+    <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
+        <div class="modal-title">&#9998; Edit Job Record</div>
+        <div id="jobEditInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>Job Type</label>
+            <select class="modal-input" id="jobEditType"></select>
+        </div>
+        <div class="modal-input-group">
+            <label>Vehicle Label (optional)</label>
+            <input type="text" class="modal-input" id="jobEditLabel">
+        </div>
+        <div class="modal-input-group">
+            <label>Cables / Adapters Needed (optional)</label>
+            <input type="text" class="modal-input" id="jobEditCables" placeholder="e.g. FCA 12+8 cable, ADC-2011...">
+        </div>
+        <div class="modal-input-group">
+            <label>Amount Charged ($)</label>
+            <input type="number" class="modal-input" id="jobEditCharge" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="modal-input-group">
+            <label>Job Notes</label>
+            <textarea class="modal-input" id="jobEditNotes" rows="4"></textarea>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeJobEditModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveJobEdit()">Save Changes</button>
         </div>
     </div>
 </div>
@@ -7891,8 +7923,8 @@ function renderCloudSyncUI() {
             <div class="sync-status-box">
                 <div class="sync-icon-wrap">⚠️</div>
                 <div class="sync-info-wrap">
-                    <div class="sync-status-text">Offline Mode</div>
-                    <div class="sync-detail-text">Cloud sync requires internet connection</div>
+                    <div class="sync-status-text">Cloud Sync Unavailable</div>
+                    <div class="sync-detail-text">Couldn't reach Firebase — check your connection, then fully close and reopen the app</div>
                 </div>
             </div>
         `;
@@ -10770,6 +10802,7 @@ async function init() {
         console.warn('IndexedDB not available, using localStorage fallback');
     }
     
+    renderCloudSyncUI();
     await loadLocalData();
     await loadCustomKeys();
     await loadCustomVehicles();
@@ -16554,6 +16587,7 @@ function goHome() {
     document.getElementById('jobHistoryPanel').classList.remove('on');
     document.getElementById('jobCompleteModal').classList.remove('on');
     document.getElementById('jobTypeModal').classList.remove('on');
+    document.getElementById('jobEditModal').classList.remove('on');
     document.getElementById('activeJobsPopup').classList.remove('on');
     document.getElementById('testKeysPanel').classList.remove('on');
     document.getElementById('addTestKeysModal').classList.remove('on');
@@ -26798,6 +26832,45 @@ function cancelJob(jobId) {
     openVehicleDetail(job.vehicleKey);
 }
 
+let jobEditRecordId = null;
+
+function openJobEditModal(jobId) {
+    const rec = jobHistory.find(j => String(j.id) === String(jobId));
+    if (!rec) { toast('Job record not found'); return; }
+    jobEditRecordId = rec.id;
+    document.getElementById('jobEditInfo').textContent =
+        `${rec.make} ${rec.model} ${rec.startYear}-${rec.endYear} \u2022 ` + new Date(rec.completedAt).toLocaleDateString();
+    document.getElementById('jobEditType').innerHTML = '<option value="">(none)</option>' + JOB_TYPES.map(t =>
+        `<option value="${t}"${t === rec.jobType ? ' selected' : ''}>${t}</option>`
+    ).join('');
+    document.getElementById('jobEditLabel').value = rec.label || '';
+    document.getElementById('jobEditCables').value = rec.cables || '';
+    document.getElementById('jobEditCharge').value = rec.charge > 0 ? rec.charge : '';
+    document.getElementById('jobEditNotes').value = rec.notes || '';
+    document.getElementById('jobEditModal').classList.add('on');
+}
+
+function closeJobEditModal() {
+    document.getElementById('jobEditModal').classList.remove('on');
+    jobEditRecordId = null;
+}
+
+function saveJobEdit() {
+    const rec = jobHistory.find(j => String(j.id) === String(jobEditRecordId));
+    if (!rec) { toast('Job record not found'); closeJobEditModal(); return; }
+    rec.jobType = document.getElementById('jobEditType').value || '';
+    rec.label = document.getElementById('jobEditLabel').value.trim();
+    rec.cables = document.getElementById('jobEditCables').value.trim();
+    rec.charge = parseFloat(document.getElementById('jobEditCharge').value) || 0;
+    rec.notes = document.getElementById('jobEditNotes').value.trim();
+    rec.editedAt = new Date().toISOString();
+    saveJobHistory();
+    closeJobEditModal();
+    toast('Job updated');
+    if (document.getElementById('jobHistoryPanel').classList.contains('on')) renderJobHistory();
+    if (document.getElementById('vehicleDetailPanel').classList.contains('on')) openVehicleDetail(rec.vehicleKey);
+}
+
 function updateActiveJobsBadge() {
     const badge = document.getElementById('activeJobsBadge');
     if (!badge) return;
@@ -27090,7 +27163,10 @@ function renderJobRecordCard(job, viewingVehicleKey) {
                 '<div class="purchase-item-pn">' + typeChip + escapeJobText(`${job.make} ${job.model} ${job.startYear}-${job.endYear}`) + (job.label ? ' <span style="color:var(--accent2);font-size:12px;">— ' + escapeJobText(job.label) + '</span>' : '') + '</div>' +
                 '<div style="font-size:12px;color:var(--dim);">' + dateStr + (job.durationMin ? ' • ' + formatJobDuration(job.durationMin) : '') + otherEntry + '</div>' +
             '</div>' +
-            (job.charge > 0 ? '<div style="color:var(--success);font-weight:700;">$' + job.charge.toFixed(2) + '</div>' : '') +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+                (job.charge > 0 ? '<div style="color:var(--success);font-weight:700;">$' + job.charge.toFixed(2) + '</div>' : '') +
+                '<button onclick="event.stopPropagation();openJobEditModal(\'' + String(job.id).replace(/'/g, "\\'") + '\')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--dim);cursor:pointer;font-size:12px;padding:4px 8px;">\u270E Edit</button>' +
+            '</div>' +
         '</div>' +
         '<div class="purchase-item-details" style="flex-wrap:wrap;gap:6px;">' +
             (keyChips || '<span style="font-size:11px;color:var(--dim);">No inventory keys used</span>') +
