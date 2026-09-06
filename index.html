@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v236</small></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v237</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v236</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v237</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v236<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v237<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6342,6 +6342,10 @@
         <div class="modal-title">✅ Complete Job</div>
         <div id="jobCompleteInfo" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
         <div class="modal-input-group">
+            <label>Job Type</label>
+            <select class="modal-input" id="jobTypeSelect"></select>
+        </div>
+        <div class="modal-input-group">
             <label>Vehicle Label (optional)</label>
             <input type="text" class="modal-input" id="jobLabel" placeholder="e.g. red one, stock #4821, VIN ...9384">
         </div>
@@ -6356,6 +6360,10 @@
             <div id="jobKeysUsedList"></div>
         </div>
         <div class="modal-input-group">
+            <label>Cables / Adapters Needed (optional)</label>
+            <input type="text" class="modal-input" id="jobCables" placeholder="e.g. FCA 12+8 cable, ADC-2011, star connector...">
+        </div>
+        <div class="modal-input-group">
             <label>Amount Charged ($)</label>
             <input type="number" class="modal-input" id="jobCharge" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
         </div>
@@ -6366,6 +6374,29 @@
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeJobCompleteModal()">Cancel</button>
             <button class="modal-btn primary" onclick="saveJobComplete()">Save & Complete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Job Type Picker (shown when starting a job) -->
+<div class="modal" id="jobTypeModal">
+    <div class="modal-content">
+        <div class="modal-title">&#9654; Start Job</div>
+        <div id="jobTypeModalVehicle" style="font-size:13px;color:var(--dim);margin-bottom:12px;"></div>
+        <div id="jobTypeModalBtns" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div class="modal-btns" style="margin-top:12px;">
+            <button class="modal-btn secondary" onclick="closeJobTypeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Active Jobs Popup (from header badge) -->
+<div class="modal" id="activeJobsPopup">
+    <div class="modal-content" style="max-height:80vh;overflow-y:auto;">
+        <div class="modal-title">&#9201; Active Jobs</div>
+        <div id="activeJobsPopupList"></div>
+        <div class="modal-btns" style="margin-top:12px;">
+            <button class="modal-btn secondary" onclick="closeActiveJobsPopup()">Close</button>
         </div>
     </div>
 </div>
@@ -10214,6 +10245,10 @@ let purchaseHistory = [];
 // (keyed by id, not vehicleKey, so two identical vehicles can run jobs at once)
 let jobHistory = [];
 let activeJobs = {};
+const JOB_TYPES = ['Add Key', 'All Keys Lost', 'Diagnostics', 'Ignition/Lock Repair'];
+const JOB_TYPE_SHORT = { 'Add Key': 'Add Key', 'All Keys Lost': 'AKL', 'Diagnostics': 'Diagnostics', 'Ignition/Lock Repair': 'Ignition/Lock' };
+let jobTypePendingVehicleKey = null;
+function jobTypeShort(t) { return JOB_TYPE_SHORT[t] || t || ''; }
 let jobCompleteJobId = null;
 let jobKeysUsedSelection = {};
 // Test key blanks (non-transponder) tracked by keyway, with optional part number:
@@ -10956,6 +10991,7 @@ async function loadLocalData() {
 
             const savedActiveJobs = await loadFromIndexedDB('activeJobs');
             if (savedActiveJobs) activeJobs = savedActiveJobs;
+            updateActiveJobsBadge();
 
             const savedTestKeyInventory = await loadFromIndexedDB('testKeyInventory');
             if (savedTestKeyInventory) testKeyInventory = savedTestKeyInventory;
@@ -11129,6 +11165,7 @@ function saveJobHistory() {
 
 function saveActiveJobs() {
     saveToIndexedDB('activeJobs', activeJobs);
+    updateActiveJobsBadge();
     triggerAutoSync();
 }
 
@@ -16516,6 +16553,8 @@ function goHome() {
     document.getElementById('purchaseHistoryPanel').classList.remove('on');
     document.getElementById('jobHistoryPanel').classList.remove('on');
     document.getElementById('jobCompleteModal').classList.remove('on');
+    document.getElementById('jobTypeModal').classList.remove('on');
+    document.getElementById('activeJobsPopup').classList.remove('on');
     document.getElementById('testKeysPanel').classList.remove('on');
     document.getElementById('addTestKeysModal').classList.remove('on');
     document.getElementById('linkTestKeyModal').classList.remove('on');
@@ -23601,7 +23640,7 @@ function openVehicleDetail(vehicleKey) {
         html += `
         <div class="job-active-banner">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <span style="font-weight:700;color:var(--accent);">⏱ Job in progress${job.label ? ' — ' + job.label : ''}</span>
+                <span style="font-weight:700;color:var(--accent);">⏱ Job in progress${job.jobType ? ': ' + jobTypeShort(job.jobType) : ''}${job.label ? ' — ' + job.label : ''}</span>
                 <button onclick="editJobLabel('${jobIdEsc}')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 6px;">✎</button>
             </div>
             <div style="font-size:12px;color:var(--dim);margin-top:4px;">Started ${startTime} (${formatJobElapsed(job.startedAt)} ago)${job.startedBy && job.startedBy !== 'Unknown' ? ' • ' + job.startedBy : ''}</div>
@@ -26701,8 +26740,28 @@ function findActiveJobsForVehicle(vehicleKey) {
 }
 
 function startJob(vehicleKey) {
+    // Pick a job type first, then create the job
+    jobTypePendingVehicleKey = vehicleKey;
+    const [make, model, startYear, endYear] = vehicleKey.split('|');
+    document.getElementById('jobTypeModalVehicle').textContent = `${make} ${model} ${startYear}-${endYear}`;
+    document.getElementById('jobTypeModalBtns').innerHTML = JOB_TYPES.map(t =>
+        `<button onclick="startJobWithType('${t.replace(/'/g, "\\'")}')" style="padding:14px;background:var(--card);border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;">${t}</button>`
+    ).join('');
+    document.getElementById('jobTypeModal').classList.add('on');
+}
+
+function closeJobTypeModal() {
+    document.getElementById('jobTypeModal').classList.remove('on');
+    jobTypePendingVehicleKey = null;
+}
+
+function startJobWithType(jobType) {
+    const vehicleKey = jobTypePendingVehicleKey;
+    closeJobTypeModal();
+    if (!vehicleKey) return;
     const [make, model, startYear, endYear] = vehicleKey.split('|');
     const job = {
+        jobType: jobType,
         id: Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         vehicleKey: vehicleKey,
         make: make,
@@ -26737,6 +26796,41 @@ function cancelJob(jobId) {
     saveActiveJobs();
     toast('Job canceled');
     openVehicleDetail(job.vehicleKey);
+}
+
+function updateActiveJobsBadge() {
+    const badge = document.getElementById('activeJobsBadge');
+    if (!badge) return;
+    const n = Object.keys(activeJobs).length;
+    badge.textContent = '\u23F1 ' + n;
+    badge.style.display = n > 0 ? '' : 'none';
+}
+
+function openActiveJobsPopup() {
+    const jobs = Object.values(activeJobs).sort((a, b) => (a.startedAt || '').localeCompare(b.startedAt || ''));
+    const list = document.getElementById('activeJobsPopupList');
+    if (jobs.length === 0) {
+        list.innerHTML = '<div style="color:var(--dim);font-size:13px;text-align:center;padding:12px;">No active jobs</div>';
+    } else {
+        list.innerHTML = jobs.map(job => {
+            const vkEsc = String(job.vehicleKey).replace(/'/g, "\\'");
+            return `<div onclick="jumpToActiveJob('${vkEsc}')" style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;">
+                <div style="font-weight:700;font-size:14px;">${escapeJobText(`${job.make} ${job.model} ${job.startYear}-${job.endYear}`)}${job.label ? ' <span style="color:var(--accent2);font-size:12px;">\u2014 ' + escapeJobText(job.label) + '</span>' : ''}</div>
+                <div style="font-size:12px;color:var(--dim);margin-top:4px;">${job.jobType ? '<span style="color:var(--accent);font-weight:600;">' + escapeJobText(jobTypeShort(job.jobType)) + '</span> \u2022 ' : ''}started ${formatJobElapsed(job.startedAt)} ago${job.startedBy && job.startedBy !== 'Unknown' ? ' \u2022 ' + escapeJobText(job.startedBy) : ''}</div>
+                <div style="font-size:11px;color:var(--accent);margin-top:6px;">Tap to open vehicle \u2192</div>
+            </div>`;
+        }).join('');
+    }
+    document.getElementById('activeJobsPopup').classList.add('on');
+}
+
+function closeActiveJobsPopup() {
+    document.getElementById('activeJobsPopup').classList.remove('on');
+}
+
+function jumpToActiveJob(vehicleKey) {
+    closeActiveJobsPopup();
+    openVehicleDetail(vehicleKey);
 }
 
 function formatJobDuration(mins) {
@@ -26853,7 +26947,11 @@ function openJobCompleteModal(jobId) {
         `${job.make} ${job.model} ${job.startYear}-${job.endYear}` +
         (job.label ? ` — ${job.label}` : '') +
         ` • started ${startTime} (${formatJobElapsed(job.startedAt)})`;
+    document.getElementById('jobTypeSelect').innerHTML = JOB_TYPES.map(t =>
+        `<option value="${t}"${t === job.jobType ? ' selected' : ''}>${t}</option>`
+    ).join('');
     document.getElementById('jobLabel').value = job.label || '';
+    document.getElementById('jobCables').value = '';
     document.getElementById('jobTestKeys').value = '';
     document.getElementById('jobCharge').value = '';
     document.getElementById('jobNotes').value = '';
@@ -26929,7 +27027,9 @@ function saveJobComplete() {
         model: job.model,
         startYear: job.startYear,
         endYear: job.endYear,
+        jobType: document.getElementById('jobTypeSelect').value || job.jobType || '',
         label: document.getElementById('jobLabel').value.trim(),
+        cables: document.getElementById('jobCables').value.trim(),
         startedAt: job.startedAt,
         completedAt: completedAt,
         durationMin: Math.max(0, Math.round((new Date(completedAt) - new Date(job.startedAt)) / 60000)),
@@ -26978,13 +27078,16 @@ function renderJobRecordCard(job, viewingVehicleKey) {
     const dateStr = completed.toLocaleDateString() + ' ' + completed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const otherEntry = viewingVehicleKey && job.vehicleKey !== viewingVehicleKey
         ? `<span style="font-size:10px;color:var(--dim);"> (logged on ${job.startYear}-${job.endYear} entry)</span>` : '';
+    const typeChip = job.jobType
+        ? `<span style="padding:2px 8px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:10px;font-size:11px;color:var(--accent);font-weight:700;">${escapeJobText(jobTypeShort(job.jobType))}</span> `
+        : '';
     const keyChips = (job.keysUsed || []).map(k =>
         `<span style="padding:2px 8px;background:rgba(0,212,255,0.15);border-radius:10px;font-size:11px;color:var(--accent);">${k.qty}× ${escapeJobText(k.pn)}</span>`
     ).join('');
     return '<div class="purchase-item">' +
         '<div class="purchase-item-header">' +
             '<div>' +
-                '<div class="purchase-item-pn">' + escapeJobText(`${job.make} ${job.model} ${job.startYear}-${job.endYear}`) + (job.label ? ' <span style="color:var(--accent2);font-size:12px;">— ' + escapeJobText(job.label) + '</span>' : '') + '</div>' +
+                '<div class="purchase-item-pn">' + typeChip + escapeJobText(`${job.make} ${job.model} ${job.startYear}-${job.endYear}`) + (job.label ? ' <span style="color:var(--accent2);font-size:12px;">— ' + escapeJobText(job.label) + '</span>' : '') + '</div>' +
                 '<div style="font-size:12px;color:var(--dim);">' + dateStr + (job.durationMin ? ' • ' + formatJobDuration(job.durationMin) : '') + otherEntry + '</div>' +
             '</div>' +
             (job.charge > 0 ? '<div style="color:var(--success);font-weight:700;">$' + job.charge.toFixed(2) + '</div>' : '') +
@@ -26993,6 +27096,7 @@ function renderJobRecordCard(job, viewingVehicleKey) {
             (keyChips || '<span style="font-size:11px;color:var(--dim);">No inventory keys used</span>') +
             (job.testKeysUsed > 0 ? '<span style="font-size:11px;color:var(--dim);">Test keys: ' + job.testKeysUsed + (job.testKeyway ? ' (' + escapeJobText(job.testKeyway) + ')' : '') + '</span>' : '') +
         '</div>' +
+        (job.cables ? '<div style="margin-top:6px;font-size:12px;color:var(--text);">🔌 Cables/adapters: ' + escapeJobText(job.cables) + '</div>' : '') +
         (job.notes ? '<div style="margin-top:6px;padding:8px;background:var(--bg);border-left:3px solid cornflowerblue;border-radius:4px;font-size:12px;color:var(--text);white-space:pre-wrap;">📝 ' + escapeJobText(job.notes) + '</div>' : '') +
         (job.completedBy && job.completedBy !== 'Unknown' ? '<div style="font-size:10px;color:var(--dim);margin-top:4px;">' + escapeJobText(job.completedBy) + '</div>' : '') +
     '</div>';
@@ -27026,7 +27130,33 @@ function renderJobHistory() {
         return;
     }
     const sorted = [...jobHistory].sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
-    document.getElementById('jobHistoryList').innerHTML = sorted.map(j => renderJobRecordCard(j, null)).join('');
+    document.getElementById('jobHistoryList').innerHTML = sorted.map(j => {
+        const idEsc = String(j.id).replace(/'/g, "\\'");
+        const d = new Date(j.completedAt);
+        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+        return `<div class="purchase-item" style="padding:0;overflow:hidden;">
+            <div onclick="toggleJobDetail('${idEsc}')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;cursor:pointer;">
+                <div style="min-width:0;">
+                    <div style="font-weight:600;font-size:14px;">${escapeJobText(`${j.make} ${j.model} ${j.startYear}-${j.endYear}`)}</div>
+                    <div style="font-size:12px;color:var(--dim);margin-top:2px;">${dateStr}${j.jobType ? ' \u2022 <span style="color:var(--accent);font-weight:600;">' + escapeJobText(jobTypeShort(j.jobType)) + '</span>' : ''}</div>
+                </div>
+                <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;">
+                    ${j.charge > 0 ? '<span style="color:var(--success);font-weight:700;font-size:13px;">$' + j.charge.toFixed(2) + '</span>' : ''}
+                    <span id="jobChev_${escapeJobText(String(j.id))}" style="color:var(--dim);font-size:12px;">\u25BC</span>
+                </div>
+            </div>
+            <div id="jobDetail_${escapeJobText(String(j.id))}" style="display:none;padding:0 12px 12px;">${renderJobRecordCard(j, null)}</div>
+        </div>`;
+    }).join('');
+}
+
+function toggleJobDetail(jobId) {
+    const detail = document.getElementById('jobDetail_' + jobId);
+    const chev = document.getElementById('jobChev_' + jobId);
+    if (!detail) return;
+    const open = detail.style.display !== 'none';
+    detail.style.display = open ? 'none' : '';
+    if (chev) chev.textContent = open ? '\u25BC' : '\u25B2';
 }
 
 function filterJobHistory() {
