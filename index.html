@@ -3873,6 +3873,18 @@
             margin-bottom: 0;
         }
 
+        /* Year inputs in the vehicle-note editor are narrow — the number
+           spinners would cover the value, so drop them. */
+        .veh-note-year {
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+        .veh-note-year::-webkit-outer-spin-button,
+        .veh-note-year::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
         .keyway-tag {
             display: inline-flex;
             align-items: center;
@@ -4548,7 +4560,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v239</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v240</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5304,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v239</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v240</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5316,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v239<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v240<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5949,6 +5961,11 @@
         <div class="modal-input-group">
             <label>Notes</label>
             <textarea class="modal-input" id="editKeyInfoNotes" style="min-height:60px;resize:vertical;" placeholder="Additional notes..."></textarea>
+        </div>
+        <div class="modal-input-group">
+            <label>Vehicle-Specific Notes <span style="font-size:11px;color:var(--dim);font-weight:normal;">(also shown on the matching vehicle's page)</span></label>
+            <div id="editKeyInfoVehicleNotesList"></div>
+            <button type="button" onclick="addVehicleNoteRow('edit')" style="width:100%;padding:9px;background:var(--bg);border:1px dashed var(--border);border-radius:6px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">+ Add Vehicle Note</button>
         </div>
         <div class="modal-btns">
             <button class="modal-btn secondary" onclick="closeEditKeyInfoModal()">Cancel</button>
@@ -7365,6 +7382,17 @@
             <label>FCC ID</label>
             <input type="text" class="add-inv-input" id="customKeyFCC" placeholder="e.g., HYQ14FBA, KR5TXN7">
 
+            <div style="margin-top:12px;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">
+                    Additional FCC IDs <span style="font-size:11px;">— for a key that carries two of them; every ID stays searchable and gets its own FID link.</span>
+                </div>
+                <div id="customKeyExtraFccList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" class="add-inv-input" id="customKeyExtraFccInput" placeholder="Enter another FCC ID..." list="fccidDatalist" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomKeyExtraFcc();}">
+                    <button type="button" onclick="addCustomKeyExtraFcc()" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
+                </div>
+            </div>
+
             <div style="margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
                 <div style="font-size:11px;color:var(--dim);text-transform:uppercase;font-weight:600;margin-bottom:10px;">FID Assignment</div>
 
@@ -7562,6 +7590,17 @@
         <div class="add-inv-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
             <label>Notes</label>
             <textarea class="add-inv-input" id="customKeyNotes" placeholder="Any additional notes..." style="min-height:80px;resize:vertical;"></textarea>
+        </div>
+        
+        <div class="add-inv-section">
+            <label>Vehicle-Specific Notes <span style="color:var(--dim);font-weight:normal;font-size:12px;">(optional)</span></label>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">
+                Manufacturer footnotes that only apply to some of the vehicles above — e.g. <span class="mono">* Corolla must match FCC ID of the remote with original key</span>. Each note shows on this key AND on that vehicle's own page. Pick a vehicle to scope it, or leave the scope blank to attach it to every vehicle on this key.
+            </div>
+            <div id="customKeyVehicleNotesList"></div>
+            <button type="button" onclick="addVehicleNoteRow('add')" style="width:100%;padding:10px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px;">
+                + Add Vehicle Note
+            </button>
         </div>
         
         <div class="add-inv-buttons" style="margin-top:24px;">
@@ -8628,6 +8667,10 @@ async function downloadFromCloud() {
         // another device) gets re-added next to the renamed key. Drop those
         // resurrected copies before rendering.
         pruneSupersededCustomKeys();
+
+        // A merge from a device on an older version can bring back comma-joined
+        // FCC IDs — re-split them before anything renders.
+        normalizeCommaFccIds();
 
         // Refresh UI
         buildFilters();
@@ -10819,6 +10862,9 @@ async function init() {
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
     applyPnRenamesToDB();
+    // Must run after the override/rename applies above so it sees each key's
+    // final FCC ID and persists the split on top of the current overrides.
+    normalizeCommaFccIds();
     await runNonChipChipClearMigration();
     await runFccidMergeMigration();
     await runH75xMergeMigration();
@@ -11476,6 +11522,205 @@ function removeExtraFccId(idx) {
     renderEditKeyInfoExtraFccs();
 }
 
+// ---- Additional FCC IDs on the Add Custom Key panel ----
+// Mirrors the Edit Key Info modal: the primary FCC ID stays in customKeyFCC,
+// everything beyond it collects here and is saved as key.fccids so search,
+// FID grouping and vehicle lookups see every ID on the key.
+let customKeyExtraFccs = [];
+
+function renderCustomKeyExtraFccs() {
+    const container = document.getElementById('customKeyExtraFccList');
+    if (!container) return;
+    if (customKeyExtraFccs.length === 0) {
+        container.innerHTML = '<span style="font-size:12px;color:var(--dim);">None</span>';
+        return;
+    }
+    container.innerHTML = customKeyExtraFccs.map((f, i) =>
+        `<span class="keyway-tag" style="background:var(--accent2);">${escapeJobText(f)}<span class="keyway-tag-remove" onclick="removeCustomKeyExtraFcc(${i})">&times;</span></span>`
+    ).join('');
+}
+
+function addCustomKeyExtraFcc() {
+    const input = document.getElementById('customKeyExtraFccInput');
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) return;
+    const upper = raw.toUpperCase();
+    const primary = (document.getElementById('customKeyFCC')?.value || '').trim().toUpperCase();
+    if (primary && upper === primary) {
+        toast('That is already the primary FCC ID');
+        return;
+    }
+    if (customKeyExtraFccs.some(f => f.toUpperCase() === upper)) {
+        toast('Already added');
+        return;
+    }
+    customKeyExtraFccs.push(raw);
+    input.value = '';
+    renderCustomKeyExtraFccs();
+}
+
+function removeCustomKeyExtraFcc(idx) {
+    customKeyExtraFccs.splice(idx, 1);
+    renderCustomKeyExtraFccs();
+}
+
+// ---- Vehicle-note editors (Add Custom Key panel + Edit Key Info modal) ----
+// Both editors are state-driven: the arrays below are the truth, the inputs
+// write straight back into them. Typing never re-renders (that would steal
+// focus) — only add / remove / quick-fill redraw the list.
+let customKeyVehicleNotes = [];
+let editKeyInfoVehicleNotes = [];
+
+const VEHICLE_NOTE_EDITORS = {
+    add: { listId: 'customKeyVehicleNotesList', get: () => customKeyVehicleNotes },
+    edit: { listId: 'editKeyInfoVehicleNotesList', get: () => editKeyInfoVehicleNotes }
+};
+
+// Vehicle applications available to scope a note to: the rows currently typed
+// into the Add form, or the saved applications of the key being edited.
+function getVehicleNoteScopeOptions(ctx) {
+    const out = [];
+    const seen = new Set();
+    const push = (make, model, s, e) => {
+        if (!make || make === '__other__') return;
+        const sy = parseInt(s) || 0;
+        const ey = parseInt(e) || sy;
+        const k = [make, model || '', sy, ey].join('|').toLowerCase();
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push({ make: make, model: model || '', startYear: sy, endYear: ey });
+    };
+    if (ctx === 'add') {
+        document.querySelectorAll('#customKeyVehicles .custom-vehicle-row').forEach(row => {
+            const num = row.id.replace('customVehicle', '');
+            const make = document.getElementById('customVehicleMake' + num)?.value || '';
+            const modelSel = document.getElementById('customVehicleModel' + num)?.value || '';
+            const modelOther = (document.getElementById('customVehicleModelOther' + num)?.value || '').trim();
+            const model = modelSel === '__other__' ? modelOther : modelSel;
+            const st = document.getElementById('customVehicleStart' + num)?.value || '';
+            push(make, model, st, document.getElementById('customVehicleEnd' + num)?.value || st);
+            row.querySelectorAll('.custom-vehicle-extra-range').forEach(er => {
+                const suffix = er.id.replace('customVehicleExtra', '');
+                const xs = document.getElementById('customVehicleExtraStart' + suffix)?.value || '';
+                if (!xs) return;
+                push(make, model, xs, document.getElementById('customVehicleExtraEnd' + suffix)?.value || xs);
+            });
+        });
+    } else {
+        const key = DB[editingKeyInfoIdx];
+        ((key && key.vehicles) || []).forEach(v => push(v.make, v.model, v.startYear, v.endYear || v.startYear));
+    }
+    return out;
+}
+
+// The scope <select> is a quick-fill: picking a vehicle stamps its make/model/
+// years into the note's fields, which stay editable for narrower scopes (e.g.
+// a 2014-only note on a 2012-2017 Camry application).
+function buildVehicleNoteScopeOptionsHtml(ctx, n) {
+    const selVal = n && n.make
+        ? [n.make, n.model || '', parseInt(n.startYear) || 0, parseInt(n.endYear) || parseInt(n.startYear) || 0].join('|')
+        : '';
+    return ['<option value="">\u2014 Quick-fill scope from this key\u2019s vehicles \u2014</option>']
+        .concat(getVehicleNoteScopeOptions(ctx).map(o => {
+            const val = [o.make, o.model, o.startYear, o.endYear].join('|');
+            const yrs = o.startYear ? ' ' + o.startYear + (o.endYear && o.endYear !== o.startYear ? '-' + o.endYear : '') : '';
+            return '<option value="' + escapeJobText(val) + '"' + (val === selVal ? ' selected' : '') + '>' +
+                escapeJobText(o.make + ' ' + (o.model || '(all models)') + yrs) + '</option>';
+        }))
+        .join('');
+}
+
+// Vehicle rows can be added/edited after a note row exists, so rebuild the
+// options as the dropdown is opened rather than only at render time.
+function refreshVehicleNoteScopeOptions(ctx, idx) {
+    const arr = VEHICLE_NOTE_EDITORS[ctx] && VEHICLE_NOTE_EDITORS[ctx].get();
+    const n = arr && arr[idx];
+    const sel = document.getElementById('vehNoteScope_' + ctx + '_' + idx);
+    if (!n || !sel) return;
+    sel.innerHTML = buildVehicleNoteScopeOptionsHtml(ctx, n);
+}
+
+function renderVehicleNotesEditor(ctx) {
+    const cfg = VEHICLE_NOTE_EDITORS[ctx];
+    if (!cfg) return;
+    const container = document.getElementById(cfg.listId);
+    if (!container) return;
+    const notes = cfg.get();
+    if (notes.length === 0) {
+        container.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:6px 0;">No vehicle-specific notes yet.</div>';
+        return;
+    }
+    const inputStyle = 'padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;min-width:0;';
+    container.innerHTML = notes.map((n, i) => {
+        const optionHtml = buildVehicleNoteScopeOptionsHtml(ctx, n);
+        return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                '<span style="font-size:11px;color:var(--dim);text-transform:uppercase;font-weight:600;">Note #' + (i + 1) + '</span>' +
+                '<button type="button" onclick="removeVehicleNoteRow(\'' + ctx + '\', ' + i + ')" style="background:none;border:none;color:#ff4444;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;">&times;</button>' +
+            '</div>' +
+            '<select id="vehNoteScope_' + ctx + '_' + i + '" onmousedown="refreshVehicleNoteScopeOptions(\'' + ctx + '\', ' + i + ')" onfocus="refreshVehicleNoteScopeOptions(\'' + ctx + '\', ' + i + ')" onchange="applyVehicleNoteScope(\'' + ctx + '\', ' + i + ', this.value)" style="width:100%;margin-bottom:6px;' + inputStyle + '">' + optionHtml + '</select>' +
+            '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+                '<input type="text" placeholder="Make (blank = all)" value="' + escapeJobText(n.make || '') + '" oninput="setVehicleNoteField(\'' + ctx + '\', ' + i + ', \'make\', this.value)" style="flex:2;' + inputStyle + '">' +
+                '<input type="text" placeholder="Model" value="' + escapeJobText(n.model || '') + '" oninput="setVehicleNoteField(\'' + ctx + '\', ' + i + ', \'model\', this.value)" style="flex:2;' + inputStyle + '">' +
+                '<input type="number" class="veh-note-year" placeholder="From" value="' + escapeJobText(n.startYear || '') + '" oninput="setVehicleNoteField(\'' + ctx + '\', ' + i + ', \'startYear\', this.value)" style="flex:1;' + inputStyle + '">' +
+                '<input type="number" class="veh-note-year" placeholder="To" value="' + escapeJobText(n.endYear || '') + '" oninput="setVehicleNoteField(\'' + ctx + '\', ' + i + ', \'endYear\', this.value)" style="flex:1;' + inputStyle + '">' +
+            '</div>' +
+            '<textarea placeholder="e.g. * Corolla must match FCC ID of the remote with original key. Another option is HYQ12BEL" oninput="setVehicleNoteField(\'' + ctx + '\', ' + i + ', \'note\', this.value)" style="width:100%;min-height:60px;resize:vertical;font-family:inherit;' + inputStyle + '">' + escapeJobText(n.note || '') + '</textarea>' +
+        '</div>';
+    }).join('');
+}
+
+function addVehicleNoteRow(ctx) {
+    const arr = VEHICLE_NOTE_EDITORS[ctx] && VEHICLE_NOTE_EDITORS[ctx].get();
+    if (!arr) return;
+    arr.push({ make: '', model: '', startYear: '', endYear: '', note: '' });
+    renderVehicleNotesEditor(ctx);
+}
+
+function removeVehicleNoteRow(ctx, idx) {
+    const arr = VEHICLE_NOTE_EDITORS[ctx] && VEHICLE_NOTE_EDITORS[ctx].get();
+    if (!arr) return;
+    arr.splice(idx, 1);
+    renderVehicleNotesEditor(ctx);
+}
+
+function setVehicleNoteField(ctx, idx, field, value) {
+    const arr = VEHICLE_NOTE_EDITORS[ctx] && VEHICLE_NOTE_EDITORS[ctx].get();
+    const n = arr && arr[idx];
+    if (n) n[field] = value;
+}
+
+function applyVehicleNoteScope(ctx, idx, value) {
+    const arr = VEHICLE_NOTE_EDITORS[ctx] && VEHICLE_NOTE_EDITORS[ctx].get();
+    const n = arr && arr[idx];
+    if (!n) return;
+    if (!value) {
+        n.make = ''; n.model = ''; n.startYear = ''; n.endYear = '';
+    } else {
+        const parts = value.split('|');
+        n.make = parts[0] || '';
+        n.model = parts[1] || '';
+        n.startYear = parts[2] && parts[2] !== '0' ? parts[2] : '';
+        n.endYear = parts[3] && parts[3] !== '0' ? parts[3] : '';
+    }
+    renderVehicleNotesEditor(ctx);
+}
+
+// Load stored notes into an editor (copies, so Cancel can't mutate the key)
+function loadVehicleNotesIntoEditor(ctx, key) {
+    const list = getKeyVehicleNotes(key).map(n => ({
+        make: n.make || '',
+        model: n.model || '',
+        startYear: n.startYear || '',
+        endYear: n.endYear || '',
+        note: n.note || ''
+    }));
+    if (ctx === 'add') customKeyVehicleNotes = list;
+    else editKeyInfoVehicleNotes = list;
+    renderVehicleNotesEditor(ctx);
+}
+
 function openAutelIKeyModal(pn) {
     const modal = document.getElementById('autelIKeyModal');
     if (!modal) return;
@@ -11564,6 +11809,7 @@ function openEditKeyInfoModal(idx) {
     populateEditKeyInfoDropdown('editKeyInfoSecondaryPN', 'editKeyInfoSecondaryPNOther', Array.from(secondaryPNs).sort(), key.secondaryKeyPartNumber);
 
     document.getElementById('editKeyInfoNotes').value = key.notes || '';
+    loadVehicleNotesIntoEditor('edit', key);
 
     // Additional part numbers (cross-references stored on the key object)
     editKeyInfoAltPartCount = 0;
@@ -11781,19 +12027,22 @@ function saveEditKeyInfoInner() {
         newKeyRoles = checked.length > 0 ? checked : null;
     }
 
+    const newVehicleNotes = cleanVehicleNotes(editKeyInfoVehicleNotes);
+
     // Build the multi-FCC ID array. Primary first, then any extras the user added.
     let newFccids = null;
-    const extras = (editKeyInfoExtraFccs || []).map(f => String(f).trim()).filter(Boolean);
-    if (extras.length > 0) {
-        const seen = new Set();
-        const list = [];
-        if (newFccid) { list.push(newFccid); seen.add(newFccid.toUpperCase()); }
-        extras.forEach(f => {
+    const seen = new Set();
+    const list = [];
+    // splitFccIdList so a comma-separated primary ("HYQ12BDP, HYQ12BEL") is
+    // stored as separate IDs rather than one opaque string
+    splitFccIdList(newFccid)
+        .concat((editKeyInfoExtraFccs || []).flatMap(f => splitFccIdList(f)))
+        .forEach(f => {
             const u = f.toUpperCase();
             if (!seen.has(u)) { seen.add(u); list.push(f); }
         });
-        newFccids = list;
-    }
+    if (list.length > 0) newFccid = list[0];
+    if (list.length > 1) newFccids = list;
 
     if (key.isCustom) {
         // For custom keys, update the customKeys array directly.
@@ -11821,6 +12070,8 @@ function saveEditKeyInfoInner() {
             customKeys[customIdx].battery = newBattery;
             customKeys[customIdx].emergencyPN = newEmergencyPN;
             customKeys[customIdx].notes = newNotes;
+            if (newVehicleNotes) customKeys[customIdx].vehicleNotes = newVehicleNotes;
+            else delete customKeys[customIdx].vehicleNotes;
             customKeys[customIdx].isVATS = newIsVATS;
             customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
             customKeys[customIdx].removableSleeve = newRemovableSleeve;
@@ -11847,6 +12098,8 @@ function saveEditKeyInfoInner() {
         key.battery = newBattery;
         key.emergencyPN = newEmergencyPN;
         key.notes = newNotes;
+        if (newVehicleNotes) key.vehicleNotes = newVehicleNotes;
+        else delete key.vehicleNotes;
         key.isVATS = newIsVATS;
         key.secondaryKeyPartNumber = newSecondaryPN;
         key.removableSleeve = newRemovableSleeve;
@@ -11869,6 +12122,7 @@ function saveEditKeyInfoInner() {
         overrides.battery = newBattery;
         overrides.emergencyPN = newEmergencyPN;
         overrides.notes = newNotes;
+        overrides.vehicleNotes = newVehicleNotes;
         overrides.isVATS = newIsVATS;
         overrides.secondaryKeyPartNumber = newSecondaryPN;
         overrides.removableSleeve = newRemovableSleeve;
@@ -11890,6 +12144,8 @@ function saveEditKeyInfoInner() {
         }
         // fccids should be removed from the key when null so getKeyFccIds falls back to fccid alone
         if (overrides.fccids === null || overrides.fccids === undefined) delete key.fccids;
+        // Same for vehicleNotes — a null override means "no notes"
+        if (overrides.vehicleNotes === null || overrides.vehicleNotes === undefined) delete key.vehicleNotes;
         // Same for altParts — a null override means "no alt parts", not the literal null
         if (overrides.altParts === null || overrides.altParts === undefined) delete key.altParts;
     }
@@ -12277,17 +12533,37 @@ function getKeyFccIds(key) {
     if (!key) return [];
     const out = [];
     const seen = new Set();
+    // A single stored value can pack several IDs as "HYQ12BDP, HYQ12BEL" —
+    // older entries did exactly that. Unpack so each ID stands on its own.
     const push = v => {
         if (v === null || v === undefined) return;
-        const s = String(v).trim();
-        if (!s) return;
-        const k = s.toUpperCase();
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(s);
+        String(v).split(',').forEach(part => {
+            const t = part.trim();
+            if (!t) return;
+            const k = t.toUpperCase();
+            if (seen.has(k)) return;
+            seen.add(k);
+            out.push(t);
+        });
     };
     if (key.fccid) push(key.fccid);
     if (Array.isArray(key.fccids)) key.fccids.forEach(push);
+    return out;
+}
+
+// Split a value that may pack several FCC IDs into one comma-separated string.
+// Trims, drops blanks and de-dupes case-insensitively, preserving order.
+function splitFccIdList(value) {
+    const out = [];
+    const seen = new Set();
+    String(value == null ? '' : value).split(',').forEach(part => {
+        const t = part.trim();
+        if (!t) return;
+        const u = t.toUpperCase();
+        if (seen.has(u)) return;
+        seen.add(u);
+        out.push(t);
+    });
     return out;
 }
 
@@ -12314,6 +12590,168 @@ function keyHasFccId(key, fccId) {
     const target = normalizeFccId(fccId);
     if (!target) return false;
     return getKeyFccIds(key).some(f => normalizeFccId(f) === target);
+}
+
+// ===== VEHICLE-SPECIFIC KEY NOTES =====
+// Manufacturer footnotes that only apply to SOME of a key's applications, e.g.
+// "* Corolla must match FCC ID of the remote with original key". They live on
+// the key as key.vehicleNotes = [{ make, model, startYear, endYear, note }] and
+// surface in two places: the key's own detail page, and the detail page of every
+// vehicle they scope to. An absent make means "every vehicle this key fits", an
+// absent model means "every model of that make", absent years mean "every year".
+function getKeyVehicleNotes(key) {
+    if (!key || !Array.isArray(key.vehicleNotes)) return [];
+    return key.vehicleNotes.filter(n => n && String(n.note || '').trim());
+}
+
+// "Toyota Corolla 2014-2018", "Toyota (all models)", "All vehicles on this key"
+function vehicleNoteScopeLabel(n) {
+    if (!n || !n.make) return 'All vehicles on this key';
+    const s = parseInt(n.startYear) || 0;
+    const e = parseInt(n.endYear) || s;
+    const years = s ? (e && e !== s ? s + '-' + e : String(s)) : '';
+    return [n.make, n.model || '(all models)', years].filter(Boolean).join(' ');
+}
+
+// Does this note apply to the given make/model/year grouping? Year ranges only
+// have to OVERLAP — a 2014-only note still belongs on a 2012-2017 Camry page.
+function vehicleNoteMatches(n, make, model, startYear, endYear) {
+    if (!n) return false;
+    if (!n.make) return true;
+    if (String(n.make).toLowerCase() !== String(make || '').toLowerCase()) return false;
+    if (n.model && String(n.model).toLowerCase() !== String(model || '').toLowerCase()) return false;
+    const ns = parseInt(n.startYear) || 0;
+    if (!ns) return true;
+    const ne = parseInt(n.endYear) || ns;
+    const vs = parseInt(startYear) || 0;
+    if (!vs) return true;
+    const ve = parseInt(endYear) || vs;
+    return ns <= ve && ne >= vs;
+}
+
+// Every vehicle-scoped note in the catalog that applies to this vehicle, tagged
+// with the PN it came from. A note that names no make rides along with its key,
+// so it only shows on vehicles that key actually fits.
+function getVehicleNotesForVehicle(make, model, startYear, endYear) {
+    const out = [];
+    const seen = new Set();
+    DB.forEach(key => {
+        const notes = getKeyVehicleNotes(key);
+        if (notes.length === 0) return;
+        let fitsKey = null; // computed lazily, only for key-wide notes
+        notes.forEach(n => {
+            if (!n.make) {
+                if (fitsKey === null) fitsKey = !!findKeyVehicleEntry(key, make, model, startYear, endYear);
+                if (!fitsKey) return;
+            }
+            if (!vehicleNoteMatches(n, make, model, startYear, endYear)) return;
+            const text = String(n.note).trim();
+            const dedupe = text.toLowerCase();
+            if (seen.has(dedupe)) return;
+            seen.add(dedupe);
+            out.push({ note: text, pn: key.pn, scope: vehicleNoteScopeLabel(n) });
+        });
+    });
+    return out;
+}
+
+// Drop blank rows and coerce years before storing. Returns null when empty so
+// the field disappears from the key rather than saving an empty array.
+function cleanVehicleNotes(list) {
+    const cleaned = (list || []).map(n => {
+        const note = String((n && n.note) || '').trim();
+        if (!note) return null;
+        const make = String((n && n.make) || '').trim();
+        const model = make ? String(n.model || '').trim() : '';
+        const s = make ? (parseInt(n.startYear) || 0) : 0;
+        const e = s ? (parseInt(n.endYear) || s) : 0;
+        const out = { note: note };
+        if (make) out.make = make;
+        if (model) out.model = model;
+        if (s) { out.startYear = s; out.endYear = e < s ? s : e; }
+        return out;
+    }).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : null;
+}
+
+// Unpacks legacy comma-joined FCC IDs into the multi-FCC shape the rest of the
+// app understands. Older entries stored several IDs in one string, both on the
+// key ("HYQ12BDP, HYQ12BEL") and as a single fidAssignments key — which reads as
+// one opaque ID in search results, on the FCC page and in a vehicle's FCC list.
+// This splits the key into fccid (first) + fccids (all), and gives each ID its
+// own FID assignment carrying the FID the joined entry had. Idempotent, and run
+// on every load because a cloud merge from an older device can bring joined
+// entries back.
+function normalizeCommaFccIds() {
+    let customDirty = false, overridesDirty = false, fidDirty = false, mergesDirty = false;
+
+    DB.forEach(key => {
+        if (!key.fccid || !String(key.fccid).includes(',')) return;
+        const parts = splitFccIdList(key.fccid);
+        if (parts.length === 0) return;
+        // Fold in any IDs already on key.fccids so nothing is dropped
+        const merged = [];
+        const seen = new Set();
+        parts.concat(Array.isArray(key.fccids) ? key.fccids : []).forEach(f => {
+            splitFccIdList(f).forEach(t => {
+                const u = t.toUpperCase();
+                if (seen.has(u)) return;
+                seen.add(u);
+                merged.push(t);
+            });
+        });
+        key.fccid = merged[0];
+        if (merged.length > 1) key.fccids = merged;
+        else delete key.fccids;
+
+        if (key.isCustom) {
+            const ck = customKeys.find(c => String(c.pn) === String(key.pn));
+            if (ck) {
+                // ck can be the SAME object as the DB entry — already updated above
+                if (ck !== key) {
+                    ck.fccid = key.fccid;
+                    if (merged.length > 1) ck.fccids = merged;
+                    else delete ck.fccids;
+                }
+                customDirty = true;
+            }
+        } else {
+            const orig = getOriginalCatalogPn(String(key.pn));
+            const ov = keyInfoOverrides[orig] || {};
+            ov.fccid = key.fccid;
+            ov.fccids = merged.length > 1 ? merged : null;
+            keyInfoOverrides[orig] = ov;
+            overridesDirty = true;
+        }
+    });
+
+    // FID assignments were keyed by the same joined string. Give every ID in the
+    // list its own entry pointing at that FID, then drop the joined key.
+    Object.keys(fidAssignments).forEach(k => {
+        if (!k.includes(',')) return;
+        const fid = fidAssignments[k];
+        delete fidAssignments[k];
+        fidDirty = true;
+        splitFccIdList(k).forEach(part => {
+            if (fidAssignments[part] === undefined) fidAssignments[part] = fid;
+        });
+    });
+
+    // Merge relationships pointing at a joined key follow it to its first ID.
+    Object.keys(fidMerges).forEach(k => {
+        const tgtRaw = String(fidMerges[k] || '');
+        const src = k.includes(',') ? (splitFccIdList(k)[0] || '') : k;
+        const tgt = tgtRaw.includes(',') ? (splitFccIdList(tgtRaw)[0] || '') : tgtRaw;
+        if (src === k && tgt === tgtRaw) return;
+        delete fidMerges[k];
+        if (src && tgt && normalizeFccId(src) !== normalizeFccId(tgt)) fidMerges[src] = tgt;
+        mergesDirty = true;
+    });
+
+    if (customDirty) saveCustomKeys();
+    if (overridesDirty) saveKeyInfoOverrides();
+    if (fidDirty) saveFidAssignments();
+    if (mergesDirty) saveFidMerges();
 }
 
 // All old PNs that resolve to the given current PN (one hop only)
@@ -12519,7 +12957,7 @@ function renderKeys() {
                 </div>
                 <div class="key-info">
                     <span><strong>Keyway:</strong> ${key.keyway || 'N/A'}</span>
-                    <span><strong>FCC:</strong> ${key.fccid || 'N/A'}</span>
+                    <span><strong>FCC:</strong> ${getKeyFccIds(key).map(escapeJobText).join(', ') || 'N/A'}</span>
                     <span class="stock-badge ${stockClass}">Stock: ${stock}</span>
                 </div>
                 <div class="key-vehicles">${vehicles || 'No vehicle info'}</div>
@@ -12809,6 +13247,24 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             <p style="color:var(--text);font-size:13px;line-height:1.6;">${key.notes}</p>
         </div>
         ` : ''}
+
+        <!-- Vehicle-Specific Notes: manufacturer footnotes scoped to some of
+             this key's applications. These also render on each matching
+             vehicle's own detail page. -->
+        ${(() => {
+            const vNotes = getKeyVehicleNotes(key);
+            if (vNotes.length === 0) return '';
+            return `
+        <div class="detail-section">
+            <h3>Vehicle-Specific Notes</h3>
+            ${vNotes.map(n => `
+                <div style="background:rgba(100,149,237,0.1);border:1px solid cornflowerblue;border-radius:6px;padding:10px;margin-bottom:8px;">
+                    <div style="font-size:11px;color:cornflowerblue;font-weight:700;text-transform:uppercase;margin-bottom:4px;">${escapeJobText(vehicleNoteScopeLabel(n))}</div>
+                    <div style="color:var(--text);font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeJobText(n.note)}</div>
+                </div>
+            `).join('')}
+        </div>`;
+        })()}
 
         <!-- Vehicles Section -->
         ${(() => {
@@ -15118,13 +15574,16 @@ function autoAssignAllFids() {
         const fccToAssign = [];
         const seenFcc = new Set();
 
+        // Every FCC ID on every key, not just the primary one — a key carrying
+        // two FCC IDs needs a FID on both.
         DB.forEach(key => {
-            if (key.fccid && !seenFcc.has(key.fccid) && !fidAssignments[key.fccid]) {
-                seenFcc.add(key.fccid);
+            getKeyFccIds(key).forEach(fcc => {
+                if (seenFcc.has(fcc) || fidAssignments[fcc]) return;
+                seenFcc.add(fcc);
                 const makes = new Set();
                 let keyType = key.keyType || '';
                 DB.forEach(k => {
-                    if (k.fccid === key.fccid) {
+                    if (keyHasFccId(k, fcc)) {
                         (k.vehicles || []).forEach(v => {
                             if (v.make) makes.add(v.make);
                         });
@@ -15133,12 +15592,12 @@ function autoAssignAllFids() {
                     }
                 });
                 fccToAssign.push({
-                    fccid: key.fccid,
+                    fccid: fcc,
                     makes: Array.from(makes),
                     keyType: keyType,
                     priority: getKeyTypePriority(keyType)
                 });
-            }
+            });
         });
 
         if (fccToAssign.length === 0) {
@@ -15372,7 +15831,7 @@ function openEditFidModal(fccId) {
         // Suggest prefix based on makes
         const makes = [];
         DB.forEach(key => {
-            if (key.fccid === fccId) {
+            if (keyHasFccId(key, fccId)) {
                 (key.vehicles || []).forEach(v => {
                     if (v.make) makes.push(v.make);
                 });
@@ -16312,7 +16771,7 @@ function renderFidDragList() {
     container.innerHTML = fidDragOrder.map((fccId, index) => {
         const fid = fidAssignments[fccId];
         const newFid = projected[fccId];
-        const key = DB.find(k => k.fccid === fccId);
+        const key = DB.find(k => keyHasFccId(k, fccId));
         const keyType = key ? key.keyType || '' : '';
 
         return `
@@ -20735,7 +21194,7 @@ function updateFccidHint(value, hintId) {
     if (!hint) return;
     const fccid = value.trim();
     if (!fccid) { hint.textContent = ''; return; }
-    const matchingKeys = DB.filter(k => k.fccid === fccid);
+    const matchingKeys = DB.filter(k => keyHasFccId(k, fccid));
     if (matchingKeys.length > 0) {
         hint.textContent = `\u2014 ${matchingKeys.length} key${matchingKeys.length !== 1 ? 's' : ''} will be linked`;
         hint.style.color = 'var(--success)';
@@ -21026,7 +21485,7 @@ function getYrfDropdownOptions() {
         if (key.chip) options.chipTypes.add(key.chip);
         if (key.keyType) options.keyTypes.add(key.keyType);
         if (key.buttons) options.buttonCounts.add(key.buttons);
-        if (key.fccid) options.fccIds.add(key.fccid);
+        getKeyFccIds(key).forEach(f => options.fccIds.add(f));
         // Parse button functions if stored
         if (key.buttonFunctions) {
             (Array.isArray(key.buttonFunctions) ? key.buttonFunctions : key.buttonFunctions.split(',')).forEach(f => {
@@ -21044,7 +21503,7 @@ function getYrfDropdownOptions() {
         if (key.chip) options.chipTypes.add(key.chip);
         if (key.keyType) options.keyTypes.add(key.keyType);
         if (key.buttons) options.buttonCounts.add(key.buttons);
-        if (key.fccid) options.fccIds.add(key.fccid);
+        getKeyFccIds(key).forEach(f => options.fccIds.add(f));
         if (key.ilcoPartNum) options.ilcoPartNums.add(key.ilcoPartNum);
         if (key.keystonePartNum) options.keystonePartNums.add(key.keystonePartNum);
     });
@@ -23155,7 +23614,7 @@ function getUniqueVehicles() {
 
             vehicleMap[vehicleKey].keys.push(key);
             if (key.keyway) vehicleMap[vehicleKey].keyways.add(key.keyway);
-            if (key.fccid) vehicleMap[vehicleKey].fccids.add(key.fccid);
+            getKeyFccIds(key).forEach(f => vehicleMap[vehicleKey].fccids.add(f));
             if (key.chip) vehicleMap[vehicleKey].chips.add(key.chip);
             if (key.frequency) vehicleMap[vehicleKey].frequencies.add(key.frequency);
         });
@@ -23333,12 +23792,13 @@ function getUniqueVehicles() {
         if (fccidsToMatch.size > 0) {
             const entry = vehicleMap[vehicleKey];
             DB.forEach(dbKey => {
-                if (!dbKey.fccid || !fccidsToMatch.has(dbKey.fccid)) return;
+                const dbKeyFccs = getKeyFccIds(dbKey);
+                if (!dbKeyFccs.some(f => fccidsToMatch.has(f))) return;
                 // Skip if this key is already in the entry
                 if (entry.keys.some(k => k.pn === dbKey.pn)) return;
                 entry.keys.push(dbKey);
                 if (dbKey.keyway) entry.keyways.add(dbKey.keyway);
-                if (dbKey.fccid) entry.fccids.add(dbKey.fccid);
+                dbKeyFccs.forEach(f => entry.fccids.add(f));
                 if (dbKey.chip) entry.chips.add(dbKey.chip);
                 if (dbKey.frequency) entry.frequencies.add(dbKey.frequency);
             });
@@ -23514,7 +23974,7 @@ function getUniqueVehicles() {
                     customEntry.keys.push(key);
                 }
                 if (key.keyway) customEntry.keyways.add(key.keyway);
-                if (key.fccid) customEntry.fccids.add(key.fccid);
+                getKeyFccIds(key).forEach(f => customEntry.fccids.add(f));
                 if (key.chip) customEntry.chips.add(key.chip);
                 if (key.frequency) customEntry.frequencies.add(key.frequency);
             });
@@ -23612,9 +24072,9 @@ function openVehicleDetail(vehicleKey) {
 
             // Find other keys with the same FID that are in stock
             const otherKeysWithSameFid = DB.filter(key => {
-                if (!key.fccid || key.fccid === fccid) return false;
-                const keyFid = fidAssignments[key.fccid];
-                return keyFid === fid && (stockData[key.pn] || 0) > 0;
+                if (keyHasFccId(key, fccid)) return false;
+                if (getKeyFccIds(key).length === 0) return false;
+                return getKeyFids(key).includes(fid) && (stockData[key.pn] || 0) > 0;
             });
 
             if (otherKeysWithSameFid.length > 0) {
@@ -23854,7 +24314,26 @@ function openVehicleDetail(vehicleKey) {
         `;
     }
 
+    // Vehicle-specific key notes: manufacturer footnotes entered on a key and
+    // scoped to this make/model/year range (e.g. "* Corolla must match FCC ID
+    // of the remote with original key"). Pulled from every key that scopes a
+    // note here, so the note the locksmith typed while adding TO-035 shows up
+    // on Toyota > Corolla > 2014-2018 as well.
+    const vehicleKeyNotes = getVehicleNotesForVehicle(make, model, parseInt(startYear), parseInt(endYear));
+
     html += `
+        ${vehicleKeyNotes.length > 0 ? `
+        <div class="vehicle-section">
+            <div class="vehicle-section-title">&#128221; Vehicle-Specific Key Notes</div>
+            ${vehicleKeyNotes.map(n => `
+                <div style="background:rgba(100,149,237,0.1);border:1px solid cornflowerblue;border-radius:8px;padding:12px;margin-bottom:8px;">
+                    <div style="color:var(--text);font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeJobText(n.note)}</div>
+                    <div style="font-size:11px;color:var(--dim);margin-top:6px;">From key <span class="mono" style="color:var(--accent);">${escapeJobText(String(n.pn))}</span> &bull; applies to ${escapeJobText(n.scope)}</div>
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+
         ${renderYearOverridesDisplay(make, model, parseInt(startYear), parseInt(endYear))}
 
         ${fidInfo.length > 0 ? `
@@ -23866,7 +24345,7 @@ function openVehicleDetail(vehicleKey) {
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(0,255,136,0.1);border-radius:6px;margin-bottom:6px;">
                         <div>
                             <div style="font-weight:600;color:var(--text);">${key.pn}</div>
-                            <div style="font-size:11px;color:var(--dim);">FID: ${info.fid} • ${key.fccid}</div>
+                            <div style="font-size:11px;color:var(--dim);">FID: ${info.fid} • ${escapeJobText((getKeyFccIds(key).find(f => fidAssignments[f] === info.fid) || key.fccid || ''))}</div>
                         </div>
                         <div style="color:var(--success);font-weight:600;">${stockData[key.pn]} in stock</div>
                     </div>
@@ -23911,6 +24390,10 @@ function openVehicleDetail(vehicleKey) {
             `<span style="display:inline-block;background:${r === 'ignition' ? 'var(--accent)' : 'var(--accent2)'};color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">${r.toUpperCase()}</span>`
         ).join('');
         // Autel iKeys are proximity-only — show on proximity key cards of an iKey-compatible vehicle
+        const cardFccs = getKeyFccIds(DB.find(k => k.pn === key.pn) || key);
+        const extraFccNote = cardFccs.length > 1
+            ? `<span style="color:var(--accent2);">• also ${cardFccs.slice(1).map(escapeJobText).join(', ')}</span>`
+            : '';
         const iKeyBadgeVeh = (vehicleIKeyStylesArr.length > 0 && normalizeKeyType(key.keyType) === 'Proximity')
             ? `<span style="display:inline-block;padding:2px 7px;background:#0057a8;color:#fff;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">iKey ✓</span>`
             : '';
@@ -23921,7 +24404,7 @@ function openVehicleDetail(vehicleKey) {
             <div class="vehicle-key-card ${inStock ? 'in-stock' : ''}" onclick="openKeyFromVehicle(${keyIdx}, '${String(key.pn).replace(/'/g, "\\'")}')" style="cursor:pointer;">
                 <div class="vehicle-key-info">
                     <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}${iKeyBadgeVeh}${sleeveBadgeVeh}</h4>
-                    <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
+                    <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''} ${extraFccNote}</p>
                 </div>
                 <div class="vehicle-key-stock">
                     <div class="count" style="color:${inStock ? 'var(--success)' : 'var(--dim)'}">${stock}</div>
@@ -25378,7 +25861,7 @@ function populateVehicleDataSelect(selectId, category, currentValue) {
     let allValues = values;
     if (category === 'fccid') {
         const fccids = new Set();
-        DB.forEach(k => { if (k.fccid) fccids.add(k.fccid); });
+        DB.forEach(k => getKeyFccIds(k).forEach(f => fccids.add(f)));
         customVehicles.forEach(c => { if (c.fccid) fccids.add(c.fccid); });
         allValues = Array.from(fccids).sort();
     } else if (category === 'pn') {
@@ -27878,6 +28361,12 @@ function openAddCustomKey(prefillFcc = null) {
         document.getElementById('customKeyPN').value = '';
         document.getElementById('customKeyFCC').value = prefillFcc || '';
         document.getElementById('customKeyNotes').value = '';
+        customKeyExtraFccs = [];
+        renderCustomKeyExtraFccs();
+        const extraFccInputEl = document.getElementById('customKeyExtraFccInput');
+        if (extraFccInputEl) extraFccInputEl.value = '';
+        customKeyVehicleNotes = [];
+        renderVehicleNotesEditor('add');
         document.getElementById('customKeyVehicles').innerHTML = '';
         document.getElementById('customKeyVehiclePasteBox').style.display = 'none';
         document.getElementById('customKeyVehiclePasteText').value = '';
@@ -28185,6 +28674,8 @@ function copyCustomKey(idx) {
 
     document.getElementById('customKeyFCC').value = source.fccid || '';
     document.getElementById('customKeyNotes').value = source.notes || '';
+    customKeyExtraFccs = getKeyFccIds(source).slice(1);
+    renderCustomKeyExtraFccs();
 
     setDropdownOrOther('customKeyBrand', 'customKeyBrandOther', source.brand);
     setDropdownOrOther('customKeyKeyway', 'customKeyKeywayOther', source.keyway);
@@ -28221,6 +28712,8 @@ function copyCustomKey(idx) {
     if (!source.vehicles || source.vehicles.length === 0) {
         addCustomKeyVehicle();
     }
+
+    loadVehicleNotesIntoEditor('add', source);
 
     toast('Copied from ' + source.pn + ' — enter a new Part Number');
 }
@@ -29519,11 +30012,28 @@ function saveCustomKey() {
     // Create the new key object. Non-chip keys without an FCC ID default to
     // their own PN as FCC stand-in (the FID grouping handle, like B44 -> "B44").
     const enteredFcc = document.getElementById('customKeyFCC').value.trim();
+    const primaryFcc = enteredFcc || (isNonChipKeyType(keyType) ? String(pn) : null);
+    // A key can carry more than one FCC ID. Primary first, extras after, all of
+    // them stored on key.fccids so getKeyFccIds() (search, FID grouping, vehicle
+    // lookups) sees every one.
+    let newFccids = null;
+    const fccList = [];
+    const seenFccIds = new Set();
+    // splitFccIdList so a comma-separated entry typed straight into the FCC
+    // field ("HYQ12BDP, HYQ12BEL") lands as separate IDs, not one opaque string
+    splitFccIdList(primaryFcc)
+        .concat((customKeyExtraFccs || []).flatMap(f => splitFccIdList(f)))
+        .forEach(f => {
+            const u = f.toUpperCase();
+            if (!seenFccIds.has(u)) { seenFccIds.add(u); fccList.push(f); }
+        });
+    if (fccList.length > 1) newFccids = fccList;
     const newKey = {
         pn: pn,
         brand: brand || null,
         altParts: altParts.length > 0 ? altParts : null,
-        fccid: enteredFcc || (isNonChipKeyType(keyType) ? String(pn) : null),
+        fccid: fccList[0] || primaryFcc,
+        fccids: newFccids,
         keyway: keyway || null,
         chip: chip || null,
         keyType: keyType || null,
@@ -29531,6 +30041,7 @@ function saveCustomKey() {
         frequency: frequency || null,
         battery: battery,
         notes: document.getElementById('customKeyNotes').value.trim() || null,
+        vehicleNotes: cleanVehicleNotes(customKeyVehicleNotes),
         vehicles: vehicles,
         isCustom: true,
         addedDate: new Date().toISOString(),
@@ -29949,12 +30460,24 @@ function saveEditCustomKey() {
     }
 
     // Update all other fields
+    const oldPrimaryFcc = key.fccid;
     key.fccid = document.getElementById('editCustomKeyFCC').value.trim() || null;
 
     // Keep the non-chip FCC stand-in (PN used as FCC ID) in step with a PN
     // rename, including any FID assignment riding on it.
     if (pnChanged && key.fccid && normalizeFccId(key.fccid) === normalizeFccId(oldPn)) {
         if (!renameFccId(key.fccid, newPn)) key.fccid = newPn;
+    }
+
+    // This modal only edits the PRIMARY FCC ID. If the key carries extras
+    // (key.fccids), re-seat the list on the new primary so the old one doesn't
+    // linger in it — additional IDs are managed in the Edit Key Info modal.
+    if (Array.isArray(key.fccids)) {
+        const rest = key.fccids.filter(f =>
+            normalizeFccId(f) !== normalizeFccId(oldPrimaryFcc) &&
+            normalizeFccId(f) !== normalizeFccId(key.fccid));
+        if (rest.length > 0) key.fccids = (key.fccid ? [key.fccid] : []).concat(rest);
+        else delete key.fccids;
     }
     key.keyway = document.getElementById('editCustomKeyKeyway').value.trim() || null;
     key.chip = document.getElementById('editCustomKeyChip').value.trim() || null;
@@ -30187,7 +30710,7 @@ function getFccRelationshipData(fccId) {
     }
 
     // Fallback to searching the database
-    const foundKey = DB.find(k => k.fccid === fccId) || customKeys.find(k => k.fccid === fccId);
+    const foundKey = DB.find(k => keyHasFccId(k, fccId)) || customKeys.find(k => keyHasFccId(k, fccId));
     if (foundKey) {
         return {
             buttonCount: foundKey.buttons,
