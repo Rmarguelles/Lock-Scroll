@@ -220,14 +220,14 @@ are enough to pick a row. Otherwise:
 None (Transponder Only)
 ```
 
-`frequency` — **always write it as `<number> MHz`, with a space**: `315 MHz`,
-not `315MHz`. Values in use: `305-320 MHz`, `315 MHz`, `314.95 MHz`,
-`433.92 MHz`, `434 MHz`, `868 MHz`, `902 MHz`, `923 MHz`.
+`frequency` — **copy the listing's own wording.** `315MHz`, `315 MHz`,
+`433 Mhz`, `433.92 MHz` are all fine; my app buckets them into its own bands
+on import, so spacing and capitalisation do not matter. Do not round, expand
+or reformat — just do not invent a number that is not printed.
 
-A listing that says `433 MHz` in one place and `434 MHz` in another is
-describing the same band — write `434 MHz` and do not flag it. But `315` vs
-`433` are **different bands**: if a listing states both, that is a real
-contradiction — pick the one from the SPECS block, put `"frequency"` in
+One thing still matters: `433` and `434` are the same band and need no flag,
+but `315` and `433` are **different bands**. If a listing states both, that is
+a real contradiction — take the SPECS-block value, put `"frequency"` in
 `uncertain`, and set `confidence` to `low`.
 
 `battery` — normalize to `<type> qty <n>`, e.g. `2032 qty 1`, `2025 qty 2`.

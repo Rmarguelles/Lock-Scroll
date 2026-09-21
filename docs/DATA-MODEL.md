@@ -232,6 +232,22 @@ American Key Supply, Locksmith Keyless (`online`). Plus `customVendors`.
 
 ---
 
+## 5b. Normalizing imported data
+
+Incoming distributor data does not have to match the app's vocabulary — some
+of it is normalized on the way in, so the extractor should copy sources
+verbatim rather than guess at our formats.
+
+| field | normalizer | behaviour |
+|---|---|---|
+| `frequency` | `bucketizeFrequency()` | Parses the digits and buckets by average, so `315MHz`, `315 MHz` and `314.95 MHz` all become `305-320 MHz`; `433 Mhz`, `434MHz` and `433.66-434.18 MHz` all become `434 MHz`. Spacing and case are irrelevant. A value outside every known band (e.g. `13.56 MHz`) is left untouched, as is text with no digits (`None (Transponder Only)`). |
+| price fields | `normalizePriceInput()` | Strips a leading `$` and thousands commas; leaves non-numeric notes as typed. |
+| `battery` | — | Canonical form is `<type> qty <n>`, e.g. `2032 qty 1`. Three spellings exist in legacy data (`2032`, `2032 x1`, `2032 qty 1`); only the last is written by the form. |
+| `chip` | **none yet** | 48 distinct values, already inconsistent in case. Distributors use a different vocabulary again (`ID46`, `ID47`, `4A` vs our `PH 46`, `Hitag AES PCF7953M`). **A mapping table is still needed before any import can fill this field.** |
+
+Bands, for reference: 300–400 → `305-320 MHz`, 420–450 → `434 MHz`,
+850–885 → `868 MHz`, 890–915 → `902 MHz`, 915–935 → `923 MHz`.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in
