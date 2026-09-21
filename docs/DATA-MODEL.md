@@ -38,6 +38,7 @@ get mutated in place — the edit goes to an override store (`keyInfoOverrides`,
 | `altParts` | array | `gatherCustomKeyAltParts()` | **0** | Additional PNs for the same key. Same drift. |
 | `mergedPNs` | array of string | — | 38/515 | Seed-only. Other PNs folded into this record. |
 | `secondaryKeyPartNumber` | — | — | **0/515** | Dead field. Present in the schema, never populated. |
+| `memorySeat` | number\|null | `customKeyMemorySeat` / `editKeyInfoMemorySeat` | 2 | Driver memory position (1/2/3) when the fob is paired to a seat/mirror profile. Added v242. |
 
 ### 2.2 Physical / spec
 
@@ -63,19 +64,26 @@ get mutated in place — the edit goes to an override store (`keyInfoOverrides`,
 | `emergencyPrice` / `emergencyPN` | | 185 / 226 | Legacy. |
 | `shellPrice` / `shellPN` | | 87 / 131 | Legacy. |
 | `oem` | number\|string | 31/515 | Legacy. Inconsistent — some values carry `$`. |
-| `distributorPrices` | obj `{vendor: {priceA,priceB,oem,emergency,shell}}` | 470/515 | **Only vendor present: `KeylessRide`.** |
+| ~~`distributorPrices`~~ | — | **removed v240** | Was a duplicate copy of the Keyless Ride prices. Nothing read it; stripped from all 470 records. |
 | `inStock` | string | 279/515 | `Yes` / `No` / `Remote only`. Free text, not a boolean. |
 | `stockQty` | number | 470/515 | All zero in seed. Live counts live in `stockData`. |
 
-**The live price store is `vendorPrices`, not the record.** `initializeVendorPricesFromDB()`
-(`index.html:11075`) copies `distributorPrices.KeylessRide` + the legacy
-`priceA`/`priceB`/… into `vendorPrices[pn]['Keyless Ride']` **once**, then
-`renderVendorPrices()` (`index.html:13925`) reads *only* `vendorPrices`.
-`distributorPrices` has exactly one other reference in the whole file and is
-otherwise dead.
+**The live price store is `vendorPrices`, not the record.**
+`initializeVendorPricesFromDB()` seeds it from the record's flat
+`priceA`/`priceB`/`emergencyPrice`/`shellPrice`/`oem` **once** (guarded by
+`vendorPriceSeedV1`), then `renderVendorPrices()` reads *only* `vendorPrices`.
+Those flat fields are therefore **seed-only**: read at first boot, never again.
 
-> **Importer rule:** write `vendorPrices[pn][vendorName]`. Never write
-> `distributorPrices` — nothing reads it.
+`priceA`/`priceB` are Keyless Ride's new/refurbished split — KR lists those as
+separate `XXXXA`/`XXXXB` part numbers. They are **not** a generic vendor
+concept: of the three vendors with prices, only Keyless Ride uses `priceB`
+(202 of 610 keys); Keyless-City (19) and American Key Supply (1) use `priceA`
+only, where it just means "the price". The UI still labels both slots
+`Price A`/`Price B` for every vendor.
+
+> **Importer rule:** write `vendorPrices[pn][vendorName]`, and put a non-KR
+> vendor's single price in `priceA`. Values are stored without a leading `$`
+> (see `normalizePriceInput`).
 
 ### 2.4 Display / meta
 
@@ -166,7 +174,8 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 | `keyInfoOverrides` | partial key record — edits to seed keys | 1 |
 | `vehicleOverrides` | `vehicles[]` — vehicle edits to seed keys | — |
 | `keyRelationships` | `{keyway, typicalChip}` | 604 |
-| `pnSupersessions` | `oldPN → newPN` | 0 |
+| `pnSupersessions` | `oldPN → newPN` | 0 | means **renamed** — `pruneSupersededCustomKeys()` deletes a custom key whose PN appears here |
+| `discontinuedPns` | `{replacedBy, date, note}` | 0 | means **discontinued** — record, stock and history all survive. Added v243 |
 | `pnRenames` | `oldPN → newPN` | 0 |
 | `autelIKeyCompatibility` | `[tags]` | 0 |
 
@@ -240,6 +249,9 @@ Other traps for an importer:
 
 1. **`codeSeries` has three shapes** — array of `{series, years}`, bare string, or `[]`.
 2. **`battery` is composed** (`"2032 qty 1"`), not structured.
+2b. **Prices are stored bare** — no `$`, no thousands commas. `normalizePriceInput()`
+   enforces this on write; `priceRow()` adds the `$` at render time and leaves
+   non-numeric entries (e.g. `Discontinued`) unprefixed.
 3. **`inStock` is free text**, not a boolean; `stockQty` is separate and always 0 in seed.
 4. **`fccid` may be a comma-joined list.**
 5. **`oem` price sometimes carries a `$`.**
