@@ -79,10 +79,15 @@ give me the two parts you CAN determine, and I will let the app do the rest:
 - `fidPrefix` — the prefix from the table above, based on the vehicle make.
 - `fidBand`   — the single digit 0-7 from the table above, based on `keyType`.
 
-These two act as a cross-check on `keyType`. If you say `keyType: "Proximity"`
-but `fidBand: 6`, that contradiction tells me to look at the record. So derive
-`fidBand` from what the listing actually describes, not from the `keyType`
-string you chose.
+These two act as a cross-check on `keyType` — but only if you work them out
+**independently**. Derive `keyType` from the product title and description, then
+derive `fidBand` separately from how the listing physically describes the key
+(does it have a blade? a flip blade? is it a fob with no key at all?). If you
+just map `fidBand` off the `keyType` you already picked, the two can never
+disagree and the check is worthless to me.
+
+If they do disagree, leave both as you derived them, put both in `uncertain`,
+and set `confidence: "low"`. Do not reconcile them yourself.
 
 If one FCC ID covers several key types (e.g. a remote head and a remote-only
 version), use the **lowest** applicable band digit.
@@ -153,14 +158,23 @@ Each object in `keys`:
    A single year becomes `startYear` and `endYear` both set to it. If the
    listing gives no years, omit `vehicles` rather than guessing.
 7. **`chip` verbatim.** Copy the transponder text as printed, even if it looks
-   inconsistent. I map it on my end. Do not normalize it.
+   inconsistent. I map it on my end. Do not normalize it. (My records say
+   things like `Hitag AES PCF7953M` where a store says `4A` — that is my
+   problem to reconcile, not yours to guess at.)
+7b. **Any field the listing states two different values for** gets the SPECS-block
+   value, its name in `uncertain`, and `confidence: "low"`. Silently picking one
+   is the single worst thing you can do, because it looks verified and is not.
 8. If you cannot read a page, add it to a top-level `"failed"` array with the
-   URL and the reason. Do not silently skip it.
+   URL and the reason. Do not silently skip it. **Always include the `failed`
+   key, even when it is an empty array** — its absence and "nothing failed"
+   must not look the same.
 9. **Work the gaps first.** I am pasting a list of FCC IDs my app already has.
    Prioritize keys whose FCC ID is NOT on that list, and set `isNew` on every
    record accordingly. Still return keys I already have if their listing adds
    something I am missing (an Ilco cross-reference, a shell PN, an OEM number),
    but put the new ones first.
+   **When a record carries several FCC IDs, `isNew` is true only if NONE of
+   them is on the list.** Check every one, not just the first.
 10. **Never merge two FCC IDs into one record** to make things tidy, and never
    split one FCC ID across records to pad the count. One key as the distributor
    sells it = one record.
@@ -173,8 +187,11 @@ Proximity | Remote Head Key | Flip Key | PEPS Flip Key | Fobik | Chip Key
 Non-Chip Key | Shell Key | Remote Only | VATS | VATS Single-Sided | VATS Double-Sided
 ```
 
-`buttons` — match one of these exactly. If none fits, omit `buttons` and set
-`buttonCount` to the number instead:
+`buttons` — match one of these exactly. A title like "3B Smart Key" does NOT
+tell you which three buttons, so do not guess: omit `buttons` and set
+`buttonCount: 3`. Only use the enum when the listing actually names the
+functions — "4B Trunk", "Remote Start", "Hatch", "Sliding Door" and the like
+are enough to pick a row. Otherwise:
 ```
 2 Button: L, U (Lock, Unlock)
 3 Button: L, U, P (Lock, Unlock, Panic)
@@ -203,9 +220,15 @@ Non-Chip Key | Shell Key | Remote Only | VATS | VATS Single-Sided | VATS Double-
 None (Transponder Only)
 ```
 
-`frequency` — keep the listing's own value with its unit. Common ones:
-`305-320 MHz`, `315 MHz`, `314.95 MHz`, `433.92 MHz`, `434 MHz`, `868 MHz`,
-`902 MHz`, `923 MHz`.
+`frequency` — **always write it as `<number> MHz`, with a space**: `315 MHz`,
+not `315MHz`. Values in use: `305-320 MHz`, `315 MHz`, `314.95 MHz`,
+`433.92 MHz`, `434 MHz`, `868 MHz`, `902 MHz`, `923 MHz`.
+
+A listing that says `433 MHz` in one place and `434 MHz` in another is
+describing the same band — write `434 MHz` and do not flag it. But `315` vs
+`433` are **different bands**: if a listing states both, that is a real
+contradiction — pick the one from the SPECS block, put `"frequency"` in
+`uncertain`, and set `confidence` to `low`.
 
 `battery` — normalize to `<type> qty <n>`, e.g. `2032 qty 1`, `2025 qty 2`.
 Types seen: 2032, 2025, 2016, 1632, 1620, 1616, 2450.
