@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v242</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v243</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v242</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v243</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v242<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v243<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5783,6 +5783,31 @@
         <div id="mergeKeyResults" style="flex:1;overflow-y:auto;min-height:200px;max-height:50vh;"></div>
         <div class="modal-btns" style="margin-top:12px;">
             <button class="modal-btn secondary" onclick="closeMergeKeyModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Key Info Modal -->
+<!-- Mark Discontinued Modal -->
+<div class="modal" id="discontinuedModal">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-title">Discontinued Part</div>
+        <p style="color:var(--dim);font-size:12px;margin:0 0 14px;line-height:1.5;">
+            Marks <span class="mono" id="discontinuedPnLabel" style="color:var(--text);"></span> as discontinued.
+            The part keeps its record, stock and job history &mdash; its page just points at the replacement.
+        </p>
+        <div class="modal-input-group">
+            <label>Replaced by PN <span style="font-size:11px;color:var(--dim);font-weight:normal;">(leave blank if none yet)</span></label>
+            <input type="text" class="modal-input" id="discontinuedReplacedBy" placeholder="e.g. 2222" list="fccidDatalist">
+        </div>
+        <div class="modal-input-group">
+            <label>Note <span style="font-size:11px;color:var(--dim);font-weight:normal;">(optional)</span></label>
+            <input type="text" class="modal-input" id="discontinuedNote" placeholder="e.g. superseded 2026, same FCC">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeDiscontinuedModal()">Cancel</button>
+            <button class="modal-btn secondary" id="discontinuedClearBtn" onclick="clearDiscontinuedFromModal()" style="display:none;color:var(--accent);">Not Discontinued</button>
+            <button class="modal-btn primary" onclick="saveDiscontinuedFromModal()">Save</button>
         </div>
     </div>
 </div>
@@ -8319,6 +8344,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                discontinuedPns: discontinuedPns,
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8356,6 +8382,7 @@ async function uploadToCloud() {
                 fidAssignments: fidAssignments,
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
+                discontinuedPns: discontinuedPns,
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8509,6 +8536,10 @@ async function downloadFromCloud() {
         if (data.fidMerges) {
             fidMerges = { ...fidMerges, ...data.fidMerges };
             saveFidMerges();
+        }
+        if (data.discontinuedPns) {
+            discontinuedPns = { ...discontinuedPns, ...data.discontinuedPns };
+            saveDiscontinuedPns();
         }
         if (data.pnSupersessions) {
             pnSupersessions = { ...pnSupersessions, ...data.pnSupersessions };
@@ -10283,6 +10314,13 @@ let fidAssignments = {"SY5KHFNA433":"HY-514","KBRASTU15, CWTWB1U733, CWTWB1U821"
 let fidMerges = {};
 // Map of obsolete part number -> replacement part number (case-insensitive lookup)
 let pnSupersessions = {};
+
+// Parts the distributor has discontinued: { pn: { replacedBy, date, note } }.
+// Deliberately NOT pnSupersessions: that map means "renamed", and
+// pruneSupersededCustomKeys() deletes a key whose PN appears there as an old
+// PN. A discontinued key must survive - you can still have it in stock and
+// past jobs reference it - so it gets its own store.
+let discontinuedPns = {};
 // Tombstones: old PNs whose supersession was deliberately removed. Needed
 // because the cloud sync merges pnSupersessions additively AND Firestore
 // set({merge:true}) never drops a map key from the server doc — so without a
@@ -11018,6 +11056,9 @@ async function loadLocalData() {
 
             const savedPnRenames = await loadFromIndexedDB('pnRenames');
             if (savedPnRenames) pnRenames = savedPnRenames;
+
+            const savedDiscontinuedPns = await loadFromIndexedDB('discontinuedPns');
+            if (savedDiscontinuedPns) discontinuedPns = savedDiscontinuedPns;
             
             const savedPurchaseHistory = await loadFromIndexedDB('purchaseHistory');
             if (savedPurchaseHistory) purchaseHistory = savedPurchaseHistory;
@@ -11371,6 +11412,11 @@ function applyKeyInfoOverridesToDB() {
 
 function saveKeyInfoOverrides() {
     saveToIndexedDB('keyInfoOverrides', keyInfoOverrides);
+    triggerAutoSync();
+}
+
+function saveDiscontinuedPns() {
+    saveToIndexedDB('discontinuedPns', discontinuedPns);
     triggerAutoSync();
 }
 
@@ -12397,6 +12443,129 @@ function keyHasFccId(key, fccId) {
     return getKeyFccIds(key).some(f => normalizeFccId(f) === target);
 }
 
+// ---- Discontinued parts -------------------------------------------------
+// A discontinued key keeps its record, its stock and its job history; it just
+// points at what to order instead. Lookup is case-insensitive like the rest of
+// the PN handling.
+function getDiscontinuedInfo(pn) {
+    if (!pn) return null;
+    const lookup = String(pn).toLowerCase();
+    for (const k of Object.keys(discontinuedPns || {})) {
+        if (k.toLowerCase() === lookup) return discontinuedPns[k];
+    }
+    return null;
+}
+
+function isDiscontinued(pn) {
+    return !!getDiscontinuedInfo(pn);
+}
+
+// Follows a chain of discontinued parts (1111 -> 2222 -> 3333 returns 3333)
+// and stops on a cycle. Returns null when pn is not discontinued.
+function resolveDiscontinuedReplacement(pn) {
+    let info = getDiscontinuedInfo(pn);
+    if (!info) return null;
+    const seen = new Set([String(pn).toLowerCase()]);
+    let target = info.replacedBy || null;
+    while (target) {
+        const lc = String(target).toLowerCase();
+        if (seen.has(lc)) break;
+        seen.add(lc);
+        const next = getDiscontinuedInfo(target);
+        if (!next || !next.replacedBy) break;
+        target = next.replacedBy;
+    }
+    return target || null;
+}
+
+// Marks a part discontinued. replacedBy may be empty - a part can be dead with
+// no replacement yet.
+function markDiscontinued(pn, replacedBy, note) {
+    if (!pn) return;
+    const clean = String(replacedBy || '').trim();
+    if (clean && clean.toLowerCase() === String(pn).toLowerCase()) {
+        toast('A part cannot replace itself');
+        return;
+    }
+    for (const k of Object.keys(discontinuedPns)) {
+        if (k.toLowerCase() === String(pn).toLowerCase()) delete discontinuedPns[k];
+    }
+    discontinuedPns[String(pn)] = {
+        replacedBy: clean || null,
+        date: new Date().toISOString(),
+        note: String(note || '').trim() || null
+    };
+    saveDiscontinuedPns();
+}
+
+function clearDiscontinued(pn) {
+    let removed = false;
+    for (const k of Object.keys(discontinuedPns)) {
+        if (k.toLowerCase() === String(pn).toLowerCase()) { delete discontinuedPns[k]; removed = true; }
+    }
+    if (removed) saveDiscontinuedPns();
+    return removed;
+}
+
+let discontinuedModalPn = null;
+
+function openDiscontinuedModal(pn) {
+    discontinuedModalPn = pn;
+    const info = getDiscontinuedInfo(pn);
+    document.getElementById('discontinuedPnLabel').textContent = pn;
+    document.getElementById('discontinuedReplacedBy').value = info && info.replacedBy ? info.replacedBy : '';
+    document.getElementById('discontinuedNote').value = info && info.note ? info.note : '';
+    document.getElementById('discontinuedClearBtn').style.display = info ? '' : 'none';
+    document.getElementById('discontinuedModal').classList.add('on');
+}
+
+function closeDiscontinuedModal() {
+    document.getElementById('discontinuedModal').classList.remove('on');
+    discontinuedModalPn = null;
+}
+
+function saveDiscontinuedFromModal() {
+    if (!discontinuedModalPn) return;
+    const pn = discontinuedModalPn;
+    const replacedBy = document.getElementById('discontinuedReplacedBy').value.trim();
+    if (replacedBy && replacedBy.toLowerCase() === String(pn).toLowerCase()) {
+        toast('A part cannot replace itself');
+        return;
+    }
+    markDiscontinued(pn, replacedBy, document.getElementById('discontinuedNote').value);
+    closeDiscontinuedModal();
+    if (currentKeyIdx !== null) openKey(currentKeyIdx, cameFromFcc, cameFromFid);
+    applyFilters();
+    toast(replacedBy ? `${pn} marked discontinued \u2192 ${replacedBy}` : `${pn} marked discontinued`);
+}
+
+function clearDiscontinuedFromModal() {
+    if (!discontinuedModalPn) return;
+    const pn = discontinuedModalPn;
+    clearDiscontinued(pn);
+    closeDiscontinuedModal();
+    if (currentKeyIdx !== null) openKey(currentKeyIdx, cameFromFcc, cameFromFid);
+    applyFilters();
+    toast(`${pn} is no longer marked discontinued`);
+}
+
+// Small chip for result rows so a dead part is visible before you tap in.
+function discontinuedBadge(pn) {
+    if (!isDiscontinued(pn)) return '';
+    return '<span style="display:inline-block;padding:2px 7px;background:#d9534f;color:#fff;' +
+           'border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;">DISCONTINUED</span>';
+}
+
+// Warning text for flows that order or stock a part. Returns '' when fine.
+function discontinuedWarning(pn) {
+    const info = getDiscontinuedInfo(pn);
+    if (!info) return '';
+    const target = resolveDiscontinuedReplacement(pn);
+    return target
+        ? `\u26A0\uFE0F ${pn} is discontinued - order ${target} instead.`
+        : `\u26A0\uFE0F ${pn} is discontinued with no listed replacement.`;
+}
+
 // All old PNs that resolve to the given current PN (one hop only)
 function getSupersededByPn(currentPn) {
     if (!currentPn) return [];
@@ -12595,7 +12764,7 @@ function renderKeys() {
         return `
             <div class="key-card" onclick="openKey(${idx})">
                 <div class="key-card-header">
-                    <span class="key-pn">${key.pn || 'N/A'}${testKeyBadge}${iKeyBadge}${sleeveBadge}</span>
+                    <span class="key-pn">${key.pn || 'N/A'}${discontinuedBadge(key.pn)}${testKeyBadge}${iKeyBadge}${sleeveBadge}</span>
                     <span class="key-type">${key.keyType || 'Unknown'}</span>
                 </div>
                 <div class="key-info">
@@ -12753,7 +12922,36 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         </div>
     `;
 
+    // Discontinued banner — the forward pointer from a dead part to what to
+    // order instead. The record itself is untouched: stock and job history stay.
+    const discInfo = getDiscontinuedInfo(key.pn);
+    let discontinuedBannerHtml = '';
+    if (discInfo) {
+        const target = resolveDiscontinuedReplacement(key.pn);
+        const targetIdx = target
+            ? DB.findIndex(k => String(k.pn).toLowerCase() === String(target).toLowerCase())
+            : -1;
+        const safeTarget = target ? escapeJobText(String(target)) : '';
+        const tapAttrs = targetIdx >= 0
+            ? `onclick="openKey(${targetIdx})" style="cursor:pointer;`
+            : 'style="';
+        discontinuedBannerHtml =
+            `<div class="detail-section" ${tapAttrs}margin:0 0 12px;padding:12px 16px;border:1px solid #d9534f;border-left-width:4px;border-radius:10px;background:rgba(217,83,79,0.12);">` +
+                '<div style="font-size:11px;color:#d9534f;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Discontinued</div>' +
+                '<div style="font-size:14px;line-height:1.45;color:var(--text);">' +
+                    (target
+                        ? `This part has been discontinued and replaced by <span class="mono" style="color:var(--accent);font-weight:700;">${safeTarget}</span>` +
+                          (targetIdx >= 0
+                              ? ' <span style="color:var(--dim);font-size:12px;">(tap to open)</span>'
+                              : ' <span style="color:var(--dim);font-size:12px;">(not in database yet)</span>')
+                        : 'This part has been discontinued. No replacement recorded yet.') +
+                '</div>' +
+                (discInfo.note ? `<div style="font-size:12px;color:var(--dim);margin-top:6px;">${escapeJobText(discInfo.note)}</div>` : '') +
+            '</div>';
+    }
+
     let html = `
+        ${discontinuedBannerHtml}
         ${fidHtml}
         ${iKeyHtml}
         <!-- Stock Section -->
@@ -12776,7 +12974,10 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         <div class="detail-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h3 style="margin:0;">Key Information</h3>
-                <button onclick="openEditKeyInfoModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="openDiscontinuedModal('${String(key.pn).replace(/'/g, "\\'")}')" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:${discInfo ? '#d9534f' : 'var(--dim)'};font-size:12px;cursor:pointer;">${discInfo ? '\u26A0\uFE0F Discontinued' : 'Mark Discontinued'}</button>
+                    <button onclick="openEditKeyInfoModal(${idx})" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;">✏️ Edit</button>
+                </div>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Part Number</span>
@@ -16672,6 +16873,7 @@ function showTab(tab, event) {
 
 function goHome() {
     // Close all panels and modals
+    document.getElementById('discontinuedModal').classList.remove('on');
     document.getElementById('settingsPanel').classList.remove('on');
     document.getElementById('lishiLookupPanel').classList.remove('on');
     document.getElementById('lishiDetailPanel').classList.remove('on');
@@ -18441,6 +18643,7 @@ function exportData() {
         customDropdownValues: customDropdownValues,
         vehicleOverrides: vehicleOverrides,
         keyInfoOverrides: keyInfoOverrides,
+        discontinuedPns: discontinuedPns,
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
         keyRelationships: keyRelationships,
@@ -18517,6 +18720,10 @@ function importData(event) {
                 saveLishiInventory();
             }
             
+            if (data.discontinuedPns) {
+                discontinuedPns = data.discontinuedPns;
+                saveDiscontinuedPns();
+            }
             if (data.vendorPrices) {
                 vendorPrices = data.vendorPrices;
                 saveVendorPrices();
@@ -26693,6 +26900,19 @@ function submitBulkInventory() {
         return;
     }
 
+    // Warn before stocking a part the distributor has discontinued. Not a block:
+    // you may be deliberately buying out remaining stock.
+    const deadItems = bulkItemDetails
+        .filter(d => d.resolvedPN && (parseInt(d.qty) || 0) > 0 && isDiscontinued(d.resolvedPN))
+        .map(d => '  \u2022 ' + discontinuedWarning(d.resolvedPN).replace(/^\u26A0\uFE0F\s*/, ''));
+    if (deadItems.length > 0) {
+        const proceed = confirm(
+            'This order includes discontinued part' + (deadItems.length > 1 ? 's' : '') + ':\n\n' +
+            deadItems.join('\n') + '\n\nAdd to stock anyway?'
+        );
+        if (!proceed) return;
+    }
+
     let totalItems = 0;
     let summaryLines = [];
 
@@ -27143,7 +27363,7 @@ function renderJobKeysUsedList(vehicleKey) {
         return `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:var(--bg);border:1px solid ${qty > 0 ? 'var(--accent)' : 'var(--border)'};border-radius:8px;margin-bottom:6px;">
                 <div style="min-width:0;">
-                    <div style="font-weight:600;font-size:13px;">${escapeJobText(key.pn)}</div>
+                    <div style="font-weight:600;font-size:13px;">${escapeJobText(key.pn)}${discontinuedBadge(key.pn)}</div>
                     <div style="font-size:11px;color:var(--dim);">${key.fccid ? escapeJobText(key.fccid) + ' • ' : ''}<span style="color:${stock > 0 ? 'var(--success)' : '#ff4444'};">${stock} in stock</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
