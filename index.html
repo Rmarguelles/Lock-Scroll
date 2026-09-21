@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v240</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v241</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5292,7 +5292,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v240</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v241</p>
         </div>
 
         <div class="settings-section">
@@ -5304,7 +5304,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v240<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v241<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10831,6 +10831,7 @@ async function init() {
     // Move test key entries stranded under old keyway labels by past renames
     healTestKeyKeywayRenames();
     await initializeVendorPricesFromDB();
+    await runVendorPriceDollarStripMigration();
     buildFilters();
     buildFccidDatalist();
     applyFilters();
@@ -11084,6 +11085,31 @@ async function loadLocalData() {
 // read here at first boot and never again. vendorPrices is the live store.
 // priceA/priceB are Keyless Ride's own new/refurbished split (KR lists those
 // as separate XXXXA / XXXXB part numbers); they are not a generic vendor concept.
+// Strip leading '$' from prices already stored in vendorPrices. The edit forms
+// used to keep whatever was typed, so values like '$164' were saved and then
+// rendered with a second '$'. Runs once; new writes go through
+// normalizePriceInput(). Notes such as 'Discontinued' are left untouched.
+async function runVendorPriceDollarStripMigration() {
+    const done = await loadFromIndexedDB('vendorPriceDollarStripV1');
+    if (done) return;
+
+    let changed = 0;
+    Object.values(vendorPrices || {}).forEach(byVendor => {
+        Object.values(byVendor || {}).forEach(p => {
+            ['priceA', 'priceB', 'emergency', 'shell', 'oem'].forEach(f => {
+                const before = p[f];
+                if (before === null || before === undefined || before === '') return;
+                const after = normalizePriceInput(before);
+                if (after !== String(before)) { p[f] = after; changed++; }
+            });
+        });
+    });
+
+    if (changed > 0) saveVendorPrices();
+    saveToIndexedDB('vendorPriceDollarStripV1', true);
+    return changed;
+}
+
 async function initializeVendorPricesFromDB() {
     const done = await loadFromIndexedDB('vendorPriceSeedV1');
     if (done) return;
@@ -11120,6 +11146,16 @@ async function initializeVendorPricesFromDB() {
 function isPriceLike(v) {
     if (v === null || v === undefined || v === '') return false;
     return !isNaN(parseFloat(String(v).replace(/^\$/, '')));
+}
+
+// Strip a typed leading '$' (and stray spaces/commas) before a price is stored.
+// The price rows render their own '$', so a stored '$164' displayed as '$$164'.
+// Non-numeric entries such as 'Discontinued' are left exactly as typed.
+function normalizePriceInput(v) {
+    const t = String(v == null ? '' : v).trim();
+    if (!t) return '';
+    const stripped = t.replace(/^\$\s*/, '').replace(/,/g, '');
+    return isPriceLike(stripped) ? stripped : t;
 }
 
 function saveStock() {
@@ -13943,6 +13979,16 @@ function saveAddSingleVehicle() {
     triggerAutoSync();
 }
 
+// One row of a vendor price card. Only prefixes '$' when the value is an
+// amount, so a note like 'Discontinued' renders as itself rather than
+// '$Discontinued'.
+function priceRow(label, value) {
+    if (!value) return '';
+    const text = isPriceLike(value) ? '$' + value : escapeJobText(String(value));
+    return '<div class="vendor-price-row"><span class="label">' + label +
+           '</span><span class="value">' + text + '</span></div>';
+}
+
 function renderVendorPrices(pn) {
     const prices = vendorPrices[pn] || {};
     const vendors = Object.keys(prices);
@@ -13963,11 +14009,11 @@ function renderVendorPrices(pn) {
                     <span class="vendor-name">${vendor}</span>
                     <button class="edit-prices-btn" onclick="openEditPricesModal('${pn}', '${vendor}')">Edit</button>
                 </div>
-                ${p.priceA ? `<div class="vendor-price-row"><span class="label">Price A</span><span class="value">$${p.priceA}</span></div>` : ''}
-                ${p.priceB ? `<div class="vendor-price-row"><span class="label">Price B</span><span class="value">$${p.priceB}</span></div>` : ''}
-                ${p.emergency ? `<div class="vendor-price-row"><span class="label">Emergency Key</span><span class="value">$${p.emergency}</span></div>` : ''}
-                ${p.shell ? `<div class="vendor-price-row"><span class="label">Shell</span><span class="value">$${p.shell}</span></div>` : ''}
-                ${p.oem ? `<div class="vendor-price-row"><span class="label">OEM</span><span class="value">$${p.oem}</span></div>` : ''}
+                ${priceRow('Price A', p.priceA)}
+                ${priceRow('Price B', p.priceB)}
+                ${priceRow('Emergency Key', p.emergency)}
+                ${priceRow('Shell', p.shell)}
+                ${priceRow('OEM', p.oem)}
             </div>
         `;
     }).join('');
@@ -14563,11 +14609,11 @@ function savePrices() {
         vendorPrices[editingPartNumber] = {};
     }
     
-    const priceA = document.getElementById('editPriceA').value.trim();
-    const priceB = document.getElementById('editPriceB').value.trim();
-    const emergency = document.getElementById('editEmergency').value.trim();
-    const shell = document.getElementById('editShell').value.trim();
-    const oem = document.getElementById('editOem').value.trim();
+    const priceA = normalizePriceInput(document.getElementById('editPriceA').value);
+    const priceB = normalizePriceInput(document.getElementById('editPriceB').value);
+    const emergency = normalizePriceInput(document.getElementById('editEmergency').value);
+    const shell = normalizePriceInput(document.getElementById('editShell').value);
+    const oem = normalizePriceInput(document.getElementById('editOem').value);
     
     // If all empty, remove the vendor entry
     if (!priceA && !priceB && !emergency && !shell && !oem) {
@@ -14622,11 +14668,11 @@ function saveNewVendorPrice() {
     }
     
     vendorPrices[editingPartNumber][vendor] = {
-        priceA: document.getElementById('addPriceA').value.trim(),
-        priceB: document.getElementById('addPriceB').value.trim(),
-        emergency: document.getElementById('addEmergency').value.trim(),
-        shell: document.getElementById('addShell').value.trim(),
-        oem: document.getElementById('addOem').value.trim()
+        priceA: normalizePriceInput(document.getElementById('addPriceA').value),
+        priceB: normalizePriceInput(document.getElementById('addPriceB').value),
+        emergency: normalizePriceInput(document.getElementById('addEmergency').value),
+        shell: normalizePriceInput(document.getElementById('addShell').value),
+        oem: normalizePriceInput(document.getElementById('addOem').value)
     };
     
     saveVendorPrices();
