@@ -10,6 +10,21 @@ useful for judging which fields an importer must fill vs. which are rare.
 
 ---
 
+> ### Read this before trusting any count below
+>
+> The fill rates in this document were measured from the **literals baked into
+> `index.html`**, whose `customKeys` snapshot ends **2026-02-10**. The live data
+> lives in IndexedDB and Firebase and has moved on since.
+>
+> So a field showing 0 here may be in daily use — `altParts` is the known case:
+> recorded as unused below, actually the normal home for OEM cross-reference
+> part numbers. Treat every "0 records" claim as *absent from the February
+> snapshot*, not as *unused*.
+>
+> The exception is `fccids[]`, which genuinely had never been written by any
+> record before v244, because `getKeyFccIds(key).slice(1)` was structurally
+> always empty. That one is a code fact, not a snapshot artefact.
+
 ## 1. Where records live
 
 | Store | Shape | Holds |

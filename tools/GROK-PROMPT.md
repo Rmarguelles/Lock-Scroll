@@ -122,6 +122,7 @@ Each object in `keys`:
   "chip":          "string  Transponder text COPIED VERBATIM from the listing.",
   "buttons":       "string  One of the enum below, or omit.",
   "buttonCount":   "number  Digit count if you cannot match the buttons enum.",
+  "buttonsFromImage": "boolean true when the product photo was your source for buttons.",
   "frequency":     "string  e.g. \"315 MHz\", \"433.92 MHz\". Keep the unit.",
   "battery":       "string  Format exactly: \"2032 qty 1\".",
   "oemPartNumber": "string  The vehicle maker's OEM number, if listed.",
@@ -146,6 +147,14 @@ Each object in `keys`:
    the region, do not infer keyway from the make. Omission is correct behavior.
 2. **`sourceText` is mandatory** on every record — paste the actual title and
    spec text you read. It is how I verify you without revisiting the site.
+   **Read only what a customer sees on that product's own page**: the title,
+   the specs table, the description body, the fitment list. Do NOT take values
+   from raw HTML, `<meta>` tags, JSON-LD, schema markup, embedded scripts,
+   tag/collection strings, breadcrumbs, or a "related products" / "you may
+   also like" block. Those carry other products' numbers, and a value lifted
+   from them looks identical to a real one in your output.
+   If a number appears ONLY in page markup and not in the visible copy, it does
+   not exist as far as you are concerned.
 3. **`confidence`**: `high` = every populated field is printed verbatim on the
    page. `medium` = you normalized wording (e.g. "4-button remote" into the
    buttons enum). `low` = anything else. List every non-verbatim field in
@@ -187,11 +196,21 @@ Proximity | Remote Head Key | Flip Key | PEPS Flip Key | Fobik | Chip Key
 Non-Chip Key | Shell Key | Remote Only | VATS | VATS Single-Sided | VATS Double-Sided
 ```
 
-`buttons` — match one of these exactly. A title like "3B Smart Key" does NOT
-tell you which three buttons, so do not guess: omit `buttons` and set
-`buttonCount: 3`. Only use the enum when the listing actually names the
-functions — "4B Trunk", "Remote Start", "Hatch", "Sliding Door" and the like
-are enough to pick a row. Otherwise:
+`buttons` — match one of these exactly. A title like "3B Smart Key" does not
+tell you which three buttons, but you have two better sources:
+
+1. **The product photo.** Look at the key in the listing image and read the
+   button icons off the fob — a padlock closed and open, a horn or triangle
+   for panic, a car with an open boot for trunk, a hatch, a circular arrow for
+   remote start, a sliding-door icon on vans. This is the most reliable route
+   and you should use it whenever an image is available.
+2. **The wording.** "4B Trunk", "Remote Start", "Hatch", "Sliding Door" in the
+   title or description each name a function directly.
+
+Say which you used: put `"buttonsFromImage": true` on the record when the photo
+was your source. If neither settles it, omit `buttons`, set `buttonCount` to
+the number, and add `"buttons"` to `uncertain`. Never infer a layout from the
+model year or from another key you have seen. The rows:
 ```
 2 Button: L, U (Lock, Unlock)
 3 Button: L, U, P (Lock, Unlock, Panic)
