@@ -10,20 +10,24 @@ useful for judging which fields an importer must fill vs. which are rare.
 
 ---
 
-> ### Read this before trusting any count below
+> ### Where the data actually lives (v245 onward)
 >
-> The fill rates in this document were measured from the **literals baked into
-> `index.html`**, whose `customKeys` snapshot ends **2026-02-10**. The live data
-> lives in IndexedDB and Firebase and has moved on since.
+> `index.html` ships **reference data only**: the 475-record seed catalog,
+> `lishiData`, `fidPrefixes`, `DEFAULT_VENDORS` and the enum tables. Every
+> store holding *your* data — `customKeys`, `vendorPrices`, `fidAssignments`,
+> `keyRelationships`, `fccRelationships`, `keyInfoOverrides`,
+> `vehicleOverrides`, `lishiVehicleData`, `lishiInventory`, `customVehicles`,
+> `vehicleYearNotes`, `toolsDatabase` — starts **empty** and is filled from
+> IndexedDB and Firebase.
 >
-> So a field showing 0 here may be in daily use — `altParts` is the known case:
-> recorded as unused below, actually the normal home for OEM cross-reference
-> part numbers. Treat every "0 records" claim as *absent from the February
-> snapshot*, not as *unused*.
+> Before v245 those literals held a snapshot dated **2026-02-10**, seven months
+> stale, and it was not inert: PN B79's keyway was pinned at `B62` and B89's at
+> `B86`, overriding live corrections on every load.
 >
-> The exception is `fccids[]`, which genuinely had never been written by any
-> record before v244, because `getKeyFccIds(key).slice(1)` was structurally
-> always empty. That one is a code fact, not a snapshot artefact.
+> **Counts below were measured from that snapshot and are historical.** For
+> current figures, read an export (Settings → Export Data), never the literals.
+> A live export as of 2026-09-22 holds 862 records, 387 custom keys, 1065
+> priced part numbers, 354 FID assignments and 588 distinct FCC IDs.
 
 ## 1. Where records live
 

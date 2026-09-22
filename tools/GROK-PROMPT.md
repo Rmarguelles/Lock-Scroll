@@ -277,18 +277,19 @@ truncate JSON mid-object.
 ## Supplying the skip list
 
 Paste the contents of `tools/known-fccids.txt` at the end of your Grok message,
-under a line reading `KNOWN FCC IDS`. It currently holds 281 FCC IDs.
+under a line reading `KNOWN FCC IDS`. It currently holds 588 FCC IDs.
 
-Regenerate it after any import, so Grok keeps targeting real gaps:
+Regenerate it from a **fresh export** (Settings → Export Data) — not from
+`index.html`, whose data literals are empty by design since v245:
 
 ```
 node -e '
-const fs=require("fs");const L=fs.readFileSync("index.html","utf8").split("\n");
-const lit=(s,o,c)=>{const l=L[L.findIndex(x=>x.trim().startsWith(s))];
-  return JSON.parse(l.slice(l.indexOf(o),l.lastIndexOf(c)+1));};
+const fs=require("fs");
+const e=JSON.parse(fs.readFileSync("YOUR-EXPORT.json","utf8"));
 const f=new Set();
-[...lit("let DB = [","[","]"),...lit("let customKeys = [","[","]")].forEach(k=>
-  String(k.fccid||"").split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>f.add(x.toUpperCase())));
+const add=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>f.add(x.toUpperCase()));
+(e.records||[]).forEach(k=>{add(k.fccid);(Array.isArray(k.fccids)?k.fccids:[]).forEach(add);});
+(e.customKeys||[]).forEach(k=>add(k.fccid));
 fs.writeFileSync("tools/known-fccids.txt",
   ["# FCC IDs already in Lock & Scroll - Grok should SKIP these.",
    "# "+f.size+" entries.",""].concat([...f].sort()).join("\n")+"\n");
