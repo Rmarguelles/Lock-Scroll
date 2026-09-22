@@ -147,12 +147,18 @@ Each object in `keys`:
    the region, do not infer keyway from the make. Omission is correct behavior.
 2. **`sourceText` is mandatory** on every record — paste the actual title and
    spec text you read. It is how I verify you without revisiting the site.
-   **Read only what a customer sees on that product's own page**: the title,
-   the specs table, the description body, the fitment list. Do NOT take values
-   from raw HTML, `<meta>` tags, JSON-LD, schema markup, embedded scripts,
-   tag/collection strings, breadcrumbs, or a "related products" / "you may
-   also like" block. Those carry other products' numbers, and a value lifted
-   from them looks identical to a real one in your output.
+   **Read everything a customer sees on that product's own page**, and capture
+   all of it: the title, the specs table, **and** the free-text description
+   paragraph, and the fitment list. Many listings carry the same facts twice —
+   once in a `Label / Value` spec table and once in prose — and the prose often
+   holds details the table omits, such as an insert or emergency-key part
+   number (`Insert: IN-042 (Included)`). Capturing only one of the two loses
+   real data, so include both blocks in `sourceText`.
+
+   Do NOT take values from raw HTML, `<meta>` tags, JSON-LD, schema markup,
+   embedded scripts, tag/collection strings, breadcrumbs, or a "related
+   products" / "you may also like" block. Those carry other products' numbers,
+   and a value lifted from them looks identical to a real one in your output.
    If a number appears ONLY in page markup and not in the visible copy, it does
    not exist as far as you are concerned.
 3. **`confidence`**: `high` = every populated field is printed verbatim on the
@@ -163,6 +169,11 @@ Each object in `keys`:
    listing shows a range or "call for price", omit `price`.
 5. **One record per part number.** If a page sells the same key under several
    part numbers, emit one record each. Do not merge them.
+5b. **Price is a point-in-time reading.** Take it from the variant you are
+   describing and nowhere else. If a listing shows several variants at
+   different prices, emit the one whose SKU you put in `vendorSku` and say
+   which variant that was in `sourceText`. Never average them or take the
+   lowest.
 6. **Do not convert years.** "18-24" becomes `startYear: 2018, endYear: 2024`.
    A single year becomes `startYear` and `endYear` both set to it. If the
    listing gives no years, omit `vehicles` rather than guessing.
