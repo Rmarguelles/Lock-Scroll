@@ -267,6 +267,25 @@ verbatim rather than guess at our formats.
 Bands, for reference: 300–400 → `305-320 MHz`, 420–450 → `434 MHz`,
 850–885 → `868 MHz`, 890–915 → `902 MHz`, 915–935 → `923 MHz`.
 
+## 5c. Condition variants
+
+One key by FCC ID is often several things to buy. Keyless Ride splits new and
+refurbished into separate part numbers `XXXXA` / `XXXXB`; Your Car Key Guys
+sells the same key as `OEM Brand New` ($85) and `OEM Board OEM Shell` ($45).
+Same FCC ID, same OEM part number, different SKU and price.
+
+The existing `priceA` / `priceB` slots in `vendorPrices[pn][vendor]` are that
+idea, hard-coded to one distributor's vocabulary. Extraction now carries it
+generically as `variants[{ vendorSku, price, condition, label }]` with
+`condition` in `new | reclaimed | refurbished | aftermarket | shell-only |
+unknown`, so the importer can map a condition onto the right price slot rather
+than guessing from a shop's wording.
+
+Unresolved: whether `vendorPrices[pn][vendor]` grows a variants array of its
+own, or keeps two slots and maps `new -> priceA`, everything else `-> priceB`.
+The second is less work and matches the Keyless Ride data already stored; the
+first is honest about shops that sell three or more conditions.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in

@@ -111,8 +111,15 @@ Each object in `keys`:
 ```
 {
   "pn":            "string  REQUIRED. The distributor's own part number / SKU.",
-  "vendorSku":     "string  The SKU as shown, if it differs from pn.",
-  "price":         "number  Listed price, digits only. No $ sign, no commas.",
+  "vendorSku":     "string  The SKU of the PRIMARY variant (variants[0]).",
+  "price":         "number  Price of the PRIMARY variant. Digits only, no $ or commas.",
+  "variants":      "array   REQUIRED. Every purchasable option on the page - see rule 5b:
+                      [{ vendorSku, price, condition, label }]
+                      condition is one of: new | reclaimed | refurbished |
+                      aftermarket | shell-only | unknown
+                      label is the shop's own wording, copied verbatim
+                      (e.g. 'OEM Board OEM Shell', 'OEM Brand New').
+                      List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
   "fidBand":       "number  0-7 key-type digit. See the FID section.",
@@ -169,11 +176,29 @@ Each object in `keys`:
    listing shows a range or "call for price", omit `price`.
 5. **One record per part number.** If a page sells the same key under several
    part numbers, emit one record each. Do not merge them.
-5b. **Price is a point-in-time reading.** Take it from the variant you are
-   describing and nowhere else. If a listing shows several variants at
-   different prices, emit the one whose SKU you put in `vendorSku` and say
-   which variant that was in `sourceText`. Never average them or take the
-   lowest.
+5b. **Capture EVERY variant — this is the rule you are most likely to get
+   wrong.** One product page usually sells the same key in several conditions,
+   each with its own SKU and its own price. A real example:
+
+   ```
+   OEM Board OEM Shell   sku=YCKG#0531   $45     <- reclaimed board in a reclaimed shell
+   OEM Brand New         sku=YCKG#0531   $85     <- brand new
+   ```
+
+   These are the same key by FCC ID, but they are different things to buy at
+   very different prices. Emit **all of them** in the `variants` array, each
+   with the price that actually sits next to that label on the page.
+
+   Two specific failures to avoid, both of which have happened:
+   - Taking one variant's label and another variant's price. If you write
+     `OEM Board OEM Shell`, the price must be the one shown for
+     `OEM Board OEM Shell`, not the one below it.
+   - Emitting only the variant that happens to be selected by default and
+     dropping the rest. Every purchasable option gets an entry.
+
+   If you genuinely cannot tell which price belongs to which label, emit the
+   variants you are sure of, put `"variants"` in `uncertain`, and set
+   `confidence` to `low`. Never guess the pairing.
 6. **Do not convert years.** "18-24" becomes `startYear: 2018, endYear: 2024`.
    A single year becomes `startYear` and `endYear` both set to it. If the
    listing gives no years, omit `vehicles` rather than guessing.
@@ -265,10 +290,17 @@ Types seen: 2032, 2025, 2016, 1632, 1620, 1616, 2450.
 
 ## Pricing note
 
-Record only the **listed/retail** price in `price`. Do not try to work out
-dealer or net pricing. Do not use a field named `priceA` or `priceB` — those
-mean something specific to one distributor (new vs. refurbished) and do not
-apply here.
+Record only the **listed/retail** price. Do not try to work out dealer or net
+pricing.
+
+Do not use field names `priceA` or `priceB`. My app uses those for one
+distributor's new-vs-refurbished split, and they are not a general concept —
+`variants[]` with a `condition` is. The parallel is worth knowing though,
+because it is the same idea: that distributor sells the same key as separate
+part numbers `XXXXA` (new) and `XXXXB` (refurbished), exactly as this shop
+sells it as `OEM Brand New` and `OEM Board OEM Shell`. Different condition,
+different SKU, different price, same key by FCC ID. That is what `variants`
+is for.
 
 ## The skip list
 
