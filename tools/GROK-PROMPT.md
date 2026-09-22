@@ -119,6 +119,10 @@ Each object in `keys`:
                       aftermarket | shell-only | unknown
                       label is the shop's own wording, copied verbatim
                       (e.g. 'OEM Board OEM Shell', 'OEM Brand New').
+                      vendorSku is REQUIRED on every variant and is usually
+                      DIFFERENT per variant - do not repeat the product's SKU
+                      across them, and do not leave it out because you already
+                      wrote it into sourceText. It must be in the field.
                       List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
@@ -162,6 +166,15 @@ Each object in `keys`:
    number (`Insert: IN-042 (Included)`). Capturing only one of the two loses
    real data, so include both blocks in `sourceText`.
 
+   **Specifically hunt for the insert / emergency-key part number.** It is
+   written as `Insert: IN-042 (Included)` or similar, and it sits in the prose
+   paragraph rather than the spec table - the table only says a generic
+   `Emergency Key / INSERT 2005-2024 Nissan ... Blade DA34`, which is not a
+   part number. If the page shows an `IN-` code anywhere in its visible copy,
+   it goes in `emergencyPN` and the paragraph containing it goes in
+   `sourceText`. Two consecutive runs lost this field entirely by reading only
+   the spec table.
+
    Do NOT take values from raw HTML, `<meta>` tags, JSON-LD, schema markup,
    embedded scripts, tag/collection strings, breadcrumbs, or a "related
    products" / "you may also like" block. Those carry other products' numbers,
@@ -195,6 +208,19 @@ Each object in `keys`:
      `OEM Board OEM Shell`, not the one below it.
    - Emitting only the variant that happens to be selected by default and
      dropping the rest. Every purchasable option gets an entry.
+
+   Each variant normally has **its own SKU**, and they are not the product's
+   SKU repeated. Real example from one page:
+
+   ```
+   OEM Brand New                 sku=YCKG#3491   $45   new
+   OEM Board OEM Shell (Old Logo) sku=YCKG#1481  $49   reclaimed
+   OEM Board OEM Shell (New Logo) sku=YCKG#1957  $45   reclaimed
+   OEM Recased (No Logo)          sku=YCKG#2715  $35   refurbished
+   ```
+
+   Put each SKU in that variant's `vendorSku` **field**. Writing it only into
+   `sourceText` does not count - the field is what I read.
 
    If you genuinely cannot tell which price belongs to which label, emit the
    variants you are sure of, put `"variants"` in `uncertain`, and set

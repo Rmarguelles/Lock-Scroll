@@ -281,10 +281,16 @@ generically as `variants[{ vendorSku, price, condition, label }]` with
 unknown`, so the importer can map a condition onto the right price slot rather
 than guessing from a shop's wording.
 
-Unresolved: whether `vendorPrices[pn][vendor]` grows a variants array of its
-own, or keeps two slots and maps `new -> priceA`, everything else `-> priceB`.
-The second is less work and matches the Keyless Ride data already stored; the
-first is honest about shops that sell three or more conditions.
+**Resolved by batch 3: two price slots are not enough.** Across 20 Nissan
+products one shop listed 60 variants - 7 products with 4 and one with 5, using
+four conditions (reclaimed 23, new 14, refurbished 13, aftermarket 10) and
+price spreads as wide as $21.50 to $125 on a single key. Each variant carries
+its own SKU, not the product's repeated.
+
+So `vendorPrices[pn][vendor]` needs a variants array rather than the
+`priceA`/`priceB` pair. The existing two slots stay as the Keyless Ride data
+already stored, mapping `new -> priceA` and the cheapest reclaimed or
+refurbished `-> priceB` for backward compatibility.
 
 ## 6. Schema drift — fix before importing
 

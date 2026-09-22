@@ -1,0 +1,1203 @@
+{
+  "source": "Your Car Key Guys",
+  "sourceUrl": "https://yourcarkeyguys.com/collections/nissan",
+  "extractedAt": "2026-09-21",
+  "keys": [
+    {
+      "pn": "YCKG#0734",
+      "vendorSku": "YCKG#0734",
+      "price": 75,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0734",
+          "price": 75,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#2344",
+          "price": 95,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#3017",
+          "price": 70,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "KBRTN001",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2005-2007-nissan-murano-3b-smart-key-kbrtn001",
+      "sourceText": "2005-2007 NISSAN MURANO 3B SMART KEY KBRTN001\nSPECS: Make: Nissan; Fits FCC ID: KBRTN001; Fits Part Number: 285E3-CB80D; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2015 Nissan | Infiniti Smart Emergency Key Blade ID46 Chip DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KBRTN001\nFits Part Number 285E3-CB80D\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2015 Nissan | Infiniti Smart Emergency Key Blade ID46 Chip DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nMurano\n2005 - 2007\nVARIANT: OEM Board OEM Shell sku=YCKG#0734 price=75 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#2344 price=95 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#3017 price=70 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#0734) \u2014 label=OEM Board OEM Shell price=75\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-CB80D",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Murano",
+          "startYear": 2005,
+          "endYear": 2007
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0034",
+      "vendorSku": "YCKG#0034",
+      "price": 15,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0034",
+          "price": 15,
+          "condition": "reclaimed"
+        }
+      ],
+      "fccid": "CWTWB1U415, CWTWB1U821, CWTWB1U733",
+      "fidPrefix": "N",
+      "fidBand": 6,
+      "isNew": false,
+      "keyType": "Remote Only",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2005-2018-nissan-3b-remote-cwtwb1u415",
+      "sourceText": "2005-2018 NISSAN 3B REMOTE CWTWB1U415\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1U415, CWTWB1U821, CWTWB1U733; Fits Part Number: 28268-EA000, 28268-ZT03A; Frequency: 315MHz; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1U415, CWTWB1U821, CWTWB1U733\nFits Part Number 28268-EA000, 28268-ZT03A\nFrequency 315MHz\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nArmada\n2008 - 2014\nNissan\nFrontier\n2005 - 2019\nNissan\nMurano\n2007 - 2008\nNissan\nNV\n2011 - 2018\nNissan\nPathfinder\n2005 - 2011\nNissan\nSentra\n2007 - 2012\nNissan\nTitan\n2007 - 2016\nNissan\nVersa\n2007 - 2012\nNissan\nXterra\n2005 - 2011\nVARIANT: OEM Board OEM Shell sku=YCKG#0034 price=15 condition=reclaimed\nPRIMARY: variant sku matching pn (YCKG#0034) \u2014 label=OEM Board OEM Shell price=15\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "low",
+      "uncertain": [
+        "battery",
+        "buttons",
+        "fccid"
+      ],
+      "oemPartNumber": "28268-EA000, 28268-ZT03A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Armada",
+          "startYear": 2008,
+          "endYear": 2014
+        },
+        {
+          "make": "Nissan",
+          "model": "Frontier",
+          "startYear": 2005,
+          "endYear": 2019
+        },
+        {
+          "make": "Nissan",
+          "model": "Murano",
+          "startYear": 2007,
+          "endYear": 2008
+        },
+        {
+          "make": "Nissan",
+          "model": "NV",
+          "startYear": 2011,
+          "endYear": 2018
+        },
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2005,
+          "endYear": 2011
+        },
+        {
+          "make": "Nissan",
+          "model": "Sentra",
+          "startYear": 2007,
+          "endYear": 2012
+        },
+        {
+          "make": "Nissan",
+          "model": "Titan",
+          "startYear": 2007,
+          "endYear": 2016
+        },
+        {
+          "make": "Nissan",
+          "model": "Versa",
+          "startYear": 2007,
+          "endYear": 2012
+        },
+        {
+          "make": "Nissan",
+          "model": "Xterra",
+          "startYear": 2005,
+          "endYear": 2011
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0345",
+      "vendorSku": "YCKG#0345",
+      "price": 45,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0345",
+          "price": 45,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3212",
+          "price": 79.5,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2714",
+          "price": 40,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#0552",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "CWTWBU735",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2007-2012-nissan-maxima-sentra-4b-trunk-smart-key-cwtwbu735",
+      "sourceText": "2007-2012 NISSAN MAXIMA SENTRA 4B TRUNK SMART KEY CWTWBU735\nSPECS: Make: Nissan; Fits FCC ID: CWTWBU735; Fits Part Number: 285E3-EW81D, 285E3-EW82D; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2015 Nissan | Infiniti Smart Emergency Key Blade ID46 Chip DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWBU735\nFits Part Number 285E3-EW81D, 285E3-EW82D\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2015 Nissan | Infiniti Smart Emergency Key Blade ID46 Chip DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nMaxima\n2007 - 2008\nNissan\nSentra\n2007 - 2012\nVARIANT: OEM Board OEM Shell sku=YCKG#0345 price=45 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3212 price=79.5 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2714 price=40 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#0552 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0345) \u2014 label=OEM Board OEM Shell price=45\nBUTTONS: from product photo \u2192 4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-EW81D, 285E3-EW82D",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Maxima",
+          "startYear": 2007,
+          "endYear": 2008
+        },
+        {
+          "make": "Nissan",
+          "model": "Sentra",
+          "startYear": 2007,
+          "endYear": 2012
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#3491",
+      "vendorSku": "YCKG#3491",
+      "price": 45,
+      "variants": [
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3491",
+          "price": 45,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Board OEM Shell (Old Logo)",
+          "sku": "YCKG#1481",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Board OEM Shell (New Logo)",
+          "sku": "YCKG#1957",
+          "price": 45,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2715",
+          "price": 35,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "CWTWB1U825, CWTWB1U773",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2009-2022-nissan-cube-armada-3b-smart-key-cwtwb1u825-773",
+      "sourceText": "2009-2024 NISSAN CUBE ARMADA 3B SMART KEY CWTWB1U773 CWTWB1U825\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1U825, CWTWB1U773; Fits Part Number: 285E3-1LK0D; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34; Reuseability for OEM: Reusable\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1U825, CWTWB1U773\nFits Part Number 285E3-1LK0D\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nReuseability for OEM Reusable\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nArmada\n2017 - 2024\nNissan\nCube\n2009 - 2010\nVARIANT: OEM Brand New sku=YCKG#3491 price=45 condition=new\nVARIANT: OEM Board OEM Shell (Old Logo) sku=YCKG#1481 price=49 condition=reclaimed\nVARIANT: OEM Board OEM Shell (New Logo) sku=YCKG#1957 price=45 condition=reclaimed\nVARIANT: OEM Recased (No Logo) sku=YCKG#2715 price=35 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#3491) \u2014 label=OEM Brand New price=45\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-1LK0D",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Armada",
+          "startYear": 2017,
+          "endYear": 2024
+        },
+        {
+          "make": "Nissan",
+          "model": "Cube",
+          "startYear": 2009,
+          "endYear": 2010
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0026",
+      "vendorSku": "YCKG#0026",
+      "price": 49,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0026",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2915",
+          "price": 45,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "CWTWB1U818",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "5 Button: L, U, P, PSD2 (Lock, Unlock, Panic, Dual Power Sliding Doors)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2011-2017-nissan-quest-5b-van-sliding-door-smart-key-cwtwb1u818",
+      "sourceText": "2011-2017 NISSAN QUEST 5B VAN SLIDING DOOR SMART KEY CWTWB1U818\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1U818; Fits Part Number: 285E3-1JA1A; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1U818\nFits Part Number 285E3-1JA1A\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nQuest\n2011 - 2017\nVARIANT: OEM Board OEM Shell sku=YCKG#0026 price=49 condition=reclaimed\nVARIANT: OEM Recased (No Logo) sku=YCKG#2915 price=45 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#0026) \u2014 label=OEM Board OEM Shell price=49\nBUTTONS: from product photo \u2192 5 Button: L, U, P, PSD2 (Lock, Unlock, Panic, Dual Power Sliding Doors)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-1JA1A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Quest",
+          "startYear": 2011,
+          "endYear": 2017
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0346",
+      "vendorSku": "YCKG#0346",
+      "price": 55,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0346",
+          "price": 55,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3388",
+          "price": 79,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#0733",
+          "price": 45,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#1523",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "CWTWB1U808",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2011-2018-nissan-quest-leaf-juke-cube-3b-smart-key-cwtwb1u808",
+      "sourceText": "2011-2018 NISSAN QUEST | LEAF | JUKE | CUBE 3B SMART KEY CWTWB1U808\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1U808; Fits Part Number: 285E3-1KM0D, 285E31KM0D; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1U808\nFits Part Number 285E3-1KM0D, 285E31KM0D\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nCube\n2011 - 2014\nNissan\nJuke\n2011 - 2017\nNissan\nLeaf\n2011 - 2015\nNissan\nQuest\n2011 - 2017\nNissan\nVersa\n2014 - 2018\nVARIANT: OEM Board OEM Shell sku=YCKG#0346 price=55 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3388 price=79 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#0733 price=45 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#1523 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0346) \u2014 label=OEM Board OEM Shell price=55\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-1KM0D, 285E31KM0D",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Cube",
+          "startYear": 2011,
+          "endYear": 2014
+        },
+        {
+          "make": "Nissan",
+          "model": "Juke",
+          "startYear": 2011,
+          "endYear": 2017
+        },
+        {
+          "make": "Nissan",
+          "model": "Leaf",
+          "startYear": 2011,
+          "endYear": 2015
+        },
+        {
+          "make": "Nissan",
+          "model": "Quest",
+          "startYear": 2011,
+          "endYear": 2017
+        },
+        {
+          "make": "Nissan",
+          "model": "Versa",
+          "startYear": 2014,
+          "endYear": 2018
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0531",
+      "vendorSku": "YCKG#0531",
+      "price": 45,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0531",
+          "price": 45,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3281",
+          "price": 85,
+          "condition": "new"
+        }
+      ],
+      "fccid": "CWTWB1U815",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2013-nissan-sentra-4b-sedan-smart-key-cwtwb1u815",
+      "sourceText": "2013 NISSAN SENTRA 4B TRUNK SMART KEY 3AA0A CWTWB1U815\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1U815; Fits Part Number: 285E3-3AA0A; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nNOTE: Vehicles built after 05/13 may require a different key -\u00a0FCC:CWTWB1U840\n\nMake Nissan\nFits FCC ID CWTWB1U815\nFits Part Number 285E3-3AA0A\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nSentra\n2013\nVARIANT: OEM Board OEM Shell sku=YCKG#0531 price=45 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3281 price=85 condition=new\nPRIMARY: variant sku matching pn (YCKG#0531) \u2014 label=OEM Board OEM Shell price=45\nBUTTONS: from product photo \u2192 4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-3AA0A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Sentra",
+          "startYear": 2013,
+          "endYear": 2013
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#1005",
+      "vendorSku": "YCKG#1005",
+      "price": 49,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#1005",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#1119",
+          "price": 17,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5S180144104",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2014-2016-nissan-pathfinder-4b-remote-start-smart-key-kr5s180144104",
+      "sourceText": "2014-2016 NISSAN PATHFINDER 4B REMOTE START SMART KEY IC 014 - 4021 - KR5S180144104\nSPECS: Make: Nissan; Fits FCC ID: KR5S180144104; Fits Part Number: 285E3-9PB4A; Transponder: ID47; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5S180144104\nFits Part Number 285E3-9PB4A\nTransponder ID47\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nPathfinder\n2014 - 2016\nVARIANT: OEM Board OEM Shell sku=YCKG#1005 price=49 condition=reclaimed\nVARIANT: New Aftermarket (No Logo) sku=YCKG#1119 price=17 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#1005) \u2014 label=OEM Board OEM Shell price=49\nBUTTONS: from product photo \u2192 4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID47",
+      "oemPartNumber": "285E3-9PB4A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2014,
+          "endYear": 2016
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0036",
+      "vendorSku": "YCKG#0036",
+      "price": 49,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell (Silver Logo)",
+          "sku": "YCKG#0036",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Board OEM Shell (Gray Logo)",
+          "sku": "YCKG#0488",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New (Silver Logo)",
+          "sku": "YCKG#3622",
+          "price": 84,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2717",
+          "price": 45,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#1466",
+          "price": 19.5,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "CWTWB1G744",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "5 Button: L, U, P, H, RS (Lock, Unlock, Panic, Hatch, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2017-2024-nissan-armada-5b-hatch-smart-key-cwtwb1g744",
+      "sourceText": "2017-2024 NISSAN ARMADA 5B HATCH SMART KEY CWTWB1G744\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1G744; Fits Part Number: 285E3-1LB5A; Transponder: ID46; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1G744\nFits Part Number 285E3-1LB5A\nTransponder ID46\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nArmada\n2017 - 2024\nVARIANT: OEM Board OEM Shell (Silver Logo) sku=YCKG#0036 price=49 condition=reclaimed\nVARIANT: OEM Board OEM Shell (Gray Logo) sku=YCKG#0488 price=49 condition=reclaimed\nVARIANT: OEM Brand New (Silver Logo) sku=YCKG#3622 price=84 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2717 price=45 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#1466 price=19.5 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0036) \u2014 label=OEM Board OEM Shell (Silver Logo) price=49\nBUTTONS: from product photo \u2192 5 Button: L, U, P, H, RS (Lock, Unlock, Panic, Hatch, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-1LB5A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Armada",
+          "startYear": 2017,
+          "endYear": 2024
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0575",
+      "vendorSku": "YCKG#0575",
+      "price": 40,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0575",
+          "price": 40,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3262",
+          "price": 94.27,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2882",
+          "price": 35,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#0860",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXN3",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2018-2020-nissan-kicks-rogue-4b-remote-start-smart-key-5ra6a-kr5txn3",
+      "sourceText": "2018-2020 NISSAN KICKS | ROGUE 4B REMOTE START SMART KEY 5RA6A KR5TXN3\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN3; Fits Part Number: 285E3-5RA6A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN3\nFits Part Number 285E3-5RA6A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2018 - 2020\nNissan\nRogue\n2018 - 2020\nVARIANT: OEM Board OEM Shell sku=YCKG#0575 price=40 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3262 price=94.27 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2882 price=35 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#0860 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0575) \u2014 label=OEM Board OEM Shell price=40\nBUTTONS: from product photo \u2192 4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-5RA6A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2018,
+          "endYear": 2020
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2018,
+          "endYear": 2020
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0521",
+      "vendorSku": "YCKG#0521",
+      "price": 45,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0521",
+          "price": 45,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3271",
+          "price": 82.5,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#3015",
+          "price": 40,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#0845",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXN1",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2018-2021-nissan-kicks-rogue-3b-smart-key-kr5txn1",
+      "sourceText": "2018-2021 NISSAN KICKS | ROGUE 3B SMART KEY 5RA0A KR5TXN1\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN1; Fits Part Number: 285E3-5RA0A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nNOTE: Please run the VIN of the vehicle to see if it is compatible with this part number. There are two part numbers for this continental number.\n\nMake Nissan\nFits FCC ID KR5TXN1\nFits Part Number 285E3-5RA0A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2018 - 2019\nNissan\nRogue\n2019 - 2020\nVARIANT: OEM Board OEM Shell sku=YCKG#0521 price=45 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3271 price=82.5 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#3015 price=40 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#0845 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0521) \u2014 label=OEM Board OEM Shell price=45\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-5RA0A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2018,
+          "endYear": 2019
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2019,
+          "endYear": 2020
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0816",
+      "vendorSku": "YCKG#0816",
+      "price": 55,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0816",
+          "price": 55,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Board OEM Shell (New Style Logo)",
+          "sku": "YCKG#2866",
+          "price": 55,
+          "condition": "reclaimed"
+        }
+      ],
+      "fccid": "CWTWB1G0168",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, CH (Lock, Unlock, Panic, Charge)",
+      "buttonsFromImage": true,
+      "frequency": "315MHz",
+      "battery": "2025 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2018-2024-nissan-leaf-4b-plug-in-smart-key-cwtwb1g0168",
+      "sourceText": "2018-2024 NISSAN LEAF 4B PLUG IN SMART KEY CWTWB1G0168\nSPECS: Make: Nissan; Fits FCC ID: CWTWB1G0168; Fits Part Number: 285E3-5SA1A, 285E3-5SA1B; Transponder: ID46; Frequency: 315MHz; Keyway: DA34; Battery: CR2025 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID CWTWB1G0168\nFits Part Number 285E3-5SA1A, 285E3-5SA1B\nTransponder ID46\nFrequency 315MHz\nKeyway DA34\nBattery CR2025 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nLeaf\n2018 - 2024\nVARIANT: OEM Board OEM Shell sku=YCKG#0816 price=55 condition=reclaimed\nVARIANT: OEM Board OEM Shell (New Style Logo) sku=YCKG#2866 price=55 condition=reclaimed\nPRIMARY: variant sku matching pn (YCKG#0816) \u2014 label=OEM Board OEM Shell price=55\nBUTTONS: from product photo \u2192 4 Button: L, U, P, CH (Lock, Unlock, Panic, Charge)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "ID46",
+      "oemPartNumber": "285E3-5SA1A, 285E3-5SA1B",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Leaf",
+          "startYear": 2018,
+          "endYear": 2024
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#1949",
+      "vendorSku": "YCKG#1949",
+      "price": 35,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#1949",
+          "price": 35,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#2089",
+          "price": 25,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXPZ3",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2022-2025-nissan-4b-remote-start-smart-key-6ra5a-kr5txpz3",
+      "sourceText": "2022-2025 NISSAN 4B REMOTE START SMART KEY 6RA5A KR5TXPZ3\nSPECS: Make: Nissan; Fits FCC ID: KR5TXPZ3; Fits Part Number: 285E3-6RA5A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2022-2026 Nissan Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXPZ3\nFits Part Number 285E3-6RA5A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2022-2026 Nissan Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2022 - 2024\nNissan\nPathfinder\n2022 - 2024\nNissan\nRogue\n2022 - 2025\nVARIANT: OEM Board OEM Shell sku=YCKG#1949 price=35 condition=reclaimed\nVARIANT: New Aftermarket (No Logo) sku=YCKG#2089 price=25 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#1949) \u2014 label=OEM Board OEM Shell price=35\nBUTTONS: from product photo \u2192 4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6RA5A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2022,
+          "endYear": 2024
+        },
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2022,
+          "endYear": 2024
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2022,
+          "endYear": 2025
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#1948",
+      "vendorSku": "YCKG#1948",
+      "price": 34.5,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#1948",
+          "price": 34.5,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3278",
+          "price": 125,
+          "condition": "new"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#2064",
+          "price": 21.5,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXPZ1",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2022-2025-nissan-rogue-pathfinder-kick-ariya-3b-smart-key-5mr1b-kr5txpz1",
+      "sourceText": "2022-2025 NISSAN ROGUE PATHFINDER KICK ARIYA 3B SMART KEY 5MR1B KR5TXPZ1\nSPECS: Make: Nissan; Fits FCC ID: KR5TXPZ1; Fits Part Number: 285E3-5MR1B; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2022-2026 Nissan Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXPZ1\nFits Part Number 285E3-5MR1B\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2022-2026 Nissan Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nAriya\n2022 - 2025\nNissan\nKicks\n2022 - 2025\nNissan\nPathfinder\n2022 - 2025\nNissan\nRogue\n2022 - 2025\nVARIANT: OEM Board OEM Shell sku=YCKG#1948 price=34.5 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3278 price=125 condition=new\nVARIANT: New Aftermarket (No Logo) sku=YCKG#2064 price=21.5 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#1948) \u2014 label=OEM Board OEM Shell price=34.5\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-5MR1B",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Ariya",
+          "startYear": 2022,
+          "endYear": 2025
+        },
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2022,
+          "endYear": 2025
+        },
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2022,
+          "endYear": 2025
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2022,
+          "endYear": 2025
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#3248",
+      "vendorSku": "YCKG#3248",
+      "price": 55,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#3248",
+          "price": 55,
+          "condition": "reclaimed"
+        }
+      ],
+      "fccid": "KR5S180144104",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, H (Lock, Unlock, Panic, Hatch)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2015-2017-nissan-murano-pathfinder-4b-hatch-smart-key-9pf0a-kr5s180144104",
+      "sourceText": "2015-2017 NISSAN MURANO PATHFINDER 4B HATCH SMART KEY 9PF0A KR5S180144104\nSPECS: Make: Nissan; Fits FCC ID: KR5S180144104; Fits Part Number: 285E3-9PF0A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5S180144104\nFits Part Number 285E3-9PF0A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nMurano\n2015 - 2017\nNissan\nPathfinder\n2016 - 2017\nVARIANT: OEM Board OEM Shell sku=YCKG#3248 price=55 condition=reclaimed\nPRIMARY: variant sku matching pn (YCKG#3248) \u2014 label=OEM Board OEM Shell price=55\nBUTTONS: from product photo \u2192 4 Button: L, U, P, H (Lock, Unlock, Panic, Hatch)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-9PF0A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Murano",
+          "startYear": 2015,
+          "endYear": 2017
+        },
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2016,
+          "endYear": 2017
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#1528",
+      "vendorSku": "YCKG#1528",
+      "price": 42.5,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#1528",
+          "price": 42.5,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#1907",
+          "price": 90,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2881",
+          "price": 35,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "KR5TXN3",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2018-2022-nissan-kicks-rogue-4b-remote-start-smart-key-6ta5b-kr5txn3",
+      "sourceText": "2018-2023 NISSAN KICKS | ROGUE 4B REMOTE START SMART KEY 6TA5B KR5TXN3\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN3; Fits Part Number: 285E3-6TA5B; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN3\nFits Part Number 285E3-6TA5B\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2018 - 2023\nNissan\nRogue\n2019 - 2023\nVARIANT: OEM Board OEM Shell sku=YCKG#1528 price=42.5 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#1907 price=90 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2881 price=35 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#1528) \u2014 label=OEM Board OEM Shell price=42.5\nBUTTONS: from product photo \u2192 4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6TA5B",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2018,
+          "endYear": 2023
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2019,
+          "endYear": 2023
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#0539",
+      "vendorSku": "YCKG#0539",
+      "price": 40,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#0539",
+          "price": 40,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3260",
+          "price": 84.25,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2902",
+          "price": 32,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#2531",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXN1",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2020-2023-nissan-versa-4b-trunk-smart-key-6ca1a-kr5txn1",
+      "sourceText": "2020-2023 NISSAN VERSA 4B TRUNK SMART KEY 6CA1A KR5TXN1\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN1; Fits Part Number: 285E3-6CA1A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN1\nFits Part Number 285E3-6CA1A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nVersa\n2020 - 2023\nVARIANT: OEM Board OEM Shell sku=YCKG#0539 price=40 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3260 price=84.25 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2902 price=32 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#2531 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#0539) \u2014 label=OEM Board OEM Shell price=40\nBUTTONS: from product photo \u2192 4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6CA1A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Versa",
+          "startYear": 2020,
+          "endYear": 2023
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#1606",
+      "vendorSku": "YCKG#1606",
+      "price": 49,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#1606",
+          "price": 49,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3225",
+          "price": 95,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2871",
+          "price": 44,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "KR5TXN1",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "3 Button: L, U, P (Lock, Unlock, Panic)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2020-2024-nissan-kicks-rogue-3b-smart-key-6ta1a-kr5txn1",
+      "sourceText": "2020-2024 NISSAN KICKS ROGUE 3B SMART KEY 6TA1A KR5TXN1\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN1; Fits Part Number: 285E3-6TA1A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN1\nFits Part Number 285E3-6TA1A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2020 - 2024\nNissan\nRogue\n2021 - 2023\nVARIANT: OEM Board OEM Shell sku=YCKG#1606 price=49 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3225 price=95 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2871 price=44 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#1606) \u2014 label=OEM Board OEM Shell price=49\nBUTTONS: from product photo \u2192 3 Button: L, U, P (Lock, Unlock, Panic)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6TA1A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2020,
+          "endYear": 2024
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2021,
+          "endYear": 2023
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#2071",
+      "vendorSku": "YCKG#2071",
+      "price": 40,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#2071",
+          "price": 40,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#3282",
+          "price": 93.5,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2859",
+          "price": 35,
+          "condition": "refurbished"
+        },
+        {
+          "label": "New Aftermarket (No Logo)",
+          "sku": "YCKG#2531",
+          "price": 19,
+          "condition": "aftermarket"
+        }
+      ],
+      "fccid": "KR5TXN1",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2020-2024-nissan-sentra-4b-trunk-smart-key-6la1a-kr5txn1",
+      "sourceText": "2020-2024 NISSAN SENTRA 4B TRUNK SMART KEY 6LA1A KR5TXN1\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN1; Fits Part Number: 285E3-6LA1A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN1\nFits Part Number 285E3-6LA1A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nSentra\n2020 - 2024\nVARIANT: OEM Board OEM Shell sku=YCKG#2071 price=40 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#3282 price=93.5 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2859 price=35 condition=refurbished\nVARIANT: New Aftermarket (No Logo) sku=YCKG#2531 price=19 condition=aftermarket\nPRIMARY: variant sku matching pn (YCKG#2071) \u2014 label=OEM Board OEM Shell price=40\nBUTTONS: from product photo \u2192 4 Button: L, U, P, T (Lock, Unlock, Panic, Trunk)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6LA1A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Sentra",
+          "startYear": 2020,
+          "endYear": 2024
+        }
+      ]
+    },
+    {
+      "pn": "YCKG#2334",
+      "vendorSku": "YCKG#2334",
+      "price": 50,
+      "variants": [
+        {
+          "label": "OEM Board OEM Shell",
+          "sku": "YCKG#2334",
+          "price": 50,
+          "condition": "reclaimed"
+        },
+        {
+          "label": "OEM Brand New",
+          "sku": "YCKG#2345",
+          "price": 90,
+          "condition": "new"
+        },
+        {
+          "label": "OEM Recased (No Logo)",
+          "sku": "YCKG#2906",
+          "price": 45,
+          "condition": "refurbished"
+        }
+      ],
+      "fccid": "KR5TXN3",
+      "fidPrefix": "N",
+      "fidBand": 5,
+      "isNew": true,
+      "keyType": "Proximity",
+      "buttons": "4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "buttonsFromImage": true,
+      "frequency": "434MHz",
+      "battery": "2032 qty 1",
+      "productUrl": "https://yourcarkeyguys.com/products/2021-2024-nissan-kicks-pathfinder-rogue-4b-remote-start-smart-key-6xr5a-kr5txn3",
+      "sourceText": "2021-2024 NISSAN KICKS PATHFINDER ROGUE 4B REMOTE START SMART KEY 6XR5A KR5TXN3\nSPECS: Make: Nissan; Fits FCC ID: KR5TXN3; Fits Part Number: 285E3-6XR5A; Transponder: 4A; Frequency: 434MHz; Keyway: DA34; Battery: CR2032 Coin Cell Lithium Ion 3V Battery (5Pk); Emergency Key: INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\nDESCRIPTION:\nMake Nissan\nFits FCC ID KR5TXN3\nFits Part Number 285E3-6XR5A\nTransponder 4A\nFrequency 434MHz\nKeyway DA34\nBattery CR2032 Coin Cell Lithium Ion 3V Battery (5Pk)\nEmergency Key INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key Blade DA34\n\n100% Satisfaction Guaranteed\nFITMENTS:\nMake\nModel\nYear\nNissan\nKicks\n2021 - 2024\nNissan\nPathfinder\n2022 - 2023\nNissan\nRogue\n2021 - 2023\nVARIANT: OEM Board OEM Shell sku=YCKG#2334 price=50 condition=reclaimed\nVARIANT: OEM Brand New sku=YCKG#2345 price=90 condition=new\nVARIANT: OEM Recased (No Logo) sku=YCKG#2906 price=45 condition=refurbished\nPRIMARY: variant sku matching pn (YCKG#2334) \u2014 label=OEM Board OEM Shell price=50\nBUTTONS: from product photo \u2192 4 Button: L, U, P, RS (Lock, Unlock, Panic, Remote Start)",
+      "confidence": "medium",
+      "uncertain": [
+        "battery",
+        "buttons"
+      ],
+      "keyway": "DA34",
+      "chip": "4A",
+      "oemPartNumber": "285E3-6XR5A",
+      "vehicles": [
+        {
+          "make": "Nissan",
+          "model": "Kicks",
+          "startYear": 2021,
+          "endYear": 2024
+        },
+        {
+          "make": "Nissan",
+          "model": "Pathfinder",
+          "startYear": 2022,
+          "endYear": 2023
+        },
+        {
+          "make": "Nissan",
+          "model": "Rogue",
+          "startYear": 2021,
+          "endYear": 2023
+        }
+      ]
+    }
+  ],
+  "failed": []
+}
