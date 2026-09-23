@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v246</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v247</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4837,6 +4837,15 @@
         <div class="vehicle-title" id="vehicleModelsPanelTitle">🚗 Select Model</div>
     </div>
     <div class="vehicle-list" id="vehicleModelsList"></div>
+</div>
+
+<!-- Duplicate Models Panel - opened from the Vehicle Lookup make list -->
+<div class="vehicle-panel" id="duplicateModelsPanel" style="z-index:205;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeDuplicateModelsPanel()">←</button>
+        <div class="vehicle-title">🧹 Duplicate Models</div>
+    </div>
+    <div class="vehicle-list" id="duplicateModelsList"></div>
 </div>
 
 <!-- Vehicle Year Ranges Panel - After selecting model -->
@@ -5301,7 +5310,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v246</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v247</p>
         </div>
 
         <div class="settings-section">
@@ -5313,7 +5322,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v246<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v247<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8387,6 +8396,7 @@ async function uploadToCloud() {
                 autelIKeyCompatibility: autelIKeyCompatibility,
                 vehicleYearNotes: vehicleYearNotes,
                 vehicleYearRanges: vehicleYearRanges,
+                modelAliases: modelAliases,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -8426,6 +8436,7 @@ async function uploadToCloud() {
                 autelIKeyCompatibility: autelIKeyCompatibility,
                 vehicleYearNotes: vehicleYearNotes,
                 vehicleYearRanges: vehicleYearRanges,
+                modelAliases: modelAliases,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -8674,6 +8685,10 @@ async function downloadFromCloud() {
         if (data.vehicleYearRanges) {
             vehicleYearRanges = { ...vehicleYearRanges, ...data.vehicleYearRanges };
             saveToIndexedDB('vehicleYearRanges', vehicleYearRanges);
+        }
+        if (data.modelAliases) {
+            modelAliases = { ...modelAliases, ...data.modelAliases };
+            saveToIndexedDB('modelAliases', modelAliases);
         }
         if (data.customDropdownValues) {
             customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], brand: [], ...data.customDropdownValues };
@@ -10345,6 +10360,7 @@ function getVehicleIKeyStyles(make, model, startYear, endYear) {
 let customDropdownValues = {"keyway":["B82","B67","B79","B68","B59","B63"],"chip":["PH 40 GM"],"keyType":[],"frequency":[],"buttons":[],"battery":[],"brand":[]};
 let vehicleYearNotes = {};
 let vehicleYearRanges = {}; // { 'Make|Model': [{start, end}] } user-set year ranges (else suggested)
+let modelAliases = {}; // { 'Make|Old Model': 'Merged Model' } recorded by model merges/renames
 
 // FID System - Prefix-based tracking
 let fidAssignments = {};
@@ -11200,6 +11216,9 @@ async function loadLocalData() {
 
             const savedVehicleYearRanges = await loadFromIndexedDB('vehicleYearRanges');
             if (savedVehicleYearRanges) vehicleYearRanges = savedVehicleYearRanges;
+
+            const savedModelAliases = await loadFromIndexedDB('modelAliases');
+            if (savedModelAliases) modelAliases = savedModelAliases;
 
             const savedJobHistory = await loadFromIndexedDB('jobHistory');
             if (savedJobHistory) jobHistory = savedJobHistory;
@@ -17066,6 +17085,7 @@ function goHome() {
     document.getElementById('vehicleModelsPanel').classList.remove('on');
     document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleYearRangesModal').classList.remove('on');
+    document.getElementById('duplicateModelsPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.getElementById('vehicleDetailPanel').classList.remove('on');
@@ -18821,6 +18841,7 @@ function exportData() {
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
         vehicleYearRanges: vehicleYearRanges,
+        modelAliases: modelAliases,
         keyRelationships: keyRelationships,
         fccRelationships: fccRelationships,
         antiqueOverrides: antiqueOverrides,
@@ -18846,6 +18867,7 @@ function copyOverridesToClipboard() {
         keyInfoOverrides: keyInfoOverrides || {},
         vehicleYearNotes: vehicleYearNotes || {},
         vehicleYearRanges: vehicleYearRanges || {},
+        modelAliases: modelAliases || {},
         keyRelationships: keyRelationships || {},
         fccRelationships: fccRelationships || {},
         customKeys: customKeys || [],
@@ -19035,6 +19057,11 @@ function importData(event) {
             if (data.vehicleYearRanges) {
                 vehicleYearRanges = { ...vehicleYearRanges, ...data.vehicleYearRanges };
                 saveVehicleYearRanges();
+            }
+
+            if (data.modelAliases) {
+                modelAliases = { ...modelAliases, ...data.modelAliases };
+                saveModelAliases();
             }
 
             if (data.keyRelationships) {
@@ -19374,7 +19401,7 @@ function syncBlankRowsToKeys(rows, opts) {
         const appLines = new Set();
         const substitutes = new Set();
         byBlank[blank].forEach(r => {
-            const model = r.model || 'Most models';
+            const model = resolveModelAlias(r.make, r.model || 'Most models');
             const sy = r.startYear || 0;
             const ey = r.endYear || r.startYear || 0;
             let veh = target.vehicles.find(v => v.make === r.make && v.model === model
@@ -20664,6 +20691,7 @@ function createKeyFromIlcoReview() {
 
 function closeVehiclePanel() {
     document.getElementById('vehiclePanel').classList.remove('on');
+    document.getElementById('duplicateModelsPanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
     document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
@@ -20853,6 +20881,20 @@ function renderVehicleMakeList() {
             </div>
         </div>
     `;
+
+    const dupCount = getDuplicateModelGroups().length;
+    if (dupCount > 0) {
+        html += `
+        <div class="vehicle-card" onclick="openDuplicateModelsPanel()" style="border:1px dashed var(--warning);background:transparent;cursor:pointer;">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title" style="color:var(--warning);">🧹 Duplicate Models</div>
+                <span class="vehicle-stock-badge" style="background:rgba(255,193,7,0.15);color:var(--warning);">${dupCount} found</span>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">Model names that look like the same vehicle — review and merge</span>
+            </div>
+        </div>`;
+    }
 
     html += filteredMakes.map(make => {
         // Count how many keys for this make are in stock
@@ -21095,60 +21137,7 @@ function renameVehicleModel() {
         return;
     }
 
-    // Update all DB key vehicle associations
-    let updatedCount = 0;
-    const affectedPNs = new Set();
-    DB.forEach(key => {
-        (key.vehicles || []).forEach(v => {
-            if (v.make === make && v.model === oldName) {
-                v.model = newName;
-                updatedCount++;
-                affectedPNs.add(key.pn);
-            }
-        });
-    });
-
-    // Update vehicleOverrides for affected base keys
-    for (const pn in vehicleOverrides) {
-        const vehicles = vehicleOverrides[pn];
-        if (Array.isArray(vehicles)) {
-            vehicles.forEach(v => {
-                if (v.make === make && v.model === oldName) {
-                    v.model = newName;
-                }
-            });
-        }
-    }
-
-    // Update customKeys vehicle associations
-    customKeys.forEach(key => {
-        (key.vehicles || []).forEach(v => {
-            if (v.make === make && v.model === oldName) {
-                v.model = newName;
-            }
-        });
-    });
-
-    // Update customVehicles model names
-    customVehicles.forEach(v => {
-        if (v.make === make && v.model === oldName) {
-            v.model = newName;
-        }
-    });
-
-    // Save all affected stores
-    saveToIndexedDB('database', DB);
-    saveVehicleOverrides();
-    saveCustomKeys();
-    saveCustomVehicles();
-
-    // Carry set year ranges over unless the target model already has its own
-    const oldRangesKey = `${make}|${oldName}`;
-    if (vehicleYearRanges[oldRangesKey]) {
-        if (!vehicleYearRanges[`${make}|${newName}`]) vehicleYearRanges[`${make}|${newName}`] = vehicleYearRanges[oldRangesKey];
-        delete vehicleYearRanges[oldRangesKey];
-        saveVehicleYearRanges();
-    }
+    const updatedCount = mergeVehicleModels(make, [oldName], newName);
 
     closeRenameModelModal();
     renderVehicleModelsForMake(make);
@@ -21183,10 +21172,11 @@ function deleteVehicleModel() {
 
     if (!confirm(msg)) return;
 
-    // Remove vehicle associations from DB keys
+    // Remove vehicle associations from DB keys (base keys persist through vehicleOverrides)
     DB.forEach(key => {
-        if (key.vehicles) {
+        if (key.vehicles && key.vehicles.some(v => v.make === make && v.model === modelName)) {
             key.vehicles = key.vehicles.filter(v => !(v.make === make && v.model === modelName));
+            if (!key.isCustom) vehicleOverrides[key.pn] = key.vehicles;
         }
     });
 
@@ -21217,6 +21207,322 @@ function deleteVehicleModel() {
     closeRenameModelModal();
     renderVehicleModelsForMake(make);
     toast(`Deleted all "${modelName}" associations (${associationCount} removed)`);
+}
+
+// ===================== MODEL MERGING & DUPLICATES =====================
+// Merge-renamed model names are remembered (modelAliases) so a later Ilco
+// sync attaches the book's spelling to the merged name instead of
+// recreating the old one.
+function resolveModelAlias(make, model) {
+    let m = model;
+    for (let i = 0; i < 5 && modelAliases[`${make}|${m}`]; i++) m = modelAliases[`${make}|${m}`];
+    return m;
+}
+
+function saveModelAliases() {
+    saveToIndexedDB('modelAliases', modelAliases);
+    triggerAutoSync();
+}
+
+// Collapse vehicle entries left identical after a rename (same make/model/years),
+// keeping the first and folding in the other's code series and uses
+function dedupeVehicleEntries(vehicles) {
+    const out = [];
+    const seen = {};
+    vehicles.forEach(v => {
+        const id = [v.make, v.model, parseInt(v.startYear) || 0, parseInt(v.endYear || v.startYear) || 0, v.startMonth || '', v.endMonth || ''].join('|');
+        const keep = seen[id];
+        if (!keep) { seen[id] = v; out.push(v); return; }
+        if (Array.isArray(v.codeSeries)) {
+            if (!Array.isArray(keep.codeSeries)) keep.codeSeries = keep.codeSeries ? [{ series: keep.codeSeries, years: '' }] : [];
+            v.codeSeries.forEach(cs => {
+                if (cs && cs.series && !keep.codeSeries.some(e => e.series === cs.series && e.years === cs.years)) keep.codeSeries.push(cs);
+            });
+        } else if (v.codeSeries && !keep.codeSeries) {
+            keep.codeSeries = v.codeSeries;
+        }
+        if (Array.isArray(v.keyRoles) && v.keyRoles.length) {
+            keep.keyRoles = Array.from(new Set([...(keep.keyRoles || []), ...v.keyRoles]));
+        }
+        Object.keys(v).forEach(f => { if (keep[f] === undefined || keep[f] === null || keep[f] === '') keep[f] = v[f]; });
+    });
+    return out;
+}
+
+// Rename/merge one or more model names of a make into toName across every
+// store keyed by model. Returns the number of key vehicle entries renamed.
+function mergeVehicleModels(make, fromNames, toName) {
+    const from = new Set(fromNames.filter(n => n && n !== toName));
+    if (from.size === 0) return 0;
+    const hit = v => v && v.make === make && from.has(v.model);
+    let renamed = 0;
+
+    // Keys: base keys persist through vehicleOverrides, custom keys through customKeys
+    DB.forEach(key => {
+        if (!(key.vehicles || []).some(hit)) return;
+        key.vehicles.forEach(v => { if (hit(v)) { v.model = toName; renamed++; } });
+        key.vehicles = dedupeVehicleEntries(key.vehicles);
+        if (key.isCustom) persistCustomKeyVehicles(key, key.vehicles);
+        else vehicleOverrides[key.pn] = key.vehicles;
+    });
+    // Stored lists not currently loaded into DB
+    for (const pn in vehicleOverrides) {
+        const vehicles = vehicleOverrides[pn];
+        if (Array.isArray(vehicles) && vehicles.some(hit)) {
+            vehicles.forEach(v => { if (hit(v)) v.model = toName; });
+            vehicleOverrides[pn] = dedupeVehicleEntries(vehicles);
+        }
+    }
+    customKeys.forEach(key => {
+        if ((key.vehicles || []).some(hit)) {
+            key.vehicles.forEach(v => { if (hit(v)) v.model = toName; });
+            key.vehicles = dedupeVehicleEntries(key.vehicles);
+        }
+    });
+    customVehicles.forEach(v => { if (hit(v)) v.model = toName; });
+
+    // Per-range vehicle data (Lishi direction, notes...): an existing entry for the target wins
+    let lishiDirty = false;
+    Object.keys(lishiVehicleData).forEach(k => {
+        const [mk, md, ...years] = k.split('|');
+        if (mk !== make || !from.has(md)) return;
+        const target = [make, toName, ...years].join('|');
+        lishiVehicleData[target] = { ...lishiVehicleData[k], ...(lishiVehicleData[target] || {}) };
+        delete lishiVehicleData[k];
+        lishiDirty = true;
+    });
+    // Notes (make|model and make|model|keyType): join when both exist
+    let notesDirty = false;
+    Object.keys(vehicleYearNotes).forEach(k => {
+        const [mk, md, ...rest] = k.split('|');
+        if (mk !== make || !from.has(md)) return;
+        const target = [make, toName, ...rest].join('|');
+        const texts = [vehicleYearNotes[target], vehicleYearNotes[k]].filter(Boolean);
+        vehicleYearNotes[target] = Array.from(new Set(texts)).join('\n\n');
+        delete vehicleYearNotes[k];
+        notesDirty = true;
+    });
+    // Set year ranges: the target's own ranges win
+    let rangesDirty = false;
+    from.forEach(name => {
+        const k = `${make}|${name}`;
+        if (!vehicleYearRanges[k]) return;
+        if (!vehicleYearRanges[`${make}|${toName}`]) vehicleYearRanges[`${make}|${toName}`] = vehicleYearRanges[k];
+        delete vehicleYearRanges[k];
+        rangesDirty = true;
+    });
+    // Remember the old names so Ilco syncs map onto the merged name
+    from.forEach(name => { modelAliases[`${make}|${name}`] = toName; });
+    delete modelAliases[`${make}|${toName}`];
+    Object.keys(modelAliases).forEach(k => { if (k.startsWith(`${make}|`) && from.has(modelAliases[k])) modelAliases[k] = toName; });
+
+    saveToIndexedDB('database', DB);
+    saveVehicleOverrides();
+    saveCustomKeys();
+    saveCustomVehicles();
+    if (lishiDirty) saveLishiVehicle();
+    if (notesDirty) saveVehicleYearNotes();
+    if (rangesDirty) saveVehicleYearRanges();
+    saveModelAliases();
+    return renamed;
+}
+
+// Every make/model in use, with how many key listings and custom year ranges each has
+function collectVehicleModels() {
+    const map = {};
+    const entry = (make, model) => {
+        const k = `${make}|${model}`;
+        return map[k] || (map[k] = { make, model, listings: 0, custom: 0, pns: new Set(), start: 9999, end: 0 });
+    };
+    const span = (e, v) => {
+        const s = parseInt(v.startYear) || 0, en = parseInt(v.endYear || v.startYear) || 0;
+        if (s) e.start = Math.min(e.start, s);
+        if (en) e.end = Math.max(e.end, en);
+    };
+    DB.forEach(key => (key.vehicles || []).forEach(v => {
+        if (!v.make || !v.model) return;
+        const e = entry(v.make, v.model);
+        e.listings++;
+        if (key.pn) e.pns.add(key.pn);
+        span(e, v);
+    }));
+    customVehicles.forEach(v => {
+        if (!v.make || !v.model) return;
+        const e = entry(v.make, v.model);
+        e.custom++;
+        span(e, v);
+    });
+    return Object.values(map);
+}
+
+// Group model names within a make that look like the same vehicle:
+// - same name spelled differently (F-150 / F150 / f 150, XTerra / Xterra)
+// - differing only by a body-style word (NV / NV Van, Accord / Accord Coupe)
+// - one name listed inside a slash list (F150 / F-Series/F150/F250 Light Duty Pickup)
+// - a one-letter typo in the middle of a longer name (Pacifca / Pacifica)
+const MODEL_BODY_WORDS = /\b(pickup|truck|van|wagon|sedan|coupe|hatchback|convertible|suv|2wd|4wd|awd|4x4)\b/gi;
+function normalizeModelName(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function isOneLetterTypo(a, b) {
+    if (a.length < 6 || b.length < 6 || Math.abs(a.length - b.length) > 1) return false;
+    if (a[0] !== b[0] || a[a.length - 1] !== b[b.length - 1]) return false; // variants differ at the ends (Prius c, Taurus X)
+    let i = 0, j = 0, edits = 0;
+    while (i < a.length && j < b.length) {
+        if (a[i] === b[j]) { i++; j++; continue; }
+        if (++edits > 1) return false;
+        if (a.length > b.length) i++;
+        else if (b.length > a.length) j++;
+        else { i++; j++; }
+    }
+    return edits + (a.length - i) + (b.length - j) === 1;
+}
+
+function findDuplicateModelGroups(models) {
+    const byMake = {};
+    models.forEach(m => (byMake[m.make] = byMake[m.make] || []).push(m.model));
+    const groups = [];
+    Object.entries(byMake).forEach(([make, names]) => {
+        const parent = {};
+        const find = x => parent[x] === x ? x : (parent[x] = find(parent[x]));
+        const reasons = {};
+        names.forEach(n => { parent[n] = n; });
+        const link = (a, b, why) => {
+            const ra = find(a), rb = find(b);
+            const r = new Set([...(reasons[ra] || []), ...(reasons[rb] || []), why]);
+            parent[ra] = rb;
+            reasons[rb] = r;
+        };
+        const strong = {}, weak = {};
+        const add = (map, k, n, why) => { if (k) (map[k] = map[k] || []).push({ n, why }); };
+        names.forEach(n => {
+            add(strong, normalizeModelName(n), n, 'Same name, different spelling');
+            const stripped = normalizeModelName(n.replace(MODEL_BODY_WORDS, ''));
+            if (stripped !== normalizeModelName(n)) add(strong, stripped, n, 'Body style word');
+            if (n.includes('/') && !/\bw\/o?\b/i.test(n)) n.split('/').forEach(p => {
+                add(weak, normalizeModelName(p), n);
+                add(weak, normalizeModelName(p.replace(MODEL_BODY_WORDS, '')), n);
+            });
+        });
+        Object.values(strong).forEach(list => {
+            const uniq = Array.from(new Set(list.map(x => x.n)));
+            const why = list.every(x => x.why === list[0].why) ? list[0].why : 'Body style word';
+            for (let i = 1; i < uniq.length; i++) link(uniq[0], uniq[i], why);
+        });
+        // A name matching a part of exactly one slash list (a part shared by two lists is ambiguous)
+        Object.entries(weak).forEach(([k, list]) => {
+            const lists = Array.from(new Set(list.map(x => x.n)));
+            if (lists.length !== 1 || !strong[k]) return;
+            strong[k].forEach(x => { if (x.n !== lists[0]) link(x.n, lists[0], 'Listed inside a combined name'); });
+        });
+        const norm = names.map(n => [n, normalizeModelName(n)]);
+        for (let i = 0; i < norm.length; i++) {
+            for (let j = i + 1; j < norm.length; j++) {
+                if (/\d/.test(norm[i][1] + norm[j][1]) || /\//.test(norm[i][0] + norm[j][0])) continue;
+                if (isOneLetterTypo(norm[i][1], norm[j][1])) link(norm[i][0], norm[j][0], 'Possible typo');
+            }
+        }
+        const byRoot = {};
+        names.forEach(n => (byRoot[find(n)] = byRoot[find(n)] || []).push(n));
+        Object.entries(byRoot).forEach(([root, members]) => {
+            if (members.length > 1) groups.push({ make, models: members.sort(), reasons: Array.from(reasons[root] || []) });
+        });
+    });
+    return groups;
+}
+
+let duplicateModelGroups = [];
+let skippedDuplicateGroups = new Set(); // this session only
+
+function getDuplicateModelGroups() {
+    const models = collectVehicleModels();
+    const info = {};
+    models.forEach(m => { info[`${m.make}|${m.model}`] = m; });
+    return findDuplicateModelGroups(models)
+        .filter(g => !skippedDuplicateGroups.has(`${g.make}|${g.models.join('|')}`))
+        .map(g => ({ ...g, info: g.models.map(n => info[`${g.make}|${n}`]) }))
+        .sort((a, b) => a.make.localeCompare(b.make) || a.models[0].localeCompare(b.models[0]));
+}
+
+function openDuplicateModelsPanel() {
+    renderDuplicateModelsPanel();
+    document.getElementById('duplicateModelsPanel').classList.add('on');
+}
+
+function closeDuplicateModelsPanel() {
+    document.getElementById('duplicateModelsPanel').classList.remove('on');
+    renderVehicleMakeList();
+}
+
+function renderDuplicateModelsPanel() {
+    duplicateModelGroups = getDuplicateModelGroups();
+    const container = document.getElementById('duplicateModelsList');
+    if (duplicateModelGroups.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:40px;">✅ No duplicate model names found</div>';
+        return;
+    }
+    let html = `<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5;">
+        ${duplicateModelGroups.length} group${duplicateModelGroups.length !== 1 ? 's' : ''} of model names that look like the same vehicle.
+        Pick the name to keep and untick any that are really different vehicles, then Merge. Keys, year ranges, notes and Lishi data move to the kept name.</div>`;
+    html += duplicateModelGroups.map((g, gi) => {
+        // Default to the name with the most key listings
+        const best = g.info.reduce((b, m, i) => (m.listings + m.custom > g.info[b].listings + g.info[b].custom ? i : b), 0);
+        const rows = g.info.map((m, mi) => {
+            const years = m.end ? (m.start === m.end ? `${m.start}` : `${m.start} - ${m.end}`) : '';
+            const pns = Array.from(m.pns);
+            const pnText = pns.slice(0, 6).join(', ') + (pns.length > 6 ? ` +${pns.length - 6}` : '');
+            return `
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
+                    <input type="checkbox" id="dupInc_${gi}_${mi}" checked style="margin-top:3px;width:18px;height:18px;flex-shrink:0;" title="Include in merge">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:var(--text);word-break:break-word;">${escapeJobText(m.model)}</div>
+                        <div style="font-size:11px;color:var(--dim);">${years}${years ? ' · ' : ''}${m.listings} key listing${m.listings !== 1 ? 's' : ''}${m.custom ? ` · ${m.custom} custom range${m.custom !== 1 ? 's' : ''}` : ''}${pnText ? ` · ${escapeJobText(pnText)}` : ''}</div>
+                    </div>
+                    <label style="font-size:11px;color:var(--accent);display:flex;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;">
+                        <input type="radio" name="dupKeep_${gi}" value="${mi}" ${mi === best ? 'checked' : ''}> Keep
+                    </label>
+                </div>`;
+        }).join('');
+        return `
+            <div class="vehicle-card" style="cursor:default;">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${escapeJobText(g.make)}</div>
+                </div>
+                <div style="font-size:11px;color:var(--warning);margin:2px 0 6px;">${g.reasons.map(escapeJobText).join(' · ')}</div>
+                ${rows}
+                <input type="text" id="dupNewName_${gi}" placeholder="Or type a new name to use instead"
+                    style="width:100%;margin-top:8px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button onclick="skipDuplicateModelGroup(${gi})" style="flex:1;padding:8px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--dim);cursor:pointer;">Not duplicates</button>
+                    <button onclick="mergeDuplicateModelGroup(${gi})" style="flex:1;padding:8px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-weight:700;cursor:pointer;">Merge</button>
+                </div>
+            </div>`;
+    }).join('');
+    container.innerHTML = html;
+}
+
+function skipDuplicateModelGroup(gi) {
+    const g = duplicateModelGroups[gi];
+    if (!g) return;
+    skippedDuplicateGroups.add(`${g.make}|${g.models.join('|')}`);
+    renderDuplicateModelsPanel();
+}
+
+function mergeDuplicateModelGroup(gi) {
+    const g = duplicateModelGroups[gi];
+    if (!g) return;
+    const included = g.models.filter((n, mi) => document.getElementById(`dupInc_${gi}_${mi}`).checked);
+    const keepRadio = document.querySelector(`input[name="dupKeep_${gi}"]:checked`);
+    const typed = document.getElementById(`dupNewName_${gi}`).value.trim();
+    const toName = typed || (keepRadio ? g.models[parseInt(keepRadio.value)] : '');
+    if (!toName) { toast('Pick a name to keep'); return; }
+    const fromNames = included.filter(n => n !== toName);
+    if (fromNames.length === 0 || (!typed && included.length < 2)) { toast('Tick at least two names to merge'); return; }
+    if (!confirm(`Merge into "${g.make} ${toName}"?\n\n${fromNames.map(n => '• ' + n).join('\n')}\n\nThis renames every key listing, custom year range, note and Lishi entry for these names.`)) return;
+    const count = mergeVehicleModels(g.make, fromNames, toName);
+    renderDuplicateModelsPanel();
+    toast(`Merged ${fromNames.length} name${fromNames.length !== 1 ? 's' : ''} into ${toName} (${count} key listing${count !== 1 ? 's' : ''})`);
 }
 
 // ==================== FCCID HELPERS ====================
