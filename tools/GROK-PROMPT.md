@@ -111,8 +111,19 @@ Each object in `keys`:
 ```
 {
   "pn":            "string  REQUIRED. The distributor's own part number / SKU.",
-  "vendorSku":     "string  The SKU as shown, if it differs from pn.",
-  "price":         "number  Listed price, digits only. No $ sign, no commas.",
+  "vendorSku":     "string  The SKU of the PRIMARY variant (variants[0]).",
+  "price":         "number  Price of the PRIMARY variant. Digits only, no $ or commas.",
+  "variants":      "array   REQUIRED. Every purchasable option on the page - see rule 5b:
+                      [{ vendorSku, price, condition, label }]
+                      condition is one of: new | reclaimed | refurbished |
+                      aftermarket | shell-only | unknown
+                      label is the shop's own wording, copied verbatim
+                      (e.g. 'OEM Board OEM Shell', 'OEM Brand New').
+                      vendorSku is REQUIRED on every variant and is usually
+                      DIFFERENT per variant - do not repeat the product's SKU
+                      across them, and do not leave it out because you already
+                      wrote it into sourceText. It must be in the field.
+                      List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
   "fidBand":       "number  0-7 key-type digit. See the FID section.",
@@ -147,12 +158,27 @@ Each object in `keys`:
    the region, do not infer keyway from the make. Omission is correct behavior.
 2. **`sourceText` is mandatory** on every record — paste the actual title and
    spec text you read. It is how I verify you without revisiting the site.
-   **Read only what a customer sees on that product's own page**: the title,
-   the specs table, the description body, the fitment list. Do NOT take values
-   from raw HTML, `<meta>` tags, JSON-LD, schema markup, embedded scripts,
-   tag/collection strings, breadcrumbs, or a "related products" / "you may
-   also like" block. Those carry other products' numbers, and a value lifted
-   from them looks identical to a real one in your output.
+   **Read everything a customer sees on that product's own page**, and capture
+   all of it: the title, the specs table, **and** the free-text description
+   paragraph, and the fitment list. Many listings carry the same facts twice —
+   once in a `Label / Value` spec table and once in prose — and the prose often
+   holds details the table omits, such as an insert or emergency-key part
+   number (`Insert: IN-042 (Included)`). Capturing only one of the two loses
+   real data, so include both blocks in `sourceText`.
+
+   **Specifically hunt for the insert / emergency-key part number.** It is
+   written as `Insert: IN-042 (Included)` or similar, and it sits in the prose
+   paragraph rather than the spec table - the table only says a generic
+   `Emergency Key / INSERT 2005-2024 Nissan ... Blade DA34`, which is not a
+   part number. If the page shows an `IN-` code anywhere in its visible copy,
+   it goes in `emergencyPN` and the paragraph containing it goes in
+   `sourceText`. Two consecutive runs lost this field entirely by reading only
+   the spec table.
+
+   Do NOT take values from raw HTML, `<meta>` tags, JSON-LD, schema markup,
+   embedded scripts, tag/collection strings, breadcrumbs, or a "related
+   products" / "you may also like" block. Those carry other products' numbers,
+   and a value lifted from them looks identical to a real one in your output.
    If a number appears ONLY in page markup and not in the visible copy, it does
    not exist as far as you are concerned.
 3. **`confidence`**: `high` = every populated field is printed verbatim on the
@@ -163,6 +189,55 @@ Each object in `keys`:
    listing shows a range or "call for price", omit `price`.
 5. **One record per part number.** If a page sells the same key under several
    part numbers, emit one record each. Do not merge them.
+5b. **Capture EVERY variant — this is the rule you are most likely to get
+   wrong.** One product page usually sells the same key in several conditions,
+   each with its own SKU and its own price. A real example:
+
+   ```
+   OEM Board OEM Shell   sku=YCKG#0531   $45     <- reclaimed board in a reclaimed shell
+   OEM Brand New         sku=YCKG#0531   $85     <- brand new
+   ```
+
+   These are the same key by FCC ID, but they are different things to buy at
+   very different prices. Emit **all of them** in the `variants` array, each
+   with the price that actually sits next to that label on the page.
+
+   Two specific failures to avoid, both of which have happened:
+   - Taking one variant's label and another variant's price. If you write
+     `OEM Board OEM Shell`, the price must be the one shown for
+     `OEM Board OEM Shell`, not the one below it.
+   - Emitting only the variant that happens to be selected by default and
+     dropping the rest. Every purchasable option gets an entry.
+
+   **Where to find them:** the variants live in a picker on the product page —
+   on these shops a dropdown labelled **Style** (it may also be called Option,
+   Condition or Type). Open it and read **every option in the list**. Each
+   option carries its own SKU and its own price, which usually update on the
+   page as you select it. The option that happens to be selected when the page
+   loads is just one of them, not the answer.
+
+   Each variant has **its own SKU**, and they are not the product's SKU
+   repeated. Real example from one page's Style dropdown:
+
+   ```
+   Style: OEM Board OEM Shell   sku=YCKG#0575   $40.00   reclaimed
+   Style: OEM Brand New         sku=YCKG#3262   $94.27   new
+   Style: OEM Recased           sku=YCKG#2882   $35.00   refurbished
+   Style: New Aftermarket       sku=YCKG#0860   $19.00   aftermarket
+   ```
+
+   Four SKUs, four prices, one key by FCC ID. Note the range: the aftermarket
+   option is a fifth of the brand-new one, so picking the wrong row is not a
+   rounding error. Copy each option's label **exactly as the dropdown spells
+   it**, including any qualifier such as `(Old Logo)`, `(New Logo)` or
+   `(No Logo)` — those distinguish real, separately-stocked variants.
+
+   Put each SKU in that variant's `vendorSku` **field**. Writing it only into
+   `sourceText` does not count - the field is what I read.
+
+   If you genuinely cannot tell which price belongs to which label, emit the
+   variants you are sure of, put `"variants"` in `uncertain`, and set
+   `confidence` to `low`. Never guess the pairing.
 6. **Do not convert years.** "18-24" becomes `startYear: 2018, endYear: 2024`.
    A single year becomes `startYear` and `endYear` both set to it. If the
    listing gives no years, omit `vehicles` rather than guessing.
@@ -254,10 +329,17 @@ Types seen: 2032, 2025, 2016, 1632, 1620, 1616, 2450.
 
 ## Pricing note
 
-Record only the **listed/retail** price in `price`. Do not try to work out
-dealer or net pricing. Do not use a field named `priceA` or `priceB` — those
-mean something specific to one distributor (new vs. refurbished) and do not
-apply here.
+Record only the **listed/retail** price. Do not try to work out dealer or net
+pricing.
+
+Do not use field names `priceA` or `priceB`. My app uses those for one
+distributor's new-vs-refurbished split, and they are not a general concept —
+`variants[]` with a `condition` is. The parallel is worth knowing though,
+because it is the same idea: that distributor sells the same key as separate
+part numbers `XXXXA` (new) and `XXXXB` (refurbished), exactly as this shop
+sells it as `OEM Brand New` and `OEM Board OEM Shell`. Different condition,
+different SKU, different price, same key by FCC ID. That is what `variants`
+is for.
 
 ## The skip list
 
