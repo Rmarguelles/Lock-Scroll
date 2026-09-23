@@ -209,15 +209,28 @@ Each object in `keys`:
    - Emitting only the variant that happens to be selected by default and
      dropping the rest. Every purchasable option gets an entry.
 
-   Each variant normally has **its own SKU**, and they are not the product's
-   SKU repeated. Real example from one page:
+   **Where to find them:** the variants live in a picker on the product page —
+   on these shops a dropdown labelled **Style** (it may also be called Option,
+   Condition or Type). Open it and read **every option in the list**. Each
+   option carries its own SKU and its own price, which usually update on the
+   page as you select it. The option that happens to be selected when the page
+   loads is just one of them, not the answer.
+
+   Each variant has **its own SKU**, and they are not the product's SKU
+   repeated. Real example from one page's Style dropdown:
 
    ```
-   OEM Brand New                 sku=YCKG#3491   $45   new
-   OEM Board OEM Shell (Old Logo) sku=YCKG#1481  $49   reclaimed
-   OEM Board OEM Shell (New Logo) sku=YCKG#1957  $45   reclaimed
-   OEM Recased (No Logo)          sku=YCKG#2715  $35   refurbished
+   Style: OEM Board OEM Shell   sku=YCKG#0575   $40.00   reclaimed
+   Style: OEM Brand New         sku=YCKG#3262   $94.27   new
+   Style: OEM Recased           sku=YCKG#2882   $35.00   refurbished
+   Style: New Aftermarket       sku=YCKG#0860   $19.00   aftermarket
    ```
+
+   Four SKUs, four prices, one key by FCC ID. Note the range: the aftermarket
+   option is a fifth of the brand-new one, so picking the wrong row is not a
+   rounding error. Copy each option's label **exactly as the dropdown spells
+   it**, including any qualifier such as `(Old Logo)`, `(New Logo)` or
+   `(No Logo)` — those distinguish real, separately-stocked variants.
 
    Put each SKU in that variant's `vendorSku` **field**. Writing it only into
    `sourceText` does not count - the field is what I read.
