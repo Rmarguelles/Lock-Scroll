@@ -316,6 +316,45 @@ Consequences for the chip funnel:
   and holds `typicalChip`, while `fccRelationships` (keyed by FCC ID) holds
   only frequency and button count — deliberately no chip.
 
+## 5e. Distributor import (v246)
+
+`distImportQueue` — an array of candidates staged from an extractor batch and
+awaiting review. Nothing an extractor sends reaches the live stores until a row
+is approved.
+
+| stage | what happens |
+|---|---|
+| paste | `parseImportBatch()` validates the envelope; a malformed file reports rather than throwing |
+| normalize | `normalizeImportedKey()` converts every value — it is pure and writes nothing |
+| stage | candidates land in `distImportQueue` with `status: 'pending'` |
+| review | each row shows the proposal, the extractor's own `confidence`/`uncertain`, and anything the app could not read |
+| approve | `applyImportCandidate()` writes to `customKeys` or `keyInfoOverrides`, plus `vendorPrices` |
+
+What the normalizers fix, so the extractor never has to:
+
+| field | conversion |
+|---|---|
+| `frequency` | `bucketizeFrequency()` — `315MHz` → `305-320 MHz` |
+| `buttons` | `resolveButtonsEnum()` matches on the **set** of function codes plus the count, so `4 Button: L, U, T, P` and `5 Button: R, L, U, H, P` both land on the right row (`R`→`RS`). Free text (`lock, unlock, panic, hatch`) works too. No match → kept as `buttonCount` and flagged |
+| price | `normalizePriceInput()` |
+| `battery` | `2032`, `2032 x1`, `CR2032` → `2032 qty 1` |
+| `emergencyPN` | only `IN-<digits>`; a generic blade description is rejected and flagged |
+| `chip` | **deliberately not mapped** — kept as `chipRaw` for review, since one FCC ID can carry several chips (§5d) |
+
+Identity on approve, per the model in §7:
+
+- **FCC ID** matches the candidate against existing keys (via `normalizeFccId`).
+- **The OEM part number becomes the `pn`** for a new key — never the store's SKU,
+  which is per-vendor. Falls back to the FCC ID when no OEM number is given.
+- **The store SKU** rides in `vendorPrices[pn][vendor].variants[]` alongside its
+  price, condition and label.
+- An existing key is only **filled where empty** — an import never overwrites a
+  hand-entered value, and base keys are written through `keyInfoOverrides`.
+
+`vendorPrices[pn][vendor]` now carries a `variants` array in addition to
+`priceA`/`priceB`; the two slots are kept populated (cheapest `new` → `priceA`,
+cheapest other → `priceB`) so existing price rendering keeps working.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in
