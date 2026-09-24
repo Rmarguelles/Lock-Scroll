@@ -119,10 +119,15 @@ Each object in `keys`:
                       aftermarket | shell-only | unknown
                       label is the shop's own wording, copied verbatim
                       (e.g. 'OEM Board OEM Shell', 'OEM Brand New').
-                      vendorSku is REQUIRED on every variant and is usually
-                      DIFFERENT per variant - do not repeat the product's SKU
-                      across them, and do not leave it out because you already
-                      wrote it into sourceText. It must be in the field.
+                      vendorSku is REQUIRED on every variant and is
+                      DIFFERENT per variant. Never emit two variants with the
+                      same SKU - if the picker shows the same SKU and price
+                      under two labels it is falling back because one is
+                      unavailable; keep the label whose option is actually
+                      selectable and drop the other.
+                      available: false when the option reads 'Sold out',
+                      true otherwise. REQUIRED - you already note this in
+                      sourceText, so put it in the field.
                       List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
@@ -167,13 +172,16 @@ Each object in `keys`:
    real data, so include both blocks in `sourceText`.
 
    **Specifically hunt for the insert / emergency-key part number.** It is
-   written as `Insert: IN-042 (Included)` or similar, and it sits in the prose
-   paragraph rather than the spec table - the table only says a generic
-   `Emergency Key / INSERT 2005-2024 Nissan ... Blade DA34`, which is not a
-   part number. If the page shows an `IN-` code anywhere in its visible copy,
-   it goes in `emergencyPN` and the paragraph containing it goes in
-   `sourceText`. Two consecutive runs lost this field entirely by reading only
-   the spec table.
+   written as `Insert: IN-042 (Included)` or similar and sits in the prose
+   paragraph, not the spec table.
+
+   `emergencyPN` accepts **only** a code matching `IN-` followed by digits. If
+   you cannot find one, **omit the field**. Do not put the spec table's
+   `Emergency Key / INSERT 2005-2024 Nissan | Infiniti Smart Emergency Key
+   Blade DA34` in it — that is a description of which blade fits, not a part
+   number, and filling the field with it is worse than leaving it empty
+   because it looks like data. One run lost the field entirely; the next
+   filled it with that sentence.
 
    Do NOT take values from raw HTML, `<meta>` tags, JSON-LD, schema markup,
    embedded scripts, tag/collection strings, breadcrumbs, or a "related
@@ -251,7 +259,8 @@ Each object in `keys`:
 8. If you cannot read a page, add it to a top-level `"failed"` array with the
    URL and the reason. Do not silently skip it. **Always include the `failed`
    key, even when it is an empty array** — its absence and "nothing failed"
-   must not look the same.
+   must not look the same. `failed` belongs at the **top level only**, once per
+   response. Do not repeat it inside every key record.
 9. **Work the gaps first.** I am pasting a list of FCC IDs my app already has.
    Prioritize keys whose FCC ID is NOT on that list, and set `isNew` on every
    record accordingly. Still return keys I already have if their listing adds
@@ -285,7 +294,14 @@ tell you which three buttons, but you have two better sources:
 Say which you used: put `"buttonsFromImage": true` on the record when the photo
 was your source. If neither settles it, omit `buttons`, set `buttonCount` to
 the number, and add `"buttons"` to `uncertain`. Never infer a layout from the
-model year or from another key you have seen. The rows:
+model year or from another key you have seen.
+
+**Copy a row below character for character, including the parenthetical.**
+`4 Button: L, U, P, H (Lock, Unlock, Panic, Hatch)` is the value;
+`4 Button: L, U, P, H` is not — it will not match. Do not reorder the letters
+to match the physical fob either: `5 Button: R, L, U, H, P` is not a row and
+will be rejected. If the buttons you can see do not match any row exactly,
+that is what `buttonCount` plus `uncertain` is for. The rows:
 ```
 2 Button: L, U (Lock, Unlock)
 3 Button: L, U, P (Lock, Unlock, Panic)

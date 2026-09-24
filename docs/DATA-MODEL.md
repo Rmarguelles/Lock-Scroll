@@ -292,6 +292,21 @@ So `vendorPrices[pn][vendor]` needs a variants array rather than the
 already stored, mapping `new -> priceA` and the cheapest reclaimed or
 refurbished `-> priceB` for backward compatibility.
 
+## 5d. Chip names are inconsistent at the FCC level
+
+Extraction across 40 Your Car Key Guys products shows one FCC ID carrying
+different transponder names on different listings from the same shop:
+
+| FCC ID | chip names seen |
+|---|---|
+| `KR5S180144014` | `ID47` (3 products), `4A` (4), `ID46` (1) |
+| `KR55WK49622` | `ID46` (2), `ID47` (1) |
+
+So the chip funnel cannot be a plain string mapping. Deciding `ID47 -> PH 47`
+would still leave the same FCC ID holding three different answers. The funnel
+has to resolve per FCC ID and flag a disagreement for review, not per raw
+string.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in
