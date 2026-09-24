@@ -126,8 +126,10 @@ Each object in `keys`:
                       unavailable; keep the label whose option is actually
                       selectable and drop the other.
                       available: false when the option reads 'Sold out',
-                      true otherwise. REQUIRED - you already note this in
-                      sourceText, so put it in the field.
+                      true otherwise. Best-effort - include it when the page
+                      makes it obvious, omit it otherwise. Stock moves too
+                      fast for a scrape to be authoritative, so never hold up
+                      or downgrade a record over it.
                       List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
