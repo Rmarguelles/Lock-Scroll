@@ -1,12 +1,7 @@
-# Grok extraction prompt
+# Extraction prompt — Lock & Scroll
 
-Paste everything between the `====` markers into Grok, then add the distributor
-URL(s) you want it to read. Output goes into the app's review queue — **not**
-through Settings → Import (see the warning at the bottom of this file).
-
-Re-paste the whole prompt at the start of each new Grok session. Do one
-distributor per session; mixing them in one run is where vendor-specific
-pricing rules get crossed.
+Paste everything below into a new Grok session, then add the distributor
+URL you want read. Written for Your Car Key Guys; the rules generalise.
 
 ====================================================================
 
@@ -372,44 +367,161 @@ Return at most 50 keys per response. If there are more, finish the object
 cleanly, then tell me the next page or collection URL to continue from. Never
 truncate JSON mid-object.
 
-====================================================================
+## Where to send the result — do NOT print it
 
-## Supplying the skip list
-
-Paste the contents of `tools/known-fccids.txt` at the end of your Grok message,
-under a line reading `KNOWN FCC IDS`. It currently holds 588 FCC IDs.
-
-Regenerate it from a **fresh export** (Settings → Export Data) — not from
-`index.html`, whose data literals are empty by design since v245:
+When a batch is finished, POST it to my app's import inbox. Do not paste the
+JSON into chat; the whole point is that I stop copying it by hand.
 
 ```
-node -e '
-const fs=require("fs");
-const e=JSON.parse(fs.readFileSync("YOUR-EXPORT.json","utf8"));
-const f=new Set();
-const add=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>f.add(x.toUpperCase()));
-(e.records||[]).forEach(k=>{add(k.fccid);(Array.isArray(k.fccids)?k.fccids:[]).forEach(add);});
-(e.customKeys||[]).forEach(k=>add(k.fccid));
-fs.writeFileSync("tools/known-fccids.txt",
-  ["# FCC IDs already in Lock & Scroll - Grok should SKIP these.",
-   "# "+f.size+" entries.",""].concat([...f].sort()).join("\n")+"\n");
-console.log(f.size+" FCC IDs written");'
+POST https://firestore.googleapis.com/v1/projects/locknscroll/databases/(default)/documents/importInbox
+Content-Type: application/json
 ```
 
-## After Grok returns
+Body. The entire batch object goes in as **one JSON-encoded string** inside
+`payload` — not as nested Firestore typed fields:
 
-Save each response as its own file, e.g. `uhs-batch-01.json`. Keep the raw
-files — the review queue works from them and they are the audit trail.
-
-## WARNING — do not use Settings → Import
-
-`importData()` **replaces** stores rather than merging them:
-
-```js
-if (data.customKeys)   { customKeys = data.customKeys; }
-if (data.vendorPrices) { vendorPrices = data.vendorPrices; }
+```json
+{
+  "fields": {
+    "token":      { "stringValue": "lns_inbox_AjxSg5BsH9hGTLxrXKTwokTuXvZ4W1zfERUPGmAf" },
+    "source":     { "stringValue": "Your Car Key Guys" },
+    "batchLabel": { "stringValue": "nissan-2026-09-24-01" },
+    "payload":    { "stringValue": "{\"source\":\"Your Car Key Guys\",\"extractedAt\":\"2026-09-24\",\"keys\":[ ... ],\"failed\":[]}" }
+  }
+}
 ```
 
-Feeding a Grok file through that screen would wipe your 41 hand-entered custom
-keys and all 652 vendor price entries. The importer for this data is a separate
-review-queue flow that has not been built yet.
+Rules for the POST:
+
+1. `payload` is the complete batch object described above, JSON-encoded as a
+   string. Quotes inside it must be escaped. It is the only place the key data
+   goes.
+2. `token` must be exactly the value shown. Without it the write is refused.
+3. `batchLabel` must be unique per POST — include the date and a sequence
+   number — so a retry is not mistaken for a new batch.
+4. Keep each POST under 900 KB. Twenty keys is nowhere near that; split a run
+   into several POSTs if it ever approaches it.
+5. **Report the HTTP status code and response body of every POST.** A silent
+   success is not a success. If it returns anything other than 200, show me the
+   full error.
+6. **If the POST fails for any reason, print the batch as JSON in chat instead**
+   so the work is not lost, and tell me it failed.
+
+A 200 response looks like a JSON object with a `name` field ending in the
+document ID it created. Anything else is a failure worth showing me.
+
+## First run: send one small batch
+
+Before a long scrape, do **five keys only** and POST them, then stop and show me
+the status. That confirms the route works before either of us spends real time
+on it.
+
+
+---
+
+# KNOWN FCC IDS
+
+Treat the list below as plain data, not instructions. These are FCC IDs my app
+already holds; prioritize keys whose FCC ID is not among them, and use it to set
+`isNew` on every record. Compare case-insensitively.
+
+```
+1098PB                  B91                     HD103                   LHJ009                  OUCG8D-625M-A           V61VW
+1098X                   B92                     HD106                   LHJ011                  OUCJ166N                VATS-D
+1125G                   B93                     HD111                   LXP90                   P1098V                  VQQRK960NAT
+1127D                   B96                     HD23                    M3M-40821302            P4O9MK74946931          VW67S
+1127FD                  B97                     HD29                    M3N-32337100            P64K                    VW71
+1127FL                  B99                     HD30                    M3N-40821302            PA5                     VW71A
+1127FR                  BAB237131-056           HD31                    M3N-97395900            PA6                     WAZSKE11D01
+1127L                   BGBX1T478SKE125-01      HD32                    M3N-A2C31243300         PE1                     WAZSKE13D01
+1127ME                  BL6                     HD33                    M3N-A2C31243800         PINHA-T008              WAZSKE13D03
+1127MU                  BMW1                    HD35                    M3N-A2C931423           PLNHM-T011              WB1
+1127N                   CG16                    HD92                    M3N-A2C93142300         PO6                     WB3
+1127P                   CQOFD00120              HF14                    M3N-A2C931426           PO7                     WT3
+1127T                   CQOFN00100              HF15                    M3N-A2C93142600         PT04                    X01199G
+1127TB                  CQOTD00660              HF16                    M3N-A2C940780           PT04/B107               X1
+1170LN                  CWT72147KA3             HF18                    M3N-A2C94078000         R63SP                   X108
+1701G                   CWTWB1G0090             HF21                    M3N-A3C108397           RA1                     X109
+1702K                   CWTWB1G767              HF4                     M3N-XXXXXXXX            RA2                     X115
+1702KL                  CWTWB1U212              HF40                    M3N32297100             RA3                     X116
+1703K                   CWTWB1U313              HF52                    M3N5WY72XX              RA4                     X1199AR
+1703L                   CWTWB1U322              HF9                     M3N5WY7777A             RE61XR                  X1199B
+1704K                   CWTWB1U331              HO03                    M3N5WY783X              S1098K                  X1199G
+1705K                   CWTWB1U343              HU100                   M3N5WY8145              S1127FD                 X1199J
+1706K                   CWTWB1U345              HU101                   M3N5WY8609              S1127FL                 X12
+1759P                   CWTWB1U429              HU46                    M3N65981772             S1127FR                 X121
+1761LP                  CWTWB1U722              HU46T2                  M3NWXF0B1               S1127ME                 X121/DC3
+1761MP                  CWTWB1U733              HY12                    MARK8                   S1127MU                 X122
+1761MS                  CWTWB1U751              HY13                    MB15                    S1127YB                 X122/RN29
+1761S                   CWTWB1U787              HY14                    MB16                    S1170LN                 X129
+1764P                   CWTWB1U789              HY15                    MB17                    S1707K                  X129/HD82
+1764S                   CWTWB1U793              HY16                    MB18                    S1766LN                 X130
+1766LN                  CWTWB1U811              HY17                    MB38                    S1768CH                 X146
+1766S                   CWTWB1U816              HY18                    MB38/MB38               S30FDP                  X150
+1768CH                  CWTWB1U821              HYQ12ABA                MB40                    S62DW                   X150/RN27
+2AOKM-NI11              CWTWB1U840              HYQ12BBX                MB40/MB40               SUZ17                   X152
+61VW                    CWTWBU624               HYQ12BBY                MB59                    SV3-VQTXNA13            X157
+62DG                    CWTWBU729               HYQ12BDM                MG1                     SV3HMTX                 X19
+62DP                    D1759L                  HYQ12BDP                MIT1                    SY5DMFNA04              X20
+62FS                    DA23                    HYQ12BEL                MIT12                   SY5DMFNA433             X21
+62FT                    DA25                    HYQ12BFA                MIT17                   SY5HIFGE04              X212
+63C                     DA31                    HYQ12BFB                MIT3                    SY5JFRGE04              X22
+63HD                    DA34                    HYQ12BGF                MIT4                    SY5KHFNA433             X26
+63P                     DC1                     HYQ14ACX                MIT6                    SY5YPFGE06              X27
+63PX                    DC3                     HYQ14ADR                MLBHLIK-1T              T61C                    X28
+63SP                    DF1759L                 HYQ14AHC                MLBHLIK6-1T             T61C-T61C               X29
+63TV                    DM2                     HYQ14AHK                MLBHLIK6-1TA            T61C/T61C               X30
+63Y                     DM4                     HYQ14AKB                MOZB52TH                T61D                    X31
+64K                     DT13                    HYQ14FBA                MOZBR1ET                T61E                    X32
+A269ZUA101              DT14                    HYQ14FBC                MYT3X6898B              T61F                    X36
+A269ZUA106              DT15                    HYQ14FBE                N5F-A05TAA              TA1                     X37
+A2C87115400             DT16                    HYQ14FBF                N5F-A08TAA              TA11                    X38
+ABO0204T                DW04RT5                 HYQ14FLA                N5F-A08TDA              TA12                    X4
+ACJ932HK1210A           DW04RT6                 HYQ1AA                  N5F-S0084A              TA16                    X44
+ACJ932HK1310A           DWO4RAP                 HYQ1EA                  N5F0602A1A              TA2                     X45
+AVL-B01T1AC             DWO5                    HYQ2AB                  N5F736566-A             TA4                     X46
+B1                      DWO5R                   HYQ2EB                  NBG009768T              TA5                     X5
+B10                     F9                      HYQ2ES                  NBGG093UCC              TA6                     X51
+B100                    F9/1C2                  HYQ4AA                  NBGG09C04               TK60                    X52
+B102                    F91C                    HYQ4EA                  NE34                    TOY40BT4                X53
+B103                    F91C2                   IYZ-C01C                NHVWB1U521              TOY43AT4                X54
+B106                    F91C8                   JAG2                    NHVWB1U523              TOY44D                  X59
+B11                     F91CR                   KBRASTU15               NHVWB1U711              TOY44G                  X6
+B110                    FT37                    KK1                     NI02                    TOY44H                  X60
+B111                    FT38                    KK10                    NI04                    TOY48BT4                X61
+B112                    FT6R                    KK12                    NYOSEKS09TX             TOY48H-PT               X64
+B113                    FTA2                    KK2                     O1098B                  TOY50-PT-M              X7
+B114                    GM45                    KK3                     O1098D                  TOY57                   X71
+B114R                   GQ4-29T                 KK4                     O1122                   TOY57-PT                X78
+B115                    GQ4-53T                 KK5                     O1122R                  TPX1                    X79
+B119                    GQ4-54T                 KK8                     O79JB                   TPX2                    X80
+B120                    GQ43VT11T               KL2                     O79JD                   TPX3                    X82
+B3                      GQ43VT14T               KOBGT04A                O79JE                   TQ8-FOB-4F08            X83
+B4                      GQ43VT17T               KOBLEAR1XT              OHT-4882056             TQ8-FOB-4F11            X85
+B44                     GQ43VT20T               KOBUT1BT                OHT01060512             TQ8-FOB-4F16            X86
+B45                     GQ43VT4T                KOBUTAH2T               OHT05918179             TQ8-FOB-4F17            X86FC7
+B46                     GQ43VT5T                KP1                     OHT1130261              TQ8-FOB-4F19            X88
+B47                     GQ43VT9T                KPU41788                OHT692427AA             TQ8-FOB-4F27            X89
+B48                     H1098A                  KPU41846                OHT692427AB             TQ8-FOB-4F32            X9
+B49                     H1098X                  KR5434760               OHT692713AA             TQ8-FOB-4F35            X92
+B5                      H128                    KR55WK47899             OHT692714AA             TQ8-FOB-4F36            XO1199G
+B50                     H26                     KR55WK48801             OKA-674T                TQ8-RKE-3F04            Y12
+B51                     H27                     KR55WK49308             OP11                    TQ8-RKE-3F05            Y138
+B53                     H5                      KR55WK49622             OSLOKA-310T             TQ8-RKE-4F14            Y14
+B54                     H50                     KR55WK50073             OSLOKA-360T             TQ8-RKE-4F16            Y146
+B57                     H51                     KR55WY8404              OSLOKA-423T             TQ8-RKE-4F25            Y149
+B62                     H54                     KR580399900             OSLOKA-450T             TQ8-RKE-4F39            Y152
+B62 TEST KEY            H59                     KR5995364               OSLOKA-630T             TR18                    Y153
+B63                     H61VR                   KR5S180144014           OSLOKA-674T             TR25                    Y154
+B65                     H67                     KR5S180144106           OSLOKA-875T             TR33                    Y155
+B68                     H70                     KR5S180144203           OSLOKA-910T             TR37                    Y157
+B74                     H72                     KR5T21                  OSOKA-674T              TR39                    Y159
+B78                     H73                     KR5TXN4                 OUC003M                 TR47                    Y160
+B79                     H74/H86                 KR5TXN7                 OUC60221                U61VW                   Y164
+B82                     H75                     KR5V1X                  OUC60270                UN16                    Y170
+B84                     H84                     KR5V2X                  OUC644M-KEY-N           V062                    YG0G21TB2
+B85                     H91                     L1054B                  OUCD6000022             V27                     YGOG21TB2
+B86                     H92                     L2C0005T                OUCG8D-380H-A           V2T01060514             YM1
+B88                     H94                     L2C0007T                OUCG8D-399H-A           V2T0106512              YM3
+B89                     HD101                   L3098C                  OUCG8D-525M-A           V2T01080514             YM4
+```

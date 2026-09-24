@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v246</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v250</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5204,6 +5204,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openDistImportPanel()">
+                    <span class="settings-nav-icon">📥</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Import from Distributor</span>
+                        <span class="settings-nav-desc">Paste extracted key data for review</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openVendorsSettingsPanel()">
                     <span class="settings-nav-icon">💰</span>
                     <div class="settings-nav-info">
@@ -5301,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v246</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v250</p>
         </div>
 
         <div class="settings-section">
@@ -5313,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v246<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v250<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5797,6 +5805,37 @@
 </div>
 
 <!-- Edit Key Info Modal -->
+<!-- Distributor Import Panel -->
+<div class="panel" id="distImportPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeDistImportPanel()">&larr;</button>
+        <h2>&#128229; Import from Distributor</h2>
+    </div>
+    <div style="padding:16px;">
+        <p style="color:var(--dim);font-size:12px;line-height:1.6;margin:0 0 10px;">
+            Paste the JSON an extractor produced. Values are normalized on the way in
+            &mdash; frequencies bucketed, buttons matched to the picklist, prices stripped
+            of currency. <b>Nothing is saved until you approve it below.</b>
+        </p>
+        <textarea id="distImportText" class="add-inv-input" placeholder='{"source": "...", "keys": [ ... ]}'
+            style="min-height:130px;resize:vertical;font-family:monospace;font-size:11px;"></textarea>
+        <button id="distInboxBtn" onclick="pullDistImportInbox()" style="width:100%;margin-top:8px;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">&#9729;&#65039; Pull from inbox</button>
+        <input type="file" id="distImportFile" accept=".json,application/json" multiple onchange="loadDistImportFiles(event)" style="display:none;">
+        <button onclick="document.getElementById('distImportFile').click()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);color:var(--accent);border:1px dashed var(--accent);border-radius:6px;font-size:13px;cursor:pointer;">&#128193; Choose JSON file(s) instead of pasting</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button onclick="previewDistImport()" style="flex:1;padding:10px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:13px;cursor:pointer;">Preview</button>
+            <button onclick="stageDistImport()" style="flex:1;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Stage for review</button>
+        </div>
+        <div id="distImportPreview" style="margin-top:10px;"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border);">
+            <h3 style="margin:0;font-size:15px;">Waiting for review (<span id="distQueueCount">0</span>)</h3>
+            <button onclick="clearDistImportQueue()" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:11px;cursor:pointer;">Clear</button>
+        </div>
+        <div id="distImportQueueList"></div>
+    </div>
+</div>
+
 <!-- Mark Discontinued Modal -->
 <div class="modal" id="discontinuedModal">
     <div class="modal-content" style="max-width:460px;">
@@ -8375,6 +8414,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
+                distImportQueue: distImportQueue,
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8414,6 +8454,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
+                distImportQueue: distImportQueue,
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8572,6 +8613,17 @@ async function downloadFromCloud() {
         if (data.discontinuedPns) {
             discontinuedPns = { ...discontinuedPns, ...data.discontinuedPns };
             saveDiscontinuedPns();
+        }
+        if (Array.isArray(data.distImportQueue)) {
+            const byId = {};
+            distImportQueue.forEach(c => { byId[c._id] = c; });
+            data.distImportQueue.forEach(c => {
+                const local = byId[c._id];
+                // A decision beats an undecided copy; otherwise keep local.
+                if (!local) distImportQueue.push(c);
+                else if (local.status === 'pending' && c.status !== 'pending') Object.assign(local, c);
+            });
+            saveDistImportQueue();
         }
         if (data.pnSupersessions) {
             pnSupersessions = { ...pnSupersessions, ...data.pnSupersessions };
@@ -11176,6 +11228,9 @@ async function loadLocalData() {
 
             const savedDiscontinuedPns = await loadFromIndexedDB('discontinuedPns');
             if (savedDiscontinuedPns) discontinuedPns = savedDiscontinuedPns;
+
+            const savedDistImportQueue = await loadFromIndexedDB('distImportQueue');
+            if (Array.isArray(savedDistImportQueue)) distImportQueue = savedDistImportQueue;
             
             const savedPurchaseHistory = await loadFromIndexedDB('purchaseHistory');
             if (savedPurchaseHistory) purchaseHistory = savedPurchaseHistory;
@@ -17045,6 +17100,7 @@ function showTab(tab, event) {
 function goHome() {
     // Close all panels and modals
     document.getElementById('discontinuedModal').classList.remove('on');
+    document.getElementById('distImportPanel').classList.remove('on');
     document.getElementById('settingsPanel').classList.remove('on');
     document.getElementById('lishiLookupPanel').classList.remove('on');
     document.getElementById('lishiDetailPanel').classList.remove('on');
@@ -18818,6 +18874,7 @@ function exportData() {
         vehicleOverrides: vehicleOverrides,
         keyInfoOverrides: keyInfoOverrides,
         discontinuedPns: discontinuedPns,
+        distImportQueue: distImportQueue,
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
         vehicleYearRanges: vehicleYearRanges,
@@ -18899,6 +18956,10 @@ function importData(event) {
             if (data.discontinuedPns) {
                 discontinuedPns = data.discontinuedPns;
                 saveDiscontinuedPns();
+            }
+            if (Array.isArray(data.distImportQueue)) {
+                distImportQueue = data.distImportQueue;
+                saveDistImportQueue();
             }
             if (data.vendorPrices) {
                 vendorPrices = data.vendorPrices;
@@ -19945,6 +20006,590 @@ function ilcoLooksLikeYear(s) {
     if (/(?:^|\D)(?:18|19|20)\d{2}(?:\D|$)/.test(s)) return true;
     if (/\d{2,4}\s*(?:[-–—~]|to)\s*\d{2,4}/i.test(s)) return true;
     return false;
+}
+
+
+// ===================== DISTRIBUTOR IMPORT =====================
+// Records extracted from a distributor's site arrive as JSON. The extractor
+// is reliable at OBSERVING (reading the fob photo, cycling the Style picker,
+// finding the FCC ID) and unreliable at FORMATTING, so every value it sends
+// is normalized here rather than trusted. Nothing is written to the live
+// stores by this code — it stages candidates into distImportQueue for review.
+
+let distImportQueue = [];
+
+function saveDistImportQueue() {
+    saveToIndexedDB('distImportQueue', distImportQueue);
+    triggerAutoSync();
+}
+
+// The canonical buttons list, read from the form's own picklist so it can
+// never drift from what the app accepts.
+let _buttonEnumCache = null;
+function getButtonEnum() {
+    if (_buttonEnumCache) return _buttonEnumCache;
+    _buttonEnumCache = [...document.querySelectorAll('#customKeyButtons option')]
+        .map(o => o.value)
+        .filter(v => /^\d+ Button:/.test(v));
+    return _buttonEnumCache;
+}
+
+// Button function words -> the short codes the enum uses.
+const BUTTON_WORD_CODES = [
+    [/remote\s*start|^rs$|^r$/i, 'RS'],
+    [/dual\s*power\s*sliding|psd2/i, 'PSD2'],
+    [/power\s*sliding|psd/i, 'PSD'],
+    [/rear\s*glass|^rg$/i, 'RG'],
+    [/tailgate|^tg$/i, 'TG'],
+    [/head\s*(&|and)?\s*tail|htl/i, 'HTL'],
+    [/air\s*condition|^ac$/i, 'AC'],
+    [/charge|^ch$/i, 'CH'],
+    [/hatch|^h$/i, 'H'],
+    [/trunk|^t$/i, 'T'],
+    [/panic|^p$/i, 'P'],
+    [/unlock|^u$/i, 'U'],
+    [/gate|^g$/i, 'G'],
+    [/lock|^l$/i, 'L']
+];
+
+function buttonTokensToCodes(text) {
+    return String(text || '')
+        .split(/[,/+]|\band\b/i)
+        .map(t => t.trim())
+        .filter(Boolean)
+        .map(t => {
+            for (const [re, code] of BUTTON_WORD_CODES) if (re.test(t)) return code;
+            return null;
+        })
+        .filter(Boolean);
+}
+
+// Resolve whatever the extractor said about buttons onto an exact enum row.
+// Matches on the SET of function codes plus the count, so a reordered or
+// truncated value ("5 Button: R, L, U, H, P") still lands on the right row.
+// Returns null when nothing matches — the caller then keeps buttonCount and
+// flags it, rather than storing a value the app cannot render.
+function resolveButtonsEnum(raw, buttonCount) {
+    const text = String(raw || '').trim();
+    if (!text) return null;
+    if (getButtonEnum().includes(text)) return text;
+
+    const declared = parseInt((text.match(/^(\d+)\s*Button/i) || [])[1], 10) || buttonCount || 0;
+    const inner = text.replace(/^\d+\s*Button:\s*/i, '');
+    // Prefer the parenthetical (full words) when present, else the codes.
+    const paren = (inner.match(/\(([^)]*)\)/) || [])[1];
+    const codes = buttonTokensToCodes(paren || inner);
+    if (!codes.length) return null;
+    const want = [...new Set(codes)].sort().join('|');
+
+    for (const row of getButtonEnum()) {
+        const n = parseInt(row, 10);
+        if (declared && n !== declared) continue;
+        const rowInner = row.replace(/^\d+\s*Button:\s*/i, '').replace(/\s*\([^)]*\)\s*$/, '');
+        const rowCodes = [...new Set(rowInner.split(',').map(x => x.trim()).filter(Boolean))].sort().join('|');
+        if (rowCodes === want) return row;
+    }
+    return null;
+}
+
+// Emergency/insert key part number. Only an IN-<digits> code counts; the spec
+// table's "INSERT 2005-2024 Nissan ... Blade DA34" describes which blade fits
+// and is not a part number.
+function extractEmergencyPN(...sources) {
+    for (const s of sources) {
+        const m = String(s || '').match(/\bIN-\d+\b/i);
+        if (m) return m[0].toUpperCase();
+    }
+    return null;
+}
+
+// Battery to the app's canonical "<type> qty <n>".
+function normalizeBatteryValue(raw) {
+    const t = String(raw || '').trim();
+    if (!t) return null;
+    const type = (t.match(/\b(\d{4})\b/) || [])[1];
+    if (!type) return null;
+    const qty = parseInt((t.match(/(?:qty|x)\s*(\d+)/i) || [])[1], 10) || 1;
+    return type + ' qty ' + qty;
+}
+
+// Turn one extracted record into the shapes the app stores. Pure: reads the
+// DB to classify the record but writes nothing. Returns the staged candidate.
+function normalizeImportedKey(raw, source) {
+    const issues = [];
+    const note = (field, msg) => issues.push({ field, msg });
+
+    const fccList = String(raw.fccid || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!fccList.length) note('fccid', 'no FCC ID — cannot identify this key');
+
+    // Identity: match on FCC ID first (the spine), then on the vendor's PN.
+    let match = null;
+    for (const f of fccList) {
+        match = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === normalizeFccId(f)));
+        if (match) break;
+    }
+
+    // The distributor's own SKU is not a part number we adopt — the OEM
+    // number is, and it goes where OEM cross-references already live.
+    const oemPns = String(raw.oemPartNumber || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    const buttons = resolveButtonsEnum(raw.buttons, raw.buttonCount);
+    if (!buttons && (raw.buttons || raw.buttonCount)) {
+        note('buttons', 'could not match "' + (raw.buttons || raw.buttonCount + ' buttons') + '" to a picklist row');
+    }
+
+    const frequency = raw.frequency ? bucketizeFrequency(String(raw.frequency)) : null;
+    const battery = normalizeBatteryValue(raw.battery);
+    if (raw.battery && !battery) note('battery', 'unrecognized battery "' + raw.battery + '"');
+
+    const emergencyPN = extractEmergencyPN(raw.emergencyPN, raw.sourceText);
+    if (raw.emergencyPN && !emergencyPN) {
+        note('emergencyPN', 'no IN- code found; extractor sent "' + String(raw.emergencyPN).slice(0, 50) + '"');
+    }
+
+    // Chip is deliberately NOT mapped. Distributors use ID46/ID47/4A where
+    // this app uses PH 46 / Hitag AES PCF7953M, and the same FCC ID can carry
+    // different chips across a production change, so it resolves per part
+    // number under review rather than by a blind string swap.
+    const chipRaw = raw.chip ? String(raw.chip).trim() : null;
+
+    const vehicles = (raw.vehicles || [])
+        .filter(v => v && v.make && v.model)
+        .map(v => ({
+            make: String(v.make).trim(),
+            model: String(v.model).trim(),
+            startYear: parseInt(v.startYear, 10) || null,
+            endYear: parseInt(v.endYear, 10) || parseInt(v.startYear, 10) || null,
+            codeSeries: null
+        }))
+        .filter(v => v.startYear);
+
+    // Every purchasable option becomes a priced row under this vendor.
+    const seenSku = new Set();
+    const variants = (raw.variants && raw.variants.length
+            ? raw.variants
+            : [{ vendorSku: raw.vendorSku || raw.pn, price: raw.price, condition: 'unknown', label: null }])
+        .map(v => ({
+            vendorSku: String(v.vendorSku || '').trim() || null,
+            price: normalizePriceInput(v.price),
+            condition: String(v.condition || 'unknown').toLowerCase(),
+            label: v.label ? String(v.label).trim() : null,
+            available: v.available === undefined ? null : !!v.available
+        }))
+        .filter(v => {
+            if (!v.price) return false;
+            const k = (v.vendorSku || '') + '|' + (v.label || '');
+            if (seenSku.has(k)) return false;
+            seenSku.add(k);
+            return true;
+        })
+        .sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+    if (!variants.length) note('variants', 'no priced option found');
+
+    return {
+        _id: 'imp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        status: 'pending',
+        source: source || 'unknown',
+        importedAt: new Date().toISOString(),
+        // what the extractor claimed, kept verbatim as the audit trail
+        raw: {
+            pn: raw.pn, vendorSku: raw.vendorSku, fccid: raw.fccid, chip: raw.chip,
+            buttons: raw.buttons, buttonCount: raw.buttonCount, frequency: raw.frequency,
+            confidence: raw.confidence, uncertain: raw.uncertain || [],
+            sourceText: raw.sourceText, productUrl: raw.productUrl
+        },
+        // what the app would store
+        proposed: {
+            fccid: fccList[0] || null,
+            fccids: fccList.length > 1 ? fccList : null,
+            keyType: raw.keyType || null,
+            keyway: raw.keyway || null,
+            chipRaw: chipRaw,
+            buttons: buttons,
+            buttonCount: raw.buttonCount || null,
+            frequency: frequency,
+            battery: battery,
+            emergencyPN: emergencyPN,
+            altParts: oemPns.map(p => ({ pn: p, brand: 'OEM' })),
+            vehicles: vehicles
+        },
+        vendor: { name: source || 'unknown', variants: variants },
+        matchedPn: match ? String(match.pn) : null,
+        isNew: !match,
+        issues: issues
+    };
+}
+
+// Accept an extractor batch. Returns { staged, skipped, errors } and never
+// throws on bad input — a malformed file should report, not break the app.
+function parseImportBatch(text) {
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        return { staged: [], skipped: 0, errors: ['Not valid JSON: ' + e.message] };
+    }
+    if (!data || !Array.isArray(data.keys)) {
+        return { staged: [], skipped: 0, errors: ['Expected an object with a "keys" array'] };
+    }
+    const source = String(data.source || '').trim() || 'Unknown distributor';
+    const staged = [];
+    const errors = [];
+    let skipped = 0;
+    data.keys.forEach((k, i) => {
+        try {
+            const cand = normalizeImportedKey(k, source);
+            if (!cand.proposed.fccid && !cand.vendor.variants.length) { skipped++; return; }
+            staged.push(cand);
+        } catch (e) {
+            errors.push('Record ' + (i + 1) + ' (' + (k && k.pn) + '): ' + e.message);
+        }
+    });
+    if (Array.isArray(data.failed) && data.failed.length) {
+        errors.push(data.failed.length + ' page(s) the extractor could not read');
+    }
+    return { staged: staged, skipped: skipped, errors: errors, source: source };
+}
+
+
+// Commit one reviewed candidate. New keys join customKeys; an existing key
+// gets an override so the base record is never mutated. Vendor pricing is
+// written per variant. Returns a short description of what changed.
+function applyImportCandidate(cand) {
+    const changes = [];
+    const p = cand.proposed;
+
+    if (cand.matchedPn) {
+        // Existing key: only fill fields that are currently EMPTY. An import
+        // never overwrites something already entered by hand.
+        const key = DB.find(k => String(k.pn) === String(cand.matchedPn));
+        if (!key) return ['key ' + cand.matchedPn + ' no longer in database'];
+        const target = key.isCustom
+            ? customKeys.find(k => String(k.pn) === String(key.pn))
+            : (keyInfoOverrides[getOriginalCatalogPn(key.pn)] = keyInfoOverrides[getOriginalCatalogPn(key.pn)] || {});
+        if (!target) return ['could not locate a writable record for ' + cand.matchedPn];
+
+        ['keyway', 'keyType', 'buttons', 'frequency', 'battery', 'emergencyPN'].forEach(f => {
+            if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
+        });
+        if (p.altParts.length) {
+            const have = new Set((key.altParts || []).map(a => String(a.pn).toUpperCase()));
+            const add = p.altParts.filter(a => !have.has(String(a.pn).toUpperCase()));
+            if (add.length) {
+                target.altParts = (key.altParts || []).concat(add);
+                key.altParts = target.altParts;
+                changes.push(add.length + ' OEM part number(s)');
+            }
+        }
+        if (key.isCustom) saveCustomKeys(); else saveKeyInfoOverrides();
+    } else {
+        // New key. The vendor's own SKU is not adopted as the part number:
+        // the OEM number is when we have one, else the FCC ID.
+        const pn = (p.altParts[0] && p.altParts[0].pn) || p.fccid;
+        if (!pn) return ['no usable part number'];
+        if (DB.some(k => String(k.pn).toUpperCase() === String(pn).toUpperCase())) {
+            return ['part number ' + pn + ' already exists — review manually'];
+        }
+        const rec = {
+            pn: pn,
+            fccid: p.fccid,
+            keyway: p.keyway || null,
+            chip: null,               // resolved separately, per part number
+            keyType: p.keyType || null,
+            buttons: p.buttons || null,
+            frequency: p.frequency || null,
+            battery: p.battery || null,
+            emergencyPN: p.emergencyPN || null,
+            notes: 'Imported from ' + cand.source + (cand.raw.productUrl ? '\n' + cand.raw.productUrl : ''),
+            vehicles: p.vehicles,
+            isCustom: true,
+            addedDate: new Date().toISOString(),
+            importedFrom: cand.source
+        };
+        if (p.fccids) rec.fccids = p.fccids;
+        if (p.altParts.length > 1) rec.altParts = p.altParts.slice(1);
+        customKeys.push(rec);
+        DB.push(rec);
+        saveCustomKeys();
+        changes.push('added key ' + pn);
+    }
+
+    // Vendor pricing: cheapest new-condition row to priceA, cheapest of the
+    // rest to priceB, and every option kept in full under variants.
+    const pn = cand.matchedPn || (cand.proposed.altParts[0] && cand.proposed.altParts[0].pn) || p.fccid;
+    if (pn && cand.vendor.variants.length) {
+        if (!vendorPrices[pn]) vendorPrices[pn] = {};
+        const v = cand.vendor.variants;
+        const newest = v.find(x => x.condition === 'new');
+        const other = v.find(x => x.condition !== 'new');
+        vendorPrices[pn][cand.vendor.name] = {
+            priceA: newest ? newest.price : (v[0] ? v[0].price : ''),
+            priceB: other ? other.price : '',
+            emergency: '', shell: '', oem: '',
+            variants: v
+        };
+        saveVendorPrices();
+        changes.push(v.length + ' price option(s) under ' + cand.vendor.name);
+    }
+
+    cand.status = 'applied';
+    cand.appliedAt = new Date().toISOString();
+    saveDistImportQueue();
+    return changes;
+}
+
+
+// Pull batches an extractor dropped into the Firestore inbox. The inbox is a
+// drop-off only: writes there are create-only and token-guarded, so nothing
+// external ever touches customKeys, vendorPrices or any live store. Everything
+// pulled lands in the same review queue as a pasted or picked file.
+async function pullDistImportInbox() {
+    if (!firebaseEnabled || !firebaseDb) { toast('Cloud sync is not available'); return; }
+    if (!currentUser) { toast('Sign in first — the inbox is readable only when signed in'); return; }
+
+    const btn = document.getElementById('distInboxBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+    const report = [];
+    let staged = 0, badDocs = 0;
+
+    try {
+        const snap = await firebaseDb.collection('importInbox').limit(50).get();
+        if (snap.empty) {
+            report.push('Inbox is empty.');
+        } else {
+            const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+            for (const docSnap of snap.docs) {
+                const d = docSnap.data() || {};
+                const label = d.batchLabel || docSnap.id;
+                if (typeof d.payload !== 'string' || !d.payload.trim()) {
+                    report.push(label + ': no payload — left in the inbox');
+                    badDocs++;
+                    continue;
+                }
+                const res = parseImportBatch(d.payload);
+                if (!res.staged.length) {
+                    report.push(label + ': nothing usable' +
+                        (res.errors.length ? ' (' + res.errors[0] + ')' : '') + ' — left in the inbox');
+                    badDocs++;
+                    continue;
+                }
+                let n = 0;
+                res.staged.forEach(c => {
+                    const k = c.raw.productUrl + '|' + c.raw.vendorSku;
+                    if (have.has(k)) return;
+                    have.add(k);
+                    distImportQueue.push(c);
+                    n++; staged++;
+                });
+                report.push(label + ': ' + res.staged.length + ' read, ' + n + ' new' +
+                    (res.errors.length ? ', ' + res.errors.length + ' problem(s)' : ''));
+                // Persist BEFORE clearing the inbox copy. If the tab closes
+                // between the two, the worst case is the batch being pulled
+                // twice — which the dedupe above absorbs — rather than it
+                // existing in neither place.
+                saveDistImportQueue();
+                // Only remove what parsed. Anything that failed stays put so it
+                // can be looked at rather than vanishing.
+                try { await docSnap.ref.delete(); }
+                catch (e) { report.push('   (could not clear ' + label + ': ' + e.message + ')'); }
+            }
+        }
+    } catch (e) {
+        report.push('Could not read the inbox: ' + e.message);
+        if (/permission/i.test(e.message)) {
+            report.push('The importInbox rules may not be in place yet — see tools/GROK-DIRECT-POST.md');
+        }
+    }
+
+    if (staged) { saveDistImportQueue(); renderDistImportQueue(); }
+    document.getElementById('distImportPreview').innerHTML =
+        '<div style="font-size:12px;line-height:1.6;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
+        report.map(escapeJobText).join('<br>') +
+        (staged ? '<div style="color:var(--accent);margin-top:6px;">' + staged + ' staged for review below.</div>' : '') +
+        (badDocs ? '<div style="color:#e0a800;margin-top:4px;">' + badDocs + ' left in the inbox for you to look at.</div>' : '') +
+        '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = '☁️ Pull from inbox'; }
+    toast(staged ? staged + ' staged from the inbox' : 'Nothing new in the inbox');
+}
+
+// ---- Import panel -------------------------------------------------------
+function openDistImportPanel() {
+    document.getElementById('distImportText').value = '';
+    document.getElementById('distImportPreview').innerHTML = '';
+    document.getElementById('distImportPanel').classList.add('on');
+    renderDistImportQueue();
+}
+
+function closeDistImportPanel() {
+    document.getElementById('distImportPanel').classList.remove('on');
+}
+
+// Read one or more extractor files straight from disk. Each is parsed and
+// staged on its own so a bad file names itself instead of failing the batch.
+function loadDistImportFiles(event) {
+    const files = [...(event.target.files || [])];
+    if (!files.length) return;
+    let done = 0, staged = 0;
+    const notes = [];
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const res = parseImportBatch(e.target.result);
+            if (res.staged.length) {
+                const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+                res.staged.forEach(c => {
+                    const k = c.raw.productUrl + '|' + c.raw.vendorSku;
+                    if (have.has(k)) return;
+                    have.add(k);
+                    distImportQueue.push(c);
+                    staged++;
+                });
+            }
+            notes.push(file.name + ': ' + res.staged.length + ' read' +
+                (res.errors.length ? ', ' + res.errors.length + ' problem(s)' : ''));
+            if (++done === files.length) {
+                saveDistImportQueue();
+                renderDistImportQueue();
+                document.getElementById('distImportPreview').innerHTML =
+                    '<div style="font-size:12px;line-height:1.6;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
+                    notes.map(escapeJobText).join('<br>') +
+                    '<div style="color:var(--accent);margin-top:6px;">' + staged + ' staged for review below.</div></div>';
+                toast(staged + ' staged from ' + files.length + ' file(s)');
+            }
+        };
+        reader.onerror = () => {
+            notes.push(file.name + ': could not be read');
+            if (++done === files.length) { saveDistImportQueue(); renderDistImportQueue(); }
+        };
+        reader.readAsText(file);
+    });
+    event.target.value = '';
+}
+
+function previewDistImport() {
+    const res = parseImportBatch(document.getElementById('distImportText').value);
+    const el = document.getElementById('distImportPreview');
+    if (res.errors.length && !res.staged.length) {
+        el.innerHTML = '<div style="color:#d9534f;font-size:12px;padding:8px 0;">' +
+            res.errors.map(escapeJobText).join('<br>') + '</div>';
+        return;
+    }
+    const nu = res.staged.filter(c => c.isNew).length;
+    const ex = res.staged.length - nu;
+    const flagged = res.staged.filter(c => c.issues.length).length;
+    const lowConf = res.staged.filter(c => c.raw.confidence === 'low').length;
+    el.innerHTML =
+        '<div style="font-size:13px;line-height:1.7;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
+            '<div><b>' + res.staged.length + '</b> record(s) from <b>' + escapeJobText(res.source) + '</b></div>' +
+            '<div style="color:var(--accent);">' + nu + ' new &bull; ' + ex + ' already in your database</div>' +
+            (flagged ? '<div style="color:#e0a800;">' + flagged + ' with a field the app could not read</div>' : '') +
+            (lowConf ? '<div style="color:#d9534f;">' + lowConf + ' the extractor itself marked low confidence</div>' : '') +
+            (res.skipped ? '<div style="color:var(--dim);">' + res.skipped + ' skipped (no FCC ID and no price)</div>' : '') +
+            (res.errors.length ? '<div style="color:#d9534f;">' + res.errors.map(escapeJobText).join('<br>') + '</div>' : '') +
+            '<div style="color:var(--dim);font-size:11px;margin-top:6px;">Nothing is saved until you approve each row below.</div>' +
+        '</div>';
+    window._distImportStaged = res.staged;
+}
+
+function stageDistImport() {
+    const staged = window._distImportStaged;
+    if (!staged || !staged.length) { toast('Preview first'); return; }
+    const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+    let added = 0;
+    staged.forEach(c => {
+        const k = c.raw.productUrl + '|' + c.raw.vendorSku;
+        if (have.has(k)) return;
+        distImportQueue.push(c); added++;
+    });
+    saveDistImportQueue();
+    document.getElementById('distImportText').value = '';
+    document.getElementById('distImportPreview').innerHTML = '';
+    window._distImportStaged = null;
+    renderDistImportQueue();
+    toast(added + ' staged for review' + (added < staged.length ? ' (' + (staged.length - added) + ' already queued)' : ''));
+}
+
+function renderDistImportQueue() {
+    const el = document.getElementById('distImportQueueList');
+    if (!el) return;
+    const pending = distImportQueue.filter(c => c.status === 'pending');
+    document.getElementById('distQueueCount').textContent = pending.length;
+    if (!pending.length) {
+        el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:24px;font-size:13px;">Nothing waiting for review.</div>';
+        return;
+    }
+    el.innerHTML = pending.map(c => {
+        const p = c.proposed;
+        const id = c._id;
+        const badge = c.isNew
+            ? '<span style="background:var(--accent);color:var(--bg);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">NEW</span>'
+            : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) + '</span>';
+        const conf = c.raw.confidence === 'low'
+            ? '<span style="color:#d9534f;font-size:11px;">low confidence</span>' : '';
+        const unc = (c.raw.uncertain || []).length
+            ? '<div style="font-size:11px;color:#e0a800;">extractor unsure of: ' + escapeJobText(c.raw.uncertain.join(', ')) + '</div>' : '';
+        const iss = c.issues.length
+            ? '<div style="font-size:11px;color:#e0a800;">' + c.issues.map(i => escapeJobText(i.msg)).join('<br>') + '</div>' : '';
+        const spec = [
+            p.keyType, p.keyway ? 'keyway ' + p.keyway : null, p.frequency,
+            p.buttons ? p.buttons.replace(/\s*\(.*$/, '') : (p.buttonCount ? p.buttonCount + ' buttons' : null),
+            p.battery, p.chipRaw ? 'chip ' + p.chipRaw + ' (unmapped)' : null
+        ].filter(Boolean).join(' &bull; ');
+        const veh = p.vehicles.slice(0, 4).map(v => v.make + ' ' + v.model + ' ' + v.startYear + '-' + v.endYear).join(', ')
+            + (p.vehicles.length > 4 ? ' +' + (p.vehicles.length - 4) + ' more' : '');
+        const prices = c.vendor.variants.map(v =>
+            '<div style="display:flex;justify-content:space-between;font-size:12px;padding:1px 0;">' +
+            '<span style="color:var(--dim);">' + escapeJobText(v.label || v.condition) + '</span>' +
+            '<span class="mono">$' + escapeJobText(v.price) + (v.vendorSku ? ' <span style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '') + '</span></div>').join('');
+        return '' +
+        '<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card);">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">' +
+                '<span class="mono" style="font-weight:700;">' + escapeJobText(p.fccid || '(no FCC)') + '</span>' + badge +
+            '</div>' +
+            (p.altParts.length ? '<div style="font-size:12px;color:var(--dim);">OEM: <span class="mono">' + escapeJobText(p.altParts.map(a => a.pn).join(', ')) + '</span></div>' : '') +
+            '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
+            (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
+            '<div style="margin:8px 0;">' + prices + '</div>' +
+            unc + iss +
+            (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
+            '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                '<button onclick="approveDistImport(\'' + id + '\')" style="flex:1;padding:8px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Approve</button>' +
+                '<button onclick="rejectDistImport(\'' + id + '\')" style="flex:1;padding:8px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Reject</button>' +
+                (c.raw.productUrl ? '<button onclick="window.open(\'' + escapeJobText(c.raw.productUrl) + '\',\'_blank\')" style="padding:8px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Page</button>' : '') +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function approveDistImport(id) {
+    const c = distImportQueue.find(x => x._id === id);
+    if (!c) return;
+    const changes = applyImportCandidate(c);
+    renderDistImportQueue();
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+    toast(changes.length ? changes.join('; ').slice(0, 90) : 'Nothing to change');
+}
+
+function rejectDistImport(id) {
+    const c = distImportQueue.find(x => x._id === id);
+    if (!c) return;
+    c.status = 'rejected';
+    c.rejectedAt = new Date().toISOString();
+    saveDistImportQueue();
+    renderDistImportQueue();
+}
+
+function clearDistImportQueue() {
+    const pending = distImportQueue.filter(c => c.status === 'pending').length;
+    if (!pending) { toast('Queue is already empty'); return; }
+    if (!confirm('Discard all ' + pending + ' record(s) waiting for review?\n\nNothing already approved is affected.')) return;
+    distImportQueue = distImportQueue.filter(c => c.status !== 'pending');
+    saveDistImportQueue();
+    renderDistImportQueue();
+    toast('Review queue cleared');
 }
 
 function parseIlcoReferenceText(text) {
