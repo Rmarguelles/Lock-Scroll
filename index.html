@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v249</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v250</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4839,8 +4839,17 @@
     <div class="vehicle-list" id="vehicleModelsList"></div>
 </div>
 
-<!-- Vehicle Key Type Panel - After selecting model -->
-<div class="vehicle-panel" id="vehicleKeyTypePanel" style="z-index:206;">
+<!-- Vehicle Year Ranges Panel - After selecting model -->
+<div class="vehicle-panel" id="vehicleRangesPanel" style="z-index:206;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeVehicleRangesPanel()">←</button>
+        <div class="vehicle-title" id="vehicleRangesPanelTitle">📅 Select Year</div>
+    </div>
+    <div class="vehicle-list" id="vehicleRangesList"></div>
+</div>
+
+<!-- Vehicle Key Type Panel - After selecting year range -->
+<div class="vehicle-panel" id="vehicleKeyTypePanel" style="z-index:207;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehicleKeyTypePanel()">←</button>
         <div class="vehicle-title" id="vehicleKeyTypePanelTitle">🔑 Select Key Type</div>
@@ -4849,7 +4858,7 @@
 </div>
 
 <!-- Vehicle Years Panel - After selecting key type -->
-<div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:207;">
+<div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:208;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehicleYearsPanel()">←</button>
         <div class="vehicle-title" id="vehicleYearsPanelTitle">🚗 Select Year</div>
@@ -5300,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v249</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v250</p>
         </div>
 
         <div class="settings-section">
@@ -5312,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v249<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v250<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6933,6 +6942,27 @@
     </div>
 </div>
 
+<!-- Edit Set Year Ranges Modal -->
+<div class="modal" id="vehicleYearRangesModal">
+    <div class="modal-content">
+        <div class="modal-title" id="vehicleYearRangesTitle">📅 Year Ranges</div>
+        <input type="hidden" id="vehicleYearRangesMake">
+        <input type="hidden" id="vehicleYearRangesModel">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:12px;">Keys are grouped under these ranges. Keys listed 1 yr off are flagged ⚠️, 2 yrs off 🟠.</div>
+        <div id="vehicleYearRangesList"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button class="modal-btn secondary" onclick="addVehicleYearRangeRow()" style="flex:1;">+ Add Range</button>
+            <button class="modal-btn secondary" onclick="resetVehicleYearRangesToSuggested()" style="flex:1;">Use Suggested</button>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Year ranges listed on keys</div>
+        <div id="vehicleYearRangesRef" style="max-height:180px;overflow-y:auto;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--dim);line-height:1.6;"></div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeVehicleYearRangesModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveVehicleYearRangesEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add New Make Modal -->
 <div class="modal" id="addNewMakeModal">
     <div class="modal-content">
@@ -8396,6 +8426,7 @@ async function uploadToCloud() {
                 keyInfoOverrides: keyInfoOverrides,
                 autelIKeyCompatibility: autelIKeyCompatibility,
                 vehicleYearNotes: vehicleYearNotes,
+                vehicleYearRanges: vehicleYearRanges,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -8435,6 +8466,7 @@ async function uploadToCloud() {
                 keyInfoOverrides: keyInfoOverrides,
                 autelIKeyCompatibility: autelIKeyCompatibility,
                 vehicleYearNotes: vehicleYearNotes,
+                vehicleYearRanges: vehicleYearRanges,
                 customDropdownValues: customDropdownValues,
                 keyRelationships: keyRelationships,
                 fccRelationships: fccRelationships,
@@ -8690,6 +8722,10 @@ async function downloadFromCloud() {
         if (data.vehicleYearNotes) {
             vehicleYearNotes = { ...vehicleYearNotes, ...data.vehicleYearNotes };
             saveVehicleYearNotes();
+        }
+        if (data.vehicleYearRanges) {
+            vehicleYearRanges = { ...vehicleYearRanges, ...data.vehicleYearRanges };
+            saveToIndexedDB('vehicleYearRanges', vehicleYearRanges);
         }
         if (data.customDropdownValues) {
             customDropdownValues = { keyway: [], chip: [], keyType: [], frequency: [], buttons: [], battery: [], brand: [], ...data.customDropdownValues };
@@ -10360,6 +10396,7 @@ function getVehicleIKeyStyles(make, model, startYear, endYear) {
 }
 let customDropdownValues = {"keyway":["B82","B67","B79","B68","B59","B63"],"chip":["PH 40 GM"],"keyType":[],"frequency":[],"buttons":[],"battery":[],"brand":[]};
 let vehicleYearNotes = {};
+let vehicleYearRanges = {}; // { 'Make|Model': [{start, end}] } user-set year ranges (else suggested)
 
 // FID System - Prefix-based tracking
 let fidAssignments = {};
@@ -11215,6 +11252,9 @@ async function loadLocalData() {
 
             const savedVehicleYearNotes = await loadFromIndexedDB('vehicleYearNotes');
             if (savedVehicleYearNotes) vehicleYearNotes = savedVehicleYearNotes;
+
+            const savedVehicleYearRanges = await loadFromIndexedDB('vehicleYearRanges');
+            if (savedVehicleYearRanges) vehicleYearRanges = savedVehicleYearRanges;
 
             const savedJobHistory = await loadFromIndexedDB('jobHistory');
             if (savedJobHistory) jobHistory = savedJobHistory;
@@ -17080,6 +17120,8 @@ function goHome() {
     document.getElementById('addCustomKeyPanel').classList.remove('on');
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleRangesPanel').classList.remove('on');
+    document.getElementById('vehicleYearRangesModal').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.getElementById('vehicleDetailPanel').classList.remove('on');
@@ -17123,6 +17165,7 @@ function goHome() {
     selectedVehicleMake = null;
     selectedVehicleModel = null;
     selectedVehicleKeyType = null;
+    selectedVehicleRange = null;
     cameFromVehicle = null;
     currentViewingVehicleKey = null;
 
@@ -18834,6 +18877,7 @@ function exportData() {
         distImportQueue: distImportQueue,
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
+        vehicleYearRanges: vehicleYearRanges,
         keyRelationships: keyRelationships,
         fccRelationships: fccRelationships,
         antiqueOverrides: antiqueOverrides,
@@ -18858,6 +18902,7 @@ function copyOverridesToClipboard() {
         vehicleOverrides: vehicleOverrides || {},
         keyInfoOverrides: keyInfoOverrides || {},
         vehicleYearNotes: vehicleYearNotes || {},
+        vehicleYearRanges: vehicleYearRanges || {},
         keyRelationships: keyRelationships || {},
         fccRelationships: fccRelationships || {},
         customKeys: customKeys || [],
@@ -19048,6 +19093,11 @@ function importData(event) {
                 saveVehicleYearNotes();
             }
 
+            if (data.vehicleYearRanges) {
+                vehicleYearRanges = { ...vehicleYearRanges, ...data.vehicleYearRanges };
+                saveVehicleYearRanges();
+            }
+
             if (data.keyRelationships) {
                 keyRelationships = { ...keyRelationships, ...data.keyRelationships };
                 saveKeyRelationships();
@@ -19099,6 +19149,8 @@ let vehicleToolsData = {}; // Future: { "IM508": { adapters: [...], cables: [...
 let selectedVehicleMake = null;
 let selectedVehicleModel = null;
 let selectedVehicleKeyType = null;
+let selectedVehicleRange = null;      // set year range {start, end} picked after the model; null = all years
+let selectedVehicleRangeList = [];    // all set ranges for the selected model
 let cameFromVehicle = null; // Stores the vehicle key if we came from vehicle detail
 let currentViewingVehicleKey = null; // Current vehicle being viewed in detail
 
@@ -21258,6 +21310,7 @@ function createKeyFromIlcoReview() {
 function closeVehiclePanel() {
     document.getElementById('vehiclePanel').classList.remove('on');
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -21266,6 +21319,7 @@ function closeVehiclePanel() {
 
 function closeVehicleModelsPanel() {
     document.getElementById('vehicleModelsPanel').classList.remove('on');
+    document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
 }
@@ -21273,10 +21327,17 @@ function closeVehicleModelsPanel() {
 function closeVehicleKeyTypePanel() {
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
+    // Re-render the ranges to reflect year ranges added further in
+    if (selectedVehicleMake && selectedVehicleModel) {
+        renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
+    }
 }
 
 function closeVehicleYearsPanel() {
     document.getElementById('vehicleYearsPanel').classList.remove('on');
+    if (selectedVehicleMake && selectedVehicleModel) {
+        renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
+    }
 }
 
 function closeVehicleDetail() {
@@ -21725,6 +21786,14 @@ function renameVehicleModel() {
     saveVehicleOverrides();
     saveCustomKeys();
     saveCustomVehicles();
+
+    // Carry set year ranges over unless the target model already has its own
+    const oldRangesKey = `${make}|${oldName}`;
+    if (vehicleYearRanges[oldRangesKey]) {
+        if (!vehicleYearRanges[`${make}|${newName}`]) vehicleYearRanges[`${make}|${newName}`] = vehicleYearRanges[oldRangesKey];
+        delete vehicleYearRanges[oldRangesKey];
+        saveVehicleYearRanges();
+    }
 
     closeRenameModelModal();
     renderVehicleModelsForMake(make);
@@ -23841,10 +23910,339 @@ function levenshteinDistance(str1, str2) {
 // Model selection -> Show key types
 function selectVehicleModel(model) {
     selectedVehicleModel = model;
-    document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${selectedVehicleMake} ${model}`;
-    renderKeyTypesForModel(selectedVehicleMake, model);
+    selectedVehicleRange = null;
+    document.getElementById('vehicleRangesPanelTitle').textContent = `📅 ${selectedVehicleMake} ${model}`;
+    renderVehicleRangesForModel(selectedVehicleMake, model);
+    document.getElementById('vehicleRangesPanel').classList.add('on');
+}
+
+// ===================== SET YEAR RANGES =====================
+// Each make/model gets a short list of set year ranges (Make -> Model -> Year
+// range -> Key type). Keys funnel into the ranges they overlap, labeled by how
+// well their listed years fit. Ranges are suggested from the key data; the
+// user can override them per make/model (vehicleYearRanges).
+const YEAR_RANGE_TOLERANCE = 2; // up to 2 yrs off a range = flagged discrepancy; 3+ = different range
+
+function yearRangeOverlap(a, b) {
+    return Math.min(a.end, b.end) - Math.max(a.start, b.start) + 1;
+}
+
+function formatSetYearRange(r) {
+    return r.start === r.end ? String(r.start) : `${r.start} - ${r.end}`;
+}
+
+// Suggest set ranges from a list of key year ranges. Years where keys start
+// and end vote for range boundaries; boundaries within 2 yrs of a stronger one
+// merge into it. An interior boundary is only kept where one key ends and
+// another starts (a real key change) — a key that merely starts partway
+// through (e.g. 2015-2019 inside 2011-2019) doesn't split the range.
+function suggestVehicleYearRanges(ranges) {
+    const sorted = ranges
+        .filter(r => r.start > 0)
+        .map(r => ({ start: r.start, end: Math.max(r.start, r.end || r.start) }))
+        .sort((a, b) => a.start - b.start);
+    // Separate runs of years with a gap between them (no key covers the gap)
+    const comps = [];
+    let cur = null;
+    sorted.forEach(r => {
+        if (cur && r.start <= cur.end + 1) {
+            cur.items.push(r);
+            cur.end = Math.max(cur.end, r.end);
+        } else {
+            cur = { start: r.start, end: r.end, items: [r] };
+            comps.push(cur);
+        }
+    });
+    const out = [];
+    comps.forEach(c => {
+        const votes = {};
+        const vote = (year, kind) => {
+            const v = votes[year] || (votes[year] = { year, n: 0, starts: 0, ends: 0 });
+            v.n++;
+            v[kind]++;
+        };
+        c.items.forEach(r => { vote(r.start, 'starts'); vote(r.end + 1, 'ends'); });
+        const picked = [];
+        Object.values(votes).sort((a, b) => b.n - a.n || a.year - b.year).forEach(v => {
+            const near = picked.find(p => Math.abs(p.year - v.year) <= YEAR_RANGE_TOLERANCE);
+            if (near) { near.starts += v.starts; near.ends += v.ends; }
+            else picked.push({ ...v });
+        });
+        picked.sort((a, b) => a.year - b.year);
+        const bounds = picked
+            .filter((p, i) => i === 0 || i === picked.length - 1 || (p.starts > 0 && p.ends > 0))
+            .map(p => p.year);
+        if (bounds.length < 2) { out.push({ start: c.start, end: c.end }); return; }
+        const compRanges = [];
+        for (let i = 0; i < bounds.length - 1; i++) compRanges.push({ start: bounds[i], end: bounds[i + 1] - 1 });
+        // A key listed entirely before the first / after the last range gets its years folded in
+        const first = compRanges[0], last = compRanges[compRanges.length - 1];
+        if (c.items.some(r => r.end < first.start)) first.start = c.start;
+        if (c.items.some(r => r.start > last.end)) last.end = c.end;
+        out.push(...compRanges);
+    });
+    return out;
+}
+
+// Year-range entries (from getUniqueVehicles) for a make/model
+function getModelVehicleEntries(make, model) {
+    return getUniqueVehicles().filter(v => v.make === make && v.model === model);
+}
+
+// The set year ranges for a make/model: the user's own, else suggested.
+// Remote-only ranges don't shape the suggestion (their years are often odd)
+// unless the model has nothing else.
+function getVehicleYearRanges(make, model, entries) {
+    const saved = vehicleYearRanges[`${make}|${model}`];
+    if (Array.isArray(saved) && saved.length > 0) {
+        return { ranges: saved.map(r => ({ start: r.start, end: r.end })), isCustom: true };
+    }
+    return { ranges: getSuggestedYearRanges(make, model, entries), isCustom: false };
+}
+
+function getSuggestedYearRanges(make, model, entries) {
+    entries = entries || getModelVehicleEntries(make, model);
+    const toRange = v => ({ start: v.startYear, end: v.endYear || v.startYear });
+    const main = entries.filter(v => !(v.keys.length > 0 && v.keys.every(isRemoteOnlyKey)));
+    return suggestVehicleYearRanges((main.length > 0 ? main : entries).map(toRange));
+}
+
+// How a key year-range entry fits a set range. null = not listed in that range.
+function getYearRangeFit(range, entry, allRanges, yearFilter) {
+    const k = { start: entry.startYear, end: entry.endYear || entry.startYear };
+    const ov = yearRangeOverlap(range, k);
+    if (ov <= 0) return null;
+    const y = parseInt(yearFilter) || 0;
+    const coversYear = y && y >= k.start && y <= k.end && y >= range.start && y <= range.end;
+    // A key that only clips this range's edge by a year or two belongs to the
+    // neighbouring range (where it's flagged) — unless it covers the filter year
+    if (ov <= YEAR_RANGE_TOLERANCE && !coversYear &&
+        allRanges.some(o => o !== range && yearRangeOverlap(o, k) > ov)) return null;
+
+    const yrs = d => `${d} yr${d !== 1 ? 's' : ''}`;
+    const notes = [];
+    let off = 0, partial = false, spans = false;
+    const startDiff = k.start - range.start;
+    const endDiff = k.end - range.end;
+    if (startDiff < 0) {
+        if (-startDiff <= YEAR_RANGE_TOLERANCE) { off = Math.max(off, -startDiff); notes.push(`starts ${yrs(-startDiff)} earlier`); }
+        else { spans = true; notes.push(`also covers ${k.start} - ${range.start - 1}`); }
+    } else if (startDiff > 0) {
+        if (startDiff <= YEAR_RANGE_TOLERANCE) { off = Math.max(off, startDiff); notes.push(`starts ${yrs(startDiff)} later`); }
+        else partial = true;
+    }
+    if (endDiff > 0) {
+        if (endDiff <= YEAR_RANGE_TOLERANCE) { off = Math.max(off, endDiff); notes.push(`ends ${yrs(endDiff)} later`); }
+        else { spans = true; notes.push(`also covers ${range.end + 1} - ${k.end}`); }
+    } else if (endDiff < 0) {
+        if (-endDiff <= YEAR_RANGE_TOLERANCE) { off = Math.max(off, -endDiff); notes.push(`ends ${yrs(-endDiff)} earlier`); }
+        else partial = true;
+    }
+    if (partial && spans) notes.unshift(`only ${formatSetYearRange({ start: Math.max(k.start, range.start), end: Math.min(k.end, range.end) })}`);
+    const level = off >= 2 ? 'off2' : off === 1 ? 'off1' : partial ? 'partial' : spans ? 'spans' : 'full';
+    return { level, notes };
+}
+
+const YEAR_RANGE_FIT_ORDER = { full: 0, off1: 1, off2: 2, partial: 3, spans: 4 };
+const YEAR_RANGE_FIT_STYLE = {
+    full:    { icon: '✅', label: 'Full range', color: 'var(--success)' },
+    off1:    { icon: '⚠️', label: 'Slight year discrepancy', color: 'var(--warning)' },
+    off2:    { icon: '🟠', label: '2-yr discrepancy', color: '#ff8c1a' },
+    partial: { icon: '🔹', label: 'Partial range', color: 'var(--accent)' },
+    spans:   { icon: '↔️', label: 'Spans ranges', color: 'var(--dim)' }
+};
+
+function yearRangeFitBadgeHtml(fit, entry) {
+    const st = YEAR_RANGE_FIT_STYLE[fit.level];
+    const listed = formatSetYearRange({ start: entry.startYear, end: entry.endYear || entry.startYear });
+    const detail = fit.level === 'full' ? '' : ` · listed ${listed}${fit.notes.length ? ' (' + fit.notes.join(', ') + ')' : ''}`;
+    return `<div style="color:${st.color};font-size:11px;font-weight:600;">${st.icon} ${st.label}${detail}</div>`;
+}
+
+// Is a key's vehicle application (start/end years) listed under the selected set range?
+function vehicleAppInSelectedRange(startYear, endYear) {
+    if (!selectedVehicleRange) return true;
+    const entry = { startYear: parseInt(startYear) || 0, endYear: parseInt(endYear || startYear) || 0 };
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+    return !!getYearRangeFit(selectedVehicleRange, entry, selectedVehicleRangeList, yearFilter);
+}
+
+function renderVehicleRangesForModel(make, model) {
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+    const y = parseInt(yearFilter) || 0;
+    const entries = getModelVehicleEntries(make, model);
+    const { ranges, isCustom } = getVehicleYearRanges(make, model, entries);
+    selectedVehicleRangeList = ranges;
+    const escapedMake = make.replace(/'/g, "\\'");
+    const escapedModel = model.replace(/'/g, "\\'");
+
+    let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:12px;color:var(--dim);">${isCustom ? '📘 Year ranges set by you' : '💡 Year ranges suggested from key data'}</span>
+            <button onclick="openVehicleYearRangesModal('${escapedMake}', '${escapedModel}')"
+                style="padding:5px 12px;background:transparent;border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer;font-weight:600;">✏️ Edit Ranges</button>
+        </div>`;
+
+    const listed = new Set();
+    const cards = ranges.map((r, idx) => {
+        const fits = entries.map(v => ({ v, fit: getYearRangeFit(r, v, ranges, yearFilter) })).filter(x => x.fit);
+        fits.forEach(x => listed.add(x.v));
+        if (y && !((y >= r.start && y <= r.end) || fits.some(x => y >= x.v.startYear && y <= x.v.endYear))) return '';
+        const pns = new Set();
+        const typeCounts = { 'Keyed Ignition': new Set(), 'Proximity': new Set() };
+        fits.forEach(x => x.v.keys.forEach(k => {
+            if (!k.pn) return;
+            pns.add(k.pn);
+            typeCounts[normalizeKeyType(k.keyType)].add(k.pn);
+        }));
+        const inStock = Array.from(pns).filter(pn => (stockData[pn] || 0) > 0).length;
+        const off1 = fits.filter(x => x.fit.level === 'off1').length;
+        const off2 = fits.filter(x => x.fit.level === 'off2').length;
+        const flags = [];
+        if (off1) flags.push(`<div style="color:var(--warning);font-size:11px;">⚠️ ${off1} slight year discrepanc${off1 !== 1 ? 'ies' : 'y'}</div>`);
+        if (off2) flags.push(`<div style="color:#ff8c1a;font-size:11px;">🟠 ${off2} two-year discrepanc${off2 !== 1 ? 'ies' : 'y'}</div>`);
+        const typeLine = Object.entries(typeCounts).filter(([, s]) => s.size > 0).map(([t, s]) => `${t}: ${s.size}`).join(' | ');
+        return `
+            <div class="vehicle-card" onclick="selectVehicleRange(${idx})">
+                <div class="vehicle-card-header">
+                    <div class="vehicle-card-title">${formatSetYearRange(r)}</div>
+                    <span class="vehicle-stock-badge ${inStock > 0 ? 'in-stock' : 'out-of-stock'}">
+                        ${inStock > 0 ? `${inStock} in stock` : 'None in stock'}
+                    </span>
+                </div>
+                <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                    <div style="color:var(--dim);">${pns.size} key${pns.size !== 1 ? 's' : ''}${fits.length > 1 ? ` · ${fits.length} listed year ranges` : ''}</div>
+                    ${typeLine ? `<div style="color:var(--accent2);font-size:11px;">${typeLine}</div>` : ''}
+                    ${flags.join('')}
+                </div>
+            </div>`;
+    }).join('');
+
+    if (ranges.length === 0) {
+        html += '<div style="text-align:center;color:var(--dim);padding:24px;">No year ranges yet — open All Years to add one</div>';
+    } else if (!cards.trim()) {
+        html += `<div style="text-align:center;color:var(--dim);padding:24px;">No year range covers ${escapeJobText(yearFilter)}</div>`;
+    }
+    html += cards;
+
+    // Key year ranges that fall outside every set range (only possible with user-set ranges)
+    const unlisted = entries.filter(v => !listed.has(v));
+    html += `
+        <div class="vehicle-card" onclick="selectVehicleRange(-1)" style="border:1px dashed var(--border);background:transparent;margin-top:12px;">
+            <div class="vehicle-card-header">
+                <div class="vehicle-card-title" style="color:var(--dim);">📋 All Years</div>
+            </div>
+            <div class="vehicle-card-info">
+                <span style="color:var(--dim);">Every listed year range, ungrouped${unlisted.length ? ` · <span style="color:var(--warning);">⚠️ ${unlisted.length} outside your set ranges</span>` : ''}</span>
+            </div>
+        </div>`;
+
+    document.getElementById('vehicleRangesList').innerHTML = html;
+}
+
+// Range selection -> Show key types (-1 = all years, no set range)
+function selectVehicleRange(idx) {
+    selectedVehicleRange = idx >= 0 ? selectedVehicleRangeList[idx] || null : null;
+    const label = selectedVehicleRange ? formatSetYearRange(selectedVehicleRange) : 'All Years';
+    document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${label} ${selectedVehicleMake} ${selectedVehicleModel}`;
+    renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
     document.getElementById('vehicleKeyTypePanel').classList.add('on');
 }
+
+function closeVehicleRangesPanel() {
+    document.getElementById('vehicleRangesPanel').classList.remove('on');
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
+    selectedVehicleRange = null;
+}
+
+function saveVehicleYearRanges() {
+    saveToIndexedDB('vehicleYearRanges', vehicleYearRanges);
+    triggerAutoSync();
+}
+
+// ---- Edit Year Ranges modal ----
+let editingYearRanges = [];
+
+function openVehicleYearRangesModal(make, model) {
+    document.getElementById('vehicleYearRangesMake').value = make;
+    document.getElementById('vehicleYearRangesModel').value = model;
+    document.getElementById('vehicleYearRangesTitle').textContent = `📅 ${make} ${model} Year Ranges`;
+    editingYearRanges = getVehicleYearRanges(make, model).ranges;
+    renderVehicleYearRangesEditor();
+
+    // Reference: every year range listed on the keys, so ranges can be checked against the book
+    const byRange = {};
+    getModelVehicleEntries(make, model).forEach(v => {
+        const label = formatSetYearRange({ start: v.startYear, end: v.endYear });
+        (byRange[label] = byRange[label] || { start: v.startYear, pns: new Set() });
+        v.keys.forEach(k => { if (k.pn) byRange[label].pns.add(k.pn); });
+    });
+    document.getElementById('vehicleYearRangesRef').innerHTML = Object.entries(byRange)
+        .sort((a, b) => a[1].start - b[1].start)
+        .map(([label, r]) => `<div><strong style="color:var(--text);">${label}</strong> ${escapeJobText(Array.from(r.pns).join(', ')) || '<em>custom range</em>'}</div>`)
+        .join('') || 'No keys listed yet';
+    document.getElementById('vehicleYearRangesModal').classList.add('on');
+}
+
+function closeVehicleYearRangesModal() {
+    document.getElementById('vehicleYearRangesModal').classList.remove('on');
+}
+
+function renderVehicleYearRangesEditor() {
+    const inputStyle = 'width:90px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;';
+    document.getElementById('vehicleYearRangesList').innerHTML = editingYearRanges.map((r, i) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <input type="number" inputmode="numeric" style="${inputStyle}" value="${r.start || ''}" placeholder="Start" oninput="editingYearRanges[${i}].start = parseInt(this.value) || 0">
+            <span style="color:var(--dim);">to</span>
+            <input type="number" inputmode="numeric" style="${inputStyle}" value="${r.end || ''}" placeholder="End" oninput="editingYearRanges[${i}].end = parseInt(this.value) || 0">
+            <button onclick="editingYearRanges.splice(${i}, 1); renderVehicleYearRangesEditor();"
+                style="margin-left:auto;padding:6px 10px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--danger, #ff5252);cursor:pointer;">✕</button>
+        </div>`).join('') || '<div style="color:var(--dim);font-size:13px;margin-bottom:8px;">No ranges — add one below</div>';
+}
+
+function addVehicleYearRangeRow() {
+    const last = editingYearRanges[editingYearRanges.length - 1];
+    editingYearRanges.push(last && last.end ? { start: last.end + 1, end: 0 } : { start: 0, end: 0 });
+    renderVehicleYearRangesEditor();
+}
+
+function resetVehicleYearRangesToSuggested() {
+    const make = document.getElementById('vehicleYearRangesMake').value;
+    const model = document.getElementById('vehicleYearRangesModel').value;
+    editingYearRanges = getSuggestedYearRanges(make, model);
+    renderVehicleYearRangesEditor();
+}
+
+function saveVehicleYearRangesEdit() {
+    const make = document.getElementById('vehicleYearRangesMake').value;
+    const model = document.getElementById('vehicleYearRangesModel').value;
+    const key = `${make}|${model}`;
+    const ranges = [];
+    for (const r of editingYearRanges) {
+        const start = parseInt(r.start) || 0;
+        const end = parseInt(r.end) || start;
+        if (!start && !end) continue;
+        if (start < 1900 || start > 2100 || end < start || end > 2100) {
+            toast(`Check the range ${start || '?'} - ${end || '?'}: start must be a year and not after end`);
+            return;
+        }
+        ranges.push({ start, end });
+    }
+    ranges.sort((a, b) => a.start - b.start);
+    // Matching the suggestion (or empty) = nothing stored, so it keeps following the key data
+    const same = (a, b) => a.length === b.length && a.every((r, i) => r.start === b[i].start && r.end === b[i].end);
+    if (ranges.length === 0 || same(ranges, getSuggestedYearRanges(make, model))) delete vehicleYearRanges[key];
+    else vehicleYearRanges[key] = ranges;
+    saveVehicleYearRanges();
+    closeVehicleYearRangesModal();
+    selectedVehicleRange = null;
+    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
+    document.getElementById('vehicleYearsPanel').classList.remove('on');
+    renderVehicleRangesForModel(make, model);
+    toast('Year ranges saved');
+}
+
 
 // Render key types for a make/model
 function renderKeyTypesForModel(make, model) {
@@ -23866,6 +24264,7 @@ function renderKeyTypesForModel(make, model) {
                         return;
                     }
                 }
+                if (!vehicleAppInSelectedRange(v.startYear, v.endYear)) return;
 
                 const keyType = key.keyType || 'Unknown';
                 // Normalize key types
@@ -23943,7 +24342,8 @@ function renderKeyTypesForModel(make, model) {
 // Key type selection -> Show year groups
 function selectVehicleKeyType(keyType) {
     selectedVehicleKeyType = keyType;
-    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${selectedVehicleMake} ${selectedVehicleModel} - ${keyType}`;
+    const rangeLabel = selectedVehicleRange ? `${formatSetYearRange(selectedVehicleRange)} ` : '';
+    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${rangeLabel}${selectedVehicleMake} ${selectedVehicleModel} - ${keyType}`;
     renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, keyType);
     document.getElementById('vehicleYearsPanel').classList.add('on');
 }
@@ -24036,6 +24436,13 @@ function renderVehicleYearsForModel(make, model, keyType) {
         filteredVehicles = vehicles.filter(v => year >= v.startYear && year <= v.endYear);
     }
 
+    // Funnel into the selected set year range, labeling how each listed range fits
+    if (selectedVehicleRange) {
+        filteredVehicles = filteredVehicles
+            .map(v => ({ ...v, rangeFit: getYearRangeFit(selectedVehicleRange, v, selectedVehicleRangeList, yearFilter) }))
+            .filter(v => v.rangeFit);
+    }
+
     // Filter keys within each vehicle by key type and recalculate
     filteredVehicles = filteredVehicles.map(v => {
         const filteredKeys = keyType
@@ -24075,8 +24482,10 @@ function renderVehicleYearsForModel(make, model, keyType) {
         });
     }
 
-    // Sort by year descending
-    filteredVehicles.sort((a, b) => b.startYear - a.startYear);
+    // Sort best fit to the set range first, then by year descending
+    filteredVehicles.sort((a, b) =>
+        (a.rangeFit && b.rangeFit ? YEAR_RANGE_FIT_ORDER[a.rangeFit.level] - YEAR_RANGE_FIT_ORDER[b.rangeFit.level] : 0) ||
+        b.startYear - a.startYear);
 
     const container = document.getElementById('vehicleYearsList');
 
@@ -24155,7 +24564,8 @@ function renderVehicleYearsForModel(make, model, keyType) {
                     </span>
                 </div>
                 <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
-                    <span style="color:var(--dim);">${keyCountDisplay}</span>
+                    ${v.rangeFit ? yearRangeFitBadgeHtml(v.rangeFit, v) : ''}
+                    <span style="color:var(--dim);">${keyCountDisplay}${v.keys.length ? ` · ${escapeJobText(v.keys.map(k => k.pn).filter(Boolean).join(', '))}` : ''}</span>
                     ${keyTypeBreakdown ? `<span style="color:var(--accent2);font-size:11px;">${keyTypeBreakdown}</span>` : ''}
                     ${v.codeSeries && v.codeSeries.length > 0 && !isRemoteOnlyRange(v) ? `<span style="color:var(--accent2);font-size:11px;">📋 ${v.codeSeries.map(cs => cs.series + (cs.years ? ' (' + cs.years + ')' : '')).join(', ')}</span>` : ''}
                 </div>
