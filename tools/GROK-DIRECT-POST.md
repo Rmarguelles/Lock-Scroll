@@ -1,9 +1,11 @@
 # Letting the extractor post straight into the review queue
 
-**Status: not built yet.** The app side is deliberately unwritten until we know
-the extractor can actually make an authenticated HTTP request. Ask it the
-question in step 1 before anything else — if the answer is no, the file picker
-added in v247 is already the shortest path and nothing here is needed.
+**Status: the app side is built (v248).** Import panel → **Pull from inbox**.
+
+The capability test in step 1 passed: the returned `X-Amzn-Trace-Id` decodes to
+a timestamp matching the moment it was run, which a fabricated response does not
+do. Steps 2 and 3 are still yours to do — the rules have to exist before the
+first POST can land.
 
 ---
 
@@ -102,12 +104,23 @@ match /importInbox/{docId} {
 
 ---
 
-## Step 4 — what I build once you confirm it works
+## Step 4 — pulling it in (built)
 
-- A **Pull from inbox** button on the import panel: reads `importInbox`,
-  parses each `payload`, stages it through the same `parseImportBatch()` path
-  the file picker uses, then deletes the inbox document.
-- The same review queue. The route in changes; **nothing skips review.**
+**Pull from inbox** on the import panel reads up to 50 inbox documents, parses
+each `payload` through the same `parseImportBatch()` the file picker uses,
+stages the results, and deletes the document it just consumed.
+
+- A document that **fails to parse is left in the inbox**, named in the report,
+  so a bad batch can be looked at rather than disappearing.
+- Duplicates are dropped on `productUrl + vendorSku`, as with files.
+- Signed out, or with the rules missing, it says so instead of failing silently;
+  a permissions error points back at this file.
+
+### One thing still unverified
+
+The extractor's sandbox reaching `httpbin.org` does not prove it can reach
+`firestore.googleapis.com` — sandboxes often allowlist hosts. Test with a single
+small batch and check the HTTP status it reports before running a long scrape.
 
 That last point is the reason this is safe to do at all. Direct posting removes
 a copy-paste, not the human check — the extractor's own output has needed a
