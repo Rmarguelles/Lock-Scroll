@@ -355,6 +355,53 @@ Identity on approve, per the model in §7:
 `priceA`/`priceB`; the two slots are kept populated (cheapest `new` → `priceA`,
 cheapest other → `priceB`) so existing price rendering keeps working.
 
+## 5f. Editing a staged candidate (v251)
+
+A review card has two ways in, and both write **only** into the staged
+candidate — nothing reaches a key until Approve.
+
+- **Edit all** — every field the import would write: FCC ID, additional FCC
+  IDs, OEM part numbers, key type, keyway, chip, buttons, button count,
+  frequency, battery, emergency PN, vehicles, and the vendor's price options.
+- **Fix flagged (n)** — only the fields behind the card's own warnings. The
+  count is the number of open flags, so it disappears once they are settled.
+
+Two maps drive it. `DIST_IMPORT_EDIT_FIELDS` is the field registry (also the
+render order); `DIST_IMPORT_FLAG_FIELDS` maps a flag name onto the fields that
+settle it. Flag names come from two places and share one vocabulary: the
+extractor's `raw.uncertain` and the normalizer's `issues[].field`.
+
+`fidBand` has no field of its own — the band is **derived** from the key type,
+so the editor shows a live `5xx — Proximity` readout under the Key Type
+dropdown, with the extractor's own band beside it when the two disagree.
+Picking the right type settles both flags at once. `normalizeImportedKey()`
+raises that disagreement as an issue, which is what makes the cross-check in
+the prompt (§ "derive fidBand separately") worth anything — before v251 the
+extractor's `fidBand` was parsed and dropped.
+
+Flag bookkeeping:
+
+- `raw.uncertain` is **never** rewritten — it stays as the extractor's audit trail.
+- `cand.resolved[]` records what a person has since signed off.
+- **Fix flagged** signs off everything it showed, changed or not (the user went
+  there to settle exactly those). **Edit all** signs off only what actually changed.
+- A flag the editor cannot map to a field (say the extractor invents a name) is
+  **reported in the hint, never swallowed**, and Save acknowledges it — otherwise
+  a card would sit yellow forever over something with nothing to edit.
+
+`proposed.chip` is new and separate from `chipRaw`: the importer still refuses
+to guess a chip (§5d), so it stays `null` until set by hand here, and only then
+does `applyImportCandidate()` write it. `chipRaw` keeps the distributor's own
+wording (`ID47`) next to it for reference.
+
+Values are re-normalized on save through the same functions the import path
+uses — `bucketizeFrequency()`, `normalizeBatteryValue()`, `normalizePriceInput()`
+— so a hand-typed `433.92` still lands on `434 MHz`. A `+ Other…` value is fed
+to `registerDropdownValue()`, so it joins the picklists everywhere else in the
+app. Vehicles are edited as `Make | Model | 2019-2021` lines; a line that will
+not parse **blocks the save** and names its line number rather than silently
+dropping a vehicle.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in
