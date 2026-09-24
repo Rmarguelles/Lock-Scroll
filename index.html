@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v246</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v247</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5300,7 +5300,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v246</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v247</p>
         </div>
 
         <div class="settings-section">
@@ -5312,7 +5312,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v246<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v247<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5810,6 +5810,8 @@
         </p>
         <textarea id="distImportText" class="add-inv-input" placeholder='{"source": "...", "keys": [ ... ]}'
             style="min-height:130px;resize:vertical;font-family:monospace;font-size:11px;"></textarea>
+        <input type="file" id="distImportFile" accept=".json,application/json" multiple onchange="loadDistImportFiles(event)" style="display:none;">
+        <button onclick="document.getElementById('distImportFile').click()" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);color:var(--accent);border:1px dashed var(--accent);border-radius:6px;font-size:13px;cursor:pointer;">&#128193; Choose JSON file(s) instead of pasting</button>
         <div style="display:flex;gap:8px;margin-top:8px;">
             <button onclick="previewDistImport()" style="flex:1;padding:10px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:13px;cursor:pointer;">Preview</button>
             <button onclick="stageDistImport()" style="flex:1;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Stage for review</button>
@@ -20294,6 +20296,48 @@ function openDistImportPanel() {
 
 function closeDistImportPanel() {
     document.getElementById('distImportPanel').classList.remove('on');
+}
+
+// Read one or more extractor files straight from disk. Each is parsed and
+// staged on its own so a bad file names itself instead of failing the batch.
+function loadDistImportFiles(event) {
+    const files = [...(event.target.files || [])];
+    if (!files.length) return;
+    let done = 0, staged = 0;
+    const notes = [];
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const res = parseImportBatch(e.target.result);
+            if (res.staged.length) {
+                const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+                res.staged.forEach(c => {
+                    const k = c.raw.productUrl + '|' + c.raw.vendorSku;
+                    if (have.has(k)) return;
+                    have.add(k);
+                    distImportQueue.push(c);
+                    staged++;
+                });
+            }
+            notes.push(file.name + ': ' + res.staged.length + ' read' +
+                (res.errors.length ? ', ' + res.errors.length + ' problem(s)' : ''));
+            if (++done === files.length) {
+                saveDistImportQueue();
+                renderDistImportQueue();
+                document.getElementById('distImportPreview').innerHTML =
+                    '<div style="font-size:12px;line-height:1.6;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
+                    notes.map(escapeJobText).join('<br>') +
+                    '<div style="color:var(--accent);margin-top:6px;">' + staged + ' staged for review below.</div></div>';
+                toast(staged + ' staged from ' + files.length + ' file(s)');
+            }
+        };
+        reader.onerror = () => {
+            notes.push(file.name + ': could not be read');
+            if (++done === files.length) { saveDistImportQueue(); renderDistImportQueue(); }
+        };
+        reader.readAsText(file);
+    });
+    event.target.value = '';
 }
 
 function previewDistImport() {
