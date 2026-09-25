@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v251</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v252</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v251</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v252</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v251<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v252<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8391,6 +8391,44 @@ function sanitizeForFirestore(payload) {
     return JSON.parse(JSON.stringify(payload));
 }
 
+// Firestore indexes every field of every nested map and every element of every
+// array, and caps a single document at 40,000 index entries. The review queue
+// is the worst possible shape for that: deep (proposed, vendor.variants[],
+// issues[], proposed.vehicles[]) and carrying whole blocks of page text in
+// raw.sourceText. Synced as structured data it burns entries fast enough to
+// fail the WHOLE backup, taking every other store down with it.
+//
+// So it rides as one JSON string. Firestore does not index a string field over
+// 1500 bytes at all, so the queue costs a constant handful of entries no matter
+// how big it gets. Only pending rows travel — applied and rejected ones are
+// local history — and sourceText is dropped, being an extractor audit note that
+// a second device has no use for. The local IndexedDB copy keeps everything.
+function packDistImportQueueForCloud() {
+    const pending = distImportQueue.filter(c => c.status === 'pending').map(c => {
+        const copy = JSON.parse(JSON.stringify(c));
+        if (copy.raw) delete copy.raw.sourceText;
+        return copy;
+    });
+    return pending.length ? JSON.stringify(pending) : '';
+}
+
+// Reads either shape: the packed string, or the structured array written by
+// v246-v251 before this changed. Returns null when the cloud has neither.
+function unpackDistImportQueueFromCloud(data) {
+    if (typeof data.distImportQueueJson === 'string') {
+        if (!data.distImportQueueJson) return [];
+        try {
+            const parsed = JSON.parse(data.distImportQueueJson);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            console.error('Could not read the synced review queue:', e);
+        }
+        return null;
+    }
+    if (Array.isArray(data.distImportQueue)) return data.distImportQueue;
+    return null;
+}
+
 // Returns true when everything uploaded, false on failure — callers must not
 // download over local state that failed to upload.
 async function uploadToCloud() {
@@ -8427,7 +8465,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
-                distImportQueue: distImportQueue,
+                distImportQueueJson: packDistImportQueueForCloud(),
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8450,6 +8488,9 @@ async function uploadToCloud() {
                 lastUpdatedBy: currentUser.email
             });
             sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+            // merge:true leaves an old field in place, so the pre-v252 structured
+            // copy would sit there costing index entries forever. Drop it.
+            sharedData.distImportQueue = firebase.firestore.FieldValue.delete();
             await sharedDocRef.set(sharedData, { merge: true });
         } else {
             // Not in shared mode - save everything to personal location
@@ -8467,7 +8508,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
-                distImportQueue: distImportQueue,
+                distImportQueueJson: packDistImportQueueForCloud(),
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8489,6 +8530,7 @@ async function uploadToCloud() {
                 ilcoRef: ilcoRef
             });
             allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+            allData.distImportQueue = firebase.firestore.FieldValue.delete();
             await personalDocRef.set(allData, { merge: true });
         }
         console.log('Cloud sync successful');
@@ -8545,19 +8587,28 @@ async function downloadFromCloud() {
 
         // Note: stockData is loaded separately from personal location above
         if (data.customKeys && data.customKeys.length > 0) {
-            // Merge custom keys by part number
-            const existingPNs = new Set(customKeys.map(k => k.pn));
+            // Merge custom keys by part number. Compare NORMALIZED, the way the
+            // rest of the app does: pn is a number on some records and a string
+            // on others, and case varies on OEM numbers, so a raw === match let
+            // the same key through as a second copy — which then saved back and
+            // compounded on the next sync.
+            const pnKey = v => String(v == null ? '' : v).trim().toLowerCase();
+            const idxByPn = new Map();
+            customKeys.forEach((k, i) => idxByPn.set(pnKey(k.pn), i));
             data.customKeys.forEach(key => {
-                if (!existingPNs.has(key.pn)) {
+                const idx = idxByPn.get(pnKey(key.pn));
+                if (idx === undefined) {
+                    idxByPn.set(pnKey(key.pn), customKeys.length);
                     customKeys.push(key);
-                } else {
-                    const idx = customKeys.findIndex(k => k.pn === key.pn);
-                    if (idx >= 0 && cloudIsNewer(key, customKeys[idx])) customKeys[idx] = key;
+                } else if (cloudIsNewer(key, customKeys[idx])) {
+                    customKeys[idx] = key;
                 }
             });
             saveCustomKeys();
             // Rebuild DB with custom keys
             loadCustomKeysIntoDB();
+            // A stale cloud snapshot can still carry copies an older build made
+            dedupeCustomKeys();
         }
         if (data.customVehicles && data.customVehicles.length > 0) {
             // Merge custom vehicles by ID
@@ -8627,10 +8678,11 @@ async function downloadFromCloud() {
             discontinuedPns = { ...discontinuedPns, ...data.discontinuedPns };
             saveDiscontinuedPns();
         }
-        if (Array.isArray(data.distImportQueue)) {
+        const cloudQueue = unpackDistImportQueueFromCloud(data);
+        if (cloudQueue) {
             const byId = {};
             distImportQueue.forEach(c => { byId[c._id] = c; });
-            data.distImportQueue.forEach(c => {
+            cloudQueue.forEach(c => {
                 const local = byId[c._id];
                 // A decision beats an undecided copy; otherwise keep local.
                 if (!local) distImportQueue.push(c);
@@ -11032,6 +11084,41 @@ async function runAntiqueConsolidationMigration() {
     saveToIndexedDB('antiqueConsolidateV1', true);
 }
 
+// ===================== CUSTOM KEY DE-DUPLICATION =====================
+// The cloud merge used to compare the raw pn while everything else compares
+// String(pn).toLowerCase(), so a part number that was a number on one side and
+// a string on the other (or differed only in case) missed its match and was
+// stored as a second copy — then synced back, compounding each round.
+//
+// The merge is fixed; this clears what it already made. "One custom key per
+// part number" is an invariant, not a one-off cleanup, so it is checked on
+// every load rather than behind a run-once flag: if duplicates ever come back
+// we want them gone AND named in the console, not silently tolerated.
+// Newest copy wins by lastEdited/addedDate/createdAt. A record with no part
+// number is never dropped.
+function dedupeCustomKeys() {
+    const ts = k => Date.parse(k.lastEdited || k.addedDate || k.createdAt || '') || 0;
+    const kept = [];
+    const posByPn = new Map();
+    const dupes = [];
+    customKeys.forEach(k => {
+        const id = String(k.pn == null ? '' : k.pn).trim().toLowerCase();
+        if (!id) { kept.push(k); return; }
+        const at = posByPn.get(id);
+        if (at === undefined) { posByPn.set(id, kept.length); kept.push(k); return; }
+        dupes.push(k.pn);
+        if (ts(k) > ts(kept[at])) kept[at] = k;
+    });
+    if (!dupes.length) return 0;
+
+    console.warn('Removed ' + dupes.length + ' duplicate custom key record(s): ' +
+        dupes.slice(0, 40).join(', ') + (dupes.length > 40 ? ' ...' : ''));
+    customKeys = kept;
+    saveCustomKeys();
+    loadCustomKeysIntoDB();
+    return dupes.length;
+}
+
 // ===================== INIT =====================
 async function init() {
     // Initialize IndexedDB first
@@ -11044,6 +11131,8 @@ async function init() {
     renderCloudSyncUI();
     await loadLocalData();
     await loadCustomKeys();
+    const dupesCleared = dedupeCustomKeys();
+    if (dupesCleared) setTimeout(() => toast('Cleaned up ' + dupesCleared + ' duplicate key record(s)'), 1800);
     await loadCustomVehicles();
     await loadAntiqueData();
     await loadIlcoReviewQueue();
