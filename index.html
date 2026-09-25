@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v250</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v251</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v250</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v251</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v250<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v251<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5833,6 +5833,19 @@
             <button onclick="clearDistImportQueue()" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:11px;cursor:pointer;">Clear</button>
         </div>
         <div id="distImportQueueList"></div>
+    </div>
+</div>
+
+<!-- Distributor Import - Review Entry Editor -->
+<div class="modal" id="distImportEditModal" style="z-index:300;">
+    <div class="modal-content" style="max-width:480px;">
+        <div class="modal-title" id="distImportEditTitle">Edit Entry</div>
+        <p id="distImportEditHint" style="color:var(--dim);font-size:11px;line-height:1.5;margin:0 0 14px;"></p>
+        <div id="distImportEditBody"></div>
+        <div class="modal-btns" style="margin-top:14px;">
+            <button class="modal-btn secondary" onclick="closeDistImportEdit()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveDistImportEdit()">Save</button>
+        </div>
     </div>
 </div>
 
@@ -17101,6 +17114,7 @@ function goHome() {
     // Close all panels and modals
     document.getElementById('discontinuedModal').classList.remove('on');
     document.getElementById('distImportPanel').classList.remove('on');
+    document.getElementById('distImportEditModal').classList.remove('on');
     document.getElementById('settingsPanel').classList.remove('on');
     document.getElementById('lishiLookupPanel').classList.remove('on');
     document.getElementById('lishiDetailPanel').classList.remove('on');
@@ -20107,7 +20121,10 @@ function extractEmergencyPN(...sources) {
 function normalizeBatteryValue(raw) {
     const t = String(raw || '').trim();
     if (!t) return null;
-    const type = (t.match(/\b(\d{4})\b/) || [])[1];
+    // Accept the chemistry prefix distributors write ("CR2032", "CR2450") —
+    // \b never fires between the letters and the digits, so a bare \b(\d{4})\b
+    // misses every prefixed cell and flags it as unrecognized.
+    const type = (t.match(/\b(?:CR|BR|DL|SR|LR)?(\d{4})\b/i) || [])[1];
     if (!type) return null;
     const qty = parseInt((t.match(/(?:qty|x)\s*(\d+)/i) || [])[1], 10) || 1;
     return type + ' qty ' + qty;
@@ -20153,6 +20170,21 @@ function normalizeImportedKey(raw, source) {
     // number under review rather than by a blind string swap.
     const chipRaw = raw.chip ? String(raw.chip).trim() : null;
 
+    // The extractor derives fidBand from how the listing physically describes
+    // the key and keyType from its type words, deliberately by two different
+    // routes, so the two disagreeing means one of them misread the page. Say
+    // which is which instead of silently trusting keyType.
+    const rawBand = (raw.fidBand === 0 || raw.fidBand) ? parseInt(raw.fidBand, 10) : null;
+    const bandOk = rawBand !== null && !isNaN(rawBand);
+    if (bandOk && raw.keyType) {
+        const typeBand = getFidTypeDigit(raw.keyType);
+        if (typeBand !== rawBand) {
+            note('keyType', 'key type "' + raw.keyType + '" is band ' + typeBand + 'xx (' +
+                (FID_BAND_NAMES[typeBand] || '?') + ') but the extractor sent band ' +
+                rawBand + 'xx (' + (FID_BAND_NAMES[rawBand] || '?') + ')');
+        }
+    }
+
     const vehicles = (raw.vehicles || [])
         .filter(v => v && v.make && v.model)
         .map(v => ({
@@ -20196,6 +20228,7 @@ function normalizeImportedKey(raw, source) {
         raw: {
             pn: raw.pn, vendorSku: raw.vendorSku, fccid: raw.fccid, chip: raw.chip,
             buttons: raw.buttons, buttonCount: raw.buttonCount, frequency: raw.frequency,
+            keyType: raw.keyType, fidBand: bandOk ? rawBand : null,
             confidence: raw.confidence, uncertain: raw.uncertain || [],
             sourceText: raw.sourceText, productUrl: raw.productUrl
         },
@@ -20205,6 +20238,7 @@ function normalizeImportedKey(raw, source) {
             fccids: fccList.length > 1 ? fccList : null,
             keyType: raw.keyType || null,
             keyway: raw.keyway || null,
+            chip: null,               // never imported; set by hand in the review editor
             chipRaw: chipRaw,
             buttons: buttons,
             buttonCount: raw.buttonCount || null,
@@ -20270,7 +20304,7 @@ function applyImportCandidate(cand) {
             : (keyInfoOverrides[getOriginalCatalogPn(key.pn)] = keyInfoOverrides[getOriginalCatalogPn(key.pn)] || {});
         if (!target) return ['could not locate a writable record for ' + cand.matchedPn];
 
-        ['keyway', 'keyType', 'buttons', 'frequency', 'battery', 'emergencyPN'].forEach(f => {
+        ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN'].forEach(f => {
             if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
         });
         if (p.altParts.length) {
@@ -20295,7 +20329,7 @@ function applyImportCandidate(cand) {
             pn: pn,
             fccid: p.fccid,
             keyway: p.keyway || null,
-            chip: null,               // resolved separately, per part number
+            chip: p.chip || null,     // blank unless resolved by hand in the review editor
             keyType: p.keyType || null,
             buttons: p.buttons || null,
             frequency: p.frequency || null,
@@ -20527,10 +20561,13 @@ function renderDistImportQueue() {
             : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) + '</span>';
         const conf = c.raw.confidence === 'low'
             ? '<span style="color:#d9534f;font-size:11px;">low confidence</span>' : '';
-        const unc = (c.raw.uncertain || []).length
-            ? '<div style="font-size:11px;color:#e0a800;">extractor unsure of: ' + escapeJobText(c.raw.uncertain.join(', ')) + '</div>' : '';
+        const flags = getDistImportFlags(c);
+        const unc = flags.names.length
+            ? '<div style="font-size:11px;color:#e0a800;">extractor unsure of: ' + escapeJobText(flags.names.join(', ')) + '</div>' : '';
         const iss = c.issues.length
             ? '<div style="font-size:11px;color:#e0a800;">' + c.issues.map(i => escapeJobText(i.msg)).join('<br>') + '</div>' : '';
+        const fixed = (c.resolved || []).length
+            ? '<div style="font-size:11px;color:var(--accent);">you reviewed: ' + escapeJobText(c.resolved.map(distEditLabel).join(', ')) + '</div>' : '';
         const spec = [
             p.keyType, p.keyway ? 'keyway ' + p.keyway : null, p.frequency,
             p.buttons ? p.buttons.replace(/\s*\(.*$/, '') : (p.buttonCount ? p.buttonCount + ' buttons' : null),
@@ -20551,12 +20588,16 @@ function renderDistImportQueue() {
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            unc + iss +
+            unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
+                (flags.names.length ? '<button onclick="openDistImportEdit(\'' + id + '\',\'flagged\')" style="flex:1;padding:8px;background:var(--bg);color:#e0a800;border:1px solid #e0a800;border-radius:6px;font-size:12px;cursor:pointer;">Fix flagged (' + flags.names.length + ')</button>' : '') +
+                (c.raw.productUrl ? '<button onclick="window.open(\'' + escapeJobText(c.raw.productUrl) + '\',\'_blank\')" style="padding:8px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Page</button>' : '') +
+            '</div>' +
+            '<div style="display:flex;gap:8px;margin-top:8px;">' +
                 '<button onclick="approveDistImport(\'' + id + '\')" style="flex:1;padding:8px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Approve</button>' +
                 '<button onclick="rejectDistImport(\'' + id + '\')" style="flex:1;padding:8px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Reject</button>' +
-                (c.raw.productUrl ? '<button onclick="window.open(\'' + escapeJobText(c.raw.productUrl) + '\',\'_blank\')" style="padding:8px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Page</button>' : '') +
             '</div>' +
         '</div>';
     }).join('');
@@ -20580,6 +20621,382 @@ function rejectDistImport(id) {
     c.rejectedAt = new Date().toISOString();
     saveDistImportQueue();
     renderDistImportQueue();
+}
+
+// ===================== IMPORT REVIEW EDITOR =====================
+// Two ways in from a review card: "Edit all" opens every field this import
+// would write, "Fix flagged" opens only the ones the extractor or the
+// normalizer was unsure about. Both write into the staged candidate only —
+// nothing reaches a key until Approve.
+
+const DIST_IMPORT_EDIT_FIELDS = [
+    { key: 'fccid',       label: 'FCC ID',                kind: 'text' },
+    { key: 'fccids',      label: 'Additional FCC IDs',    kind: 'text',   hint: 'comma separated; the primary above is kept first automatically' },
+    { key: 'altParts',    label: 'OEM part number(s)',    kind: 'text',   hint: 'comma separated. The first one becomes the part number when this is a new key.' },
+    { key: 'keyType',     label: 'Key Type',              kind: 'select', cat: 'keyType' },
+    { key: 'keyway',      label: 'Keyway / Blade',        kind: 'select', cat: 'keyway' },
+    { key: 'chip',        label: 'Chip',                  kind: 'select', cat: 'chip',
+      hint: 'left blank by the importer — the same FCC ID can carry different chips, so this one is yours to set' },
+    { key: 'buttons',     label: 'Buttons',               kind: 'select', cat: 'buttons' },
+    { key: 'buttonCount', label: 'Button count',          kind: 'number' },
+    { key: 'frequency',   label: 'Frequency',             kind: 'select', cat: 'frequency' },
+    { key: 'battery',     label: 'Battery',               kind: 'select', cat: 'battery', hint: 'stored as "2032 qty 1"' },
+    { key: 'emergencyPN', label: 'Emergency / insert PN', kind: 'text' },
+    { key: 'vehicles',    label: 'Vehicles',              kind: 'vehicles', hint: 'one per line - Make | Model | 2019-2021' },
+    { key: 'variants',    label: 'Price options',         kind: 'variants' }
+];
+
+// Extractor flag names (raw.uncertain) and normalizer issue fields both point
+// at the editor's own field keys. fidBand has no field of its own: the band is
+// derived from the key type, so settling the type settles the flag.
+const DIST_IMPORT_FLAG_FIELDS = {
+    fccid: ['fccid', 'fccids'], fccids: ['fccids'],
+    keytype: ['keyType'], fidband: ['keyType'],
+    keyway: ['keyway'], chip: ['chip'],
+    buttons: ['buttons', 'buttonCount'], buttoncount: ['buttons', 'buttonCount'],
+    frequency: ['frequency'], battery: ['battery'],
+    emergencypn: ['emergencyPN'], vehicles: ['vehicles'],
+    variants: ['variants'], price: ['variants'],
+    oempartnumber: ['altParts'], pn: ['altParts'], oem: ['altParts']
+};
+
+// The condition vocabulary the extractor is told to use.
+const DIST_IMPORT_CONDITIONS = ['new', 'reclaimed', 'refurbished', 'aftermarket', 'shell-only', 'unknown'];
+
+let distImportEditingId = null;
+let distImportEditMode = 'all';
+let distImportEditFieldKeys = [];
+let distImportEditUnmapped = [];
+let distImportEditVariants = [];
+
+function distEditLabel(key) {
+    const f = DIST_IMPORT_EDIT_FIELDS.find(x => x.key === key);
+    return f ? f.label : key;
+}
+
+// A candidate's still-open flags: which editor fields they point at, the flag
+// names that remain, and any the editor has no field for — reported, never
+// silently swallowed.
+function getDistImportFlags(cand) {
+    const resolved = cand.resolved || [];
+    const seen = [];
+    (cand.raw.uncertain || []).forEach(u => { if (u && seen.indexOf(String(u)) < 0) seen.push(String(u)); });
+    (cand.issues || []).forEach(i => { if (i.field && seen.indexOf(i.field) < 0) seen.push(i.field); });
+
+    const fields = [], names = [], unmapped = [];
+    seen.forEach(n => {
+        const mapped = DIST_IMPORT_FLAG_FIELDS[String(n).toLowerCase().replace(/[^a-z]/g, '')];
+        if (!mapped) {
+            // No field to edit, but a person can still acknowledge it, so a
+            // card cannot sit flagged forever on something we cannot map.
+            if (resolved.indexOf(n) < 0) { unmapped.push(n); names.push(n); }
+            return;
+        }
+        const left = mapped.filter(f => resolved.indexOf(f) < 0);
+        if (!left.length) return;              // a person already settled it
+        left.forEach(f => { if (fields.indexOf(f) < 0) fields.push(f); });
+        names.push(n);
+    });
+    const order = DIST_IMPORT_EDIT_FIELDS.map(f => f.key);
+    fields.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    return { fields: fields, names: names, unmapped: unmapped };
+}
+
+// Buttons must offer the whole picklist, not just the rows already in use —
+// resolveButtonsEnum matches against exactly that list.
+function getDistEditOptions(cat) {
+    const vals = getDropdownValuesForCategory(cat) || [];
+    if (cat !== 'buttons') return vals;
+    const all = new Set(getButtonEnum());
+    vals.forEach(v => all.add(v));
+    return Array.from(all).sort();
+}
+
+function distEditFieldHtml(f, p) {
+    const id = 'distEdit_' + f.key;
+    const hint = f.hint
+        ? ' <span style="color:var(--dim);font-size:10px;font-weight:normal;text-transform:none;">' + escapeJobText(f.hint) + '</span>'
+        : '';
+    let body = '';
+
+    if (f.kind === 'select') {
+        const opts = getDistEditOptions(f.cat);
+        const val = p[f.key] ? String(p[f.key]) : '';
+        const known = val && opts.indexOf(val) >= 0;
+        body = '<select class="modal-input" id="' + id + '" onchange="handleCustomDropdown(this, \'' + id + '_other\')' +
+                    (f.key === 'keyType' ? '; updateDistEditBand()' : '') + '">' +
+                '<option value="">&mdash; none &mdash;</option>' +
+                opts.map(o => '<option value="' + escapeJobText(o) + '"' + (o === val ? ' selected' : '') + '>' +
+                    escapeJobText(o) + '</option>').join('') +
+                '<option value="__other__"' + (val && !known ? ' selected' : '') + '>+ Other&hellip;</option>' +
+            '</select>' +
+            '<input type="text" class="modal-input" id="' + id + '_other" placeholder="Type a value&hellip;" ' +
+                'style="margin-top:6px;display:' + (val && !known ? 'block' : 'none') + ';" value="' +
+                (val && !known ? escapeJobText(val) : '') + '">';
+        if (f.key === 'keyType') {
+            body += '<div id="distEditBandOut" style="font-size:11px;color:var(--dim);margin-top:6px;"></div>';
+        }
+    } else if (f.kind === 'vehicles') {
+        const lines = (p.vehicles || []).map(v => v.make + ' | ' + v.model + ' | ' + v.startYear +
+            (v.endYear && v.endYear !== v.startYear ? '-' + v.endYear : '')).join('\n');
+        body = '<textarea class="modal-input" id="' + id + '" style="min-height:90px;font-size:12px;">' +
+            escapeJobText(lines) + '</textarea>';
+    } else if (f.kind === 'variants') {
+        body = '<div id="distEditVariants"></div>' +
+            '<button type="button" onclick="addDistEditVariant()" style="margin-top:6px;padding:6px 10px;' +
+            'background:var(--bg);color:var(--accent);border:1px dashed var(--accent);border-radius:6px;' +
+            'font-size:11px;cursor:pointer;">+ Add option</button>';
+    } else {
+        let val;
+        if (f.key === 'fccids') val = (p.fccids || []).slice(1).join(', ');
+        else if (f.key === 'altParts') val = (p.altParts || []).map(a => a.pn).join(', ');
+        else val = p[f.key] == null ? '' : String(p[f.key]);
+        body = '<input type="' + (f.kind === 'number' ? 'number' : 'text') + '" class="modal-input" id="' + id +
+            '" value="' + escapeJobText(val) + '">';
+    }
+    return '<div class="modal-input-group"><label>' + escapeJobText(f.label) + hint + '</label>' + body + '</div>';
+}
+
+function renderDistEditVariants() {
+    const el = document.getElementById('distEditVariants');
+    if (!el) return;
+    if (!distImportEditVariants.length) {
+        el.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:6px 0;">No priced option. Approving adds no vendor price.</div>';
+        return;
+    }
+    el.innerHTML = distImportEditVariants.map((v, i) => {
+        const cond = String(v.condition || 'unknown').toLowerCase();
+        // A condition the extractor sent that is outside the vocabulary stays
+        // selectable rather than snapping to the first row on re-render.
+        const conds = DIST_IMPORT_CONDITIONS.indexOf(cond) < 0
+            ? DIST_IMPORT_CONDITIONS.concat([cond]) : DIST_IMPORT_CONDITIONS;
+        return '<div style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+            '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+                '<input type="text" class="modal-input" id="distVarLabel' + i + '" placeholder="Label" value="' +
+                    escapeJobText(v.label || '') + '" style="flex:2;min-width:0;font-size:12px;padding:7px;">' +
+                '<input type="text" class="modal-input" id="distVarSku' + i + '" placeholder="SKU" value="' +
+                    escapeJobText(v.vendorSku || '') + '" style="flex:1;min-width:0;font-size:12px;padding:7px;">' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+                '<input type="text" class="modal-input" id="distVarPrice' + i + '" placeholder="Price" value="' +
+                    escapeJobText(v.price || '') + '" style="flex:1;min-width:0;font-size:12px;padding:7px;">' +
+                '<select class="modal-input" id="distVarCond' + i + '" style="flex:1;min-width:0;font-size:12px;padding:7px;">' +
+                    conds.map(c => '<option value="' + escapeJobText(c) + '"' + (c === cond ? ' selected' : '') + '>' +
+                        escapeJobText(c) + '</option>').join('') +
+                '</select>' +
+                '<button type="button" onclick="removeDistEditVariant(' + i + ')" style="padding:6px 10px;' +
+                    'background:var(--bg);color:#d9534f;border:1px solid var(--border);border-radius:6px;' +
+                    'font-size:13px;cursor:pointer;">&times;</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+// Pull what is on screen back into the array before any re-render, so adding
+// or removing a row never discards what is being typed in the others.
+function readDistEditVariants() {
+    if (!document.getElementById('distEditVariants')) return;
+    distImportEditVariants = distImportEditVariants.map((v, i) => {
+        const g = n => { const e = document.getElementById(n + i); return e ? e.value : ''; };
+        return {
+            vendorSku: g('distVarSku').trim() || null,
+            price: normalizePriceInput(g('distVarPrice')),
+            condition: (g('distVarCond') || 'unknown').toLowerCase(),
+            label: g('distVarLabel').trim() || null,
+            available: v.available === undefined ? null : v.available
+        };
+    });
+}
+
+function addDistEditVariant() {
+    readDistEditVariants();
+    distImportEditVariants.push({ vendorSku: null, price: '', condition: 'new', label: null, available: null });
+    renderDistEditVariants();
+}
+
+function removeDistEditVariant(i) {
+    readDistEditVariants();
+    distImportEditVariants.splice(i, 1);
+    renderDistEditVariants();
+}
+
+function updateDistEditBand() {
+    const out = document.getElementById('distEditBandOut');
+    if (!out || !document.getElementById('distEdit_keyType')) return;
+    const kt = getDropdownValue('distEdit_keyType', 'distEdit_keyType_other').trim();
+    if (!kt) { out.textContent = 'No key type - FID band would fall back to 1xx (Chip / VATS).'; return; }
+    const d = getFidTypeDigit(kt);
+    const cand = distImportQueue.find(x => x._id === distImportEditingId);
+    const sent = cand && cand.raw && cand.raw.fidBand != null ? parseInt(cand.raw.fidBand, 10) : null;
+    let t = 'FID band ' + d + 'xx - ' + (FID_BAND_NAMES[d] || '?');
+    if (sent !== null && !isNaN(sent) && sent !== d) {
+        t += '   (the extractor said ' + sent + 'xx - ' + (FID_BAND_NAMES[sent] || '?') + ')';
+    }
+    out.textContent = t;
+}
+
+function openDistImportEdit(id, mode) {
+    const c = distImportQueue.find(x => x._id === id);
+    if (!c) return;
+    distImportEditingId = id;
+    distImportEditMode = mode === 'flagged' ? 'flagged' : 'all';
+
+    const flags = getDistImportFlags(c);
+    const fields = distImportEditMode === 'flagged'
+        ? DIST_IMPORT_EDIT_FIELDS.filter(f => flags.fields.indexOf(f.key) >= 0)
+        : DIST_IMPORT_EDIT_FIELDS;
+    distImportEditFieldKeys = fields.map(f => f.key);
+    distImportEditUnmapped = flags.unmapped.slice();
+    distImportEditVariants = (c.vendor.variants || []).map(v => Object.assign({}, v));
+
+    document.getElementById('distImportEditTitle').textContent =
+        (distImportEditMode === 'flagged' ? 'Fix flagged' : 'Edit entry') + ' — ' + (c.proposed.fccid || '(no FCC)');
+
+    let hint;
+    if (distImportEditMode === 'flagged') {
+        const parts = [];
+        if (fields.length) {
+            parts.push('Only what the extractor or the importer was unsure of: ' + fields.map(f => f.label).join(', ') +
+                '. Saving marks all of these reviewed, whether or not you change them.');
+        }
+        if (flags.unmapped.length) {
+            parts.push((fields.length ? 'It also flagged ' : 'The only thing still flagged is ') +
+                flags.unmapped.join(', ') + ', which is not a field this import writes — check the ' +
+                'product page. Saving clears the flag.');
+        }
+        hint = parts.join(' ') || 'Nothing left to settle on this entry.';
+    } else {
+        hint = 'Every field this import would write. On a key that already exists only the empty ones are filled, so a value here is a proposal, not an overwrite.';
+    }
+    document.getElementById('distImportEditHint').textContent = hint;
+
+    const body = document.getElementById('distImportEditBody');
+    body.innerHTML = fields.length
+        ? fields.map(f => distEditFieldHtml(f, c.proposed)).join('')
+        : '<div style="color:var(--dim);font-size:12px;padding:6px 0 10px;">Use Edit all to change anything on this entry.</div>';
+    renderDistEditVariants();
+    updateDistEditBand();
+
+    document.getElementById('distImportEditModal').classList.add('on');
+}
+
+function closeDistImportEdit() {
+    document.getElementById('distImportEditModal').classList.remove('on');
+    distImportEditingId = null;
+    distImportEditFieldKeys = [];
+    distImportEditUnmapped = [];
+    distImportEditVariants = [];
+}
+
+// "Make | Model | 2019-2021" per line; a single year means a one-year range.
+// Returns the parsed rows plus the 1-based numbers of any line that failed.
+function parseDistEditVehicles(text) {
+    const rows = [], bad = [];
+    String(text || '').split('\n').forEach((line, i) => {
+        const t = line.trim();
+        if (!t) return;
+        const parts = t.split('|').map(x => x.trim());
+        const years = (parts[2] || '').match(/(\d{4})\s*(?:-\s*(\d{4}))?/);
+        if (parts.length < 3 || !parts[0] || !parts[1] || !years) { bad.push(i + 1); return; }
+        const start = parseInt(years[1], 10);
+        rows.push({
+            make: parts[0], model: parts[1],
+            startYear: start,
+            endYear: years[2] ? parseInt(years[2], 10) : start,
+            codeSeries: null
+        });
+    });
+    return { rows: rows, bad: bad };
+}
+
+function saveDistImportEdit() {
+    const c = distImportQueue.find(x => x._id === distImportEditingId);
+    if (!c) { closeDistImportEdit(); return; }
+    const p = c.proposed;
+    const keys = distImportEditFieldKeys;
+    const has = k => keys.indexOf(k) >= 0;
+    const txt = k => { const e = document.getElementById('distEdit_' + k); return e ? e.value.trim() : ''; };
+    const drop = k => document.getElementById('distEdit_' + k)
+        ? getDropdownValue('distEdit_' + k, 'distEdit_' + k + '_other').trim() : '';
+    const touched = [];
+
+    // Vehicles first: a line that will not parse stops the save, so a typo
+    // never silently drops a vehicle.
+    let vehicles = null;
+    if (has('vehicles')) {
+        const res = parseDistEditVehicles(txt('vehicles'));
+        if (res.bad.length) {
+            toast('Line ' + res.bad.join(', ') + ': use Make | Model | 2019-2021');
+            return;
+        }
+        vehicles = res.rows;
+    }
+
+    if (has('fccid')) {
+        const v = txt('fccid').toUpperCase();
+        if (v !== (p.fccid || '')) touched.push('fccid');
+        p.fccid = v || null;
+    }
+    if (has('fccids')) {
+        const extra = txt('fccids').split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
+        const next = extra.length && p.fccid ? [p.fccid].concat(extra) : (extra.length ? extra : null);
+        if (JSON.stringify(next) !== JSON.stringify(p.fccids || null)) touched.push('fccids');
+        p.fccids = next;
+    } else if (p.fccids && p.fccids.length && p.fccid) {
+        p.fccids[0] = p.fccid;   // primary edited on its own; keep the list in step
+    }
+    if (has('altParts')) {
+        const pns = txt('altParts').split(',').map(x => x.trim()).filter(Boolean);
+        if (pns.join(',') !== (p.altParts || []).map(a => a.pn).join(',')) touched.push('altParts');
+        p.altParts = pns.map(x => ({ pn: x, brand: 'OEM' }));
+    }
+    ['keyType', 'keyway', 'chip', 'buttons', 'frequency', 'battery'].forEach(k => {
+        if (!has(k)) return;
+        let v = drop(k);
+        if (v && k === 'frequency') v = bucketizeFrequency(v) || v;
+        if (v && k === 'battery') v = normalizeBatteryValue(v) || v;
+        if (v !== (p[k] || '')) touched.push(k);
+        if (v) registerDropdownValue(k, v);
+        p[k] = v || null;
+    });
+    if (has('buttonCount')) {
+        const n = parseInt(txt('buttonCount'), 10);
+        const v = isNaN(n) ? null : n;
+        if (v !== (p.buttonCount == null ? null : p.buttonCount)) touched.push('buttonCount');
+        p.buttonCount = v;
+    }
+    if (has('emergencyPN')) {
+        const v = txt('emergencyPN').toUpperCase();
+        if (v !== (p.emergencyPN || '')) touched.push('emergencyPN');
+        p.emergencyPN = v || null;
+    }
+    if (vehicles) {
+        if (JSON.stringify(vehicles) !== JSON.stringify(p.vehicles || [])) touched.push('vehicles');
+        p.vehicles = vehicles;
+    }
+    if (has('variants')) {
+        readDistEditVariants();
+        const next = distImportEditVariants.filter(v => v.price)
+            .sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        if (JSON.stringify(next) !== JSON.stringify(c.vendor.variants || [])) touched.push('variants');
+        c.vendor.variants = next;
+    }
+
+    // A field a person settled is no longer uncertain. raw.uncertain keeps the
+    // extractor's original list as the audit trail; resolved records what a
+    // human has since signed off. Fix-flagged signs off everything it showed,
+    // Edit-all only what actually changed.
+    const settled = distImportEditMode === 'flagged'
+        ? keys.concat(distImportEditUnmapped) : touched.slice();
+    c.resolved = c.resolved || [];
+    settled.forEach(k => { if (c.resolved.indexOf(k) < 0) c.resolved.push(k); });
+    c.issues = (c.issues || []).filter(i => !i.field || settled.indexOf(i.field) < 0);
+    if (touched.length) c.editedAt = new Date().toISOString();
+
+    saveDistImportQueue();
+    closeDistImportEdit();
+    renderDistImportQueue();
+    toast(touched.length ? 'Updated ' + touched.map(distEditLabel).join(', ') : 'Marked reviewed');
 }
 
 function clearDistImportQueue() {
