@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v252</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v253</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v252</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v253</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v252<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v253<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8036,6 +8036,11 @@ let syncEnabled = false;
 
 // Shared Database State
 let sharedModeEnabled = false;
+// True once this device has downloaded the cloud copy in this session. Until
+// then an upload would push whatever it holds locally — possibly nothing, on a
+// fresh browser or after a failed sign-in download — over the cloud, and
+// set({merge:true}) replaces every list field wholesale.
+let cloudPulledThisSession = false;
 let sharedOwnerEmail = null;
 let authorizedUsers = []; // Array of email addresses
 
@@ -8365,6 +8370,12 @@ async function syncNow() {
     renderCloudSyncUI();
     
     try {
+        // A device that has not seen the cloud copy yet pulls it first, so its
+        // upload carries the merged data rather than overwriting the cloud.
+        if (!cloudPulledThisSession) {
+            await downloadFromCloud();
+            cloudPulledThisSession = true;
+        }
         // Never download over local changes that failed to upload — pulling the
         // stale cloud copy would erase the edit that was just made locally.
         const uploaded = await uploadToCloud();
@@ -8433,6 +8444,10 @@ function unpackDistImportQueueFromCloud(data) {
 // download over local state that failed to upload.
 async function uploadToCloud() {
     if (!currentUser || !firebaseDb) return false;
+    if (!cloudPulledThisSession) {
+        console.warn('Upload held: this device has not downloaded the cloud copy yet this session.');
+        return false;
+    }
 
     try {
         // Always save personal data (stock counts) to user's own location
@@ -8768,6 +8783,13 @@ async function downloadFromCloud() {
             if (data.toolsDatabase.tools) {
                 toolsDatabase.tools = { ...toolsDatabase.tools, ...data.toolsDatabase.tools };
             }
+            // Categories were never merged, so one made on another device never
+            // arrived here. Union them, keeping local order first.
+            if (Array.isArray(data.toolsDatabase.categories)) {
+                data.toolsDatabase.categories.forEach(c => {
+                    if (c && toolsDatabase.categories.indexOf(c) < 0) toolsDatabase.categories.push(c);
+                });
+            }
             saveToolsDatabase();
         }
         if (data.vehicleOverrides) {
@@ -8919,6 +8941,7 @@ if (firebaseEnabled && auth) {
             // Download cloud data on sign in
             try {
                 await downloadFromCloud();
+                cloudPulledThisSession = true;
                 lastSyncTime = new Date();
                 localStorage.setItem('lockscroll_last_sync', lastSyncTime.toISOString());
             } catch (error) {
@@ -8926,6 +8949,7 @@ if (firebaseEnabled && auth) {
             }
         } else {
             // Reset shared mode state on sign out
+            cloudPulledThisSession = false;
             sharedModeEnabled = false;
             sharedOwnerEmail = null;
             authorizedUsers = [];
@@ -17283,7 +17307,22 @@ function goHome() {
 // ===================== TOOLS & EQUIPMENT MODULE =====================
 
 // Tools Database Structure
-let toolsDatabase = {};
+// Starts in its full empty shape. v245 stopped shipping the user's own tools
+// as a literal, and a bare {} left categories/platforms/tools undefined on any
+// browser with nothing saved yet — Settings crashed on first open, and Settings
+// is where Sign In lives, so a fresh device could never pull its data down.
+const DEFAULT_TOOL_CATEGORIES = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
+let toolsDatabase = { categories: DEFAULT_TOOL_CATEGORIES.slice(), platforms: {}, tools: {} };
+
+// Every path that replaces toolsDatabase wholesale (local load, file import)
+// runs through this, so the three sub-stores always exist.
+function normalizeToolsDatabase(db) {
+    const t = (db && typeof db === 'object') ? db : {};
+    if (!t.platforms || typeof t.platforms !== 'object') t.platforms = {};
+    if (!t.tools || typeof t.tools !== 'object') t.tools = {};
+    if (!Array.isArray(t.categories)) t.categories = DEFAULT_TOOL_CATEGORIES.slice();
+    return t;
+}
 
 // Tools State Variables
 let currentPlatformFilter = 'all';
@@ -17303,15 +17342,7 @@ function saveToolsDatabase() {
 async function loadToolsDatabase() {
     try {
         const saved = await loadFromIndexedDB('toolsDatabase');
-        if (saved) {
-            toolsDatabase = saved;
-            // Ensure structure integrity
-            if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
-            if (!toolsDatabase.tools) toolsDatabase.tools = {};
-            if (!toolsDatabase.categories) {
-                toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
-            }
-        }
+        if (saved) toolsDatabase = normalizeToolsDatabase(saved);
     } catch (e) {
         console.error('Error loading tools database:', e);
     }
@@ -19149,13 +19180,7 @@ function importData(event) {
             }
 
             if (data.toolsDatabase) {
-                toolsDatabase = data.toolsDatabase;
-                // Ensure structure integrity
-                if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
-                if (!toolsDatabase.tools) toolsDatabase.tools = {};
-                if (!toolsDatabase.categories) {
-                    toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
-                }
+                toolsDatabase = normalizeToolsDatabase(data.toolsDatabase);
                 saveToolsDatabase();
             }
 
