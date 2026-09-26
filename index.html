@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v252</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v254</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v252</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v254</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v252<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v254<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8036,6 +8036,11 @@ let syncEnabled = false;
 
 // Shared Database State
 let sharedModeEnabled = false;
+// True once this device has downloaded the cloud copy in this session. Until
+// then an upload would push whatever it holds locally — possibly nothing, on a
+// fresh browser or after a failed sign-in download — over the cloud, and
+// set({merge:true}) replaces every list field wholesale.
+let cloudPulledThisSession = false;
 let sharedOwnerEmail = null;
 let authorizedUsers = []; // Array of email addresses
 
@@ -8080,9 +8085,12 @@ function renderCloudSyncUI() {
             ? `<img src="${currentUser.photoURL}" alt="Avatar">` 
             : initial;
         const lastSyncStr = lastSyncTime ? formatLastSync(lastSyncTime) : 'Never';
-        const statusIcon = isSyncing ? '<span class="spinning">🔄</span>' : '✓';
-        const statusText = isSyncing ? 'Syncing...' : 'Connected & Synced';
-        const statusDetail = isSyncing ? 'Uploading changes...' : 'All data up to date';
+        // "All data up to date" only when the last backup actually went through.
+        const backupFailed = !isSyncing && !!lastUploadError;
+        const statusIcon = isSyncing ? '<span class="spinning">🔄</span>' : (backupFailed ? '⚠️' : '✓');
+        const statusText = isSyncing ? 'Syncing...' : (backupFailed ? 'Backup Failing' : 'Connected & Synced');
+        const statusDetail = isSyncing ? 'Uploading changes...'
+            : (backupFailed ? 'Changes on this device are not in the cloud: ' + escapeJobText(lastUploadError) : 'All data up to date');
         
         container.innerHTML = `
             <div class="sync-status-box connected">
@@ -8365,6 +8373,12 @@ async function syncNow() {
     renderCloudSyncUI();
     
     try {
+        // A device that has not seen the cloud copy yet pulls it first, so its
+        // upload carries the merged data rather than overwriting the cloud.
+        if (!cloudPulledThisSession) {
+            await downloadFromCloud();
+            cloudPulledThisSession = true;
+        }
         // Never download over local changes that failed to upload — pulling the
         // stale cloud copy would erase the edit that was just made locally.
         const uploaded = await uploadToCloud();
@@ -8383,61 +8397,97 @@ async function syncNow() {
     renderCloudSyncUI();
 }
 
-// Firestore rejects any document containing an undefined value anywhere, so a
-// single stray `startMonth: undefined` on one vehicle would fail the whole
-// upload. JSON round-trip drops undefined-valued object properties (undefined
-// array slots become null, which Firestore accepts).
-function sanitizeForFirestore(payload) {
-    return JSON.parse(JSON.stringify(payload));
+// Firestore indexes every field of every nested map and every element of every
+// array, and caps one document at 40,000 index entries. Stored as structured
+// data the user's own stores measured ~37,600 entries on 22 Sep 2026 (before
+// the importer existed) and have grown past the cap since: lishiVehicleData
+// alone is ~15,900, vendorPrices ~10,800. When the cap is hit the WHOLE backup
+// fails, not just the store that tipped it over.
+//
+// So every store rides as its own JSON text field, "<name>Json". A string value
+// costs a fixed pair of index entries however long it is, which puts the whole
+// document at a few dozen entries. The structured field of the same name is
+// deleted in the same write: set({merge:true}) leaves fields it is not given in
+// place, and the old copy would go on counting against the cap.
+//
+// This does NOT shrink the document: it is ~800 KB of Firestore's 1 MiB limit.
+// See the size check in uploadToCloud.
+const CLOUD_PLAIN_FIELDS = ['lastUpdatedBy'];
+
+function packStoresForCloud(payload) {
+    const out = {};
+    Object.keys(payload).forEach(k => {
+        const v = payload[k];
+        if (v === undefined) return;
+        if (CLOUD_PLAIN_FIELDS.indexOf(k) >= 0) { out[k] = v; return; }
+        // JSON drops undefined values; Firestore rejects a document holding
+        // even one (a stray startMonth: undefined used to fail the whole upload)
+        out[k + 'Json'] = JSON.stringify(v);
+        out[k] = firebase.firestore.FieldValue.delete();
+    });
+    return out;
 }
 
-// Firestore indexes every field of every nested map and every element of every
-// array, and caps a single document at 40,000 index entries. The review queue
-// is the worst possible shape for that: deep (proposed, vendor.variants[],
-// issues[], proposed.vehicles[]) and carrying whole blocks of page text in
-// raw.sourceText. Synced as structured data it burns entries fast enough to
-// fail the WHOLE backup, taking every other store down with it.
-//
-// So it rides as one JSON string. Firestore does not index a string field over
-// 1500 bytes at all, so the queue costs a constant handful of entries no matter
-// how big it gets. Only pending rows travel — applied and rejected ones are
-// local history — and sourceText is dropped, being an extractor audit note that
-// a second device has no use for. The local IndexedDB copy keeps everything.
-function packDistImportQueueForCloud() {
-    const pending = distImportQueue.filter(c => c.status === 'pending').map(c => {
+// Turns "<name>Json" text back into the store, so the merge code below keeps
+// reading data.<name> exactly as before. A document written by an older build
+// has structured fields and no Json twins, and passes through untouched.
+function unpackStoresFromCloud(data) {
+    if (!data) return data;
+    Object.keys(data).forEach(k => {
+        const m = /^(.+)Json$/.exec(k);
+        if (!m || typeof data[k] !== 'string') return;
+        const text = data[k];
+        delete data[k];
+        if (!text) return;   // v252 wrote '' for an empty review queue
+        try {
+            data[m[1]] = JSON.parse(text);
+        } catch (e) {
+            console.error('Could not read synced ' + m[1] + ':', e);
+        }
+    });
+    return data;
+}
+
+// Only undecided review rows travel; applied and rejected ones are local
+// history. sourceText is an extractor audit note a second device never needs.
+function pendingDistImportQueueForCloud() {
+    return distImportQueue.filter(c => c.status === 'pending').map(c => {
         const copy = JSON.parse(JSON.stringify(c));
         if (copy.raw) delete copy.raw.sourceText;
         return copy;
     });
-    return pending.length ? JSON.stringify(pending) : '';
 }
 
-// Reads either shape: the packed string, or the structured array written by
-// v246-v251 before this changed. Returns null when the cloud has neither.
-function unpackDistImportQueueFromCloud(data) {
-    if (typeof data.distImportQueueJson === 'string') {
-        if (!data.distImportQueueJson) return [];
-        try {
-            const parsed = JSON.parse(data.distImportQueueJson);
-            if (Array.isArray(parsed)) return parsed;
-        } catch (e) {
-            console.error('Could not read the synced review queue:', e);
-        }
-        return null;
-    }
-    if (Array.isArray(data.distImportQueue)) return data.distImportQueue;
-    return null;
+// Firestore refuses a document over 1 MiB with an error that does not say
+// how big it was. Check first so the message can.
+const CLOUD_DOC_LIMIT_BYTES = 1048576;
+function packedSizeBytes(packed) {
+    let n = 0;
+    Object.keys(packed).forEach(k => {
+        if (typeof packed[k] === 'string') n += k.length + 1 + new Blob([packed[k]]).size + 1;
+    });
+    return n;
+}
+
+let lastUploadError = null;
+
+function tooBigMessage(bytes) {
+    return 'backup is ' + Math.round(bytes / 1024) + ' KB, over the 1024 KB a single cloud document can hold';
 }
 
 // Returns true when everything uploaded, false on failure — callers must not
 // download over local state that failed to upload.
 async function uploadToCloud() {
     if (!currentUser || !firebaseDb) return false;
+    if (!cloudPulledThisSession) {
+        console.warn('Upload held: this device has not downloaded the cloud copy yet this session.');
+        return false;
+    }
 
     try {
         // Always save personal data (stock counts) to user's own location
         const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
-        const personalData = sanitizeForFirestore({ stockData: stockData });
+        const personalData = packStoresForCloud({ stockData: stockData });
         personalData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
         await personalDocRef.set(personalData, { merge: true });
 
@@ -8451,7 +8501,7 @@ async function uploadToCloud() {
 
             // Save shared data to shared location (excludes stockData)
             const sharedDocRef = firebaseDb.collection('shared').doc('data');
-            const sharedData = sanitizeForFirestore({
+            const sharedData = packStoresForCloud({
                 customKeys: customKeys,
                 customVehicles: customVehicles,
                 lishiInventory: lishiInventory,
@@ -8465,7 +8515,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
-                distImportQueueJson: packDistImportQueueForCloud(),
+                distImportQueue: pendingDistImportQueueForCloud(),
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8488,13 +8538,12 @@ async function uploadToCloud() {
                 lastUpdatedBy: currentUser.email
             });
             sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-            // merge:true leaves an old field in place, so the pre-v252 structured
-            // copy would sit there costing index entries forever. Drop it.
-            sharedData.distImportQueue = firebase.firestore.FieldValue.delete();
+            const sharedBytes = packedSizeBytes(sharedData);
+            if (sharedBytes > CLOUD_DOC_LIMIT_BYTES) throw new Error(tooBigMessage(sharedBytes));
             await sharedDocRef.set(sharedData, { merge: true });
         } else {
             // Not in shared mode - save everything to personal location
-            const allData = sanitizeForFirestore({
+            const allData = packStoresForCloud({
                 customKeys: customKeys,
                 customVehicles: customVehicles,
                 lishiInventory: lishiInventory,
@@ -8508,7 +8557,7 @@ async function uploadToCloud() {
                 fidMerges: fidMerges,
                 pnSupersessions: pnSupersessions,
                 discontinuedPns: discontinuedPns,
-                distImportQueueJson: packDistImportQueueForCloud(),
+                distImportQueue: pendingDistImportQueueForCloud(),
                 deletedPnSupersessions: deletedPnSupersessions,
                 fidPrefixes: fidPrefixes,
                 purchaseHistory: purchaseHistory,
@@ -8530,14 +8579,19 @@ async function uploadToCloud() {
                 ilcoRef: ilcoRef
             });
             allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-            allData.distImportQueue = firebase.firestore.FieldValue.delete();
+            // stockData is written separately above but lands in this same document
+            const allBytes = packedSizeBytes(allData) + packedSizeBytes(personalData);
+            if (allBytes > CLOUD_DOC_LIMIT_BYTES) throw new Error(tooBigMessage(allBytes));
             await personalDocRef.set(allData, { merge: true });
         }
         console.log('Cloud sync successful');
+        lastUploadError = null;
         return true;
     } catch (error) {
         console.error('Cloud sync failed:', error);
-        toast('Cloud backup failed: ' + error.message);
+        lastUploadError = error.message || String(error);
+        toast('Cloud backup failed: ' + lastUploadError);
+        renderCloudSyncUI();
         return false;
     }
 }
@@ -8549,7 +8603,7 @@ async function downloadFromCloud() {
     const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
     const personalDoc = await personalDocRef.get();
     if (personalDoc.exists) {
-        const personalData = personalDoc.data();
+        const personalData = unpackStoresFromCloud(personalDoc.data());
         if (personalData.stockData) {
             stockData = { ...stockData, ...personalData.stockData };
             saveStock();
@@ -8573,7 +8627,7 @@ async function downloadFromCloud() {
     const dataDoc = await docRef.get();
 
     if (dataDoc.exists) {
-        const data = dataDoc.data();
+        const data = unpackStoresFromCloud(dataDoc.data());
 
         // For records that exist on both sides, the newer edit wins (by
         // lastEdited/createdAt); ties and unstamped records keep the LOCAL
@@ -8678,11 +8732,10 @@ async function downloadFromCloud() {
             discontinuedPns = { ...discontinuedPns, ...data.discontinuedPns };
             saveDiscontinuedPns();
         }
-        const cloudQueue = unpackDistImportQueueFromCloud(data);
-        if (cloudQueue) {
+        if (Array.isArray(data.distImportQueue)) {
             const byId = {};
             distImportQueue.forEach(c => { byId[c._id] = c; });
-            cloudQueue.forEach(c => {
+            data.distImportQueue.forEach(c => {
                 const local = byId[c._id];
                 // A decision beats an undecided copy; otherwise keep local.
                 if (!local) distImportQueue.push(c);
@@ -8767,6 +8820,13 @@ async function downloadFromCloud() {
             }
             if (data.toolsDatabase.tools) {
                 toolsDatabase.tools = { ...toolsDatabase.tools, ...data.toolsDatabase.tools };
+            }
+            // Categories were never merged, so one made on another device never
+            // arrived here. Union them, keeping local order first.
+            if (Array.isArray(data.toolsDatabase.categories)) {
+                data.toolsDatabase.categories.forEach(c => {
+                    if (c && toolsDatabase.categories.indexOf(c) < 0) toolsDatabase.categories.push(c);
+                });
             }
             saveToolsDatabase();
         }
@@ -8919,6 +8979,7 @@ if (firebaseEnabled && auth) {
             // Download cloud data on sign in
             try {
                 await downloadFromCloud();
+                cloudPulledThisSession = true;
                 lastSyncTime = new Date();
                 localStorage.setItem('lockscroll_last_sync', lastSyncTime.toISOString());
             } catch (error) {
@@ -8926,6 +8987,7 @@ if (firebaseEnabled && auth) {
             }
         } else {
             // Reset shared mode state on sign out
+            cloudPulledThisSession = false;
             sharedModeEnabled = false;
             sharedOwnerEmail = null;
             authorizedUsers = [];
@@ -17283,7 +17345,22 @@ function goHome() {
 // ===================== TOOLS & EQUIPMENT MODULE =====================
 
 // Tools Database Structure
-let toolsDatabase = {};
+// Starts in its full empty shape. v245 stopped shipping the user's own tools
+// as a literal, and a bare {} left categories/platforms/tools undefined on any
+// browser with nothing saved yet — Settings crashed on first open, and Settings
+// is where Sign In lives, so a fresh device could never pull its data down.
+const DEFAULT_TOOL_CATEGORIES = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
+let toolsDatabase = { categories: DEFAULT_TOOL_CATEGORIES.slice(), platforms: {}, tools: {} };
+
+// Every path that replaces toolsDatabase wholesale (local load, file import)
+// runs through this, so the three sub-stores always exist.
+function normalizeToolsDatabase(db) {
+    const t = (db && typeof db === 'object') ? db : {};
+    if (!t.platforms || typeof t.platforms !== 'object') t.platforms = {};
+    if (!t.tools || typeof t.tools !== 'object') t.tools = {};
+    if (!Array.isArray(t.categories)) t.categories = DEFAULT_TOOL_CATEGORIES.slice();
+    return t;
+}
 
 // Tools State Variables
 let currentPlatformFilter = 'all';
@@ -17303,15 +17380,7 @@ function saveToolsDatabase() {
 async function loadToolsDatabase() {
     try {
         const saved = await loadFromIndexedDB('toolsDatabase');
-        if (saved) {
-            toolsDatabase = saved;
-            // Ensure structure integrity
-            if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
-            if (!toolsDatabase.tools) toolsDatabase.tools = {};
-            if (!toolsDatabase.categories) {
-                toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
-            }
-        }
+        if (saved) toolsDatabase = normalizeToolsDatabase(saved);
     } catch (e) {
         console.error('Error loading tools database:', e);
     }
@@ -19149,13 +19218,7 @@ function importData(event) {
             }
 
             if (data.toolsDatabase) {
-                toolsDatabase = data.toolsDatabase;
-                // Ensure structure integrity
-                if (!toolsDatabase.platforms) toolsDatabase.platforms = {};
-                if (!toolsDatabase.tools) toolsDatabase.tools = {};
-                if (!toolsDatabase.categories) {
-                    toolsDatabase.categories = ["Programmers", "Cables", "Adapters", "EEPROM Clamps", "Pin Readers"];
-                }
+                toolsDatabase = normalizeToolsDatabase(data.toolsDatabase);
                 saveToolsDatabase();
             }
 

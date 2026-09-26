@@ -402,6 +402,25 @@ app. Vehicles are edited as `Make | Model | 2019-2021` lines; a line that will
 not parse **blocks the save** and names its line number rather than silently
 dropping a vehicle.
 
+## 5g. Cloud document format (v254)
+
+Firestore caps one document at **40,000 index entries** and **1 MiB**. Written
+as structured maps, the user's own stores measured ~37,600 entries on 22 Sep
+2026, before any importer data (`lishiVehicleData` ~15,900, `vendorPrices`
+~10,800), and grew past the cap soon after, failing every backup.
+
+Each store is now written as a single JSON text field, `<name>Json`, and the
+structured field of the same name is deleted in the same write (`merge:true`
+would otherwise keep it). A text field costs a fixed two index entries, so the
+document went from ~37,600 entries to ~70. `unpackStoresFromCloud()` turns the
+text back into `data.<name>` before any merge code runs, and passes a document
+from an older build (structured fields, no `Json` twins) through untouched.
+
+Size is the next limit: ~795 KB of 1,024 KB on the 22 Sep data, with
+`customKeys` alone at 342 KB (~900 bytes per key). `uploadToCloud()` checks the
+size before writing and fails with a readable message rather than Firestore's.
+Splitting stores across documents is the way past it.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in
