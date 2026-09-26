@@ -30,6 +30,12 @@ numbers in the same commit:
   `exportData()`/`importData()`. Mirror how `jobHistory` is threaded through.
 - `stockData` (key stock by PN) is per-user and deliberately excluded from
   shared sync; most other stores are shared.
+- Cloud sync writes each store as one JSON text field (`<name>Json`, see
+  `packStoresForCloud()` / `unpackStoresFromCloud()`), so a new store added to
+  the payloads is packed automatically. Never write stores as structured
+  Firestore data again: the user's data alone exceeds Firestore's 40,000
+  index-entry cap per document. The document is ~800 KB of the 1 MiB size cap;
+  `uploadToCloud()` refuses an oversized write with a readable message.
 - Escape user text with `escapeJobText()` before injecting into innerHTML, and
   escape quotes (`.replace(/'/g, "\\'")`) inside inline onclick args.
 
