@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v255</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v257</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v255</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v257</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v255<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v257<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8893,6 +8893,7 @@ async function downloadFromCloud() {
             keyInfoOverrides = { ...keyInfoOverrides, ...data.keyInfoOverrides };
             saveKeyInfoOverrides();
             applyKeyInfoOverridesToDB();
+            normalizeStoredBatteries();
         }
         if (data.autelIKeyCompatibility) {
             autelIKeyCompatibility = { ...autelIKeyCompatibility, ...data.autelIKeyCompatibility };
@@ -11264,6 +11265,7 @@ async function init() {
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
     applyPnRenamesToDB();
+    normalizeStoredBatteries();
     await runNonChipChipClearMigration();
     await runFccidSplitMigration();
     await runFccidMergeMigration();
@@ -12272,7 +12274,7 @@ function saveEditKeyInfoInner() {
     const newFrequency = getDropdownValue('editKeyInfoFrequency', 'editKeyInfoFrequencyOther') || null;
     const newButtons = getDropdownValue('editKeyInfoButtons', 'editKeyInfoButtonsOther') || null;
     const newLogo = getDropdownValue('editKeyInfoLogo', 'editKeyInfoLogoOther') || null;
-    const newBattery = getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther') || null;
+    const newBattery = canonicalBattery(getDropdownValue('editKeyInfoBattery', 'editKeyInfoBatteryOther')) || null;
     const newEmergencyPN = getDropdownValue('editKeyInfoEmergencyPN', 'editKeyInfoEmergencyPNOther') || null;
     const newNotes = document.getElementById('editKeyInfoNotes').value.trim() || null;
     const newMemorySeat = parseInt(document.getElementById('editKeyInfoMemorySeat')?.value, 10) || null;
@@ -20325,7 +20327,10 @@ function extractEmergencyPN(...sources) {
     return null;
 }
 
-// Battery to the app's canonical "<type> qty <n>".
+// Battery to the app's canonical form: the bare type for one cell ("2032"),
+// "<type> x<n>" for more ("2016 x2"). Every spelling in the data ("CR2032",
+// "2032 x1", "2032 qty 1", "2x CR2032") lands on one form, so the picklist
+// shows each type/quantity pair once.
 function normalizeBatteryValue(raw) {
     const t = String(raw || '').trim();
     if (!t) return null;
@@ -20334,8 +20339,38 @@ function normalizeBatteryValue(raw) {
     // misses every prefixed cell and flags it as unrecognized.
     const type = (t.match(/\b(?:CR|BR|DL|SR|LR)?(\d{4})\b/i) || [])[1];
     if (!type) return null;
-    const qty = parseInt((t.match(/(?:qty|x)\s*(\d+)/i) || [])[1], 10) || 1;
-    return type + ' qty ' + qty;
+    const qm = t.match(/(?:qty|x)\s*:?\s*(\d+)/i) ||
+        t.match(/^\(?(\d)\)?\s*x?\s*(?:CR|BR|DL|SR|LR)?\d{4}\b/i);
+    const qty = parseInt((qm || [])[1], 10) || 1;
+    return qty > 1 ? type + ' x' + qty : type;
+}
+
+// A stored battery in canonical form, or as-is when it is not a coin cell the
+// normalizer can read (a free-typed note is kept rather than dropped).
+function canonicalBattery(v) {
+    if (v === null || v === undefined || v === '') return v;
+    return normalizeBatteryValue(v) || String(v).trim();
+}
+
+// Put every stored battery in canonical form. The base catalog is rewritten in
+// memory each load; the stores a person writes to are saved back only when
+// something changed. Idempotent, so it also cleans values synced in later.
+function normalizeStoredBatteries() {
+    DB.forEach(k => { if (k.battery) k.battery = canonicalBattery(k.battery); });
+    let ck = false, ov = false;
+    customKeys.forEach(k => {
+        if (!k.battery) return;
+        const c = canonicalBattery(k.battery);
+        if (c !== k.battery) { k.battery = c; ck = true; }
+    });
+    for (const pn in keyInfoOverrides) {
+        const o = keyInfoOverrides[pn];
+        if (!o || !o.battery) continue;
+        const c = canonicalBattery(o.battery);
+        if (c !== o.battery) { o.battery = c; ov = true; }
+    }
+    if (ck) saveCustomKeys();
+    if (ov) saveKeyInfoOverrides();
 }
 
 // Turn one extracted record into the shapes the app stores. Pure: reads the
@@ -20361,6 +20396,15 @@ function normalizeImportedKey(raw, source) {
     const buttons = resolveButtonsEnum(raw.buttons, raw.buttonCount);
     if (!buttons && (raw.buttons || raw.buttonCount)) {
         note('buttons', 'could not match "' + (raw.buttons || raw.buttonCount + ' buttons') + '" to a picklist row');
+    }
+    // A matched row carries its own count ("3 Button: ..."), so the count is
+    // read from it. A separate count is only kept when no row matched, and
+    // only questioned when it contradicts the row.
+    const rowCount = buttons ? parseInt(buttons, 10) : null;
+    const sentCount = parseInt(raw.buttonCount, 10);
+    if (rowCount && !isNaN(sentCount) && sentCount !== rowCount) {
+        note('buttons', 'extractor sent ' + sentCount + ' buttons but the layout "' +
+            buttons.replace(/\s*\(.*$/, '') + '" has ' + rowCount);
     }
 
     const frequency = raw.frequency ? bucketizeFrequency(String(raw.frequency)) : null;
@@ -20449,7 +20493,7 @@ function normalizeImportedKey(raw, source) {
             chip: null,               // never imported; set by hand in the review editor
             chipRaw: chipRaw,
             buttons: buttons,
-            buttonCount: raw.buttonCount || null,
+            buttonCount: rowCount || raw.buttonCount || null,
             frequency: frequency,
             battery: battery,
             emergencyPN: emergencyPN,
@@ -20846,9 +20890,11 @@ const DIST_IMPORT_EDIT_FIELDS = [
     { key: 'chip',        label: 'Chip',                  kind: 'select', cat: 'chip',
       hint: 'left blank by the importer — the same FCC ID can carry different chips, so this one is yours to set' },
     { key: 'buttons',     label: 'Buttons',               kind: 'select', cat: 'buttons' },
-    { key: 'buttonCount', label: 'Button count',          kind: 'number' },
+    { key: 'buttonCount', label: 'Button count',          kind: 'number',
+      hint: 'only when no layout above fits — a layout already says how many buttons' },
     { key: 'frequency',   label: 'Frequency',             kind: 'select', cat: 'frequency' },
-    { key: 'battery',     label: 'Battery',               kind: 'select', cat: 'battery', hint: 'stored as "2032 qty 1"' },
+    { key: 'battery',     label: 'Battery',               kind: 'select', cat: 'battery',
+      hint: 'lists only type/quantity pairs already on a key. A new one (e.g. two 2032s) goes in + Other as "2032 x2"' },
     { key: 'emergencyPN', label: 'Emergency / insert PN', kind: 'text' },
     { key: 'vehicles',    label: 'Vehicles',              kind: 'vehicles', hint: 'one per line - Make | Model | 2019-2021' },
     { key: 'variants',    label: 'Price options',         kind: 'variants' }
@@ -20861,7 +20907,7 @@ const DIST_IMPORT_FLAG_FIELDS = {
     fccid: ['fccid', 'fccids'], fccids: ['fccids'],
     keytype: ['keyType'], fidband: ['keyType'],
     keyway: ['keyway'], chip: ['chip'],
-    buttons: ['buttons', 'buttonCount'], buttoncount: ['buttons', 'buttonCount'],
+    buttons: ['buttons', 'buttonCount'], buttoncount: ['buttonCount'],
     frequency: ['frequency'], battery: ['battery'],
     emergencypn: ['emergencyPN'], vehicles: ['vehicles'],
     variants: ['variants'], price: ['variants'],
@@ -20886,7 +20932,18 @@ function distEditLabel(key) {
 // names that remain, and any the editor has no field for — reported, never
 // silently swallowed.
 function getDistImportFlags(cand) {
-    const resolved = cand.resolved || [];
+    const resolved = (cand.resolved || []).slice();
+    const p = cand.proposed || {};
+    // Button count is read off the buttons row ("3 Button: L, U, P"), so once
+    // a row is set there is no separate count to question.
+    if (p.buttons) resolved.push('buttonCount');
+    // A guess that agrees with what the matched key already has needs no
+    // second look.
+    const have = cand.matchedPn ? DB.find(k => String(k.pn) === String(cand.matchedPn)) : null;
+    if (have) {
+        if (p.buttons && have.buttons === p.buttons) resolved.push('buttons');
+        if (p.battery && have.battery && canonicalBattery(have.battery) === canonicalBattery(p.battery)) resolved.push('battery');
+    }
     const seen = [];
     (cand.raw.uncertain || []).forEach(u => { if (u && seen.indexOf(String(u)) < 0) seen.push(String(u)); });
     (cand.issues || []).forEach(i => { if (i.field && seen.indexOf(i.field) < 0) seen.push(i.field); });
@@ -20936,9 +20993,11 @@ function distEditFieldHtml(f, p) {
                 '<option value="">&mdash; none &mdash;</option>' +
                 opts.map(o => '<option value="' + escapeJobText(o) + '"' + (o === val ? ' selected' : '') + '>' +
                     escapeJobText(o) + '</option>').join('') +
-                '<option value="__other__"' + (val && !known ? ' selected' : '') + '>+ Other&hellip;</option>' +
+                '<option value="__other__"' + (val && !known ? ' selected' : '') + '>' +
+                    (f.key === 'battery' ? '+ Other type or quantity&hellip;' : '+ Other&hellip;') + '</option>' +
             '</select>' +
-            '<input type="text" class="modal-input" id="' + id + '_other" placeholder="Type a value&hellip;" ' +
+            '<input type="text" class="modal-input" id="' + id + '_other" placeholder="' +
+                (f.key === 'battery' ? 'e.g. 2032 x2' : 'Type a value&hellip;') + '" ' +
                 'style="margin-top:6px;display:' + (val && !known ? 'block' : 'none') + ';" value="' +
                 (val && !known ? escapeJobText(val) : '') + '">';
         if (f.key === 'keyType') {
@@ -21050,9 +21109,12 @@ function openDistImportEdit(id, mode) {
     distImportEditMode = mode === 'flagged' ? 'flagged' : 'all';
 
     const flags = getDistImportFlags(c);
-    const fields = distImportEditMode === 'flagged'
+    const fields = (distImportEditMode === 'flagged'
         ? DIST_IMPORT_EDIT_FIELDS.filter(f => flags.fields.indexOf(f.key) >= 0)
-        : DIST_IMPORT_EDIT_FIELDS;
+        : DIST_IMPORT_EDIT_FIELDS)
+        // The count is part of a buttons row, so it is asked for only when
+        // there is no row to read it from.
+        .filter(f => f.key !== 'buttonCount' || !c.proposed.buttons);
     distImportEditFieldKeys = fields.map(f => f.key);
     distImportEditUnmapped = flags.unmapped.slice();
     distImportEditVariants = (c.vendor.variants || []).map(v => Object.assign({}, v));
@@ -21164,9 +21226,13 @@ function saveDistImportEdit() {
         if (v && k === 'frequency') v = bucketizeFrequency(v) || v;
         if (v && k === 'battery') v = normalizeBatteryValue(v) || v;
         if (v !== (p[k] || '')) touched.push(k);
-        if (v) registerDropdownValue(k, v);
+        // A battery is offered once a key carries it, not on being typed here —
+        // a rejected import must not leave a "2032 x2" option behind.
+        if (v && k !== 'battery') registerDropdownValue(k, v);
         p[k] = v || null;
     });
+    // The count rides on the layout; keep it in step with whatever row is set.
+    if (p.buttons && parseInt(p.buttons, 10)) p.buttonCount = parseInt(p.buttons, 10);
     if (has('buttonCount')) {
         const n = parseInt(txt('buttonCount'), 10);
         const v = isNaN(n) ? null : n;
@@ -30327,10 +30393,10 @@ function copyCustomKey(idx) {
     setDropdownOrOther('customKeyButtons', 'customKeyButtonsOther', source.buttons);
     setDropdownOrOther('customKeyFreq', 'customKeyFreqOther', source.frequency);
 
-    // Battery is stored as "<type> qty <n>"
+    // Battery is stored as "2032" or "2016 x2" (older records: "<type> qty <n>")
     if (source.battery) {
-        const m = String(source.battery).match(/^(.*?)\s+qty\s+(\d+)$/i);
-        const batteryType = m ? m[1].trim() : String(source.battery).trim();
+        const m = String(canonicalBattery(source.battery)).match(/^(.*?)\s+x(\d+)$/i);
+        const batteryType = m ? m[1].trim() : String(canonicalBattery(source.battery)).trim();
         const batteryQty = m ? parseInt(m[2], 10) : 1;
         setDropdownOrOther('customKeyBatteryType', 'customKeyBatteryTypeOther', batteryType);
         const qtyEl = document.getElementById('customKeyBatteryQty');
@@ -31637,11 +31703,14 @@ function saveCustomKey() {
         keyRoles = checkedRoles.length > 0 ? checkedRoles : null;
     }
 
-    // Battery: combine type + quantity into the existing "<type> qty <n>" format
+    // Battery: combine type + quantity into "2032" / "2016 x2"; a typed type the
+    // normalizer cannot read keeps the quantity as "x<n>" when more than one
     const batteryType = getDropdownValue('customKeyBatteryType', 'customKeyBatteryTypeOther');
     const batteryQtyRaw = parseInt(document.getElementById('customKeyBatteryQty')?.value, 10);
     const batteryQty = isNaN(batteryQtyRaw) || batteryQtyRaw < 1 ? 1 : batteryQtyRaw;
-    const battery = batteryType ? `${batteryType} qty ${batteryQty}` : null;
+    const battery = batteryType
+        ? (normalizeBatteryValue(batteryType + ' x' + batteryQty) || (batteryQty > 1 ? batteryType + ' x' + batteryQty : batteryType))
+        : null;
 
     // Create the new key object. Non-chip keys without an FCC ID default to
     // their own PN as FCC stand-in (the FID grouping handle, like B44 -> "B44").
@@ -33274,7 +33343,7 @@ function getDropdownValuesForCategory(category) {
         else if (category === 'chip' && key.chip) values.add(String(key.chip));
         else if (category === 'keyType' && key.keyType) values.add(String(key.keyType));
         else if (category === 'buttons' && key.buttons) values.add(String(key.buttons));
-        else if (category === 'battery' && key.battery) values.add(String(key.battery));
+        else if (category === 'battery' && key.battery) values.add(canonicalBattery(String(key.battery)));
         else if (category === 'brand' && key.brand) values.add(String(key.brand));
     });
     // Include default brand options
@@ -33292,7 +33361,7 @@ function getDropdownValuesForCategory(category) {
     }
     // Add user-custom values
     if (customDropdownValues[category]) {
-        customDropdownValues[category].forEach(v => values.add(v));
+        customDropdownValues[category].forEach(v => values.add(category === 'battery' ? canonicalBattery(String(v)) : v));
     }
     return Array.from(values).sort();
 }

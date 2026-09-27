@@ -142,7 +142,7 @@ Each object in `keys`:
   "buttonCount":   "number  Digit count if you cannot match the buttons enum.",
   "buttonsFromImage": "boolean true when the product photo was your source for buttons.",
   "frequency":     "string  e.g. \"315 MHz\", \"433.92 MHz\". Keep the unit.",
-  "battery":       "string  Format exactly: \"2032 qty 1\".",
+  "battery":       "string  Format exactly: \"2032\" for one cell, \"2016 x2\" for two or more.",
   "oemPartNumber": "string  The vehicle maker's OEM number, if listed.",
   "ilco":          "string  Ilco cross-reference, if listed.",
   "emergencyPN":   "string  Emergency/insert key part number, if listed.",
@@ -342,7 +342,7 @@ but `315` and `433` are **different bands**. If a listing states both, that is
 a real contradiction — take the SPECS-block value, put `"frequency"` in
 `uncertain`, and set `confidence` to `low`.
 
-`battery` — normalize to `<type> qty <n>`, e.g. `2032 qty 1`, `2025 qty 2`.
+`battery` — normalize to the bare type for one cell and `<type> x<n>` for more, e.g. `2032`, `2025 x2`.
 Types seen: 2032, 2025, 2016, 1632, 1620, 1616, 2450.
 
 ## Pricing note
