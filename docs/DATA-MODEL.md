@@ -402,24 +402,43 @@ app. Vehicles are edited as `Make | Model | 2019-2021` lines; a line that will
 not parse **blocks the save** and names its line number rather than silently
 dropping a vehicle.
 
-## 5g. Cloud document format (v254)
+## 5g. Cloud storage layout (v255)
 
-Firestore caps one document at **40,000 index entries** and **1 MiB**. Written
-as structured maps, the user's own stores measured ~37,600 entries on 22 Sep
-2026, before any importer data (`lishiVehicleData` ~15,900, `vendorPrices`
-~10,800), and grew past the cap soon after, failing every backup.
+Firestore caps one document at **1 MiB** and **40,000 index entries**. Every
+store used to live in one document: structured, it measured ~37,600 index
+entries on the 22 Sep 2026 data; packed as text (v254), ~795 KB of the 1 MiB,
+with room for about 250 more custom keys.
 
-Each store is now written as a single JSON text field, `<name>Json`, and the
-structured field of the same name is deleted in the same write (`merge:true`
-would otherwise keep it). A text field costs a fixed two index entries, so the
-document went from ~37,600 entries to ~70. `unpackStoresFromCloud()` turns the
-text back into `data.<name>` before any merge code runs, and passes a document
-from an older build (structured fields, no `Json` twins) through untouched.
+Each store now has its own document:
 
-Size is the next limit: ~795 KB of 1,024 KB on the 22 Sep data, with
-`customKeys` alone at 342 KB (~900 bytes per key). `uploadToCloud()` checks the
-size before writing and fails with a readable message rather than Firestore's.
-Splitting stores across documents is the way past it.
+| owner | path |
+|---|---|
+| personal (always holds `stockData`; holds everything without team sharing) | `users/<uid>/stores/<name>` |
+| team sharing | `shared/data/stores/<name>` |
+
+A store document is `{ json, parts, updatedAt, updatedBy }`. A store over
+300,000 characters is split across `<name>`, `<name>__2`, `<name>__3` ...
+with the part count on each, so no single store can hit the 1 MiB wall either.
+On the 22 Sep data `customKeys` (342 KB) is two parts and the biggest single
+document is 333 KB.
+
+- **One atomic batch per sync**: every changed store, its parts, and any
+  cleanup commit together or not at all.
+- **Only changed stores are written.** `cloudStoreSeen` remembers the text
+  last read from or written to each store this session; an unchanged sync
+  writes nothing.
+- **Migration is automatic.** `readCloudData()` reads the stores and, for any
+  store not moved yet, the old single document (`<name>Json` from v254, or
+  structured fields from before). The first upload writes the stores and
+  deletes exactly those old fields, in the same batch.
+- **Unreadable stores are protected.** A store with a missing part is not read,
+  is never overwritten, and keeps its old-document copy.
+- **Rules first.** Rules do not cascade into subcollections, so
+  `tools/firestore.rules` adds a `stores` match under both owners. Without it
+  the download falls back to the old document and the upload is refused with
+  a message naming the fix; nothing is written, so nothing is half-moved.
+
+Cost: a download now reads each store document (~35 reads instead of 1).
 
 ## 6. Schema drift — fix before importing
 

@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v254</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v255</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v254</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v255</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v254<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v255<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8397,40 +8397,167 @@ async function syncNow() {
     renderCloudSyncUI();
 }
 
-// Firestore indexes every field of every nested map and every element of every
-// array, and caps one document at 40,000 index entries. Stored as structured
-// data the user's own stores measured ~37,600 entries on 22 Sep 2026 (before
-// the importer existed) and have grown past the cap since: lishiVehicleData
-// alone is ~15,900, vendorPrices ~10,800. When the cap is hit the WHOLE backup
-// fails, not just the store that tipped it over.
+// ===== Cloud storage layout =====
+// Each store is its own Firestore document: <owner>/stores/<name>, where the
+// owner is users/<uid> (personal) or shared/data (team). A document holds the
+// store as JSON text in `json`.
 //
-// So every store rides as its own JSON text field, "<name>Json". A string value
-// costs a fixed pair of index entries however long it is, which puts the whole
-// document at a few dozen entries. The structured field of the same name is
-// deleted in the same write: set({merge:true}) leaves fields it is not given in
-// place, and the old copy would go on counting against the cap.
+// Why separate documents: Firestore caps ONE document at 1 MiB and 40,000
+// index entries. Everything used to live in a single document; structured it
+// hit the index cap (~37,600 entries on the 22 Sep 2026 data), and packed as
+// text it sat at ~795 KB of the 1 MiB — about 250 custom keys from full, with
+// the distributor importer built to add keys in bulk. Now each store gets the
+// whole 1 MiB to itself, and a store that outgrows even that is split into
+// parts (<name>, <name>__2, <name>__3 ...) with the part count kept on each.
+// A text field costs a fixed pair of index entries however long it is.
 //
-// This does NOT shrink the document: it is ~800 KB of Firestore's 1 MiB limit.
-// See the size check in uploadToCloud.
-const CLOUD_PLAIN_FIELDS = ['lastUpdatedBy'];
+// Everything is written in one batch, so a sync lands whole or not at all.
+const CLOUD_PART_CHARS = 300000;   // <= 900 KB even if every char took 3 bytes
 
-function packStoresForCloud(payload) {
-    const out = {};
-    Object.keys(payload).forEach(k => {
-        const v = payload[k];
-        if (v === undefined) return;
-        if (CLOUD_PLAIN_FIELDS.indexOf(k) >= 0) { out[k] = v; return; }
+// What this session last saw in the cloud per store, keyed
+// "<owner path>/<name>": { text, parts }. An unchanged store is not rewritten,
+// and a store that shrank has its leftover parts deleted. { unreadable: true }
+// marks a store whose parts could not be put back together: it is never
+// written over, since this device does not know what it would be replacing.
+let cloudStoreSeen = {};
+// Field names still on an owner's pre-v255 single document, keyed by owner
+// path. Cleared from that document in the same batch that writes their stores.
+let cloudLegacyFields = {};
+
+function cloudStoreDocId(name, i) {
+    return i === 0 ? name : name + '__' + (i + 1);
+}
+
+// The stores every sync carries. stockData is personal and added separately.
+function cloudStorePayload() {
+    return {
+        customKeys: customKeys,
+        customVehicles: customVehicles,
+        lishiInventory: lishiInventory,
+        lishiVehicleData: lishiVehicleData,
+        lishiData: lishiData,
+        deletedLishiTools: deletedLishiTools,
+        customKeyways: customKeyways,
+        vendorPrices: vendorPrices,
+        customVendors: customVendors,
+        fidAssignments: fidAssignments,
+        fidMerges: fidMerges,
+        pnSupersessions: pnSupersessions,
+        discontinuedPns: discontinuedPns,
+        distImportQueue: pendingDistImportQueueForCloud(),
+        deletedPnSupersessions: deletedPnSupersessions,
+        fidPrefixes: fidPrefixes,
+        purchaseHistory: purchaseHistory,
+        jobHistory: jobHistory,
+        activeJobs: activeJobs,
+        testKeyInventory: testKeyInventory,
+        toolsDatabase: toolsDatabase,
+        vehicleOverrides: vehicleOverrides,
+        keyInfoOverrides: keyInfoOverrides,
+        autelIKeyCompatibility: autelIKeyCompatibility,
+        vehicleYearNotes: vehicleYearNotes,
+        vehicleYearRanges: vehicleYearRanges,
+        customDropdownValues: customDropdownValues,
+        keyRelationships: keyRelationships,
+        fccRelationships: fccRelationships,
+        antiqueOverrides: antiqueOverrides,
+        antiqueCustom: antiqueCustom,
+        ilcoReviewQueue: ilcoReviewQueue,
+        ilcoRef: ilcoRef
+    };
+}
+
+// Only undecided review rows travel; applied and rejected ones are local
+// history. sourceText is an extractor audit note a second device never needs.
+function pendingDistImportQueueForCloud() {
+    return distImportQueue.filter(c => c.status === 'pending').map(c => {
+        const copy = JSON.parse(JSON.stringify(c));
+        if (copy.raw) delete copy.raw.sourceText;
+        return copy;
+    });
+}
+
+// Stage one owner's changed stores into the batch. Returns the entries to
+// record in cloudStoreSeen once the batch has committed.
+function stageCloudStores(batch, ownerRef, stores, stamp) {
+    const col = ownerRef.collection('stores');
+    const staged = [];
+    Object.keys(stores).forEach(name => {
         // JSON drops undefined values; Firestore rejects a document holding
         // even one (a stray startMonth: undefined used to fail the whole upload)
-        out[k + 'Json'] = JSON.stringify(v);
-        out[k] = firebase.firestore.FieldValue.delete();
+        const text = JSON.stringify(stores[name]);
+        if (text === undefined) return;
+        const key = ownerRef.path + '/' + name;
+        const seen = cloudStoreSeen[key];
+        if (seen && (seen.unreadable || seen.text === text)) return;
+        const parts = Math.max(1, Math.ceil(text.length / CLOUD_PART_CHARS));
+        for (let i = 0; i < parts; i++) {
+            batch.set(col.doc(cloudStoreDocId(name, i)), Object.assign({
+                json: text.slice(i * CLOUD_PART_CHARS, (i + 1) * CLOUD_PART_CHARS),
+                parts: parts
+            }, stamp));
+        }
+        for (let i = parts; i < (seen ? seen.parts : 0); i++) {
+            batch.delete(col.doc(cloudStoreDocId(name, i)));
+        }
+        staged.push([key, { text: text, parts: parts }]);
+    });
+    return staged;
+}
+
+// Clear, from an owner's pre-v255 single document, the fields for the stores
+// this batch writes: "<name>Json" (v254) and structured "<name>" (older). Only
+// those — anything else on that document is left alone.
+function stageLegacyCleanup(batch, ownerRef, names) {
+    // A store that could not be read keeps its old copy as the fallback
+    const moved = names.filter(n => {
+        const seen = cloudStoreSeen[ownerRef.path + '/' + n];
+        return !(seen && seen.unreadable);
+    });
+    const fields = (cloudLegacyFields[ownerRef.path] || [])
+        .filter(f => moved.indexOf(f.replace(/Json$/, '')) >= 0);
+    if (!fields.length) return false;
+    const del = {};
+    fields.forEach(f => { del[f] = firebase.firestore.FieldValue.delete(); });
+    batch.set(ownerRef, del, { merge: true });
+    return true;
+}
+
+// Every store under <owner>/stores, reassembled from its parts. A store with a
+// missing part is skipped (the caller falls back to the old document for it)
+// rather than read half.
+async function readCloudStores(ownerRef) {
+    const snap = await ownerRef.collection('stores').get();
+    const byName = {};
+    snap.forEach(doc => {
+        const m = /^(.+?)(?:__(\d+))?$/.exec(doc.id);
+        (byName[m[1]] = byName[m[1]] || [])[m[2] ? parseInt(m[2], 10) - 1 : 0] = doc.data();
+    });
+    const out = {};
+    Object.keys(byName).forEach(name => {
+        const docs = byName[name];
+        const parts = (docs[0] && docs[0].parts) || 0;
+        const pieces = docs.slice(0, parts);
+        const key = ownerRef.path + '/' + name;
+        if (!parts || pieces.length < parts || pieces.some(d => !d || typeof d.json !== 'string')) {
+            console.error('Cloud store ' + name + ' is missing a part; not read, and not overwritten.');
+            cloudStoreSeen[key] = { unreadable: true };
+            return;
+        }
+        const text = pieces.map(d => d.json).join('');
+        try {
+            out[name] = JSON.parse(text);
+            cloudStoreSeen[key] = { text: text, parts: docs.length };
+        } catch (e) {
+            console.error('Could not read cloud store ' + name + '; not overwritten:', e);
+            cloudStoreSeen[key] = { unreadable: true };
+        }
     });
     return out;
 }
 
-// Turns "<name>Json" text back into the store, so the merge code below keeps
-// reading data.<name> exactly as before. A document written by an older build
-// has structured fields and no Json twins, and passes through untouched.
+// Turns a pre-v255 document's "<name>Json" text back into data.<name>. A
+// document from before v254 has structured fields and passes through as is.
 function unpackStoresFromCloud(data) {
     if (!data) return data;
     Object.keys(data).forEach(k => {
@@ -8448,32 +8575,28 @@ function unpackStoresFromCloud(data) {
     return data;
 }
 
-// Only undecided review rows travel; applied and rejected ones are local
-// history. sourceText is an extractor audit note a second device never needs.
-function pendingDistImportQueueForCloud() {
-    return distImportQueue.filter(c => c.status === 'pending').map(c => {
-        const copy = JSON.parse(JSON.stringify(c));
-        if (copy.raw) delete copy.raw.sourceText;
-        return copy;
-    });
-}
-
-// Firestore refuses a document over 1 MiB with an error that does not say
-// how big it was. Check first so the message can.
-const CLOUD_DOC_LIMIT_BYTES = 1048576;
-function packedSizeBytes(packed) {
-    let n = 0;
-    Object.keys(packed).forEach(k => {
-        if (typeof packed[k] === 'string') n += k.length + 1 + new Blob([packed[k]]).size + 1;
-    });
-    return n;
+// Everything the cloud holds for one owner: its per-store documents, with the
+// pre-v255 single document as the fallback for any store not moved yet.
+// Returns null when the owner has neither.
+async function readCloudData(ownerRef) {
+    const legacyDoc = await ownerRef.get();
+    const legacyRaw = legacyDoc.exists ? legacyDoc.data() : {};
+    cloudLegacyFields[ownerRef.path] = Object.keys(legacyRaw)
+        .filter(f => f !== 'updatedAt' && f !== 'lastUpdatedBy');
+    let stores = {};
+    try {
+        stores = await readCloudStores(ownerRef);
+    } catch (e) {
+        if (!e || e.code !== 'permission-denied') throw e;
+        // Rules not updated for the stores documents yet. Read the old
+        // document; the upload is refused and says what to change.
+        console.warn('Cloud stores are not readable yet:', e.message);
+    }
+    if (!legacyDoc.exists && !Object.keys(stores).length) return null;
+    return Object.assign(unpackStoresFromCloud(legacyRaw), stores);
 }
 
 let lastUploadError = null;
-
-function tooBigMessage(bytes) {
-    return 'backup is ' + Math.round(bytes / 1024) + ' KB, over the 1024 KB a single cloud document can hold';
-}
 
 // Returns true when everything uploaded, false on failure — callers must not
 // download over local state that failed to upload.
@@ -8485,111 +8608,46 @@ async function uploadToCloud() {
     }
 
     try {
-        // Always save personal data (stock counts) to user's own location
-        const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
-        const personalData = packStoresForCloud({ stockData: stockData });
-        personalData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-        await personalDocRef.set(personalData, { merge: true });
+        const stamp = {
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser.email
+        };
+        const batch = firebaseDb.batch();
+        const personalRef = firebaseDb.collection('users').doc(currentUser.uid);
+        // Stock counts are personal in every mode; without team sharing
+        // everything else lives under the user as well
+        const own = sharedModeEnabled
+            ? { stockData: stockData }
+            : Object.assign({ stockData: stockData }, cloudStorePayload());
+        let staged = stageCloudStores(batch, personalRef, own, stamp);
+        let cleanups = [stageLegacyCleanup(batch, personalRef, Object.keys(own)) && personalRef.path];
 
-        // Check if user is authorized for shared mode
-        if (sharedModeEnabled) {
-            const isAuthorized = authorizedUsers.includes(currentUser.email);
-            if (!isAuthorized) {
-                console.log('User not authorized for shared database');
-                return false;
-            }
-
-            // Save shared data to shared location (excludes stockData)
-            const sharedDocRef = firebaseDb.collection('shared').doc('data');
-            const sharedData = packStoresForCloud({
-                customKeys: customKeys,
-                customVehicles: customVehicles,
-                lishiInventory: lishiInventory,
-                lishiVehicleData: lishiVehicleData,
-                lishiData: lishiData,
-                deletedLishiTools: deletedLishiTools,
-                customKeyways: customKeyways,
-                vendorPrices: vendorPrices,
-                customVendors: customVendors,
-                fidAssignments: fidAssignments,
-                fidMerges: fidMerges,
-                pnSupersessions: pnSupersessions,
-                discontinuedPns: discontinuedPns,
-                distImportQueue: pendingDistImportQueueForCloud(),
-                deletedPnSupersessions: deletedPnSupersessions,
-                fidPrefixes: fidPrefixes,
-                purchaseHistory: purchaseHistory,
-                jobHistory: jobHistory,
-                activeJobs: activeJobs,
-                testKeyInventory: testKeyInventory,
-                toolsDatabase: toolsDatabase,
-                vehicleOverrides: vehicleOverrides,
-                keyInfoOverrides: keyInfoOverrides,
-                autelIKeyCompatibility: autelIKeyCompatibility,
-                vehicleYearNotes: vehicleYearNotes,
-                vehicleYearRanges: vehicleYearRanges,
-                customDropdownValues: customDropdownValues,
-                keyRelationships: keyRelationships,
-                fccRelationships: fccRelationships,
-                antiqueOverrides: antiqueOverrides,
-                antiqueCustom: antiqueCustom,
-                ilcoReviewQueue: ilcoReviewQueue,
-                ilcoRef: ilcoRef,
-                lastUpdatedBy: currentUser.email
-            });
-            sharedData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-            const sharedBytes = packedSizeBytes(sharedData);
-            if (sharedBytes > CLOUD_DOC_LIMIT_BYTES) throw new Error(tooBigMessage(sharedBytes));
-            await sharedDocRef.set(sharedData, { merge: true });
-        } else {
-            // Not in shared mode - save everything to personal location
-            const allData = packStoresForCloud({
-                customKeys: customKeys,
-                customVehicles: customVehicles,
-                lishiInventory: lishiInventory,
-                lishiVehicleData: lishiVehicleData,
-                lishiData: lishiData,
-                deletedLishiTools: deletedLishiTools,
-                customKeyways: customKeyways,
-                vendorPrices: vendorPrices,
-                customVendors: customVendors,
-                fidAssignments: fidAssignments,
-                fidMerges: fidMerges,
-                pnSupersessions: pnSupersessions,
-                discontinuedPns: discontinuedPns,
-                distImportQueue: pendingDistImportQueueForCloud(),
-                deletedPnSupersessions: deletedPnSupersessions,
-                fidPrefixes: fidPrefixes,
-                purchaseHistory: purchaseHistory,
-                jobHistory: jobHistory,
-                activeJobs: activeJobs,
-                testKeyInventory: testKeyInventory,
-                toolsDatabase: toolsDatabase,
-                vehicleOverrides: vehicleOverrides,
-                keyInfoOverrides: keyInfoOverrides,
-                autelIKeyCompatibility: autelIKeyCompatibility,
-                vehicleYearNotes: vehicleYearNotes,
-                vehicleYearRanges: vehicleYearRanges,
-                customDropdownValues: customDropdownValues,
-                keyRelationships: keyRelationships,
-                fccRelationships: fccRelationships,
-                antiqueOverrides: antiqueOverrides,
-                antiqueCustom: antiqueCustom,
-                ilcoReviewQueue: ilcoReviewQueue,
-                ilcoRef: ilcoRef
-            });
-            allData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-            // stockData is written separately above but lands in this same document
-            const allBytes = packedSizeBytes(allData) + packedSizeBytes(personalData);
-            if (allBytes > CLOUD_DOC_LIMIT_BYTES) throw new Error(tooBigMessage(allBytes));
-            await personalDocRef.set(allData, { merge: true });
+        const teamAllowed = !sharedModeEnabled || authorizedUsers.includes(currentUser.email);
+        if (sharedModeEnabled && teamAllowed) {
+            const sharedRef = firebaseDb.collection('shared').doc('data');
+            const team = cloudStorePayload();
+            staged = staged.concat(stageCloudStores(batch, sharedRef, team, stamp));
+            cleanups.push(stageLegacyCleanup(batch, sharedRef, Object.keys(team)) && sharedRef.path);
         }
-        console.log('Cloud sync successful');
+        cleanups = cleanups.filter(Boolean);
+
+        if (staged.length || cleanups.length) {
+            await batch.commit();
+            staged.forEach(([key, seen]) => { cloudStoreSeen[key] = seen; });
+            cleanups.forEach(path => { delete cloudLegacyFields[path]; });
+        }
+        if (!teamAllowed) {
+            console.log('User not authorized for shared database');
+            return false;
+        }
+        console.log('Cloud sync successful: ' + staged.length + ' store(s) written');
         lastUploadError = null;
         return true;
     } catch (error) {
         console.error('Cloud sync failed:', error);
-        lastUploadError = error.message || String(error);
+        lastUploadError = error && error.code === 'permission-denied'
+            ? 'the cloud rules do not allow the new storage yet. In the Firebase console, open Firestore, Rules, and add the "stores" rules from tools/firestore.rules'
+            : (error.message || String(error));
         toast('Cloud backup failed: ' + lastUploadError);
         renderCloudSyncUI();
         return false;
@@ -8600,10 +8658,9 @@ async function downloadFromCloud() {
     if (!currentUser || !firebaseDb) return;
 
     // Always load personal data (stock counts) from user's own location
-    const personalDocRef = firebaseDb.collection('users').doc(currentUser.uid);
-    const personalDoc = await personalDocRef.get();
-    if (personalDoc.exists) {
-        const personalData = unpackStoresFromCloud(personalDoc.data());
+    const personalRef = firebaseDb.collection('users').doc(currentUser.uid);
+    const personalData = await readCloudData(personalRef);
+    if (personalData) {
         if (personalData.stockData) {
             stockData = { ...stockData, ...personalData.stockData };
             saveStock();
@@ -8619,15 +8676,12 @@ async function downloadFromCloud() {
         }
     }
 
-    // Use shared location if enabled, otherwise user's personal location for other data
-    const docRef = sharedModeEnabled
-        ? firebaseDb.collection('shared').doc('data')
-        : firebaseDb.collection('users').doc(currentUser.uid);
+    // Use shared location if enabled, otherwise the personal data read above
+    const data = sharedModeEnabled
+        ? await readCloudData(firebaseDb.collection('shared').doc('data'))
+        : personalData;
 
-    const dataDoc = await docRef.get();
-
-    if (dataDoc.exists) {
-        const data = unpackStoresFromCloud(dataDoc.data());
+    if (data) {
 
         // For records that exist on both sides, the newer edit wins (by
         // lastEdited/createdAt); ties and unstamped records keep the LOCAL
@@ -8988,6 +9042,8 @@ if (firebaseEnabled && auth) {
         } else {
             // Reset shared mode state on sign out
             cloudPulledThisSession = false;
+            cloudStoreSeen = {};
+            cloudLegacyFields = {};
             sharedModeEnabled = false;
             sharedOwnerEmail = null;
             authorizedUsers = [];
