@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v263</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v264</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v263</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v264</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v263<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v264<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -13538,6 +13538,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             </div>
             <button class="add-vendor-price-btn" onclick="openAddVendorPriceModal('${key.pn}')">+ Add Vendor Pricing</button>
         </div>
+        ${renderSameOemParts(key)}
         
         ${key.notes ? `
         <div class="detail-section">
@@ -14665,6 +14666,72 @@ function priceRow(label, value) {
     const text = isPriceLike(value) ? '$' + value : escapeJobText(String(value));
     return '<div class="vendor-price-row"><span class="label">' + label +
            '</span><span class="value">' + text + '</span></div>';
+}
+
+// The OEM part numbers a key itself lists (cross-references tagged OEM). Only
+// what is written on the key counts — nothing is inferred from its FCC ID.
+function getKeyOemNumbers(key) {
+    return (key && Array.isArray(key.altParts) ? key.altParts : [])
+        .filter(a => a && a.pn && String(a.brand || '').trim().toUpperCase() === 'OEM')
+        .map(a => String(a.pn));
+}
+
+// What a key costs and from whom: its own option's price when it is one
+// version of a distributor listing, else the first vendor price on file.
+function getKeyPricePoint(pn) {
+    const vp = vendorPrices[pn] || {};
+    for (const vendor in vp) {
+        const e = vp[vendor] || {};
+        if (e.sku && Array.isArray(e.variants)) {
+            const own = e.variants.find(v => v.vendorSku && importPnKey(v.vendorSku) === importPnKey(e.sku));
+            if (own && own.price) return { vendor: vendor, price: own.price };
+        }
+        const pr = e.priceA || e.priceB || (Array.isArray(e.variants) && e.variants[0] && e.variants[0].price);
+        if (pr) return { vendor: vendor, price: pr };
+    }
+    return null;
+}
+
+// Keys that list the same OEM part number as this one, from other
+// distributors or listings — the same physical part, a different seller or
+// condition. Versions from this key's own listing are on its vendor card and
+// are left out here. Nothing shows for a key that lists no OEM number.
+function renderSameOemParts(key) {
+    const oems = getKeyOemNumbers(key);
+    if (!oems.length) return '';
+    const want = new Map(oems.map(o => [importPnKey(o), o]));
+    const siblings = new Set();
+    Object.values(vendorPrices[key.pn] || {}).forEach(e => {
+        (e && Array.isArray(e.variants) ? e.variants : []).forEach(v => { if (v.vendorSku) siblings.add(importPnKey(v.vendorSku)); });
+    });
+    const rows = DB.filter(k => k !== key && String(k.pn) !== String(key.pn) && !siblings.has(importPnKey(k.pn)))
+        .map(k => {
+            const shared = getKeyOemNumbers(k).find(o => want.has(importPnKey(o)));
+            if (!shared) return null;
+            const pp = getKeyPricePoint(k.pn);
+            return { k, shared: want.get(importPnKey(shared)), pp, price: pp ? parseFloat(pp.price) : NaN };
+        })
+        .filter(Boolean)
+        .sort((a, b) => (isNaN(a.price) ? 1e9 : a.price) - (isNaN(b.price) ? 1e9 : b.price));
+    if (!rows.length) return '';
+    const body = rows.map(r => {
+        const qty = stockData[r.k.pn] || 0;
+        const seller = (r.pp && r.pp.vendor) || r.k.importedFrom || '';
+        const price = r.pp ? (isPriceLike(r.pp.price) && !isNaN(parseFloat(r.pp.price)) ? '$' + parseFloat(r.pp.price).toFixed(2) : escapeJobText(String(r.pp.price))) : '—';
+        return '<div class="vendor-price-row" style="cursor:pointer;" onclick="openVendorOptionKey(\'' + String(r.k.pn).replace(/'/g, "\\'") + '\')">' +
+            '<span class="label">' + (seller ? escapeJobText(seller) + ' &middot; ' : '') +
+            (r.k.brand ? escapeJobText(r.k.brand) + ' ' : '') +
+            '<span class="mono" style="font-size:10px;">' + escapeJobText(String(r.k.pn)) + '</span>' +
+            ' <span style="font-size:10px;color:' + (qty > 0 ? 'var(--success)' : 'var(--dim)') + ';">' + (qty > 0 ? qty + ' in stock' : 'none in stock') + '</span>' +
+            (oems.length > 1 ? ' <span style="font-size:10px;color:var(--dim);">OEM ' + escapeJobText(r.shared) + '</span>' : '') +
+            ' <span style="color:var(--accent);">&rsaquo;</span></span>' +
+            '<span class="value">' + price + '</span></div>';
+    }).join('');
+    return '<div class="detail-section">' +
+        '<h3>🔗 Same OEM Part, Other Sources</h3>' +
+        '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Keys that list OEM ' +
+            escapeJobText(oems.join(', ')) + ' too. Linked only by that written number, cheapest first.</div>' +
+        '<div class="vendor-price-card">' + body + '</div></div>';
 }
 
 // Open another version of this key from its vendor card, keeping the way
@@ -20699,9 +20766,11 @@ function parseImportBatch(text) {
 
 
 // Fill a key's EMPTY fields from an import (never overwriting what was entered
-// by hand) and add the OEM numbers as cross-references. `brand` is the option
-// name when the key is one option of a listing. Returns what changed.
-function fillImportedKeyFields(pn, p, brand) {
+// by hand). `brand` is the option name when the key is one option of a
+// listing. OEM numbers are added only with `withOem` — i.e. to a key made for
+// this very listing. A key that merely shares the FCC ID is NOT assumed to be
+// the same OEM part. Returns what changed.
+function fillImportedKeyFields(pn, p, brand, withOem) {
     const changes = [];
     const key = DB.find(k => String(k.pn) === String(pn));
     if (!key) return ['key ' + pn + ' no longer in database'];
@@ -20714,7 +20783,7 @@ function fillImportedKeyFields(pn, p, brand) {
     ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN', 'brand'].forEach(f => {
         if (vals[f] && !key[f]) { target[f] = vals[f]; key[f] = vals[f]; changes.push(pn + ': ' + f + ' = ' + vals[f]); }
     });
-    if (p.altParts.length) {
+    if (withOem && p.altParts.length) {
         // The key's own part number is not a cross-reference to itself.
         const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
         const add = p.altParts.filter(a => {
@@ -20803,7 +20872,7 @@ function applyImportCandidate(cand) {
     const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
 
     if (cand.matchedPn && !optKeys.has(importPnKey(cand.matchedPn))) {
-        changes.push(...fillImportedKeyFields(cand.matchedPn, p, null));
+        changes.push(...fillImportedKeyFields(cand.matchedPn, p, null, false));
     }
 
     if (opts.length) {
@@ -20813,7 +20882,7 @@ function applyImportCandidate(cand) {
             let pn = v.vendorSku;
             if (existing) {
                 pn = String(existing.pn);
-                changes.push(...fillImportedKeyFields(pn, p, brand));
+                changes.push(...fillImportedKeyFields(pn, p, brand, true));
             } else {
                 const err = createImportedKey(cand, pn, brand, p.altParts);
                 if (err) { changes.push(err); return; }
