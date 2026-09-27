@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v264</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v265</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v264</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v265</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v264<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v265<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5827,6 +5827,7 @@
             <button onclick="stageDistImport()" style="flex:1;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Stage for review</button>
         </div>
         <div id="distImportPreview" style="margin-top:10px;"></div>
+        <button onclick="showDistImportFootprint()" style="width:100%;margin-top:10px;padding:9px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">&#129529; Start over: review everything imports added</button>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border);">
             <h3 style="margin:0;font-size:15px;">Waiting for review (<span id="distQueueCount">0</span>)</h3>
@@ -8447,6 +8448,7 @@ function cloudStorePayload() {
         discontinuedPns: discontinuedPns,
         distImportQueue: pendingDistImportQueueForCloud(),
         deletedPnSupersessions: deletedPnSupersessions,
+        deletedCustomKeys: deletedCustomKeys,
         fidPrefixes: fidPrefixes,
         purchaseHistory: purchaseHistory,
         jobHistory: jobHistory,
@@ -8695,6 +8697,11 @@ async function downloadFromCloud() {
         };
 
         // Note: stockData is loaded separately from personal location above
+        // Deletions first, so neither the local copy nor the cloud's copy of a
+        // deleted custom key survives the merge below.
+        if (mergeDeletedCustomKeys(data.deletedCustomKeys) && !(data.customKeys && data.customKeys.length)) {
+            loadCustomKeysIntoDB();
+        }
         if (data.customKeys && data.customKeys.length > 0) {
             // Merge custom keys by part number. Compare NORMALIZED, the way the
             // rest of the app does: pn is a number on some records and a string
@@ -8705,6 +8712,7 @@ async function downloadFromCloud() {
             const idxByPn = new Map();
             customKeys.forEach((k, i) => idxByPn.set(pnKey(k.pn), i));
             data.customKeys.forEach(key => {
+                if (isCustomKeyTombstoned(key)) return;
                 const idx = idxByPn.get(pnKey(key.pn));
                 if (idx === undefined) {
                     idxByPn.set(pnKey(key.pn), customKeys.length);
@@ -10600,6 +10608,11 @@ let discontinuedPns = {};
 // set({merge:true}) never drops a map key from the server doc — so without a
 // record of the removal, the next download resurrects the deleted mapping.
 let deletedPnSupersessions = [];
+// Tombstones for deleted custom keys: [{ pn, at }]. The cloud merge adds any
+// custom key it does not have locally, so without a record of the delete the
+// next download brings a deleted key back. A copy stamped (lastEdited /
+// addedDate) after the delete is a re-creation and is kept.
+let deletedCustomKeys = [];
 // Map of original catalog PN -> current display PN, for renames of base (non-custom) keys
 let pnRenames = {};
 // Feature flags — set to true to re-enable
@@ -11446,6 +11459,8 @@ async function loadLocalData() {
             if (savedPnSupersessions) pnSupersessions = savedPnSupersessions;
             const savedDeletedPnSupersessions = await loadFromIndexedDB('deletedPnSupersessions');
             if (Array.isArray(savedDeletedPnSupersessions)) deletedPnSupersessions = savedDeletedPnSupersessions;
+            const savedDeletedCustomKeys = await loadFromIndexedDB('deletedCustomKeys');
+            if (Array.isArray(savedDeletedCustomKeys)) deletedCustomKeys = savedDeletedCustomKeys;
 
             const savedPnRenames = await loadFromIndexedDB('pnRenames');
             if (savedPnRenames) pnRenames = savedPnRenames;
@@ -19273,6 +19288,7 @@ function exportData() {
         keyInfoOverrides: keyInfoOverrides,
         discontinuedPns: discontinuedPns,
         distImportQueue: distImportQueue,
+        deletedCustomKeys: deletedCustomKeys,
         autelIKeyCompatibility: autelIKeyCompatibility,
         vehicleYearNotes: vehicleYearNotes,
         vehicleYearRanges: vehicleYearRanges,
@@ -19358,6 +19374,10 @@ function importData(event) {
             if (Array.isArray(data.distImportQueue)) {
                 distImportQueue = data.distImportQueue;
                 saveDistImportQueue();
+            }
+            if (Array.isArray(data.deletedCustomKeys)) {
+                deletedCustomKeys = data.deletedCustomKeys;
+                saveDeletedCustomKeys();
             }
             if (data.vendorPrices) {
                 vendorPrices = data.vendorPrices;
@@ -20990,6 +21010,149 @@ async function pullDistImportInbox() {
         '</div>';
     if (btn) { btn.disabled = false; btn.textContent = '☁️ Pull from inbox'; }
     toast(staged ? staged + ' staged from the inbox' : 'Nothing new in the inbox');
+}
+
+// ---- Start over ---------------------------------------------------------
+// Everything distributor imports put into the live data: the keys they made
+// (marked importedFrom), and on keys that already existed, the OEM numbers
+// and distributor prices they added. Filled-in spec fields on existing keys
+// are not listed — they cannot be told apart from values typed by hand.
+function getDistImportFootprint() {
+    const made = customKeys.filter(k => k && k.importedFrom);
+    const madeSet = new Set(made.map(k => customKeyPnKey(k.pn)));
+    const sources = new Set(made.map(k => k.importedFrom));
+    const applied = distImportQueue.filter(c => c.status === 'applied');
+    applied.forEach(c => { if (c.source) sources.add(c.source); });
+
+    const touched = {};   // pn -> { oem: [pn...], vendors: [name...] }
+    const touch = pn => (touched[pn] = touched[pn] || { oem: [], vendors: [] });
+    // OEM numbers an import copied onto a key it matched by FCC ID
+    applied.forEach(c => {
+        if (!c.matchedPn || madeSet.has(customKeyPnKey(c.matchedPn))) return;
+        const key = DB.find(k => String(k.pn) === String(c.matchedPn));
+        if (!key) return;
+        const fromImport = new Set(((c.proposed && c.proposed.altParts) || []).map(a => importPnKey(a.pn)));
+        (key.altParts || []).forEach(a => {
+            if (a && String(a.brand || '').toUpperCase() === 'OEM' && fromImport.has(importPnKey(a.pn))) {
+                const t = touch(String(key.pn));
+                if (t.oem.indexOf(a.pn) < 0) t.oem.push(a.pn);
+            }
+        });
+    });
+    // Distributor price entries an import wrote (they carry an options list)
+    Object.keys(vendorPrices).forEach(pn => {
+        if (madeSet.has(customKeyPnKey(pn))) return;
+        Object.keys(vendorPrices[pn] || {}).forEach(vendor => {
+            const e = vendorPrices[pn][vendor];
+            if (sources.has(vendor) && e && Array.isArray(e.variants) && e.variants.length) {
+                const t = touch(pn);
+                if (t.vendors.indexOf(vendor) < 0) t.vendors.push(vendor);
+            }
+        });
+    });
+    return { made: made, touched: touched, sources: Array.from(sources) };
+}
+
+function showDistImportFootprint() {
+    const f = getDistImportFootprint();
+    const el = document.getElementById('distImportPreview');
+    const touchedPns = Object.keys(f.touched);
+    if (!f.made.length && !touchedPns.length) {
+        el.innerHTML = '<div style="font-size:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--dim);">Nothing in your data came from a distributor import.</div>';
+        return;
+    }
+    const stocked = f.made.filter(k => (stockData[k.pn] || 0) > 0);
+    const row = (left, right) => '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:2px 0;border-bottom:1px solid var(--border);">' +
+        '<span>' + left + '</span><span style="color:var(--dim);text-align:right;">' + right + '</span></div>';
+    const madeList = f.made.slice().sort((a, b) => String(a.pn).localeCompare(String(b.pn))).map(k => {
+        const q = stockData[k.pn] || 0;
+        return row('<span class="mono">' + escapeJobText(String(k.pn)) + '</span>' +
+            (k.brand ? ' <span style="color:var(--dim);">' + escapeJobText(k.brand) + '</span>' : ''),
+            escapeJobText(k.fccid || '') + (q > 0 ? ' <b style="color:#e0a800;">' + q + ' in stock</b>' : ''));
+    }).join('');
+    const touchedList = touchedPns.sort().map(pn => {
+        const t = f.touched[pn];
+        const what = [];
+        if (t.oem.length) what.push('OEM ' + t.oem.join(', '));
+        if (t.vendors.length) what.push(t.vendors.join(', ') + ' prices');
+        return row('<span class="mono">' + escapeJobText(pn) + '</span>', escapeJobText('remove ' + what.join('; ')));
+    }).join('');
+    el.innerHTML =
+        '<div style="font-size:12px;line-height:1.5;padding:10px 12px;background:var(--bg);border:1px solid #d9534f;border-radius:8px;">' +
+            '<div style="font-weight:700;margin-bottom:6px;">Start over</div>' +
+            (f.made.length ? '<div style="margin:6px 0 4px;"><b>' + f.made.length + '</b> key(s) made by imports — deleted:</div>' +
+                '<div style="max-height:220px;overflow:auto;">' + madeList + '</div>' : '') +
+            (touchedPns.length ? '<div style="margin:10px 0 4px;"><b>' + touchedPns.length + '</b> existing key(s) an import added to — the keys stay, only what the import added is removed:</div>' +
+                '<div style="max-height:160px;overflow:auto;">' + touchedList + '</div>' : '') +
+            '<div style="color:var(--dim);font-size:11px;margin-top:8px;">Spec fields an import filled in on existing keys (battery, buttons, ...) are left alone. ' +
+                'Approved entries in the review queue are marked undone so the same files can be imported again.</div>' +
+            (stocked.length ? '<div style="color:#e0a800;font-size:11px;margin-top:6px;">' + stocked.length + ' of the keys to delete have stock on hand; their stock counts are deleted with them.</div>' : '') +
+            '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                '<button onclick="document.getElementById(\'distImportPreview\').innerHTML=\'\'" style="flex:1;padding:9px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Cancel</button>' +
+                '<button onclick="undoAllDistImports()" style="flex:2;padding:9px;background:#d9534f;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Delete ' + f.made.length + ' key(s) &amp; undo</button>' +
+            '</div>' +
+        '</div>';
+}
+
+function undoAllDistImports() {
+    const f = getDistImportFootprint();
+    const touchedPns = Object.keys(f.touched);
+    const stocked = f.made.filter(k => (stockData[k.pn] || 0) > 0).length;
+    if (!confirm('Delete ' + f.made.length + ' imported key(s)' +
+            (touchedPns.length ? ' and remove what imports added to ' + touchedPns.length + ' other key(s)' : '') + '?' +
+            (stocked ? '\n\n' + stocked + ' of them have stock on hand; those counts are deleted too.' : '') +
+            '\n\nThis cannot be undone (export a backup first if unsure).')) return;
+
+    // Keys the imports made
+    const gone = new Set(f.made.map(k => customKeyPnKey(k.pn)));
+    f.made.forEach(k => {
+        tombstoneCustomKey(k.pn);
+        delete vendorPrices[k.pn];
+        delete stockData[k.pn];
+    });
+    customKeys = customKeys.filter(k => !gone.has(customKeyPnKey(k.pn)));
+    DB = DB.filter(k => !(k.isCustom && gone.has(customKeyPnKey(k.pn))));
+
+    // What imports added to keys that stay
+    let overridesChanged = false, customChanged = false;
+    touchedPns.forEach(pn => {
+        const t = f.touched[pn];
+        const key = DB.find(k => String(k.pn) === String(pn));
+        if (key && t.oem.length) {
+            const drop = new Set(t.oem.map(importPnKey));
+            const next = (key.altParts || []).filter(a => !(a && String(a.brand || '').toUpperCase() === 'OEM' && drop.has(importPnKey(a.pn))));
+            if (next.length) key.altParts = next; else delete key.altParts;
+            if (key.isCustom) {
+                const ck = customKeys.find(k => String(k.pn) === String(key.pn));
+                if (ck) { if (next.length) ck.altParts = next; else delete ck.altParts; customChanged = true; }
+            } else {
+                const orig = getOriginalCatalogPn(key.pn);
+                keyInfoOverrides[orig] = keyInfoOverrides[orig] || {};
+                keyInfoOverrides[orig].altParts = next.length ? next : null;
+                overridesChanged = true;
+            }
+        }
+        t.vendors.forEach(v => { if (vendorPrices[pn]) delete vendorPrices[pn][v]; });
+        if (vendorPrices[pn] && !Object.keys(vendorPrices[pn]).length) delete vendorPrices[pn];
+    });
+
+    distImportQueue.forEach(c => { if (c.status === 'applied') { c.status = 'undone'; c.undoneAt = new Date().toISOString(); } });
+
+    saveDeletedCustomKeys();
+    saveCustomKeys();
+    if (overridesChanged) saveKeyInfoOverrides();
+    saveVendorPrices();
+    saveStock();
+    saveDistImportQueue();
+    buildFilters();
+    applyFilters();
+    document.getElementById('totalCount').textContent = DB.length;
+    document.getElementById('distImportPreview').innerHTML =
+        '<div style="font-size:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--accent);">Deleted ' +
+        f.made.length + ' imported key(s)' + (touchedPns.length ? ' and cleaned ' + touchedPns.length + ' other key(s)' : '') +
+        '. You can import the files again now.</div>';
+    renderDistImportQueue();
+    toast('Imports undone');
 }
 
 // ---- Import panel -------------------------------------------------------
@@ -32287,8 +32450,58 @@ function getDropdownValue(selectId, otherInputId) {
 }
 
 function saveCustomKeys() {
+    // A custom key present under a tombstoned part number was made again
+    // after the delete (tombstoned copies are pruned before anything saves):
+    // stamp it so no device's merge mistakes it for the deleted one.
+    if (deletedCustomKeys.length) {
+        const now = new Date().toISOString();
+        customKeys.forEach(k => { if (isCustomKeyTombstoned(k)) k.lastEdited = now; });
+    }
     saveToIndexedDB('customKeys', customKeys);
     triggerAutoSync();
+}
+
+function saveDeletedCustomKeys() {
+    saveToIndexedDB('deletedCustomKeys', deletedCustomKeys);
+    triggerAutoSync();
+}
+
+function customKeyPnKey(pn) {
+    return String(pn == null ? '' : pn).trim().toLowerCase();
+}
+
+// Is this record the (or an older) copy of a custom key that was deleted?
+function isCustomKeyTombstoned(key) {
+    if (!key || !deletedCustomKeys.length) return false;
+    const t = deletedCustomKeys.find(x => customKeyPnKey(x.pn) === customKeyPnKey(key.pn));
+    if (!t) return false;
+    const ts = Date.parse(key.lastEdited || key.addedDate || key.createdAt || '') || 0;
+    return ts <= (Date.parse(t.at || '') || 0);
+}
+
+function tombstoneCustomKey(pn) {
+    const at = new Date().toISOString();
+    const t = deletedCustomKeys.find(x => customKeyPnKey(x.pn) === customKeyPnKey(pn));
+    if (t) t.at = at; else deletedCustomKeys.push({ pn: String(pn), at: at });
+}
+
+// Merge another device's tombstones (latest delete per part number wins) and
+// drop local copies they cover. Returns true when a local key was removed.
+function mergeDeletedCustomKeys(incoming) {
+    let changedTomb = false;
+    (Array.isArray(incoming) ? incoming : []).forEach(x => {
+        if (!x || !x.pn) return;
+        const t = deletedCustomKeys.find(y => customKeyPnKey(y.pn) === customKeyPnKey(x.pn));
+        if (!t) { deletedCustomKeys.push({ pn: String(x.pn), at: x.at }); changedTomb = true; }
+        else if ((Date.parse(x.at || '') || 0) > (Date.parse(t.at || '') || 0)) { t.at = x.at; changedTomb = true; }
+    });
+    if (changedTomb) saveToIndexedDB('deletedCustomKeys', deletedCustomKeys);
+    const before = customKeys.length;
+    customKeys = customKeys.filter(k => !isCustomKeyTombstoned(k));
+    if (customKeys.length === before) return false;
+    DB = DB.filter(k => !(k.isCustom && isCustomKeyTombstoned(k)));
+    saveToIndexedDB('customKeys', customKeys);
+    return true;
 }
 
 // Persist a custom key's vehicles list into customKeys (the store that
@@ -32604,8 +32817,10 @@ function deleteCustomKey() {
     const key = customKeys[editingCustomKeyIndex];
     const pn = key.pn;
     
-    // Remove from customKeys
+    // Remove from customKeys, and remember the delete so sync cannot bring it back
     customKeys.splice(editingCustomKeyIndex, 1);
+    tombstoneCustomKey(pn);
+    saveDeletedCustomKeys();
     
     // Remove from DB
     const dbIndex = DB.findIndex(k => String(k.pn) === String(pn) && k.isCustom);
