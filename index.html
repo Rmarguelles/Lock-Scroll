@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v261</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v262</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v261</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v262</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v261<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v262<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20649,96 +20649,147 @@ function parseImportBatch(text) {
 }
 
 
-// Commit one reviewed candidate. New keys join customKeys; an existing key
-// gets an override so the base record is never mutated. Vendor pricing is
-// written per variant. Returns a short description of what changed.
+// Fill a key's EMPTY fields from an import (never overwriting what was entered
+// by hand) and add the OEM numbers as cross-references. `brand` is the option
+// name when the key is one option of a listing. Returns what changed.
+function fillImportedKeyFields(pn, p, brand) {
+    const changes = [];
+    const key = DB.find(k => String(k.pn) === String(pn));
+    if (!key) return ['key ' + pn + ' no longer in database'];
+    const target = key.isCustom
+        ? customKeys.find(k => String(k.pn) === String(key.pn))
+        : (keyInfoOverrides[getOriginalCatalogPn(key.pn)] = keyInfoOverrides[getOriginalCatalogPn(key.pn)] || {});
+    if (!target) return ['could not locate a writable record for ' + pn];
+
+    const vals = Object.assign({}, p, brand ? { brand: brand } : {});
+    ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN', 'brand'].forEach(f => {
+        if (vals[f] && !key[f]) { target[f] = vals[f]; key[f] = vals[f]; changes.push(pn + ': ' + f + ' = ' + vals[f]); }
+    });
+    if (p.altParts.length) {
+        // The key's own part number is not a cross-reference to itself.
+        const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
+        const add = p.altParts.filter(a => {
+            const k = importPnKey(a.pn);
+            if (have.has(k)) return false;
+            have.add(k);
+            return true;
+        });
+        if (add.length) {
+            target.altParts = (key.altParts || []).concat(add);
+            key.altParts = target.altParts;
+            changes.push(pn + ': ' + add.length + ' OEM cross-reference(s)');
+        }
+    }
+    if (key.isCustom) saveCustomKeys(); else saveKeyInfoOverrides();
+    return changes;
+}
+
+// A new custom key from an import. Returns null or a reason it was not made.
+function createImportedKey(cand, pn, brand, refs) {
+    const p = cand.proposed;
+    if (DB.some(k => importPnKey(k.pn) === importPnKey(pn))) return 'part number ' + pn + ' already exists — review manually';
+    const rec = {
+        pn: pn,
+        fccid: p.fccid,
+        keyway: p.keyway || null,
+        chip: p.chip || null,     // blank unless resolved by hand in the review editor
+        keyType: p.keyType || null,
+        buttons: p.buttons || null,
+        frequency: p.frequency || null,
+        battery: p.battery || null,
+        emergencyPN: p.emergencyPN || null,
+        notes: 'Imported from ' + cand.source + (brand ? ' — ' + brand : '') +
+            (cand.raw.productUrl ? '\n' + cand.raw.productUrl : ''),
+        vehicles: JSON.parse(JSON.stringify(p.vehicles || [])),
+        isCustom: true,
+        addedDate: new Date().toISOString(),
+        importedFrom: cand.source
+    };
+    if (brand) rec.brand = brand;
+    if (p.fccids) rec.fccids = p.fccids.slice();
+    if (refs && refs.length) rec.altParts = refs.map(a => ({ pn: a.pn, brand: a.brand }));
+    customKeys.push(rec);
+    DB.push(rec);
+    saveCustomKeys();
+    return null;
+}
+
+// This vendor's price entry on one key: the options it covers, each under its
+// own name and SKU. Price A / Price B is Keyless Ride's new/refurbished split
+// and is not forced onto other distributors.
+function setImportedVendorPrice(pn, vendor, sku, variants) {
+    if (!vendorPrices[pn]) vendorPrices[pn] = {};
+    vendorPrices[pn][vendor] = {
+        sku: sku || null,
+        priceA: '', priceB: '',
+        emergency: '', shell: '', oem: '',
+        variants: variants
+    };
+}
+
+// The options of a listing that carry their own SKU — each is its own part
+// (Your Car Key Guys: YCKG#1060 is the OEM Board OEM Shell, YCKG#2234 the
+// OEM Recased of the same key), so each becomes its own key.
+function importOptionsWithSku(cand) {
+    const seen = new Set();
+    return (cand.vendor.variants || []).filter(v => {
+        if (!v.vendorSku) return false;
+        const k = importPnKey(v.vendorSku);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+    });
+}
+
+// Commit one reviewed candidate. Each option with its own SKU becomes (or
+// updates) a key under that SKU with that option's price. A listing whose
+// options have no SKUs falls back to one key holding every option. A key the
+// listing matched by FCC ID that is not one of those (a catalog key) only has
+// its empty fields filled. Returns a short description of what changed.
 function applyImportCandidate(cand) {
     const changes = [];
     const p = cand.proposed;
+    const vendor = cand.vendor.name;
+    const opts = importOptionsWithSku(cand);
+    const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
 
-    if (cand.matchedPn) {
-        // Existing key: only fill fields that are currently EMPTY. An import
-        // never overwrites something already entered by hand.
-        const key = DB.find(k => String(k.pn) === String(cand.matchedPn));
-        if (!key) return ['key ' + cand.matchedPn + ' no longer in database'];
-        const target = key.isCustom
-            ? customKeys.find(k => String(k.pn) === String(key.pn))
-            : (keyInfoOverrides[getOriginalCatalogPn(key.pn)] = keyInfoOverrides[getOriginalCatalogPn(key.pn)] || {});
-        if (!target) return ['could not locate a writable record for ' + cand.matchedPn];
-
-        ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN'].forEach(f => {
-            if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
-        });
-        // The distributor SKU joins the OEM numbers as a cross-reference, so
-        // the key can be found by what the distributor's site calls it.
-        const sku = importSkuOf(cand);
-        const refs = (sku ? [{ pn: sku, brand: cand.source }] : []).concat(p.altParts);
-        if (refs.length) {
-            // The key's own part number is not a cross-reference to itself.
-            const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
-            const add = refs.filter(a => {
-                const k = importPnKey(a.pn);
-                if (have.has(k)) return false;
-                have.add(k);
-                return true;
-            });
-            if (add.length) {
-                target.altParts = (key.altParts || []).concat(add);
-                key.altParts = target.altParts;
-                changes.push(add.length + ' cross-reference part number(s)');
-            }
-        }
-        if (key.isCustom) saveCustomKeys(); else saveKeyInfoOverrides();
-    } else {
-        // New key, filed under the distributor SKU. Every OEM number is kept
-        // as a cross-reference (only when there is no SKU does the first one
-        // stand in as the part number).
-        const pn = importNewKeyPn(cand);
-        const usedOemAsPn = !importSkuOf(cand) && p.altParts[0] && p.altParts[0].pn === pn;
-        if (!pn) return ['no usable part number'];
-        if (DB.some(k => String(k.pn).toUpperCase() === String(pn).toUpperCase())) {
-            return ['part number ' + pn + ' already exists — review manually'];
-        }
-        const rec = {
-            pn: pn,
-            fccid: p.fccid,
-            keyway: p.keyway || null,
-            chip: p.chip || null,     // blank unless resolved by hand in the review editor
-            keyType: p.keyType || null,
-            buttons: p.buttons || null,
-            frequency: p.frequency || null,
-            battery: p.battery || null,
-            emergencyPN: p.emergencyPN || null,
-            notes: 'Imported from ' + cand.source + (cand.raw.productUrl ? '\n' + cand.raw.productUrl : ''),
-            vehicles: p.vehicles,
-            isCustom: true,
-            addedDate: new Date().toISOString(),
-            importedFrom: cand.source
-        };
-        if (p.fccids) rec.fccids = p.fccids;
-        const refs = usedOemAsPn ? p.altParts.slice(1) : p.altParts;
-        if (refs.length) rec.altParts = refs.slice();
-        customKeys.push(rec);
-        DB.push(rec);
-        saveCustomKeys();
-        changes.push('added key ' + pn);
+    if (cand.matchedPn && !optKeys.has(importPnKey(cand.matchedPn))) {
+        changes.push(...fillImportedKeyFields(cand.matchedPn, p, null));
     }
 
-    // Vendor pricing: each option the distributor sells, under its own name
-    // ("OEM Brand New", "OEM Board OEM Shell", ...). Price A / Price B is
-    // Keyless Ride's new/refurbished split and is not forced onto others.
-    const pn = cand.matchedPn || importNewKeyPn(cand);
-    if (pn && cand.vendor.variants.length) {
-        if (!vendorPrices[pn]) vendorPrices[pn] = {};
-        const v = cand.vendor.variants;
-        vendorPrices[pn][cand.vendor.name] = {
-            sku: importSkuOf(cand),
-            priceA: '', priceB: '',
-            emergency: '', shell: '', oem: '',
-            variants: v
-        };
+    if (opts.length) {
+        opts.forEach(v => {
+            const brand = v.label || null;
+            const existing = DB.find(k => importPnKey(k.pn) === importPnKey(v.vendorSku));
+            let pn = v.vendorSku;
+            if (existing) {
+                pn = String(existing.pn);
+                changes.push(...fillImportedKeyFields(pn, p, brand));
+            } else {
+                const err = createImportedKey(cand, pn, brand, p.altParts);
+                if (err) { changes.push(err); return; }
+                changes.push('added ' + pn + (brand ? ' (' + brand + ')' : ''));
+            }
+            setImportedVendorPrice(pn, vendor, v.vendorSku, [v]);
+        });
         saveVendorPrices();
-        changes.push(v.length + ' price option(s) under ' + cand.vendor.name);
+    } else {
+        // No option has a SKU of its own: one key for the listing, filed under
+        // the listing SKU (else the first OEM number, else the FCC ID).
+        let pn = cand.matchedPn;
+        if (!pn) {
+            pn = importNewKeyPn(cand);
+            if (!pn) return ['no usable part number'];
+            const usedOemAsPn = !importSkuOf(cand) && p.altParts[0] && p.altParts[0].pn === pn;
+            const err = createImportedKey(cand, pn, null, usedOemAsPn ? p.altParts.slice(1) : p.altParts);
+            if (err) return [err];
+            changes.push('added key ' + pn);
+        }
+        if (cand.vendor.variants.length) {
+            setImportedVendorPrice(pn, vendor, importSkuOf(cand), cand.vendor.variants);
+            saveVendorPrices();
+            changes.push(cand.vendor.variants.length + ' price option(s) under ' + vendor);
+        }
     }
 
     cand.status = 'applied';
@@ -20766,7 +20817,7 @@ async function pullDistImportInbox() {
         if (snap.empty) {
             report.push('Inbox is empty.');
         } else {
-            const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+            const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
             for (const docSnap of snap.docs) {
                 const d = docSnap.data() || {};
                 const label = d.batchLabel || docSnap.id;
@@ -20845,7 +20896,7 @@ function loadDistImportFiles(event) {
         reader.onload = e => {
             const res = parseImportBatch(e.target.result);
             if (res.staged.length) {
-                const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+                const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
                 res.staged.forEach(c => {
                     const k = c.raw.productUrl + '|' + c.raw.vendorSku;
                     if (have.has(k)) return;
@@ -20903,7 +20954,7 @@ function previewDistImport() {
 function stageDistImport() {
     const staged = window._distImportStaged;
     if (!staged || !staged.length) { toast('Preview first'); return; }
-    const have = new Set(distImportQueue.map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
+    const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
     let added = 0;
     staged.forEach(c => {
         const k = c.raw.productUrl + '|' + c.raw.vendorSku;
@@ -20960,22 +21011,44 @@ function renderDistImportQueue() {
         ].filter(Boolean).join(' &bull; ');
         const veh = p.vehicles.slice(0, 4).map(v => v.make + ' ' + v.model + ' ' + v.startYear + '-' + v.endYear).join(', ')
             + (p.vehicles.length > 4 ? ' +' + (p.vehicles.length - 4) + ' more' : '');
+        // What Approve does with each option: a key of its own under its SKU
+        // (new, or an update when that SKU is already a key).
+        const opts = importOptionsWithSku(c);
+        const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
+        const optTag = v => {
+            if (!opts.length) return '';
+            if (!v.vendorSku) return ' <span style="color:#e0a800;font-size:10px;">no SKU — not saved</span>';
+            const have = DB.some(k => importPnKey(k.pn) === importPnKey(v.vendorSku));
+            return have
+                ? ' <span style="color:var(--dim);font-size:10px;">updates key</span>'
+                : ' <span style="color:var(--accent);font-size:10px;">+ new key</span>';
+        };
         const prices = c.vendor.variants.map(v =>
-            '<div style="display:flex;justify-content:space-between;font-size:12px;padding:1px 0;">' +
-            '<span style="color:var(--dim);">' + escapeJobText(v.label || v.condition) + '</span>' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:1px 0;">' +
+            '<span style="color:var(--dim);">' + escapeJobText(v.label || v.condition) + optTag(v) + '</span>' +
             '<span class="mono">$' + escapeJobText(v.price) + (v.vendorSku ? ' <span style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '') + '</span></div>').join('');
+        const skuLine = opts.length
+            ? '<div style="font-size:12px;color:var(--dim);">Each option is saved as its own key under its SKU; OEM numbers go on each as cross-references.</div>'
+            : (importSkuOf(c) && c.isNew ? '<div style="font-size:12px;color:var(--dim);">SKU: <span class="mono" style="color:var(--text);">' +
+                escapeJobText(importSkuOf(c)) + '</span> (part number)</div>' : '');
+        // A key an earlier import made for this listing under its OEM number
+        // is superseded by the option keys.
+        const matchedKey = c.matchedPn && !optKeys.has(importPnKey(c.matchedPn))
+            ? DB.find(k => String(k.pn) === String(c.matchedPn)) : null;
+        const staleNote = opts.length && matchedKey && matchedKey.importedFrom === c.source
+            ? '<div style="font-size:11px;color:#e0a800;">Key ' + escapeJobText(c.matchedPn) + ' was made by an earlier import of this listing. ' +
+                'Once the option keys are in, delete it if they replace it.</div>' : '';
         return '' +
         '<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card);">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">' +
                 '<span class="mono" style="font-weight:700;">' + escapeJobText(p.fccid || '(no FCC)') + '</span>' + badge +
             '</div>' +
-            (importSkuOf(c) ? '<div style="font-size:12px;color:var(--dim);">SKU: <span class="mono" style="color:var(--text);">' +
-                escapeJobText(importSkuOf(c)) + '</span>' + (c.isNew ? ' (part number)' : ' (added as cross-reference)') + '</div>' : '') +
+            skuLine +
             (p.altParts.length ? '<div style="font-size:12px;color:var(--dim);">OEM: <span class="mono">' + escapeJobText(p.altParts.map(a => a.pn).join(', ')) + '</span></div>' : '') +
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            oemNote + unc + iss + fixed +
+            staleNote + oemNote + unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
                 '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
@@ -21030,7 +21103,7 @@ function rejectDistImport(id) {
 const DIST_IMPORT_EDIT_FIELDS = [
     { key: 'fccid',       label: 'FCC ID',                kind: 'text' },
     { key: 'fccids',      label: 'Additional FCC IDs',    kind: 'text',   hint: 'comma separated; the primary above is kept first automatically' },
-    { key: 'pn',          label: 'Distributor SKU',       kind: 'text',   hint: 'the part number a new key is saved under' },
+    { key: 'pn',          label: 'Listing SKU',           kind: 'text',   hint: 'used as the part number only when the options below have no SKUs of their own' },
     { key: 'altParts',    label: 'OEM part number(s)',    kind: 'text',   hint: 'comma separated; saved as cross-references' },
     { key: 'keyType',     label: 'Key Type',              kind: 'select', cat: 'keyType' },
     { key: 'keyway',      label: 'Keyway / Blade',        kind: 'select', cat: 'keyway' },
