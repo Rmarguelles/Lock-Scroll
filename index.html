@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v262</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v263</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v262</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v263</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v262<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v263<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14667,6 +14667,14 @@ function priceRow(label, value) {
            '</span><span class="value">' + text + '</span></div>';
 }
 
+// Open another version of this key from its vendor card, keeping the way
+// back the same as for the key being viewed.
+function openVendorOptionKey(pn) {
+    const idx = DB.findIndex(k => String(k.pn) === String(pn));
+    if (idx < 0) { toast('Key ' + pn + ' is not in the database'); return; }
+    openKey(idx, cameFromFcc, cameFromFid, cameFromFidDetail);
+}
+
 function renderVendorPrices(pn) {
     const prices = vendorPrices[pn] || {};
     const vendors = Object.keys(prices);
@@ -14683,19 +14691,40 @@ function renderVendorPrices(pn) {
         if (!hasData) return '';
         
         // A distributor that sells named options (Your Car Key Guys: OEM Brand
-        // New, OEM Board OEM Shell, Aftermarket...) shows each by its own name
-        // and SKU; Price A / B is Keyless Ride's split and shows only when set.
-        const optRows = opts.map(v =>
-            '<div class="vendor-price-row"><span class="label">' + escapeJobText(v.label || v.condition || 'Option') +
-            (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '') +
-            '</span><span class="value">' + (isPriceLike(v.price) ? '$' + v.price : escapeJobText(String(v.price))) + '</span></div>').join('');
+        // New, OEM Board OEM Shell, Aftermarket...) lists every version of the
+        // key together: this key's own option marked, the others tappable to
+        // open their keys, each with stock on hand. Price A / B is Keyless
+        // Ride's split and shows only when set.
+        const optRows = opts.map(v => {
+            const own = p.sku && v.vendorSku && importPnKey(v.vendorSku) === importPnKey(p.sku);
+            const sib = !own && v.vendorSku ? DB.find(k => importPnKey(k.pn) === importPnKey(v.vendorSku)) : null;
+            const qty = own ? (stockData[pn] || 0) : (sib ? (stockData[sib.pn] || 0) : null);
+            const stockTag = qty === null ? '' : ' <span style="font-size:10px;font-weight:normal;color:' +
+                (qty > 0 ? 'var(--success)' : 'var(--dim)') + ';">' + (qty > 0 ? qty + ' in stock' : 'none in stock') + '</span>';
+            const name = escapeJobText(v.label || v.condition || 'Option') +
+                (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '');
+            const price = isPriceLike(v.price)
+                ? '$' + (isNaN(parseFloat(v.price)) ? v.price : parseFloat(v.price).toFixed(2))
+                : escapeJobText(String(v.price));
+            if (own) {
+                return '<div class="vendor-price-row" style="background:var(--bg);border-left:3px solid var(--accent);margin:2px -6px;padding:6px 6px 6px 8px;border-radius:4px;">' +
+                    '<span class="label" style="color:var(--text);">' + name + ' <span style="font-size:10px;color:var(--accent);font-weight:700;">THIS KEY</span>' + stockTag +
+                    '</span><span class="value">' + price + '</span></div>';
+            }
+            const click = sib ? ' onclick="openVendorOptionKey(\'' + String(sib.pn).replace(/'/g, "\\'") + '\')" style="cursor:pointer;"' : '';
+            return '<div class="vendor-price-row"' + click + '><span class="label">' + name + stockTag +
+                (sib ? ' <span style="color:var(--accent);">&rsaquo;</span>' : '') +
+                '</span><span class="value">' + price + '</span></div>';
+        }).join('');
+        const optHead = opts.length > 1
+            ? '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;margin:2px 0 4px;">Versions of this key</div>' : '';
         return `
             <div class="vendor-price-card">
                 <div class="vendor-price-header">
                     <span class="vendor-name">${vendor}${p.sku ? ` <span class="mono" style="color:var(--dim);font-size:11px;font-weight:normal;">SKU: ${escapeJobText(p.sku)}</span>` : ''}</span>
                     <button class="edit-prices-btn" onclick="openEditPricesModal('${pn}', '${vendor}')">Edit</button>
                 </div>
-                ${optRows}
+                ${optHead}${optRows}
                 ${priceRow('Price A', p.priceA)}
                 ${priceRow('Price B', p.priceB)}
                 ${priceRow('Emergency Key', p.emergency)}
@@ -15300,8 +15329,11 @@ function openEditPricesModal(pn, vendor) {
     // Named options (from a distributor import) are edited as themselves; the
     // A / B fields only show for a vendor that uses them.
     const opts = Array.isArray(prices.variants) ? prices.variants : [];
-    document.getElementById('editPricesOptions').innerHTML = opts.map((v, i) =>
+    document.getElementById('editPricesOptions').innerHTML = (opts.length > 1
+        ? '<div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Changes apply to every version of this key.</div>' : '') +
+        opts.map((v, i) =>
         '<div class="modal-input-group"><label>' + escapeJobText(v.label || v.condition || 'Option') +
+        (prices.sku && v.vendorSku && importPnKey(v.vendorSku) === importPnKey(prices.sku) ? ' <span style="color:var(--accent);">(this key)</span>' : '') +
         (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-weight:normal;text-transform:none;">' + escapeJobText(v.vendorSku) + '</span>' : '') +
         '</label><input type="text" class="modal-input" id="editPriceOpt' + i + '" placeholder="0.00 (blank removes it)" value="' +
         escapeJobText(v.price || '') + '"></div>').join('');
@@ -15319,6 +15351,19 @@ function closeEditPricesModal() {
     document.getElementById('editPricesModal').classList.remove('on');
     editingPartNumber = null;
     editingVendor = null;
+}
+
+// Copy an edited option list onto every sibling key (the keys named by the
+// options' SKUs) that holds this vendor's list. Each sibling keeps its own sku.
+function syncVendorOptionSiblings(pn, vendor, before, after) {
+    const skus = new Set();
+    (before || []).concat(after || []).forEach(v => { if (v && v.vendorSku) skus.add(importPnKey(v.vendorSku)); });
+    DB.forEach(k => {
+        if (String(k.pn) === String(pn) || !skus.has(importPnKey(k.pn))) return;
+        const e = vendorPrices[k.pn] && vendorPrices[k.pn][vendor];
+        if (!e || !Array.isArray(e.variants)) return;
+        e.variants = after.map(v => Object.assign({}, v));
+    });
 }
 
 function savePrices() {
@@ -15351,6 +15396,10 @@ function savePrices() {
         if (prev.sku) entry.sku = prev.sku;
         vendorPrices[editingPartNumber][editingVendor] = entry;
     }
+    // The other versions of this key carry the same list of options; keep
+    // their cards in step so no two disagree about a price.
+    syncVendorOptionSiblings(editingPartNumber, editingVendor, prev.variants,
+        (vendorPrices[editingPartNumber][editingVendor] || {}).variants || []);
     
     saveVendorPrices();
     closeEditPricesModal();
@@ -20714,8 +20763,8 @@ function createImportedKey(cand, pn, brand, refs) {
     return null;
 }
 
-// This vendor's price entry on one key: the options it covers, each under its
-// own name and SKU. Price A / Price B is Keyless Ride's new/refurbished split
+// This vendor's price entry on one key: the listing's options, each under its
+// own name and SKU, with `sku` naming the one this key is. Price A / Price B is Keyless Ride's new/refurbished split
 // and is not forced onto other distributors.
 function setImportedVendorPrice(pn, vendor, sku, variants) {
     if (!vendorPrices[pn]) vendorPrices[pn] = {};
@@ -20770,7 +20819,9 @@ function applyImportCandidate(cand) {
                 if (err) { changes.push(err); return; }
                 changes.push('added ' + pn + (brand ? ' (' + brand + ')' : ''));
             }
-            setImportedVendorPrice(pn, vendor, v.vendorSku, [v]);
+            // Every option key carries the whole listing (its own SKU marked),
+            // so its card shows the other versions of the same key.
+            setImportedVendorPrice(pn, vendor, v.vendorSku, cand.vendor.variants.map(x => Object.assign({}, x)));
         });
         saveVendorPrices();
     } else {
