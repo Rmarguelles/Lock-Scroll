@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v257</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v260</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v257</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v260</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v257<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v260<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20382,16 +20382,12 @@ function normalizeImportedKey(raw, source) {
     const fccList = String(raw.fccid || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!fccList.length) note('fccid', 'no FCC ID — cannot identify this key');
 
-    // Identity: match on FCC ID first (the spine), then on the vendor's PN.
-    let match = null;
-    for (const f of fccList) {
-        match = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === normalizeFccId(f)));
-        if (match) break;
-    }
-
     // The distributor's own SKU is not a part number we adopt — the OEM
     // number is, and it goes where OEM cross-references already live.
     const oemPns = String(raw.oemPartNumber || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    // Identity: FCC ID first (the spine), then the OEM part number.
+    const match = findImportMatch(fccList, oemPns);
 
     const buttons = resolveButtonsEnum(raw.buttons, raw.buttonCount);
     if (!buttons && (raw.buttons || raw.buttonCount)) {
@@ -20501,10 +20497,52 @@ function normalizeImportedKey(raw, source) {
             vehicles: vehicles
         },
         vendor: { name: source || 'unknown', variants: variants },
-        matchedPn: match ? String(match.pn) : null,
+        matchedPn: match ? String(match.key.pn) : null,
+        matchedBy: match ? match.by : null,
         isNew: !match,
         issues: issues
     };
+}
+
+// Part numbers compared without case, spaces or dashes ("285E3-6FL2B" is
+// "285E36FL2B").
+function importPnKey(pn) {
+    return String(pn || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// The key already in the database that an import is about: by FCC ID, else by
+// the OEM part number being a key's own part number or one of its cross-
+// references. Returns { key, by: 'fcc' | 'oem' } or null.
+function findImportMatch(fccList, oemPns) {
+    for (const f of fccList || []) {
+        const n = normalizeFccId(f);
+        const hit = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === n));
+        if (hit) return { key: hit, by: 'fcc' };
+    }
+    // A short number ("123") is too likely to collide by accident to count.
+    const want = new Set((oemPns || []).map(importPnKey).filter(x => x.length >= 5));
+    if (!want.size) return null;
+    const hit = DB.find(k => want.has(importPnKey(k.pn)) ||
+        (k.altParts || []).some(a => a && want.has(importPnKey(a.pn))));
+    return hit ? { key: hit, by: 'oem' } : null;
+}
+
+// Re-decide new vs. existing against the database as it is now. The match is
+// first made when a record is staged, but the database moves on while it sits
+// in the queue: approving one card can add the key a second card is about, a
+// key can be added or deleted by hand, and the FCC ID can be edited in review.
+// Returns true when the answer changed.
+function refreshImportMatch(cand) {
+    const p = cand.proposed || {};
+    const list = p.fccids && p.fccids.length ? p.fccids : (p.fccid ? [p.fccid] : []);
+    const m = findImportMatch(list, (p.altParts || []).map(a => a.pn));
+    const pn = m ? String(m.key.pn) : null;
+    const by = m ? m.by : null;
+    const changed = pn !== (cand.matchedPn || null);
+    cand.matchedPn = pn;
+    cand.matchedBy = by;
+    cand.isNew = !m;
+    return changed;
 }
 
 // Accept an extractor batch. Returns { staged, skipped, errors } and never
@@ -20560,8 +20598,9 @@ function applyImportCandidate(cand) {
             if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
         });
         if (p.altParts.length) {
-            const have = new Set((key.altParts || []).map(a => String(a.pn).toUpperCase()));
-            const add = p.altParts.filter(a => !have.has(String(a.pn).toUpperCase()));
+            // The key's own part number is not a cross-reference to itself.
+            const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
+            const add = p.altParts.filter(a => !have.has(importPnKey(a.pn)));
             if (add.length) {
                 target.altParts = (key.altParts || []).concat(add);
                 key.altParts = target.altParts;
@@ -20800,6 +20839,10 @@ function renderDistImportQueue() {
     const el = document.getElementById('distImportQueueList');
     if (!el) return;
     const pending = distImportQueue.filter(c => c.status === 'pending');
+    // Badges reflect the database now, not when the batch was staged.
+    let rematched = false;
+    pending.forEach(c => { if (refreshImportMatch(c)) rematched = true; });
+    if (rematched) saveDistImportQueue();
     document.getElementById('distQueueCount').textContent = pending.length;
     if (!pending.length) {
         el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:24px;font-size:13px;">Nothing waiting for review.</div>';
@@ -20810,7 +20853,14 @@ function renderDistImportQueue() {
         const id = c._id;
         const badge = c.isNew
             ? '<span style="background:var(--accent);color:var(--bg);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">NEW</span>'
-            : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) + '</span>';
+            : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) +
+                (c.matchedBy === 'oem' ? ' BY OEM #' : '') + '</span>';
+        // Approving fills empty fields but never touches a key's FCC IDs, so
+        // say when the one on this listing is not on the key it matched.
+        const oemNote = c.matchedBy === 'oem' && p.fccid
+            ? '<div style="font-size:11px;color:#e0a800;">Matched on OEM part number. FCC ID ' +
+                escapeJobText(p.fccid) + ' is not on key ' + escapeJobText(c.matchedPn) +
+                ' — add it there by hand if it belongs.</div>' : '';
         const conf = c.raw.confidence === 'low'
             ? '<span style="color:#d9534f;font-size:11px;">low confidence</span>' : '';
         const flags = getDistImportFlags(c);
@@ -20840,7 +20890,7 @@ function renderDistImportQueue() {
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            unc + iss + fixed +
+            oemNote + unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
                 '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
@@ -20858,6 +20908,17 @@ function renderDistImportQueue() {
 function approveDistImport(id) {
     const c = distImportQueue.find(x => x._id === id);
     if (!c) return;
+    // Check again right before writing. If the answer changed since the card
+    // was drawn, stop and show the updated card instead of approving blind —
+    // otherwise a second card for the same FCC ID adds a duplicate key.
+    if (refreshImportMatch(c)) {
+        saveDistImportQueue();
+        renderDistImportQueue();
+        toast(c.isNew
+            ? 'The key this matched is gone — it would now be added as new. Check it and approve again.'
+            : 'This is already in your database as ' + c.matchedPn + ' — check the card and approve again.');
+        return;
+    }
     const changes = applyImportCandidate(c);
     renderDistImportQueue();
     buildFilters();
@@ -22009,6 +22070,7 @@ function closeVehiclePanel() {
 }
 
 function closeVehicleModelsPanel() {
+    vehicleKeyTypeSkipped = false;
     document.getElementById('vehicleModelsPanel').classList.remove('on');
     document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
@@ -22027,7 +22089,13 @@ function closeVehicleKeyTypePanel() {
 function closeVehicleYearsPanel() {
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     if (selectedVehicleMake && selectedVehicleModel) {
-        renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
+        // Skipped key-type step: Back lands on the ranges, so refresh those.
+        if (vehicleKeyTypeSkipped) {
+            vehicleKeyTypeSkipped = false;
+            renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
+        } else {
+            renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
+        }
     }
 }
 
@@ -24831,9 +24899,41 @@ function renderVehicleRangesForModel(make, model) {
     document.getElementById('vehicleRangesList').innerHTML = html;
 }
 
-// Range selection -> Show key types (-1 = all years, no set range)
+// True while the key-type step was skipped for the current range, so Back
+// from the years list returns to the ranges and the model notes move there.
+let vehicleKeyTypeSkipped = false;
+
+// The key types (Keyed Ignition / Proximity) that have anything to show for
+// the selected make/model under the selected range and year filter — the same
+// test the years list applies, so a type listed here never opens empty.
+function getVehicleKeyTypesInSelection(make, model) {
+    const yearFilter = document.getElementById('vehicleYearFilter').value;
+    const y = parseInt(yearFilter) || 0;
+    const found = new Set();
+    getModelVehicleEntries(make, model).forEach(v => {
+        if (y && !(y >= v.startYear && y <= (v.endYear || v.startYear))) return;
+        if (!vehicleAppInSelectedRange(v.startYear, v.endYear)) return;
+        v.keys.forEach(k => found.add(normalizeKeyType(k.keyType)));
+        if (!v.keys.length && v.isCustom && v.customKeyType) found.add(v.customKeyType);
+    });
+    return ['Keyed Ignition', 'Proximity'].filter(t => found.has(t));
+}
+
+// Range selection -> Show key types (-1 = all years, no set range). The key
+// type is only asked when the range actually has both; with one, it goes
+// straight to that type's years (a 1940s range never offers Proximity).
 function selectVehicleRange(idx) {
     selectedVehicleRange = idx >= 0 ? selectedVehicleRangeList[idx] || null : null;
+    const types = getVehicleKeyTypesInSelection(selectedVehicleMake, selectedVehicleModel);
+    if (types.length === 1) {
+        vehicleKeyTypeSkipped = true;
+        // Nothing stale may linger in the hidden key-type list: the model
+        // notes box moves to the years list and must be the only one.
+        document.getElementById('vehicleKeyTypeList').innerHTML = '';
+        selectVehicleKeyType(types[0]);
+        return;
+    }
+    vehicleKeyTypeSkipped = false;
     const label = selectedVehicleRange ? formatSetYearRange(selectedVehicleRange) : 'All Years';
     document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${label} ${selectedVehicleMake} ${selectedVehicleModel}`;
     renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
@@ -24841,6 +24941,7 @@ function selectVehicleRange(idx) {
 }
 
 function closeVehicleRangesPanel() {
+    vehicleKeyTypeSkipped = false;
     document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
@@ -25289,6 +25390,23 @@ function renderVehicleYearsForModel(make, model, keyType) {
                 style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${existingNote}</textarea>
         </div>
     `;
+
+    // The model-wide notes normally sit on the key-type page; when that page
+    // was skipped they would be unreachable, so they show here instead.
+    if (vehicleKeyTypeSkipped) {
+        const modelNote = vehicleYearNotes[`${make}|${model}`] || '';
+        html += `
+        <div style="margin-top:12px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text);">Notes for all ${escapeJobText(model)} keys</span>
+                <button onclick="saveVehicleYearNote('${escapedMakeNote}', '${escapedModelNote}', '')"
+                    style="padding:5px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">Save</button>
+            </div>
+            <textarea id="vehicleKeyTypeNoteInput" placeholder="Add notes about this vehicle's keys, reference source differences, etc..."
+                style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${escapeJobText(modelNote)}</textarea>
+        </div>
+    `;
+    }
 
     container.innerHTML = html;
 }
