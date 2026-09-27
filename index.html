@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v256</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v257</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v256</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v257</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v256<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v257<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20327,9 +20327,10 @@ function extractEmergencyPN(...sources) {
     return null;
 }
 
-// Battery to the app's canonical "<type> qty <n>". Every spelling in the data
-// ("2032", "CR2032", "2032 x1", "2032 qty 1", "2x CR2032") lands on one form,
-// so the picklist shows each type/quantity pair once.
+// Battery to the app's canonical form: the bare type for one cell ("2032"),
+// "<type> x<n>" for more ("2016 x2"). Every spelling in the data ("CR2032",
+// "2032 x1", "2032 qty 1", "2x CR2032") lands on one form, so the picklist
+// shows each type/quantity pair once.
 function normalizeBatteryValue(raw) {
     const t = String(raw || '').trim();
     if (!t) return null;
@@ -20341,7 +20342,7 @@ function normalizeBatteryValue(raw) {
     const qm = t.match(/(?:qty|x)\s*:?\s*(\d+)/i) ||
         t.match(/^\(?(\d)\)?\s*x?\s*(?:CR|BR|DL|SR|LR)?\d{4}\b/i);
     const qty = parseInt((qm || [])[1], 10) || 1;
-    return type + ' qty ' + qty;
+    return qty > 1 ? type + ' x' + qty : type;
 }
 
 // A stored battery in canonical form, or as-is when it is not a coin cell the
@@ -20893,7 +20894,7 @@ const DIST_IMPORT_EDIT_FIELDS = [
       hint: 'only when no layout above fits — a layout already says how many buttons' },
     { key: 'frequency',   label: 'Frequency',             kind: 'select', cat: 'frequency' },
     { key: 'battery',     label: 'Battery',               kind: 'select', cat: 'battery',
-      hint: 'lists only type/quantity pairs already on a key. A new one (e.g. two 2032s) goes in + Other as "2032 qty 2"' },
+      hint: 'lists only type/quantity pairs already on a key. A new one (e.g. two 2032s) goes in + Other as "2032 x2"' },
     { key: 'emergencyPN', label: 'Emergency / insert PN', kind: 'text' },
     { key: 'vehicles',    label: 'Vehicles',              kind: 'vehicles', hint: 'one per line - Make | Model | 2019-2021' },
     { key: 'variants',    label: 'Price options',         kind: 'variants' }
@@ -20996,7 +20997,7 @@ function distEditFieldHtml(f, p) {
                     (f.key === 'battery' ? '+ Other type or quantity&hellip;' : '+ Other&hellip;') + '</option>' +
             '</select>' +
             '<input type="text" class="modal-input" id="' + id + '_other" placeholder="' +
-                (f.key === 'battery' ? 'e.g. 2032 qty 2' : 'Type a value&hellip;') + '" ' +
+                (f.key === 'battery' ? 'e.g. 2032 x2' : 'Type a value&hellip;') + '" ' +
                 'style="margin-top:6px;display:' + (val && !known ? 'block' : 'none') + ';" value="' +
                 (val && !known ? escapeJobText(val) : '') + '">';
         if (f.key === 'keyType') {
@@ -21226,7 +21227,7 @@ function saveDistImportEdit() {
         if (v && k === 'battery') v = normalizeBatteryValue(v) || v;
         if (v !== (p[k] || '')) touched.push(k);
         // A battery is offered once a key carries it, not on being typed here —
-        // a rejected import must not leave a "2032 qty 2" option behind.
+        // a rejected import must not leave a "2032 x2" option behind.
         if (v && k !== 'battery') registerDropdownValue(k, v);
         p[k] = v || null;
     });
@@ -30392,10 +30393,10 @@ function copyCustomKey(idx) {
     setDropdownOrOther('customKeyButtons', 'customKeyButtonsOther', source.buttons);
     setDropdownOrOther('customKeyFreq', 'customKeyFreqOther', source.frequency);
 
-    // Battery is stored as "<type> qty <n>"
+    // Battery is stored as "2032" or "2016 x2" (older records: "<type> qty <n>")
     if (source.battery) {
-        const m = String(source.battery).match(/^(.*?)\s+qty\s+(\d+)$/i);
-        const batteryType = m ? m[1].trim() : String(source.battery).trim();
+        const m = String(canonicalBattery(source.battery)).match(/^(.*?)\s+x(\d+)$/i);
+        const batteryType = m ? m[1].trim() : String(canonicalBattery(source.battery)).trim();
         const batteryQty = m ? parseInt(m[2], 10) : 1;
         setDropdownOrOther('customKeyBatteryType', 'customKeyBatteryTypeOther', batteryType);
         const qtyEl = document.getElementById('customKeyBatteryQty');
@@ -31702,11 +31703,14 @@ function saveCustomKey() {
         keyRoles = checkedRoles.length > 0 ? checkedRoles : null;
     }
 
-    // Battery: combine type + quantity into the existing "<type> qty <n>" format
+    // Battery: combine type + quantity into "2032" / "2016 x2"; a typed type the
+    // normalizer cannot read keeps the quantity as "x<n>" when more than one
     const batteryType = getDropdownValue('customKeyBatteryType', 'customKeyBatteryTypeOther');
     const batteryQtyRaw = parseInt(document.getElementById('customKeyBatteryQty')?.value, 10);
     const batteryQty = isNaN(batteryQtyRaw) || batteryQtyRaw < 1 ? 1 : batteryQtyRaw;
-    const battery = batteryType ? `${batteryType} qty ${batteryQty}` : null;
+    const battery = batteryType
+        ? (normalizeBatteryValue(batteryType + ' x' + batteryQty) || (batteryQty > 1 ? batteryType + ' x' + batteryQty : batteryType))
+        : null;
 
     // Create the new key object. Non-chip keys without an FCC ID default to
     // their own PN as FCC stand-in (the FID grouping handle, like B44 -> "B44").
