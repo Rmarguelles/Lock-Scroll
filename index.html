@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v260</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v261</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v260</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v261</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v260<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v261<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -6105,11 +6105,12 @@
 <div class="modal" id="editPricesModal">
     <div class="modal-content">
         <div class="modal-title">Edit Prices - <span id="editPricesVendor"></span></div>
-        <div class="modal-input-group">
+        <div id="editPricesOptions"></div>
+        <div class="modal-input-group" id="editPriceAGroup">
             <label>Price A (Primary)</label>
             <input type="text" class="modal-input" id="editPriceA" placeholder="0.00">
         </div>
-        <div class="modal-input-group">
+        <div class="modal-input-group" id="editPriceBGroup">
             <label>Price B (Secondary)</label>
             <input type="text" class="modal-input" id="editPriceB" placeholder="0.00">
         </div>
@@ -11280,6 +11281,7 @@ async function init() {
     healTestKeyKeywayRenames();
     await initializeVendorPricesFromDB();
     await runVendorPriceDollarStripMigration();
+    clearImportDerivedPriceAB();
     buildFilters();
     buildFccidDatalist();
     applyFilters();
@@ -14675,16 +14677,25 @@ function renderVendorPrices(pn) {
     
     return vendors.map(vendor => {
         const p = prices[vendor];
-        const hasData = p.priceA || p.priceB || p.emergency || p.shell || p.oem;
+        const opts = Array.isArray(p.variants) ? p.variants.filter(v => v && v.price) : [];
+        const hasData = opts.length || p.priceA || p.priceB || p.emergency || p.shell || p.oem;
         
         if (!hasData) return '';
         
+        // A distributor that sells named options (Your Car Key Guys: OEM Brand
+        // New, OEM Board OEM Shell, Aftermarket...) shows each by its own name
+        // and SKU; Price A / B is Keyless Ride's split and shows only when set.
+        const optRows = opts.map(v =>
+            '<div class="vendor-price-row"><span class="label">' + escapeJobText(v.label || v.condition || 'Option') +
+            (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '') +
+            '</span><span class="value">' + (isPriceLike(v.price) ? '$' + v.price : escapeJobText(String(v.price))) + '</span></div>').join('');
         return `
             <div class="vendor-price-card">
                 <div class="vendor-price-header">
-                    <span class="vendor-name">${vendor}</span>
+                    <span class="vendor-name">${vendor}${p.sku ? ` <span class="mono" style="color:var(--dim);font-size:11px;font-weight:normal;">SKU: ${escapeJobText(p.sku)}</span>` : ''}</span>
                     <button class="edit-prices-btn" onclick="openEditPricesModal('${pn}', '${vendor}')">Edit</button>
                 </div>
+                ${optRows}
                 ${priceRow('Price A', p.priceA)}
                 ${priceRow('Price B', p.priceB)}
                 ${priceRow('Emergency Key', p.emergency)}
@@ -15255,6 +15266,27 @@ function adjustStock(pn, delta) {
     applyFilters();
 }
 
+// Distributor imports used to copy two of their options into Price A / Price B
+// (Keyless Ride's split), so an imported card showed the same price twice.
+// Where both are copies of that vendor's own option prices, clear them; a
+// vendor without options (Keyless Ride) or a value typed by hand is untouched.
+function clearImportDerivedPriceAB() {
+    let changed = false;
+    for (const pn in vendorPrices) {
+        for (const vendor in vendorPrices[pn] || {}) {
+            const e = vendorPrices[pn][vendor];
+            if (!e || !Array.isArray(e.variants) || !e.variants.length) continue;
+            if (!e.priceA && !e.priceB) continue;
+            const optPrices = new Set(e.variants.map(v => String(v.price)));
+            if ((!e.priceA || optPrices.has(String(e.priceA))) && (!e.priceB || optPrices.has(String(e.priceB)))) {
+                e.priceA = ''; e.priceB = '';
+                changed = true;
+            }
+        }
+    }
+    if (changed) saveVendorPrices();
+}
+
 // ===================== VENDOR PRICING MODALS =====================
 function openEditPricesModal(pn, vendor) {
     editingPartNumber = pn;
@@ -15265,6 +15297,17 @@ function openEditPricesModal(pn, vendor) {
     document.getElementById('editPricesVendor').textContent = vendor;
     document.getElementById('editPriceA').value = prices.priceA || '';
     document.getElementById('editPriceB').value = prices.priceB || '';
+    // Named options (from a distributor import) are edited as themselves; the
+    // A / B fields only show for a vendor that uses them.
+    const opts = Array.isArray(prices.variants) ? prices.variants : [];
+    document.getElementById('editPricesOptions').innerHTML = opts.map((v, i) =>
+        '<div class="modal-input-group"><label>' + escapeJobText(v.label || v.condition || 'Option') +
+        (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-weight:normal;text-transform:none;">' + escapeJobText(v.vendorSku) + '</span>' : '') +
+        '</label><input type="text" class="modal-input" id="editPriceOpt' + i + '" placeholder="0.00 (blank removes it)" value="' +
+        escapeJobText(v.price || '') + '"></div>').join('');
+    const useAB = !opts.length || prices.priceA || prices.priceB;
+    document.getElementById('editPriceAGroup').style.display = useAB ? '' : 'none';
+    document.getElementById('editPriceBGroup').style.display = useAB ? '' : 'none';
     document.getElementById('editEmergency').value = prices.emergency || '';
     document.getElementById('editShell').value = prices.shell || '';
     document.getElementById('editOem').value = prices.oem || '';
@@ -15291,13 +15334,22 @@ function savePrices() {
     const shell = normalizePriceInput(document.getElementById('editShell').value);
     const oem = normalizePriceInput(document.getElementById('editOem').value);
     
+    // Keep the named options (and the SKU) — rebuilding from the five fields
+    // alone would silently drop them.
+    const prev = vendorPrices[editingPartNumber][editingVendor] || {};
+    const variants = (Array.isArray(prev.variants) ? prev.variants : []).map((v, i) => {
+        const el = document.getElementById('editPriceOpt' + i);
+        return Object.assign({}, v, { price: el ? normalizePriceInput(el.value) : v.price });
+    }).filter(v => v.price);
+
     // If all empty, remove the vendor entry
-    if (!priceA && !priceB && !emergency && !shell && !oem) {
+    if (!priceA && !priceB && !emergency && !shell && !oem && !variants.length) {
         delete vendorPrices[editingPartNumber][editingVendor];
     } else {
-        vendorPrices[editingPartNumber][editingVendor] = {
-            priceA, priceB, emergency, shell, oem
-        };
+        const entry = { priceA, priceB, emergency, shell, oem };
+        if (variants.length) entry.variants = variants;
+        if (prev.sku) entry.sku = prev.sku;
+        vendorPrices[editingPartNumber][editingVendor] = entry;
     }
     
     saveVendorPrices();
@@ -20382,12 +20434,14 @@ function normalizeImportedKey(raw, source) {
     const fccList = String(raw.fccid || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!fccList.length) note('fccid', 'no FCC ID — cannot identify this key');
 
-    // The distributor's own SKU is not a part number we adopt — the OEM
-    // number is, and it goes where OEM cross-references already live.
+    // A new key is filed under the distributor's SKU (what their site is
+    // searched by); the OEM numbers ride along as cross-references for
+    // checking other sources and compatibility.
+    const sku = String(raw.vendorSku || raw.pn || '').trim() || null;
     const oemPns = String(raw.oemPartNumber || '').split(',').map(s => s.trim()).filter(Boolean);
 
-    // Identity: FCC ID first (the spine), then the OEM part number.
-    const match = findImportMatch(fccList, oemPns);
+    // Identity: FCC ID first (the spine), then the SKU or an OEM number.
+    const match = findImportMatch(fccList, (sku ? [sku] : []).concat(oemPns));
 
     const buttons = resolveButtonsEnum(raw.buttons, raw.buttonCount);
     if (!buttons && (raw.buttons || raw.buttonCount)) {
@@ -20450,7 +20504,8 @@ function normalizeImportedKey(raw, source) {
             ? raw.variants
             : [{ vendorSku: raw.vendorSku || raw.pn, price: raw.price, condition: 'unknown', label: null }])
         .map(v => ({
-            vendorSku: String(v.vendorSku || '').trim() || null,
+            // The extractor names an option's SKU "sku"; older batches "vendorSku".
+            vendorSku: String(v.vendorSku || v.sku || '').trim() || null,
             price: normalizePriceInput(v.price),
             condition: String(v.condition || 'unknown').toLowerCase(),
             label: v.label ? String(v.label).trim() : null,
@@ -20482,6 +20537,7 @@ function normalizeImportedKey(raw, source) {
         },
         // what the app would store
         proposed: {
+            pn: sku,
             fccid: fccList[0] || null,
             fccids: fccList.length > 1 ? fccList : null,
             keyType: raw.keyType || null,
@@ -20511,8 +20567,8 @@ function importPnKey(pn) {
 }
 
 // The key already in the database that an import is about: by FCC ID, else by
-// the OEM part number being a key's own part number or one of its cross-
-// references. Returns { key, by: 'fcc' | 'oem' } or null.
+// the distributor SKU or an OEM number being a key's own part number or one of
+// its cross-references. Returns { key, by: 'fcc' | 'oem' } or null.
 function findImportMatch(fccList, oemPns) {
     for (const f of fccList || []) {
         const n = normalizeFccId(f);
@@ -20527,6 +20583,21 @@ function findImportMatch(fccList, oemPns) {
     return hit ? { key: hit, by: 'oem' } : null;
 }
 
+// The distributor SKU a candidate would be filed under. Records staged before
+// the SKU was carried in proposed fall back to what the extractor sent.
+function importSkuOf(cand) {
+    const p = cand.proposed || {};
+    if (p.pn !== undefined) return p.pn || null;
+    return String(cand.raw.vendorSku || cand.raw.pn || '').trim() || null;
+}
+
+// The part number a NEW key from this candidate gets: the distributor SKU,
+// else the first OEM number, else the FCC ID.
+function importNewKeyPn(cand) {
+    const p = cand.proposed;
+    return importSkuOf(cand) || (p.altParts[0] && p.altParts[0].pn) || p.fccid || null;
+}
+
 // Re-decide new vs. existing against the database as it is now. The match is
 // first made when a record is staged, but the database moves on while it sits
 // in the queue: approving one card can add the key a second card is about, a
@@ -20535,7 +20606,8 @@ function findImportMatch(fccList, oemPns) {
 function refreshImportMatch(cand) {
     const p = cand.proposed || {};
     const list = p.fccids && p.fccids.length ? p.fccids : (p.fccid ? [p.fccid] : []);
-    const m = findImportMatch(list, (p.altParts || []).map(a => a.pn));
+    const sku = importSkuOf(cand);
+    const m = findImportMatch(list, (sku ? [sku] : []).concat((p.altParts || []).map(a => a.pn)));
     const pn = m ? String(m.key.pn) : null;
     const by = m ? m.by : null;
     const changed = pn !== (cand.matchedPn || null);
@@ -20597,21 +20669,32 @@ function applyImportCandidate(cand) {
         ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN'].forEach(f => {
             if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
         });
-        if (p.altParts.length) {
+        // The distributor SKU joins the OEM numbers as a cross-reference, so
+        // the key can be found by what the distributor's site calls it.
+        const sku = importSkuOf(cand);
+        const refs = (sku ? [{ pn: sku, brand: cand.source }] : []).concat(p.altParts);
+        if (refs.length) {
             // The key's own part number is not a cross-reference to itself.
             const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
-            const add = p.altParts.filter(a => !have.has(importPnKey(a.pn)));
+            const add = refs.filter(a => {
+                const k = importPnKey(a.pn);
+                if (have.has(k)) return false;
+                have.add(k);
+                return true;
+            });
             if (add.length) {
                 target.altParts = (key.altParts || []).concat(add);
                 key.altParts = target.altParts;
-                changes.push(add.length + ' OEM part number(s)');
+                changes.push(add.length + ' cross-reference part number(s)');
             }
         }
         if (key.isCustom) saveCustomKeys(); else saveKeyInfoOverrides();
     } else {
-        // New key. The vendor's own SKU is not adopted as the part number:
-        // the OEM number is when we have one, else the FCC ID.
-        const pn = (p.altParts[0] && p.altParts[0].pn) || p.fccid;
+        // New key, filed under the distributor SKU. Every OEM number is kept
+        // as a cross-reference (only when there is no SKU does the first one
+        // stand in as the part number).
+        const pn = importNewKeyPn(cand);
+        const usedOemAsPn = !importSkuOf(cand) && p.altParts[0] && p.altParts[0].pn === pn;
         if (!pn) return ['no usable part number'];
         if (DB.some(k => String(k.pn).toUpperCase() === String(pn).toUpperCase())) {
             return ['part number ' + pn + ' already exists — review manually'];
@@ -20633,24 +20716,24 @@ function applyImportCandidate(cand) {
             importedFrom: cand.source
         };
         if (p.fccids) rec.fccids = p.fccids;
-        if (p.altParts.length > 1) rec.altParts = p.altParts.slice(1);
+        const refs = usedOemAsPn ? p.altParts.slice(1) : p.altParts;
+        if (refs.length) rec.altParts = refs.slice();
         customKeys.push(rec);
         DB.push(rec);
         saveCustomKeys();
         changes.push('added key ' + pn);
     }
 
-    // Vendor pricing: cheapest new-condition row to priceA, cheapest of the
-    // rest to priceB, and every option kept in full under variants.
-    const pn = cand.matchedPn || (cand.proposed.altParts[0] && cand.proposed.altParts[0].pn) || p.fccid;
+    // Vendor pricing: each option the distributor sells, under its own name
+    // ("OEM Brand New", "OEM Board OEM Shell", ...). Price A / Price B is
+    // Keyless Ride's new/refurbished split and is not forced onto others.
+    const pn = cand.matchedPn || importNewKeyPn(cand);
     if (pn && cand.vendor.variants.length) {
         if (!vendorPrices[pn]) vendorPrices[pn] = {};
         const v = cand.vendor.variants;
-        const newest = v.find(x => x.condition === 'new');
-        const other = v.find(x => x.condition !== 'new');
         vendorPrices[pn][cand.vendor.name] = {
-            priceA: newest ? newest.price : (v[0] ? v[0].price : ''),
-            priceB: other ? other.price : '',
+            sku: importSkuOf(cand),
+            priceA: '', priceB: '',
             emergency: '', shell: '', oem: '',
             variants: v
         };
@@ -20854,11 +20937,11 @@ function renderDistImportQueue() {
         const badge = c.isNew
             ? '<span style="background:var(--accent);color:var(--bg);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">NEW</span>'
             : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) +
-                (c.matchedBy === 'oem' ? ' BY OEM #' : '') + '</span>';
+                (c.matchedBy === 'oem' ? ' BY PART #' : '') + '</span>';
         // Approving fills empty fields but never touches a key's FCC IDs, so
         // say when the one on this listing is not on the key it matched.
         const oemNote = c.matchedBy === 'oem' && p.fccid
-            ? '<div style="font-size:11px;color:#e0a800;">Matched on OEM part number. FCC ID ' +
+            ? '<div style="font-size:11px;color:#e0a800;">Matched on part number. FCC ID ' +
                 escapeJobText(p.fccid) + ' is not on key ' + escapeJobText(c.matchedPn) +
                 ' — add it there by hand if it belongs.</div>' : '';
         const conf = c.raw.confidence === 'low'
@@ -20886,6 +20969,8 @@ function renderDistImportQueue() {
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">' +
                 '<span class="mono" style="font-weight:700;">' + escapeJobText(p.fccid || '(no FCC)') + '</span>' + badge +
             '</div>' +
+            (importSkuOf(c) ? '<div style="font-size:12px;color:var(--dim);">SKU: <span class="mono" style="color:var(--text);">' +
+                escapeJobText(importSkuOf(c)) + '</span>' + (c.isNew ? ' (part number)' : ' (added as cross-reference)') + '</div>' : '') +
             (p.altParts.length ? '<div style="font-size:12px;color:var(--dim);">OEM: <span class="mono">' + escapeJobText(p.altParts.map(a => a.pn).join(', ')) + '</span></div>' : '') +
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
@@ -20945,7 +21030,8 @@ function rejectDistImport(id) {
 const DIST_IMPORT_EDIT_FIELDS = [
     { key: 'fccid',       label: 'FCC ID',                kind: 'text' },
     { key: 'fccids',      label: 'Additional FCC IDs',    kind: 'text',   hint: 'comma separated; the primary above is kept first automatically' },
-    { key: 'altParts',    label: 'OEM part number(s)',    kind: 'text',   hint: 'comma separated. The first one becomes the part number when this is a new key.' },
+    { key: 'pn',          label: 'Distributor SKU',       kind: 'text',   hint: 'the part number a new key is saved under' },
+    { key: 'altParts',    label: 'OEM part number(s)',    kind: 'text',   hint: 'comma separated; saved as cross-references' },
     { key: 'keyType',     label: 'Key Type',              kind: 'select', cat: 'keyType' },
     { key: 'keyway',      label: 'Keyway / Blade',        kind: 'select', cat: 'keyway' },
     { key: 'chip',        label: 'Chip',                  kind: 'select', cat: 'chip',
@@ -20972,7 +21058,7 @@ const DIST_IMPORT_FLAG_FIELDS = {
     frequency: ['frequency'], battery: ['battery'],
     emergencypn: ['emergencyPN'], vehicles: ['vehicles'],
     variants: ['variants'], price: ['variants'],
-    oempartnumber: ['altParts'], pn: ['altParts'], oem: ['altParts']
+    oempartnumber: ['altParts'], oem: ['altParts'], pn: ['pn'], vendorsku: ['pn'], sku: ['pn']
 };
 
 // The condition vocabulary the extractor is told to use.
@@ -21077,6 +21163,7 @@ function distEditFieldHtml(f, p) {
     } else {
         let val;
         if (f.key === 'fccids') val = (p.fccids || []).slice(1).join(', ');
+        else if (f.key === 'pn') val = importSkuOf(distImportQueue.find(x => x._id === distImportEditingId) || { proposed: p, raw: {} }) || '';
         else if (f.key === 'altParts') val = (p.altParts || []).map(a => a.pn).join(', ');
         else val = p[f.key] == null ? '' : String(p[f.key]);
         body = '<input type="' + (f.kind === 'number' ? 'number' : 'text') + '" class="modal-input" id="' + id +
@@ -21275,6 +21362,11 @@ function saveDistImportEdit() {
         p.fccids = next;
     } else if (p.fccids && p.fccids.length && p.fccid) {
         p.fccids[0] = p.fccid;   // primary edited on its own; keep the list in step
+    }
+    if (has('pn')) {
+        const v = txt('pn');
+        if (v !== (importSkuOf(c) || '')) touched.push('pn');
+        p.pn = v || null;
     }
     if (has('altParts')) {
         const pns = txt('altParts').split(',').map(x => x.trim()).filter(Boolean);
@@ -28951,7 +29043,8 @@ function submitBulkInventory() {
             if (!vendorPrices[pn][vendor]) {
                 vendorPrices[pn][vendor] = { priceA: '', priceB: '', emergency: '', shell: '', oem: '' };
             }
-            if (!vendorPrices[pn][vendor].priceA) {
+            const vp = vendorPrices[pn][vendor];
+            if (!vp.priceA && !(Array.isArray(vp.variants) && vp.variants.length)) {
                 vendorPrices[pn][vendor].priceA = price.toFixed(2);
             }
         }
