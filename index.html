@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v258</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v259</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v258</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v259</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v258<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v259<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20382,12 +20382,12 @@ function normalizeImportedKey(raw, source) {
     const fccList = String(raw.fccid || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!fccList.length) note('fccid', 'no FCC ID — cannot identify this key');
 
-    // Identity: match on FCC ID (the spine).
-    const match = findImportMatch(fccList);
-
     // The distributor's own SKU is not a part number we adopt — the OEM
     // number is, and it goes where OEM cross-references already live.
     const oemPns = String(raw.oemPartNumber || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    // Identity: FCC ID first (the spine), then the OEM part number.
+    const match = findImportMatch(fccList, oemPns);
 
     const buttons = resolveButtonsEnum(raw.buttons, raw.buttonCount);
     if (!buttons && (raw.buttons || raw.buttonCount)) {
@@ -20497,20 +20497,34 @@ function normalizeImportedKey(raw, source) {
             vehicles: vehicles
         },
         vendor: { name: source || 'unknown', variants: variants },
-        matchedPn: match ? String(match.pn) : null,
+        matchedPn: match ? String(match.key.pn) : null,
+        matchedBy: match ? match.by : null,
         isNew: !match,
         issues: issues
     };
 }
 
-// The key already in the database that an import is about, by FCC ID.
-function findImportMatch(fccList) {
-    for (const f of fccList) {
+// Part numbers compared without case, spaces or dashes ("285E3-6FL2B" is
+// "285E36FL2B").
+function importPnKey(pn) {
+    return String(pn || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// The key already in the database that an import is about: by FCC ID, else by
+// the OEM part number being a key's own part number or one of its cross-
+// references. Returns { key, by: 'fcc' | 'oem' } or null.
+function findImportMatch(fccList, oemPns) {
+    for (const f of fccList || []) {
         const n = normalizeFccId(f);
         const hit = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === n));
-        if (hit) return hit;
+        if (hit) return { key: hit, by: 'fcc' };
     }
-    return null;
+    // A short number ("123") is too likely to collide by accident to count.
+    const want = new Set((oemPns || []).map(importPnKey).filter(x => x.length >= 5));
+    if (!want.size) return null;
+    const hit = DB.find(k => want.has(importPnKey(k.pn)) ||
+        (k.altParts || []).some(a => a && want.has(importPnKey(a.pn))));
+    return hit ? { key: hit, by: 'oem' } : null;
 }
 
 // Re-decide new vs. existing against the database as it is now. The match is
@@ -20521,12 +20535,14 @@ function findImportMatch(fccList) {
 function refreshImportMatch(cand) {
     const p = cand.proposed || {};
     const list = p.fccids && p.fccids.length ? p.fccids : (p.fccid ? [p.fccid] : []);
-    const m = findImportMatch(list);
-    const pn = m ? String(m.pn) : null;
-    if (pn === (cand.matchedPn || null)) return false;
+    const m = findImportMatch(list, (p.altParts || []).map(a => a.pn));
+    const pn = m ? String(m.key.pn) : null;
+    const by = m ? m.by : null;
+    const changed = pn !== (cand.matchedPn || null);
     cand.matchedPn = pn;
+    cand.matchedBy = by;
     cand.isNew = !m;
-    return true;
+    return changed;
 }
 
 // Accept an extractor batch. Returns { staged, skipped, errors } and never
@@ -20582,8 +20598,9 @@ function applyImportCandidate(cand) {
             if (p[f] && !key[f]) { target[f] = p[f]; key[f] = p[f]; changes.push(f + ' = ' + p[f]); }
         });
         if (p.altParts.length) {
-            const have = new Set((key.altParts || []).map(a => String(a.pn).toUpperCase()));
-            const add = p.altParts.filter(a => !have.has(String(a.pn).toUpperCase()));
+            // The key's own part number is not a cross-reference to itself.
+            const have = new Set((key.altParts || []).map(a => importPnKey(a.pn)).concat([importPnKey(key.pn)]));
+            const add = p.altParts.filter(a => !have.has(importPnKey(a.pn)));
             if (add.length) {
                 target.altParts = (key.altParts || []).concat(add);
                 key.altParts = target.altParts;
@@ -20836,7 +20853,14 @@ function renderDistImportQueue() {
         const id = c._id;
         const badge = c.isNew
             ? '<span style="background:var(--accent);color:var(--bg);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">NEW</span>'
-            : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) + '</span>';
+            : '<span style="background:var(--card);color:var(--dim);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">MATCHES ' + escapeJobText(c.matchedPn) +
+                (c.matchedBy === 'oem' ? ' BY OEM #' : '') + '</span>';
+        // Approving fills empty fields but never touches a key's FCC IDs, so
+        // say when the one on this listing is not on the key it matched.
+        const oemNote = c.matchedBy === 'oem' && p.fccid
+            ? '<div style="font-size:11px;color:#e0a800;">Matched on OEM part number. FCC ID ' +
+                escapeJobText(p.fccid) + ' is not on key ' + escapeJobText(c.matchedPn) +
+                ' — add it there by hand if it belongs.</div>' : '';
         const conf = c.raw.confidence === 'low'
             ? '<span style="color:#d9534f;font-size:11px;">low confidence</span>' : '';
         const flags = getDistImportFlags(c);
@@ -20866,7 +20890,7 @@ function renderDistImportQueue() {
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            unc + iss + fixed +
+            oemNote + unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
                 '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
