@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v257</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v258</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v257</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v258</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v257<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v258<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -20382,12 +20382,8 @@ function normalizeImportedKey(raw, source) {
     const fccList = String(raw.fccid || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!fccList.length) note('fccid', 'no FCC ID — cannot identify this key');
 
-    // Identity: match on FCC ID first (the spine), then on the vendor's PN.
-    let match = null;
-    for (const f of fccList) {
-        match = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === normalizeFccId(f)));
-        if (match) break;
-    }
+    // Identity: match on FCC ID (the spine).
+    const match = findImportMatch(fccList);
 
     // The distributor's own SKU is not a part number we adopt — the OEM
     // number is, and it goes where OEM cross-references already live.
@@ -20505,6 +20501,32 @@ function normalizeImportedKey(raw, source) {
         isNew: !match,
         issues: issues
     };
+}
+
+// The key already in the database that an import is about, by FCC ID.
+function findImportMatch(fccList) {
+    for (const f of fccList) {
+        const n = normalizeFccId(f);
+        const hit = DB.find(k => getKeyFccIds(k).some(x => normalizeFccId(x) === n));
+        if (hit) return hit;
+    }
+    return null;
+}
+
+// Re-decide new vs. existing against the database as it is now. The match is
+// first made when a record is staged, but the database moves on while it sits
+// in the queue: approving one card can add the key a second card is about, a
+// key can be added or deleted by hand, and the FCC ID can be edited in review.
+// Returns true when the answer changed.
+function refreshImportMatch(cand) {
+    const p = cand.proposed || {};
+    const list = p.fccids && p.fccids.length ? p.fccids : (p.fccid ? [p.fccid] : []);
+    const m = findImportMatch(list);
+    const pn = m ? String(m.pn) : null;
+    if (pn === (cand.matchedPn || null)) return false;
+    cand.matchedPn = pn;
+    cand.isNew = !m;
+    return true;
 }
 
 // Accept an extractor batch. Returns { staged, skipped, errors } and never
@@ -20800,6 +20822,10 @@ function renderDistImportQueue() {
     const el = document.getElementById('distImportQueueList');
     if (!el) return;
     const pending = distImportQueue.filter(c => c.status === 'pending');
+    // Badges reflect the database now, not when the batch was staged.
+    let rematched = false;
+    pending.forEach(c => { if (refreshImportMatch(c)) rematched = true; });
+    if (rematched) saveDistImportQueue();
     document.getElementById('distQueueCount').textContent = pending.length;
     if (!pending.length) {
         el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:24px;font-size:13px;">Nothing waiting for review.</div>';
@@ -20858,6 +20884,17 @@ function renderDistImportQueue() {
 function approveDistImport(id) {
     const c = distImportQueue.find(x => x._id === id);
     if (!c) return;
+    // Check again right before writing. If the answer changed since the card
+    // was drawn, stop and show the updated card instead of approving blind —
+    // otherwise a second card for the same FCC ID adds a duplicate key.
+    if (refreshImportMatch(c)) {
+        saveDistImportQueue();
+        renderDistImportQueue();
+        toast(c.isNew
+            ? 'The key this matched is gone — it would now be added as new. Check it and approve again.'
+            : 'This is already in your database as ' + c.matchedPn + ' — check the card and approve again.');
+        return;
+    }
     const changes = applyImportCandidate(c);
     renderDistImportQueue();
     buildFilters();
