@@ -4548,7 +4548,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v266</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v267</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4839,17 +4839,8 @@
     <div class="vehicle-list" id="vehicleModelsList"></div>
 </div>
 
-<!-- Vehicle Year Ranges Panel - After selecting model -->
-<div class="vehicle-panel" id="vehicleRangesPanel" style="z-index:206;">
-    <div class="vehicle-header">
-        <button class="back-btn" onclick="closeVehicleRangesPanel()">←</button>
-        <div class="vehicle-title" id="vehicleRangesPanelTitle">📅 Select Year</div>
-    </div>
-    <div class="vehicle-list" id="vehicleRangesList"></div>
-</div>
-
-<!-- Vehicle Key Type Panel - After selecting year range -->
-<div class="vehicle-panel" id="vehicleKeyTypePanel" style="z-index:207;">
+<!-- Vehicle Key Type Panel - After selecting model -->
+<div class="vehicle-panel" id="vehicleKeyTypePanel" style="z-index:206;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehicleKeyTypePanel()">←</button>
         <div class="vehicle-title" id="vehicleKeyTypePanelTitle">🔑 Select Key Type</div>
@@ -4857,7 +4848,16 @@
     <div class="vehicle-list" id="vehicleKeyTypeList"></div>
 </div>
 
-<!-- Vehicle Years Panel - After selecting key type -->
+<!-- Vehicle Year Ranges Panel - After selecting key type -->
+<div class="vehicle-panel" id="vehicleRangesPanel" style="z-index:207;">
+    <div class="vehicle-header">
+        <button class="back-btn" onclick="closeVehicleRangesPanel()">←</button>
+        <div class="vehicle-title" id="vehicleRangesPanelTitle">📅 Select Year</div>
+    </div>
+    <div class="vehicle-list" id="vehicleRangesList"></div>
+</div>
+
+<!-- Vehicle Years Panel - After selecting year range -->
 <div class="vehicle-panel" id="vehicleYearsPanel" style="z-index:208;">
     <div class="vehicle-header">
         <button class="back-btn" onclick="closeVehicleYearsPanel()">←</button>
@@ -5309,7 +5309,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v266</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v267</p>
         </div>
 
         <div class="settings-section">
@@ -5321,7 +5321,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v266<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v267<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -22532,25 +22532,21 @@ function closeVehicleModelsPanel() {
     document.getElementById('vehicleYearsPanel').classList.remove('on');
 }
 
+// Back to the models list; nothing past the key type stays open
 function closeVehicleKeyTypePanel() {
     document.getElementById('vehicleKeyTypePanel').classList.remove('on');
+    document.getElementById('vehicleRangesPanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
-    // Re-render the ranges to reflect year ranges added further in
-    if (selectedVehicleMake && selectedVehicleModel) {
-        renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
-    }
+    selectedVehicleKeyType = null;
+    selectedVehicleRange = null;
 }
 
 function closeVehicleYearsPanel() {
     document.getElementById('vehicleYearsPanel').classList.remove('on');
+    selectedVehicleRange = null;
+    // Re-render the ranges to reflect year ranges added further in
     if (selectedVehicleMake && selectedVehicleModel) {
-        // Skipped key-type step: Back lands on the ranges, so refresh those.
-        if (vehicleKeyTypeSkipped) {
-            vehicleKeyTypeSkipped = false;
-            renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
-        } else {
-            renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
-        }
+        renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
     }
 }
 
@@ -25122,17 +25118,31 @@ function levenshteinDistance(str1, str2) {
 }
 
 // Model selection -> Show key types
+// Model selection -> key type (Keyed Ignition / Proximity). The key type is
+// only asked when the model actually has both; with one, it goes straight to
+// that type's year ranges (a 1940s model never offers Proximity).
 function selectVehicleModel(model) {
     selectedVehicleModel = model;
     selectedVehicleRange = null;
-    document.getElementById('vehicleRangesPanelTitle').textContent = `📅 ${selectedVehicleMake} ${model}`;
-    renderVehicleRangesForModel(selectedVehicleMake, model);
-    document.getElementById('vehicleRangesPanel').classList.add('on');
+    selectedVehicleKeyType = null;
+    const types = getVehicleKeyTypesInSelection(selectedVehicleMake, model);
+    if (types.length === 1) {
+        vehicleKeyTypeSkipped = true;
+        // Nothing stale may linger in the hidden key-type list: the model
+        // notes box moves to the year ranges and must be the only one.
+        document.getElementById('vehicleKeyTypeList').innerHTML = '';
+        selectVehicleKeyType(types[0]);
+        return;
+    }
+    vehicleKeyTypeSkipped = false;
+    document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${selectedVehicleMake} ${model}`;
+    renderKeyTypesForModel(selectedVehicleMake, model);
+    document.getElementById('vehicleKeyTypePanel').classList.add('on');
 }
 
 // ===================== SET YEAR RANGES =====================
-// Each make/model gets a short list of set year ranges (Make -> Model -> Year
-// range -> Key type). Keys funnel into the ranges they overlap, labeled by how
+// Each make/model gets a short list of set year ranges (Make -> Model -> Key
+// type -> Year range). Keys funnel into the ranges they overlap, labeled by how
 // well their listed years fit. Ranges are suggested from the key data; the
 // user can override them per make/model (vehicleYearRanges).
 const YEAR_RANGE_TOLERANCE = 2; // up to 2 yrs off a range = flagged discrepancy; 3+ = different range
@@ -25273,19 +25283,16 @@ function yearRangeFitBadgeHtml(fit, entry) {
     return `<div style="color:${st.color};font-size:11px;font-weight:600;">${st.icon} ${st.label}${detail}</div>`;
 }
 
-// Is a key's vehicle application (start/end years) listed under the selected set range?
-function vehicleAppInSelectedRange(startYear, endYear) {
-    if (!selectedVehicleRange) return true;
-    const entry = { startYear: parseInt(startYear) || 0, endYear: parseInt(endYear || startYear) || 0 };
-    const yearFilter = document.getElementById('vehicleYearFilter').value;
-    return !!getYearRangeFit(selectedVehicleRange, entry, selectedVehicleRangeList, yearFilter);
-}
-
+// Year ranges for the chosen key type. The ranges themselves belong to the
+// make/model (Edit Ranges sets them once for both types); a range with nothing
+// of the chosen type is left out, so a range listed here never opens empty.
 function renderVehicleRangesForModel(make, model) {
     const yearFilter = document.getElementById('vehicleYearFilter').value;
     const y = parseInt(yearFilter) || 0;
-    const entries = getModelVehicleEntries(make, model);
-    const { ranges, isCustom } = getVehicleYearRanges(make, model, entries);
+    const keyType = selectedVehicleKeyType;
+    const allEntries = getModelVehicleEntries(make, model);
+    const { ranges, isCustom } = getVehicleYearRanges(make, model, allEntries);
+    const entries = keyType ? allEntries.filter(v => vehicleEntryHasKeyType(v, keyType)) : allEntries;
     selectedVehicleRangeList = ranges;
     const escapedMake = make.replace(/'/g, "\\'");
     const escapedModel = model.replace(/'/g, "\\'");
@@ -25301,13 +25308,11 @@ function renderVehicleRangesForModel(make, model) {
     const cards = ranges.map((r, idx) => {
         const fits = entries.map(v => ({ v, fit: getYearRangeFit(r, v, ranges, yearFilter) })).filter(x => x.fit);
         fits.forEach(x => listed.add(x.v));
+        if (keyType && !fits.length) return '';
         if (y && !((y >= r.start && y <= r.end) || fits.some(x => y >= x.v.startYear && y <= x.v.endYear))) return '';
         const pns = new Set();
-        const typeCounts = { 'Keyed Ignition': new Set(), 'Proximity': new Set() };
         fits.forEach(x => x.v.keys.forEach(k => {
-            if (!k.pn) return;
-            pns.add(k.pn);
-            typeCounts[normalizeKeyType(k.keyType)].add(k.pn);
+            if (k.pn && (!keyType || normalizeKeyType(k.keyType) === keyType)) pns.add(k.pn);
         }));
         const inStock = Array.from(pns).filter(pn => (stockData[pn] || 0) > 0).length;
         const off1 = fits.filter(x => x.fit.level === 'off1').length;
@@ -25315,7 +25320,6 @@ function renderVehicleRangesForModel(make, model) {
         const flags = [];
         if (off1) flags.push(`<div style="color:var(--warning);font-size:11px;">⚠️ ${off1} slight year discrepanc${off1 !== 1 ? 'ies' : 'y'}</div>`);
         if (off2) flags.push(`<div style="color:#ff8c1a;font-size:11px;">🟠 ${off2} two-year discrepanc${off2 !== 1 ? 'ies' : 'y'}</div>`);
-        const typeLine = Object.entries(typeCounts).filter(([, s]) => s.size > 0).map(([t, s]) => `${t}: ${s.size}`).join(' | ');
         return `
             <div class="vehicle-card" onclick="selectVehicleRange(${idx})">
                 <div class="vehicle-card-header">
@@ -25326,7 +25330,6 @@ function renderVehicleRangesForModel(make, model) {
                 </div>
                 <div class="vehicle-card-info" style="flex-direction:column;align-items:flex-start;gap:4px;">
                     <div style="color:var(--dim);">${pns.size} key${pns.size !== 1 ? 's' : ''}${fits.length > 1 ? ` · ${fits.length} listed year ranges` : ''}</div>
-                    ${typeLine ? `<div style="color:var(--accent2);font-size:11px;">${typeLine}</div>` : ''}
                     ${flags.join('')}
                 </div>
             </div>`;
@@ -25335,7 +25338,8 @@ function renderVehicleRangesForModel(make, model) {
     if (ranges.length === 0) {
         html += '<div style="text-align:center;color:var(--dim);padding:24px;">No year ranges yet — open All Years to add one</div>';
     } else if (!cards.trim()) {
-        html += `<div style="text-align:center;color:var(--dim);padding:24px;">No year range covers ${escapeJobText(yearFilter)}</div>`;
+        const why = yearFilter ? `No year range covers ${escapeJobText(yearFilter)}` : `No ${escapeJobText(keyType || '')} keys in these year ranges`;
+        html += `<div style="text-align:center;color:var(--dim);padding:24px;">${why}</div>`;
     }
     html += cards;
 
@@ -25351,56 +25355,65 @@ function renderVehicleRangesForModel(make, model) {
             </div>
         </div>`;
 
+    // The model-wide notes normally sit on the key-type page; when that page
+    // was skipped they would be unreachable, so they show here instead.
+    if (vehicleKeyTypeSkipped) {
+        html += `
+        <div style="margin-top:12px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text);">Notes for all ${escapeJobText(model)} keys</span>
+                <button onclick="saveVehicleYearNote('${escapedMake}', '${escapedModel}', '')"
+                    style="padding:5px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">Save</button>
+            </div>
+            <textarea id="vehicleKeyTypeNoteInput" placeholder="Add notes about this vehicle's keys, reference source differences, etc..."
+                style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${escapeJobText(vehicleYearNotes[`${make}|${model}`] || '')}</textarea>
+        </div>`;
+    }
+
     document.getElementById('vehicleRangesList').innerHTML = html;
 }
 
-// True while the key-type step was skipped for the current range, so Back
-// from the years list returns to the ranges and the model notes move there.
+// True while the key-type step was skipped for the current model, so Back
+// from the year ranges returns to the models and the model notes move there.
 let vehicleKeyTypeSkipped = false;
 
-// The key types (Keyed Ignition / Proximity) that have anything to show for
-// the selected make/model under the selected range and year filter — the same
-// test the years list applies, so a type listed here never opens empty.
-function getVehicleKeyTypesInSelection(make, model) {
-    const yearFilter = document.getElementById('vehicleYearFilter').value;
-    const y = parseInt(yearFilter) || 0;
-    const found = new Set();
-    getModelVehicleEntries(make, model).forEach(v => {
-        if (y && !(y >= v.startYear && y <= (v.endYear || v.startYear))) return;
-        if (!vehicleAppInSelectedRange(v.startYear, v.endYear)) return;
-        v.keys.forEach(k => found.add(normalizeKeyType(k.keyType)));
-        if (!v.keys.length && v.isCustom && v.customKeyType) found.add(v.customKeyType);
-    });
-    return ['Keyed Ignition', 'Proximity'].filter(t => found.has(t));
+// Does a year-range entry have anything under this key type? The same test
+// the years list applies, so a key type or range offered never opens empty.
+function vehicleEntryHasKeyType(v, keyType) {
+    return v.keys.some(k => normalizeKeyType(k.keyType) === keyType) ||
+        !!(v.isCustom && v.customKeyType === keyType);
 }
 
-// Range selection -> Show key types (-1 = all years, no set range). The key
-// type is only asked when the range actually has both; with one, it goes
-// straight to that type's years (a 1940s range never offers Proximity).
+// The key types (Keyed Ignition / Proximity) that have anything to show for
+// the selected make/model under the year filter.
+function getVehicleKeyTypesInSelection(make, model) {
+    const y = parseInt(document.getElementById('vehicleYearFilter').value) || 0;
+    const entries = getModelVehicleEntries(make, model)
+        .filter(v => !y || (y >= v.startYear && y <= (v.endYear || v.startYear)));
+    return ['Keyed Ignition', 'Proximity'].filter(t => entries.some(v => vehicleEntryHasKeyType(v, t)));
+}
+
+// Range selection -> the key year ranges inside it (-1 = all years, no set range)
 function selectVehicleRange(idx) {
     selectedVehicleRange = idx >= 0 ? selectedVehicleRangeList[idx] || null : null;
-    const types = getVehicleKeyTypesInSelection(selectedVehicleMake, selectedVehicleModel);
-    if (types.length === 1) {
-        vehicleKeyTypeSkipped = true;
-        // Nothing stale may linger in the hidden key-type list: the model
-        // notes box moves to the years list and must be the only one.
-        document.getElementById('vehicleKeyTypeList').innerHTML = '';
-        selectVehicleKeyType(types[0]);
-        return;
-    }
-    vehicleKeyTypeSkipped = false;
-    const label = selectedVehicleRange ? formatSetYearRange(selectedVehicleRange) : 'All Years';
-    document.getElementById('vehicleKeyTypePanelTitle').textContent = `🔑 ${label} ${selectedVehicleMake} ${selectedVehicleModel}`;
-    renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
-    document.getElementById('vehicleKeyTypePanel').classList.add('on');
+    const rangeLabel = selectedVehicleRange ? `${formatSetYearRange(selectedVehicleRange)} ` : '';
+    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${rangeLabel}${selectedVehicleMake} ${selectedVehicleModel} - ${selectedVehicleKeyType}`;
+    renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, selectedVehicleKeyType);
+    document.getElementById('vehicleYearsPanel').classList.add('on');
 }
 
 function closeVehicleRangesPanel() {
-    vehicleKeyTypeSkipped = false;
     document.getElementById('vehicleRangesPanel').classList.remove('on');
-    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     selectedVehicleRange = null;
+    if (vehicleKeyTypeSkipped) {
+        // Key-type step was skipped: Back lands on the models list
+        vehicleKeyTypeSkipped = false;
+        selectedVehicleKeyType = null;
+    } else if (selectedVehicleMake && selectedVehicleModel) {
+        // Refresh the key types to reflect year ranges added further in
+        renderKeyTypesForModel(selectedVehicleMake, selectedVehicleModel);
+    }
 }
 
 function saveVehicleYearRanges() {
@@ -25484,7 +25497,6 @@ function saveVehicleYearRangesEdit() {
     saveVehicleYearRanges();
     closeVehicleYearRangesModal();
     selectedVehicleRange = null;
-    document.getElementById('vehicleKeyTypePanel').classList.remove('on');
     document.getElementById('vehicleYearsPanel').classList.remove('on');
     renderVehicleRangesForModel(make, model);
     toast('Year ranges saved');
@@ -25511,8 +25523,6 @@ function renderKeyTypesForModel(make, model) {
                         return;
                     }
                 }
-                if (!vehicleAppInSelectedRange(v.startYear, v.endYear)) return;
-
                 const keyType = key.keyType || 'Unknown';
                 // Normalize key types
                 let normalizedType = 'Keyed Ignition'; // Default fallback
@@ -25586,13 +25596,13 @@ function renderKeyTypesForModel(make, model) {
     `;
 }
 
-// Key type selection -> Show year groups
+// Key type selection -> that type's year ranges
 function selectVehicleKeyType(keyType) {
     selectedVehicleKeyType = keyType;
-    const rangeLabel = selectedVehicleRange ? `${formatSetYearRange(selectedVehicleRange)} ` : '';
-    document.getElementById('vehicleYearsPanelTitle').textContent = `🚗 ${rangeLabel}${selectedVehicleMake} ${selectedVehicleModel} - ${keyType}`;
-    renderVehicleYearsForModel(selectedVehicleMake, selectedVehicleModel, keyType);
-    document.getElementById('vehicleYearsPanel').classList.add('on');
+    selectedVehicleRange = null;
+    document.getElementById('vehicleRangesPanelTitle').textContent = `📅 ${selectedVehicleMake} ${selectedVehicleModel} - ${keyType}`;
+    renderVehicleRangesForModel(selectedVehicleMake, selectedVehicleModel);
+    document.getElementById('vehicleRangesPanel').classList.add('on');
 }
 
 // Helper to normalize key type for filtering
@@ -25845,23 +25855,6 @@ function renderVehicleYearsForModel(make, model, keyType) {
                 style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${existingNote}</textarea>
         </div>
     `;
-
-    // The model-wide notes normally sit on the key-type page; when that page
-    // was skipped they would be unreachable, so they show here instead.
-    if (vehicleKeyTypeSkipped) {
-        const modelNote = vehicleYearNotes[`${make}|${model}`] || '';
-        html += `
-        <div style="margin-top:12px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <span style="font-size:13px;font-weight:600;color:var(--text);">Notes for all ${escapeJobText(model)} keys</span>
-                <button onclick="saveVehicleYearNote('${escapedMakeNote}', '${escapedModelNote}', '')"
-                    style="padding:5px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:12px;cursor:pointer;font-weight:600;">Save</button>
-            </div>
-            <textarea id="vehicleKeyTypeNoteInput" placeholder="Add notes about this vehicle's keys, reference source differences, etc..."
-                style="width:100%;min-height:80px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;">${escapeJobText(modelNote)}</textarea>
-        </div>
-    `;
-    }
 
     container.innerHTML = html;
 }
