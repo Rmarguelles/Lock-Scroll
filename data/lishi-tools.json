@@ -1,0 +1,1274 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "extractedAt": "2026-10-08T14:37:04.372Z",
+  "fromApp": "v268",
+  "backup": null
+ },
+ "tools": {
+  "B106/GM37": {
+   "tool": "B106/GM37",
+   "keyways": [
+    "GM B / GM37"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "B111": {
+   "tool": "B111",
+   "keyways": [
+    "GM Z"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "BAOJUN": {
+   "tool": "BAOJUN",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "BQSB": {
+   "tool": "BQSB",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "BW9MH": {
+   "tool": "BW9MH",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "BYD01": {
+   "tool": "BYD01",
+   "keyways": [
+    "BYD"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "BYD01R": {
+   "tool": "BYD01R",
+   "keyways": [
+    "BYD"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "CHAANGAN": {
+   "tool": "CHAANGAN",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "CY24": {
+   "tool": "CY24",
+   "keyways": [
+    "Chrysler CY24",
+    "Y157",
+    "Y159",
+    "Y164"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "CY24 TRUCK": {
+   "tool": "CY24 TRUCK",
+   "keyways": [
+    "Chrysler CY24"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "CY24-CV": {
+   "tool": "CY24-CV",
+   "keyways": [
+    "Chrysler CY24"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "DAT12R": {
+   "tool": "DAT12R",
+   "keyways": [
+    "Datsun DAT12"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "DW04R V.2": {
+   "tool": "DW04R V.2",
+   "keyways": [
+    "Peugeot/Citroen DW04"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "FO38": {
+   "tool": "FO38",
+   "keyways": [
+    "Ford FO38",
+    "H75"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "FORD 2017": {
+   "tool": "FORD 2017",
+   "keyways": [
+    "Ford HU101 variant"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "GM39": {
+   "tool": "GM39",
+   "keyways": [
+    "GM"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "GM45": {
+   "tool": "GM45",
+   "keyways": [
+    "GM"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HAIMA": {
+   "tool": "HAIMA",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HON58R": {
+   "tool": "HON58R",
+   "keyways": [
+    "Honda HON58"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HON66": {
+   "tool": "HON66",
+   "keyways": [
+    "Honda HON66"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU100R V.3": {
+   "tool": "HU100R V.3",
+   "keyways": [
+    "GM HU100"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU100V3(10 Cut)": {
+   "tool": "HU100V3(10 Cut)",
+   "keyways": [
+    "GM HU100",
+    "B119",
+    "B120"
+   ],
+   "door": true,
+   "ignition": false,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": "Does NOT work on ignition. Reads cuts 3-10 only."
+  },
+  "HU100V3(8 Cut)": {
+   "tool": "HU100V3(8 Cut)",
+   "keyways": [
+    "GM HU100"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU101 V.3": {
+   "tool": "HU101 V.3",
+   "keyways": [
+    "Ford HU101"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU162 (VAG2015)": {
+   "tool": "HU162 (VAG2015)",
+   "keyways": [
+    "VAG HU162"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU162-SC10 V.3": {
+   "tool": "HU162-SC10 V.3",
+   "keyways": [
+    "VAG HU162"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU162-SC9": {
+   "tool": "HU162-SC9",
+   "keyways": [
+    "VAG HU162"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU39": {
+   "tool": "HU39",
+   "keyways": [
+    "Mercedes HU39"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU43": {
+   "tool": "HU43",
+   "keyways": [
+    "Mercedes HU43"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU46": {
+   "tool": "HU46",
+   "keyways": [
+    "Mercedes HU46"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU49": {
+   "tool": "HU49",
+   "keyways": [
+    "Mercedes HU49"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU58": {
+   "tool": "HU58",
+   "keyways": [
+    "Mercedes HU58"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU58TL": {
+   "tool": "HU58TL",
+   "keyways": [
+    "Mercedes HU58"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU64 V.2": {
+   "tool": "HU64 V.2",
+   "keyways": [
+    "Mercedes HU64"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU66 Generation 1 & 2": {
+   "tool": "HU66 Generation 1 & 2",
+   "keyways": [
+    "VAG HU66",
+    "HU66"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU66 V.3": {
+   "tool": "HU66 V.3",
+   "keyways": [
+    "VAG HU66",
+    "HU66"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU71": {
+   "tool": "HU71",
+   "keyways": [
+    "Mercedes HU71"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HU92": {
+   "tool": "HU92",
+   "keyways": [
+    "BMW HU92"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HY16": {
+   "tool": "HY16",
+   "keyways": [
+    "Hyundai HY16"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HY17(HYN15)": {
+   "tool": "HY17(HYN15)",
+   "keyways": [
+    "Hyundai HY17"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HY20": {
+   "tool": "HY20",
+   "keyways": [
+    "Hyundai HY20"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HY22": {
+   "tool": "HY22",
+   "keyways": [
+    "Hyundai HY22"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HYN14(HY15)": {
+   "tool": "HYN14(HY15)",
+   "keyways": [
+    "Hyundai HYN14"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HYN14R(HY16)": {
+   "tool": "HYN14R(HY16)",
+   "keyways": [
+    "Hyundai HYN14"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HYN22": {
+   "tool": "HYN22",
+   "keyways": [
+    "Hyundai HYN22"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "HYN7R": {
+   "tool": "HYN7R",
+   "keyways": [
+    "Hyundai HYN7"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "ICF03": {
+   "tool": "ICF03",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "K5 V.3": {
+   "tool": "K5 V.3",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "MAZ24R V.2": {
+   "tool": "MAZ24R V.2",
+   "keyways": [
+    "Mazda MAZ24"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "MIT11R": {
+   "tool": "MIT11R",
+   "keyways": [
+    "Mitsubishi MIT11"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "MIT8": {
+   "tool": "MIT8",
+   "keyways": [
+    "Mitsubishi MIT8"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "MIT9/MIT6": {
+   "tool": "MIT9/MIT6",
+   "keyways": [
+    "Mitsubishi MIT9 / MIT6"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "NE38 V.2 Boot": {
+   "tool": "NE38 V.2 Boot",
+   "keyways": [
+    "Nissan NE38"
+   ],
+   "door": true,
+   "ignition": false,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": "Boot/Trunk only - does not work on ignition"
+  },
+  "NE66": {
+   "tool": "NE66",
+   "keyways": [
+    "Nissan NE66"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "NE71R V.2": {
+   "tool": "NE71R V.2",
+   "keyways": [
+    "Nissan NE71"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "NE72": {
+   "tool": "NE72",
+   "keyways": [
+    "Nissan NE72"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "NE78": {
+   "tool": "NE78",
+   "keyways": [
+    "Nissan NE78"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "NSN14": {
+   "tool": "NSN14",
+   "keyways": [
+    "Nissan NSN14",
+    "DA34"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "QIRUI": {
+   "tool": "QIRUI",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "SIP22": {
+   "tool": "SIP22",
+   "keyways": [
+    "Fiat SIP22"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "SRT2018": {
+   "tool": "SRT2018",
+   "keyways": [
+    "Dodge SRT"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "SX9": {
+   "tool": "SX9",
+   "keyways": [
+    "Citroen SX9"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "TOY2": {
+   "tool": "TOY2",
+   "keyways": [
+    "Toyota TOY2"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "TOY43": {
+   "tool": "TOY43",
+   "keyways": [
+    "Toyota TOY43",
+    "TR47"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "TOY43AT": {
+   "tool": "TOY43AT",
+   "keyways": [
+    "Toyota TOY43AT"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "TOY43AT Dr/Bt": {
+   "tool": "TOY43AT Dr/Bt",
+   "keyways": [
+    "Toyota TOY43AT"
+   ],
+   "door": true,
+   "ignition": false,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": "Door/Boot only - does not work on ignition"
+  },
+  "TOY43AT Ignition": {
+   "tool": "TOY43AT Ignition",
+   "keyways": [
+    "Toyota TOY43AT"
+   ],
+   "door": false,
+   "ignition": true,
+   "trunk": false,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": "Ignition only"
+  },
+  "TOY43R": {
+   "tool": "TOY43R",
+   "keyways": [
+    "Toyota TOY43"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "TOY48": {
+   "tool": "TOY48",
+   "keyways": [
+    "Toyota TOY48"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "VA2": {
+   "tool": "VA2",
+   "keyways": [
+    "Peugeot/Citroen VA2"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "VA6": {
+   "tool": "VA6",
+   "keyways": [
+    "Peugeot/Citroen VA6"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "VAC102": {
+   "tool": "VAC102",
+   "keyways": [],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "YM23": {
+   "tool": "YM23",
+   "keyways": [
+    "Yamaha YM23 (auto use)"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  },
+  "ZD30": {
+   "tool": "ZD30",
+   "keyways": [
+    "Isuzu ZD30"
+   ],
+   "door": true,
+   "ignition": true,
+   "trunk": true,
+   "inStock": false,
+   "qty": null,
+   "codeSeries": [],
+   "notes": null
+  }
+ },
+ "keywayToTool": {
+  "HY20": {
+   "tool": "HY20",
+   "direction": "CW"
+  },
+  "HY20R": {
+   "tool": "HY20R",
+   "direction": "CW"
+  },
+  "B106": {
+   "tool": "B111",
+   "direction": "CW"
+  },
+  "KK10": {
+   "tool": "K5",
+   "direction": "CW"
+  },
+  "Y164": {
+   "tool": "CY24",
+   "direction": "CW"
+  },
+  "HY17": {
+   "tool": "HY17(HYN15)",
+   "direction": "CW"
+  },
+  "HU162": {
+   "tool": "HU162 10 CUT",
+   "direction": "CW"
+  },
+  "KK3": {
+   "tool": "KIA3R",
+   "direction": "CW"
+  },
+  "Toyota TOY43AT": {
+   "tool": "TOY43AT IGNITION",
+   "direction": "CW"
+  },
+  "Mercedes HU58": {
+   "tool": "HU58",
+   "direction": "CW"
+  },
+  "DW04RAP": {
+   "tool": "DW05",
+   "direction": "CW"
+  },
+  "HU43": {
+   "tool": "HU43",
+   "direction": "CW"
+  },
+  "Hyundai HY17": {
+   "tool": "HY17(HYN15)",
+   "direction": "CW"
+  },
+  "SIP22": {
+   "tool": "SIP22",
+   "direction": "CW"
+  },
+  "KY14": {
+   "tool": "KY14",
+   "direction": "CW"
+  },
+  "B108": {
+   "tool": "TOY43R",
+   "direction": "CW"
+  },
+  "HO01": {
+   "tool": "HON66",
+   "direction": "CW"
+  },
+  "Mitsubishi MIT11": {
+   "tool": "MIT11R",
+   "direction": "CW"
+  },
+  "DW05R": {
+   "tool": "DW04R",
+   "direction": "CW"
+  },
+  "MIT11": {
+   "tool": "MIT11",
+   "direction": "CW"
+  },
+  "Y159": {
+   "tool": "CY24",
+   "direction": "CW"
+  },
+  "DA34": {
+   "tool": "NSN14",
+   "direction": "CW"
+  },
+  "Mercedes HU39": {
+   "tool": "HU39",
+   "direction": "CW"
+  },
+  "HYN15": {
+   "tool": "HY17(HYN15)",
+   "direction": "CW"
+  },
+  "B119": {
+   "tool": "HU100V3(10 CUT)",
+   "direction": "CW"
+  },
+  "HU198": {
+   "tool": "HU198",
+   "direction": "CW"
+  },
+  "KK4": {
+   "tool": "KIA3R",
+   "direction": "CW"
+  },
+  "BMW HU92": {
+   "tool": "HU92 SINGLE LIFTER",
+   "direction": "CW"
+  },
+  "GM B / GM37": {
+   "tool": "B106/GM37",
+   "direction": "CW"
+  },
+  "MIT8": {
+   "tool": "MIT8",
+   "direction": "CW"
+  },
+  "HU101": {
+   "tool": "HU101",
+   "direction": "CW"
+  },
+  "B96/B102": {
+   "tool": "GM39",
+   "direction": "CW"
+  },
+  "GM45": {
+   "tool": "GM45",
+   "direction": "CW"
+  },
+  "TOY43R": {
+   "tool": "TOY43R",
+   "direction": "CW"
+  },
+  "HD103": {
+   "tool": "HON58R",
+   "direction": "CW"
+  },
+  "GM HU100": {
+   "tool": "HU100R",
+   "direction": "CW"
+  },
+  "Honda HON58": {
+   "tool": "HON58R",
+   "direction": "CW"
+  },
+  "HYN11": {
+   "tool": "HYN11",
+   "direction": "CW"
+  },
+  "HU66": {
+   "tool": "HU66 SINGLE LIFTER",
+   "direction": "CW"
+  },
+  "LX Medium": {
+   "tool": "TOY48 SHORT",
+   "direction": "CW"
+  },
+  "DW04": {
+   "tool": "DW05",
+   "direction": "CW"
+  },
+  "DA31": {
+   "tool": "NSN11",
+   "direction": "CW"
+  },
+  "LXP90": {
+   "tool": "TOY40 LONG",
+   "direction": "CW"
+  },
+  "VAG HU66": {
+   "tool": "HU66 SINGLE LIFTER",
+   "direction": "CW"
+  },
+  "TR47": {
+   "tool": "TOY43AT IGNITION",
+   "direction": "CW"
+  },
+  "Honda HON66": {
+   "tool": "HON66",
+   "direction": "CW"
+  },
+  "S48": {
+   "tool": "HU39",
+   "direction": "CW"
+  },
+  "DW04R": {
+   "tool": "DW04R",
+   "direction": "CW"
+  },
+  "H75": {
+   "tool": "FO38",
+   "direction": "CW"
+  },
+  "Hyundai HY16": {
+   "tool": "HY16",
+   "direction": "CW"
+  },
+  "Fiat SIP22": {
+   "tool": "SIP22",
+   "direction": "CW"
+  },
+  "HYN14R": {
+   "tool": "HYN14R (HY15)",
+   "direction": "CW"
+  },
+  "VAG HU162": {
+   "tool": "HU162 IGNITION",
+   "direction": "CW"
+  },
+  "K9": {
+   "tool": "K9",
+   "direction": "CW"
+  },
+  "MIT3": {
+   "tool": "MIT11",
+   "direction": "CW"
+  },
+  "HU92": {
+   "tool": "HU92 TWIN LIFTER",
+   "direction": "CW"
+  },
+  "MZ27": {
+   "tool": "MAZ24",
+   "direction": "CW"
+  },
+  "GM": {
+   "tool": "GM39",
+   "direction": "CW"
+  },
+  "B61": {
+   "tool": "HU46",
+   "direction": "CW"
+  },
+  "KIA3R": {
+   "tool": "KIA3R",
+   "direction": "CW"
+  },
+  "B120": {
+   "tool": "HU100V3(10 CUT)",
+   "direction": "CW"
+  },
+  "KK12": {
+   "tool": "KIA 2018",
+   "direction": "CW"
+  },
+  "B110": {
+   "tool": "TOY43R",
+   "direction": "CW"
+  },
+  "HU46": {
+   "tool": "HU46",
+   "direction": "CW"
+  },
+  "KK8": {
+   "tool": "KY14",
+   "direction": "CW"
+  },
+  "K5": {
+   "tool": "K5",
+   "direction": "CW"
+  },
+  "Toyota TOY48": {
+   "tool": "TOY48 SHORT",
+   "direction": "CW"
+  },
+  "HU100": {
+   "tool": "HU100V3(8 CUT)",
+   "direction": "CW"
+  },
+  "Y157": {
+   "tool": "CY24",
+   "direction": "CW"
+  },
+  "DW05": {
+   "tool": "DW05",
+   "direction": "CW"
+  },
+  "Toyota TOY43": {
+   "tool": "TOY43",
+   "direction": "CW"
+  },
+  "HYN6": {
+   "tool": "HYN11",
+   "direction": "CW"
+  },
+  "HU39": {
+   "tool": "HU39",
+   "direction": "CW"
+  },
+  "HY15": {
+   "tool": "HYN14R (HY15)",
+   "direction": "CW"
+  },
+  "MZ31": {
+   "tool": "MAZ24",
+   "direction": "CW"
+  },
+  "DW04/DW05": {
+   "tool": "DW05",
+   "direction": "CW"
+  },
+  "LX Short": {
+   "tool": "TOY48 SHORT",
+   "direction": "CW"
+  }
+ }
+}
