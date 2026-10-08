@@ -55,7 +55,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.16-pagealign"
+EXTRACTOR_VERSION = "2.17-fullguide"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -125,6 +125,7 @@ APPLICATION_CANON = {
 }
 
 YEAR_RE = re.compile(r"^(19|20)\d{2}$")
+HEADER_BAND_MAX_Y = 75  # the column-header rows print at y 38-58 on every page
 HEADER_WORDS = {"apps", "series", "(plastic)", "substitues", "substitutes",
                 "transponder", "equipment"}
 # Blank-cell tokens that are markers/noise, never part numbers.
@@ -228,9 +229,12 @@ def normalize_model(raw):
 # like "w/O Tilt Wheel" stay on the model (different ignition = different key).
 KEYSYS_RE = re.compile(r"\s*\bw/\s*(o\b)?\s*(prox|peps|regular\s+ignition)\b\.?", re.IGNORECASE)
 # OEM part numbers (72147-TZ5-A01, 13584504) are prox/smart fobs.
-# OEM fob part numbers: GM/Honda/Toyota/Chrysler style (5+ leading digits)
-# and Ford's "164-R8091".
-OEM_BLANK_RE = re.compile(r"^(\d{5}|164-R\d{4})")
+# OEM fob part numbers: GM/Honda/Toyota/Chrysler style (5+ leading digits),
+# Ford's "164-R8091",
+# and the dash-split 5+5 style used by Nissan/Infiniti (285E3-1BA2A),
+# Toyota/Lexus (8990H-06020, 89904-48V80), Subaru (57497-CA110), Scion
+# (SU003-01445) and Infiniti (H0561-AR200).
+OEM_BLANK_RE = re.compile(r"^(\d{5}|164-R\d{4}|[A-Z0-9]{5}-[A-Z0-9]{5})")
 
 
 # Trim/package words that follow a model name in the guide's labels.
@@ -375,7 +379,10 @@ def _expand_oem_suffixes(names):
     return out
 
 
-DEALER_ENTRY = {"fob": "Dealer FOB", "key": "Dealer Key"}
+# Plain words that make up a no-part-number entry, and the word that ends one.
+PHRASE_WORD_RE = re.compile(r"^(dealer|smart|pass|optional|prox|key|fob|card|key/fob)$", re.IGNORECASE)
+PHRASE_END_RE = re.compile(r"(fob|key|card)$", re.IGNORECASE)
+PHRASE_MARK = "\x00"
 
 
 def join_wrapped_parts(tokens):
@@ -396,35 +403,47 @@ def join_wrapped_parts(tokens):
 def clean_part_tokens(tokens, drop):
     """Blank/subs cell tokens -> list of part names (slash groups expanded)."""
     names = []
-    # "Dealer FOB" / "Dealer Key": the guide's entry when only the dealer
-    # supplies the key. Kept verbatim and in place; it has no part number.
-    merged = []
+    # Word entries with no part number: "Dealer FOB", "Dealer Key/FOB",
+    # "Dealer Prox Card", "Smart Pass Prox FOB", "Optional Prox FOB". Runs of
+    # plain words ending in FOB/Key/Card are kept verbatim and in place.
+    merged, phrase = [], []
     for tok in join_wrapped_parts(tokens):
         t = tok.strip().strip(",")
-        if merged and merged[-1].lower() == "dealer" and t.lower() in ("fob", "key"):
-            merged[-1] = DEALER_ENTRY[t.lower()]
-        else:
-            merged.append(tok)
+        if PHRASE_WORD_RE.match(t) and t.lower() not in drop:
+            phrase.append(t)
+            if PHRASE_END_RE.search(t) and len(phrase) > 1:
+                merged.append(PHRASE_MARK + " ".join(phrase))
+                phrase = []
+            continue
+        merged += phrase
+        phrase = []
+        merged.append(tok)
+    merged += phrase
     for tok in merged:
-        if tok in DEALER_ENTRY.values():
-            names.append(tok)
+        if tok.startswith(PHRASE_MARK):
+            names.append(tok[len(PHRASE_MARK):])
             continue
         t = tok.strip().strip(",")
         if not t or t.lower() in drop:
             continue
         # variant brackets like "[-P]", "[-P,", "-PC]" — also when printed
-        # with no space after the part ("P1786/Y153[-P,")
-        if t.startswith("[") or t.endswith("]"):
+        # with no space after the part ("P1786/Y153[-P,", "HY15-[-P]",
+        # "MIT9-PT[R]", "S1098WD/B67]"): drop the note, keep the part
+        if t.startswith("["):
             continue
-        t = re.sub(r"\[.*$", "", t)
+        t = re.sub(r"\[[^\]]*\]?", "", t).rstrip("]").rstrip("-").strip(",")
+        if not t:
+            continue
         # A fully parenthesized part like "(B62-P-1/15)" is unwrapped; inline
         # parenthetical notes ("(LAL)", "HO03-PT(V)") are removed.
         if t.startswith("(") and t.endswith(")"):
             t = t[1:-1]
         t = re.sub(r"\([^)]*\)", "", t).strip().strip(",")
+        t = t.rstrip("-")           # "Y159-(-P)" leaves "Y159-" once the note goes
         if not t or t.lower() in drop:
             continue
         t = t.rstrip("*#")          # footnote markers
+        t = re.sub(r"^OEM\s*#?\s*", "", t, flags=re.IGNORECASE)  # "OEM#13532751" printed glued
         t = BLANK_FOOTNOTE_RE.sub("", t)  # "B62-P-1/15" page footnote
         t = t.strip("/")            # continuation slashes at either end
         if not t or not re.search(r"\d", t):
@@ -548,10 +567,11 @@ def _line_months(line):
 
 def _is_header_or_footer(line):
     words = {t.lower().strip(",.") for _, ws in line["cols"].items() for _, t in ws}
-    # Column-header words only count outside the model column: a model label
-    # can contain one ("F-150, F-250 SERIES", "SUPER DUTY SERIES").
+    # Column-header words only count outside the model column (a label can
+    # contain one: "F-150, F-250 SERIES") and only in the page's header band:
+    # chip notes say "Philips Crypto Transponder" on hundreds of data lines.
     data_words = {t.lower().strip(",.") for c, ws in line["cols"].items() if c != "model" for _, t in ws}
-    if data_words & HEADER_WORDS:
+    if data_words & HEADER_WORDS and line.get("y", 0) < HEADER_BAND_MAX_Y:
         return True
     if "page" in words and any(t.isdigit() for t in words):
         return True
@@ -1183,6 +1203,8 @@ def parse_page_any(words, width, state, edges=None):
     # landscape (~783). Route each page to the matching engine.
     if width and width < 700:
         return parse_antique_page(words, width, state)
+    if not any(w["text"] == "Apps" and w["top"] < 90 for w in words):
+        return []  # no table header: front matter, index or an appendix (p164)
     words, edges = align_page(words, edges, width)
     return parse_page(words, width, state, edges=edges)
 
@@ -1373,13 +1395,22 @@ def selftest():
         (["Y164-PT", "(LAL),", "or", "Dealer", "FOB"], ["Y164", "Dealer FOB"]),
         (["Dealer", "Key"], ["Dealer Key"]),
         (["P1786/Y153[-P,", "-PC]"], ["P1786", "Y153"]),
+        (["1628-P", "Y159-(-P)"], ["1628", "Y159"]),
+        (["Dealer", "Key/FOB"], ["Dealer Key/FOB"]),
+        (["OEM#13532751"], ["13532751"]),
+        (["Dealer", "Prox", "FOB", "(LAL)"], ["Dealer Prox FOB"]),
+        (["Optional", "Prox", "FOB", "(LAL)", "TOY44G-PT"], ["Optional Prox FOB", "TOY44G"]),
+        (["HY15-[-P]"], ["HY15"]),
+        (["MIT9-GTK#", "MIT9-PT[R]"], ["MIT9"]),
+        (["S1098WD/B67]", "P1098WE/B78", "[-P,", "-PC]"], ["S1098WD", "B67", "P1098WE", "B78"]),
     ]
     for toks, want in blank_checks:
         gotb = clean_part_tokens(toks, BLANK_DROP)
         if gotb != want:
             print("FAIL blanks:", toks, "->", gotb, "!=", want)
             ok = False
-    if not (OEM_BLANK_RE.match("164-R8091") and OEM_BLANK_RE.match("13598507") and not OEM_BLANK_RE.match("H128")):
+    if not all(OEM_BLANK_RE.match(x) for x in ("164-R8091", "13598507", "285E3-1BA2A", "8990H-06020", "57497-CA110", "SU003-01445")) \
+            or any(OEM_BLANK_RE.match(x) for x in ("H128", "HU100-GTK", "TOY43-PT", "EK3-H72")):
         print("FAIL: OEM fob pattern")
         ok = False
 
@@ -1392,10 +1423,12 @@ def selftest():
             ok = False
 
     # A model label containing a column-header word is not the header row
-    hdr_line = {"cols": {"model": [(38, "F-150,"), (60, "F-250"), (80, "SERIES")]}}
-    real_hdr = {"cols": {"apps": [(172, "Apps")], "series": [(210, "Series")]}}
-    if _is_header_or_footer(hdr_line) or not _is_header_or_footer(real_hdr):
-        print("FAIL: header detection (model label 'SERIES' vs real header row)")
+    hdr_line = {"y": 300, "cols": {"model": [(38, "F-150,"), (60, "F-250"), (80, "SERIES")]}}
+    real_hdr = {"y": 56, "cols": {"apps": [(172, "Apps")], "series": [(210, "Series")]}}
+    chip_note = {"y": 356, "cols": {"blank": [(247, "OEM#"), (268, "31252732")],
+                                    "notes": [(563, "Encrypted"), (650, "Megamos"), (681, "Transponder")]}}
+    if _is_header_or_footer(hdr_line) or not _is_header_or_footer(real_hdr) or _is_header_or_footer(chip_note):
+        print("FAIL: header detection (model label 'SERIES' / chip note 'Transponder' vs real header row)")
         ok = False
 
     # Pages printed off the standard grid are shifted back onto it

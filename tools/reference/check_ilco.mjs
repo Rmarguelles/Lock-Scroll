@@ -23,10 +23,14 @@ const files = inputs.flatMap(p => fs.statSync(p).isDirectory()
 const NOT_A_MODEL = [
     [/\b[A-Z]\d{2,3}\/[a-z]{2}\d{2}\b/i, 'key blank text in the model column'],
     [/Models AND Years|\bDoor & \d Door\b|^\d Door/i, 'table note in the model column'],
-    [/^(st|slt|sport|laramie|power|wagon|trx4|cabs|light duty|w\/ prox|\d{3,4}(\/hd)?(\/\d{3,4})*|cf\d+|srt( 10)?)$/i, 'trim or series fragment, not a model'],
+    [/^(st|slt|sport|laramie|power|wagon|trx4|cabs|light duty|w\/ prox|cf\d+)$/i, 'trim or series fragment, not a model'],
 ];
+// A bare series number ("350", "2500/hd/3500") is a fragment of a truck
+// label for these makes; elsewhere numbers are real models (Volvo 740, Porsche 911).
+const TRUCK_SERIES_MAKES = new Set(['Ford', 'Chevrolet', 'GMC', 'Dodge', 'Ram']);
+const BARE_SERIES = /^\d{3,4}(\/hd)?(\/\d{3,4})*$/i;
 const MECH_BLANK = /^(P?\d{3,4}[A-Z]{0,3}\/)?([A-Z]{1,3}\d{2,3}[A-Z]*|HU\d+[A-Z]*|TOY\d+[A-Z]*|FO\d+|SIP\d+|DW\d+\w*|MIT\d+|NI\d+|NSN\d+|HON\d+\w*|TR\d+|LXP\d+|X\d+)$/i;
-const OEM_PN = /^(OEM#?)?(\d{7,}|\d{3}-[A-Z]?\d{4,}|\d{5}-[A-Z0-9]{3}-[A-Z0-9]{3}|\d{8}[A-Z]{2}|[A-Z0-9]{4,5}-[A-Z0-9]{5}|\d{5}-\d{5})$/i;
+const OEM_PN = /^(OEM#?)?(\d{7,}|\d{3}-[A-Z]?\d{4,}|\d{5}-[A-Z0-9]{3}-[A-Z0-9]{3}|\d{8}[A-Z]{2}|[A-Z0-9]{5}-[A-Z0-9]{5})$/i;
 
 const norm = s => s.toLowerCase().replace(/\(.*?\)/g, '').replace(/\bw\/o?\b.*$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
 function productionFor(make, model) {
@@ -54,6 +58,7 @@ for (const file of files) {
         const prod = productionFor(make, model || '');
         // a name the production table knows (Chrysler 200/300) is a real model
         for (const [re, why] of NOT_A_MODEL) if (re.test(model || '') && !prod) issues.push(why);
+        if (TRUCK_SERIES_MAKES.has(make) && BARE_SERIES.test(model || '') && !prod) issues.push('trim or series fragment, not a model');
         if (!ym) issues.push(`unreadable years "${years}"`);
         if (!blankCell) issues.push('no key blank');
         if (/\[|\]/.test(line)) issues.push('stray bracket');
