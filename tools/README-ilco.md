@@ -106,3 +106,17 @@ install needed on the machine you copy it to. (On macOS/Linux use `:` instead
 of `;` in `--add-data`, and drop the `^` line-continuations / put it on one
 line.) The first launch after linking a PDF spends a minute extracting, then
 caches; later launches are instant.
+
+## Sending pages for debugging (instead of the whole PDF)
+
+The PDF is too large to upload, but the extractor only reads each page's word
+positions and table lines. A capture saves exactly that for the makes you
+pick, small enough to upload, and the extractor runs on it as if it were the
+PDF:
+
+```
+python ilco_extract.py "Ilco Guide.pdf" --capture ilco_capture.json.gz --makes "Cadillac,Chevrolet,Chrysler,Dodge,Ford"
+python ilco_extract.py "Ilco Guide.pdf" --capture ilco_capture.json.gz --pages 40-60
+```
+
+In the desktop app: **Export makes…** → select makes → **Save capture…**.

@@ -50,6 +50,7 @@ the parsing logic is verified without needing the PDF.
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -964,28 +965,78 @@ def format_row(r):
 # PDF input
 # --------------------------------------------------------------------------
 
-def parse_pdf(pdf_path, pages=None):
-    import pdfplumber
-    rows = []
-    state = {}
-    with pdfplumber.open(pdf_path) as pdf:
-        page_list = pdf.pages
-        if pages:
-            lo, hi = pages
-            page_list = pdf.pages[lo - 1:hi]
-        for page in page_list:
-            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
-            # The classic book is portrait (~612 wide); the modern guide is
-            # landscape (~783). Route each page to the matching engine.
-            if page.width and page.width < 700:
-                rows += parse_antique_page(words, page.width, state)
+def is_capture(path):
+    return str(path).lower().endswith((".json", ".json.gz"))
+
+
+def iter_pages(path, pages=None):
+    """Yield (page number, width, words, horizontal edges) for each page, from
+    the PDF itself or from a --capture file (same data, a fraction of the size)."""
+    if is_capture(path):
+        import gzip
+        opener = gzip.open if str(path).lower().endswith(".gz") else open
+        with opener(path, "rt", encoding="utf-8") as fh:
+            blob = json.load(fh)
+        for pg in blob["pages"]:
+            if pages and not (pages[0] <= pg["n"] <= pages[1]):
                 continue
+            words = [{"x0": a, "x1": b, "top": t, "bottom": bo, "text": tx} for a, b, t, bo, tx in pg["words"]]
+            edges = [{"x0": a, "x1": b, "top": t} for a, b, t in pg["edges"]] if pg.get("edges") is not None else None
+            yield pg["n"], pg["width"], words, edges
+        return
+    import pdfplumber
+    with pdfplumber.open(path) as pdf:
+        lo, hi = pages if pages else (1, len(pdf.pages))
+        for n in range(lo, min(hi, len(pdf.pages)) + 1):
+            page = pdf.pages[n - 1]
+            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
             try:
                 h_edges = page.horizontal_edges
             except Exception:
                 h_edges = None
-            rows += parse_page(words, page.width, state, edges=h_edges)
+            yield n, page.width, words, h_edges
+
+
+def parse_page_any(words, width, state, edges=None):
+    # The classic book is portrait (~612 wide); the modern guide is
+    # landscape (~783). Route each page to the matching engine.
+    if width and width < 700:
+        return parse_antique_page(words, width, state)
+    return parse_page(words, width, state, edges=edges)
+
+
+def parse_pdf(pdf_path, pages=None):
+    rows = []
+    state = {}
+    for _, width, words, edges in iter_pages(pdf_path, pages):
+        rows += parse_page_any(words, width, state, edges=edges)
     return dedupe_rows(rows)
+
+
+def capture(pdf_path, out, pages=None, makes=None):
+    """Save the raw page data the parser reads (word boxes + table rules) for
+    a page range and/or the pages of some makes, so the extractor can be run
+    and debugged without the PDF. Pages of a make include the page before,
+    whose state (make/model carried over) the first page depends on."""
+    import gzip
+    wanted = {m.strip().lower() for m in makes.split(",")} if makes else None
+    keep, all_pages, state, prev = [], [], {}, None
+    for n, width, words, edges in iter_pages(pdf_path, pages):
+        all_pages.append(n)
+        rec = {"n": n, "width": width,
+               "words": [[round(w["x0"], 2), round(w["x1"], 2), round(w["top"], 2), round(w["bottom"], 2), w["text"]] for w in words],
+               "edges": None if edges is None else [[round(e.get("x0", 0), 2), round(e.get("x1", 0), 2), round(e["top"], 2)] for e in edges]}
+        rows = parse_page_any(words, width, state, edges=edges)
+        if wanted is None or any((r.get("make") or "").lower() in wanted for r in rows):
+            if prev is not None and wanted is not None and (not keep or keep[-1]["n"] != prev["n"]):
+                keep.append(prev)
+            keep.append(rec)
+        prev = rec
+    with gzip.open(out, "wt", encoding="utf-8") as fh:
+        json.dump({"extractor": EXTRACTOR_VERSION, "source": os.path.basename(pdf_path), "pages": keep}, fh)
+    size = os.path.getsize(out) / 1024
+    print(f"Captured {len(keep)} of {len(all_pages)} pages ({', '.join(str(p['n']) for p in keep)}) -> {out} ({size:.0f} KB)")
+    return 0
 
 
 # --------------------------------------------------------------------------
@@ -1330,33 +1381,28 @@ def trace_makes(pdf_path):
     """Diagnostic: one line per page — the make(s) the parser resolved and the
     first models — so a make that carries over wrong (Nissan rows landing under
     Mitsubishi) shows up as the exact page where the label stops changing."""
-    try:
-        import pdfplumber
-    except ImportError:
-        print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
-        return 2
+    if not is_capture(pdf_path):
+        try:
+            import pdfplumber  # noqa: F401
+        except ImportError:
+            print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
+            return 2
     print(f">>> make trace (extractor v{EXTRACTOR_VERSION})")
     state = {}
-    with pdfplumber.open(pdf_path) as pdf:
-        for pi, page in enumerate(pdf.pages):
-            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
-            try:
-                h_edges = page.horizontal_edges
-            except Exception:
-                h_edges = None
-            rows = parse_page(words, page.width, state, edges=h_edges)
-            makes = []
-            for r in rows:
-                if r["make"] and r["make"] not in makes:
-                    makes.append(r["make"])
-            models = []
-            for r in rows:
-                if r["model"] and r["model"] not in models:
-                    models.append(r["model"])
-                if len(models) >= 4:
-                    break
-            print(f"  p{pi + 1:<4} {'/'.join(makes) or '-':22} {len(rows):>3} rows | "
-                  + ", ".join(models))
+    for n, width, words, h_edges in iter_pages(pdf_path):
+        rows = parse_page(words, width, state, edges=h_edges)
+        makes = []
+        for r in rows:
+            if r["make"] and r["make"] not in makes:
+                makes.append(r["make"])
+        models = []
+        for r in rows:
+            if r["model"] and r["model"] not in models:
+                models.append(r["model"])
+            if len(models) >= 4:
+                break
+        print(f"  p{n:<4} {'/'.join(makes) or '-':22} {len(rows):>3} rows | "
+              + ", ".join(models))
     return 0
 
 
@@ -1378,6 +1424,9 @@ def main(argv=None):
     ap.add_argument("--preview", type=int, metavar="N",
                     help="print first N rows and stats, don't write a file")
     ap.add_argument("--split-by-make", action="store_true", help="write one file per make")
+    ap.add_argument("--capture", metavar="OUT.json.gz",
+                    help="save the page data the parser reads (for --pages and/or --makes) so the extractor "
+                         "can be debugged without the PDF; the PDF argument may then be this file")
     ap.add_argument("--makes", metavar="LIST",
                     help='only these makes, comma-separated, e.g. "Ford,Chevrolet,Dodge"')
     ap.add_argument("--key", metavar="NAME",
@@ -1398,6 +1447,8 @@ def main(argv=None):
         return dump_coords(args.pdf, args.dump)
     if args.trace_makes:
         return trace_makes(args.pdf)
+    if args.capture:
+        return capture(args.pdf, args.capture, parse_pages_arg(args.pages), args.makes)
 
     try:
         rows = parse_pdf(args.pdf, parse_pages_arg(args.pages))

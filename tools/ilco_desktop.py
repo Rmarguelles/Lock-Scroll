@@ -532,11 +532,39 @@ def run_gui():
                 messagebox.showinfo(APP_NAME, f"Exported {total} row(s) from {len(makes)} make(s) "
                                               f"into {len(written)} file(s) in:\n{folder}")
 
+            def save_capture():
+                # Page data (word positions + table lines) for the selected
+                # makes: small enough to upload, and lets the extractor be
+                # debugged against the real pages without the whole PDF.
+                makes = [lb.get(i).rsplit("  (", 1)[0] for i in lb.curselection()]
+                pdf = self.pdf.get("guide")
+                if not makes or not pdf or not os.path.exists(pdf):
+                    messagebox.showinfo(APP_NAME, "Link the Modern Guide and select at least one make.", parent=win)
+                    return
+                path = filedialog.asksaveasfilename(title="Save page capture", parent=win,
+                                                    defaultextension=".json.gz", initialfile="ilco_capture.json.gz",
+                                                    filetypes=[("Capture", "*.json.gz")])
+                if not path:
+                    return
+                win.destroy()
+                self.set_status(f"Capturing pages for {len(makes)} make(s) — this can take a minute…")
+
+                def work():
+                    try:
+                        ilco_extract.capture(pdf, path, makes=",".join(makes))
+                        kb = os.path.getsize(path) / 1024
+                        self.root.after(0, lambda: (self.set_status(f"Saved capture ({kb:.0f} KB) to {path}"),
+                                                    messagebox.showinfo(APP_NAME, f"Saved {kb:.0f} KB capture:\n{path}")))
+                    except Exception as e:
+                        self.root.after(0, lambda: messagebox.showerror(APP_NAME, f"Capture failed:\n{e}"))
+                threading.Thread(target=work, daemon=True).start()
+
             btns = ttk.Frame(win, padding=8)
             btns.pack(fill="x")
             ttk.Button(btns, text="Select all", command=lambda: lb.selection_set(0, "end")).pack(side="left")
             ttk.Button(btns, text="Clear", command=lambda: lb.selection_clear(0, "end")).pack(side="left", padx=4)
             ttk.Button(btns, text="Export…", command=run).pack(side="right")
+            ttk.Button(btns, text="Save capture…", command=save_capture).pack(side="right", padx=4)
 
         def open_pdf(self, key):
             path = self.pdf.get(key)
