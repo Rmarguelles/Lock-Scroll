@@ -126,7 +126,8 @@ try {
                 stockData, lishiData, lishiVehicleData, lishiInventory, MASTER_LISHI_TOOLS,
                 testKeyInventory, fidAssignments, fidMerges, fidPrefixes,
                 pnSupersessions, discontinuedPns, customVehicles, vehicleYearNotes,
-                vehicleYearRanges, keyRelationships, fccRelationships, customKeyways
+                vehicleYearRanges, keyRelationships, fccRelationships, customKeyways,
+                ilcoRef // reference year ranges: a candidate source for the vehicle gate
             }
         };
     });
