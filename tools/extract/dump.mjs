@@ -89,10 +89,12 @@ try {
     }
 
     const state = await page.evaluate(() => {
+        // Snapshot records now: getUniqueVehicles() below writes a custom
+        // vehicle's keyway/chip/frequency/... onto real DB keys that lack them.
         const keys = DB.map(k => {
             const tkKeyways = typeof getTestKeyKeywaysForKey === 'function' ? getTestKeyKeywaysForKey(k) : [];
             return {
-                record: k,
+                record: structuredClone(k),
                 computed: {
                     category: normalizeKeyType(k.keyType),
                     fccIds: getKeyFccIds(k),
