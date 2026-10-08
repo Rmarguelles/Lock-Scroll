@@ -745,6 +745,23 @@ def parse_page(words, width, state, edges=None):
     apps_rules = _rules_crossing(edges, "apps", width)
     start_rules = _rules_crossing(edges, "start", width)
 
+    # Two application words stacked in ONE apps cell ("Ignition" over "Door",
+    # no slash, no border between) are one entry: Ignition/Door. Without this
+    # the second becomes its own row and borrows the next row's values.
+    merged_app = {}
+    if apps_rules and len(anchors) > 1:
+        kept = [anchors[0]]
+        for a in anchors[1:]:
+            prev = kept[-1]
+            bare = lambda ln: not ln["cols"].get("series") and not ln["cols"].get("blank")
+            if (a["y"] - prev["y"] <= 12 and not _rule_between(prev["y"], a["y"], apps_rules)
+                    and bare(prev) and bare(a)):
+                merged_app[id(prev)] = (merged_app.get(id(prev)) or _col_text(prev, "apps")) + "/" + _col_text(a, "apps")
+                continue
+            kept.append(a)
+        anchors = kept
+    anchor_ys = [a["y"] for a in anchors]
+
     # ---- band boundaries: real cell borders when present, else midpoints ----
     bounds = []
     for i, ay in enumerate(anchor_ys):
@@ -790,7 +807,7 @@ def parse_page(words, width, state, edges=None):
         # Application: the anchor's own apps text, prefixed by any wrapped
         # fragments directly above it (each ending in "/"). Walk up the apps
         # column while fragments stay contiguous and slash-terminated.
-        app_text = _col_text(anchor, "apps")
+        app_text = merged_app.get(id(anchor)) or _col_text(anchor, "apps")
         prefix = []
         prev_y = ay
         for fy, ftext in sorted(apps_frags, key=lambda t: -t[0]):
@@ -1429,6 +1446,21 @@ def selftest():
                                     "notes": [(563, "Encrypted"), (650, "Megamos"), (681, "Transponder")]}}
     if _is_header_or_footer(hdr_line) or not _is_header_or_footer(real_hdr) or _is_header_or_footer(chip_note):
         print("FAIL: header detection (model label 'SERIES' / chip note 'Transponder' vs real header row)")
+        ok = False
+
+    # Two application words stacked in one bordered Apps cell are one entry,
+    # and the second must not borrow the next row's code series.
+    W = lambda x, y, t: {"x0": x, "x1": x + 20, "top": y, "text": t}
+    syn = [W(38, 377, "TRUCK"), W(167, 377, "Ignition"), W(120, 382, "1996"), W(146, 382, "1999"),
+           W(247, 382, "RV1"), W(167, 386, "Door"),
+           W(38, 395, "VAN"), W(120, 395, "2020"), W(146, 395, "2025"), W(167, 395, "All"),
+           W(194, 395, "10,001-11,500"), W(247, 395, "H128-PT")]
+    rule = lambda y: [{"x0": 36, "x1": 109.4, "top": y}, {"x0": 166, "x1": 193, "top": y},
+                      {"x0": 109, "x1": 141, "top": y}]
+    syn_rows = [format_row(r) for r in parse_page(syn, REF_WIDTH, {"make": "Ford"},
+                                                  edges=rule(375) + rule(393.5) + rule(410))]
+    if "Ford | Truck | 1996-1999 | Ignition/Door |  | RV1" not in syn_rows or any("| Door |" in r for r in syn_rows):
+        print("FAIL: stacked application words in one cell:", syn_rows)
         ok = False
 
     # Pages printed off the standard grid are shifted back onto it
