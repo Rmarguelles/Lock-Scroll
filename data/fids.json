@@ -1,0 +1,169 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "extractedAt": "2026-10-08T14:37:04.372Z",
+  "fromApp": "v268",
+  "backup": null
+ },
+ "fids": {
+  "GM-101": {
+   "fid": "GM-101",
+   "prefix": "GM",
+   "group": "GM/Chevrolet/Buick/Cadillac/GMC",
+   "fccIds": [
+    "B62"
+   ],
+   "keys": [
+    "40011",
+    "40012",
+    "40013",
+    "40014",
+    "40015",
+    "40016",
+    "40017",
+    "40018",
+    "40019",
+    "40020",
+    "40021",
+    "40022",
+    "40023",
+    "40024",
+    "40025",
+    "40076"
+   ]
+  },
+  "GM-102": {
+   "fid": "GM-102",
+   "prefix": "GM",
+   "group": "GM/Chevrolet/Buick/Cadillac/GMC",
+   "fccIds": [
+    "VATS-D"
+   ],
+   "keys": [
+    "40082",
+    "40083",
+    "40084",
+    "40085",
+    "40086",
+    "40087",
+    "40088",
+    "40089",
+    "40090",
+    "40091",
+    "40092",
+    "40093",
+    "40094",
+    "40095",
+    "40146",
+    "42152"
+   ]
+  }
+ },
+ "prefixes": {
+  "N": {
+   "makes": [
+    "Nissan",
+    "Infiniti"
+   ],
+   "name": "Nissan/Infiniti"
+  },
+  "F": {
+   "makes": [
+    "Ford",
+    "Lincoln",
+    "Mercury"
+   ],
+   "name": "Ford/Lincoln/Mercury"
+  },
+  "GM": {
+   "makes": [
+    "Chevrolet",
+    "GMC",
+    "Buick",
+    "Cadillac",
+    "Saturn",
+    "Pontiac",
+    "Oldsmobile",
+    "Hummer"
+   ],
+   "name": "GM/Chevrolet/Buick/Cadillac/GMC"
+  },
+  "T": {
+   "makes": [
+    "Toyota",
+    "Lexus",
+    "Scion"
+   ],
+   "name": "Toyota/Lexus/Scion"
+  },
+  "H": {
+   "makes": [
+    "Honda",
+    "Acura"
+   ],
+   "name": "Honda/Acura"
+  },
+  "CH": {
+   "name": "Chrysler/Dodge/Jeep/Ram",
+   "makes": [
+    "Chrysler",
+    "Dodge",
+    "Jeep",
+    "Ram",
+    "Eagle",
+    "Plymouth"
+   ]
+  },
+  "HY": {
+   "name": "Hyundai/Kia/Genesis",
+   "makes": [
+    "Hyundai",
+    "Kia",
+    "Genesis"
+   ]
+  },
+  "MZ": {
+   "makes": [
+    "Mazda"
+   ],
+   "name": "Mazda"
+  },
+  "MT": {
+   "makes": [
+    "Mitsubishi"
+   ],
+   "name": "Mitsubishi"
+  },
+  "SB": {
+   "name": "Subaru",
+   "makes": [
+    "Subaru"
+   ]
+  },
+  "VW": {
+   "name": "Volkswagen/Audi",
+   "makes": [
+    "Volkswagen",
+    "Audi"
+   ]
+  },
+  "SZ": {
+   "name": "Suzuki",
+   "makes": [
+    "Suzuki"
+   ]
+  },
+  "CL": {
+   "name": "Cloneable Keys",
+   "makes": []
+  },
+  "TB": {
+   "name": "Tibbe Keys",
+   "makes": []
+  },
+  "OT": {
+   "name": "Other",
+   "makes": []
+  }
+ }
+}

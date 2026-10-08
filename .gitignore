@@ -5,3 +5,7 @@ __pycache__/
 # Extractor output (generated locally from the Ilco PDF)
 ilco_output.txt
 ilco_by_make/
+
+# Key extraction: raw app dump and personal backups stay local
+data/raw/
+*Backup*.json
