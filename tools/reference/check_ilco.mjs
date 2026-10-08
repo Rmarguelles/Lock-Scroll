@@ -44,13 +44,16 @@ for (const file of files) {
         if (!line.trim()) return;
         const cells = line.split('|').map(c => c.trim());
         const [make, model, years, application, codeSeries, blankCell = '', proxCell = ''] = cells;
-        const ym = (years || '').match(/^(\d{4})(?:-(\d{4}))?$/);
+        // the guide marks part-year changes: "Mid 2001-2010", "MID-2001", "Apr-05"
+        const ym = (years || '').replace(/(^|-)(mid|early|late|[a-z]{3})[\s-]+(?=\d{4})/gi, '$1').match(/^(\d{4})(?:-(\d{4}))?$/);
         const startYear = ym ? +ym[1] : null, endYear = ym ? +(ym[2] || ym[1]) : null;
         const blanks = blankCell.split('/').map(s => s.trim()).filter(Boolean);
         const prox = proxCell === 'Prox';
         const issues = [];
 
-        for (const [re, why] of NOT_A_MODEL) if (re.test(model || '')) issues.push(why);
+        const prod = productionFor(make, model || '');
+        // a name the production table knows (Chrysler 200/300) is a real model
+        for (const [re, why] of NOT_A_MODEL) if (re.test(model || '') && !prod) issues.push(why);
         if (!ym) issues.push(`unreadable years "${years}"`);
         if (!blankCell) issues.push('no key blank');
         if (/\[|\]/.test(line)) issues.push('stray bracket');
@@ -58,7 +61,6 @@ for (const file of files) {
         if (prox && blanks.length && blanks.every(b => MECH_BLANK.test(b))) issues.push('tagged Prox but every blank is a mechanical key');
         if (!prox && blanks.length && blanks.every(b => OEM_PN.test(b))) issues.push('only OEM fob part numbers but not tagged Prox');
 
-        const prod = productionFor(make, model || '');
         if (prod && ym) {
             const fits = prod.spans.some(([a, b]) => startYear >= a - 1 && endYear <= (b ?? 2100) + 1);
             if (!fits) issues.push(`${prod.name} was built ${prod.spans.map(([a, b]) => `${a}-${b ?? 'now'}`).join(', ')}: row says ${years}`);

@@ -55,7 +55,7 @@ import os
 import re
 import sys
 
-EXTRACTOR_VERSION = "2.15-yearquals"
+EXTRACTOR_VERSION = "2.16-pagealign"
 
 # --------------------------------------------------------------------------
 # Reference geometry (measured from the real guide; pages are 783pt wide).
@@ -228,7 +228,24 @@ def normalize_model(raw):
 # like "w/O Tilt Wheel" stay on the model (different ignition = different key).
 KEYSYS_RE = re.compile(r"\s*\bw/\s*(o\b)?\s*(prox|peps|regular\s+ignition)\b\.?", re.IGNORECASE)
 # OEM part numbers (72147-TZ5-A01, 13584504) are prox/smart fobs.
-OEM_BLANK_RE = re.compile(r"^\d{5}")
+# OEM fob part numbers: GM/Honda/Toyota/Chrysler style (5+ leading digits)
+# and Ford's "164-R8091".
+OEM_BLANK_RE = re.compile(r"^(\d{5}|164-R\d{4})")
+
+
+# Trim/package words that follow a model name in the guide's labels.
+TRIM_WORDS = {
+    "st", "slt", "sle", "sport", "laramie", "power", "wagon", "trx4", "sxt", "se", "le", "xle",
+    "xlt", "xl", "stx", "lariat", "limited", "platinum", "denali", "ls", "lt", "ltz", "ss",
+    "base", "gt", "rt", "r/t", "srt", "srt8", "big", "horn", "lone", "star", "longhorn", "king",
+    "ranch", "tradesman", "express", "rebel", "outdoorsman", "fx4", "fx2", "raptor", "touring",
+    "premium", "luxury", "ex", "lx", "dx", "si", "sr5", "trd", "sl", "sv", "hd", "z71",
+}
+
+
+def _is_trim(piece):
+    words = piece.replace("/", " / ").split()
+    return bool(words) and all(w.lower() in TRIM_WORDS or w == "/" for w in words)
 
 
 def split_model_variants(model):
@@ -259,7 +276,48 @@ def split_model_variants(model):
     pieces = [p.strip() for p in base.split(",") if p.strip()]
     if not pieces:
         pieces = [base or model]
+
+    # "RAM 2500 ST, Sport, Laramie, Power Wagon, SLT, TRX4": a model followed
+    # by a comma list of trims (no dash) is the same one-model-many-trims
+    # case. Collapse it when every listed piece is made of trim words; real
+    # separate models ("Camaro, Z28", "Beretta, Corsica") are not trims.
+    if len(pieces) > 1 and all(_is_trim(p) for p in pieces[1:]):
+        words = pieces[0].split()
+        while len(words) > 1 and words[-1].lower() in TRIM_WORDS:
+            words.pop()
+        return [" ".join(words)], prox[0]
     if len(pieces) > 1:
+        # A bare series number inherits the first model's prefix:
+        # "F-250, 350, 450" -> F-250, F-350, F-450;
+        # "Transfer Heavy Trucks 6000, 9000, CF7000" -> each gets the words.
+        first = pieces[0].split()
+        code_prefix = re.match(r"^([A-Za-z]+-?)\d", first[-1])
+        # words before the first model code: "Silverado" in "Silverado 1500/HD/ SS"
+        lead_words = []
+        for w in first:
+            if w[:1].isdigit():
+                break
+            lead_words.append(w)
+        lead = " ".join(lead_words) if len(lead_words) < len(first) else ""
+        out = [pieces[0]]
+        for p in pieces[1:]:
+            head, _, rest = p.partition(" ")
+            if re.fullmatch(r"\d{2,4}", head) and code_prefix:
+                head = code_prefix.group(1) + head
+            elif " " not in p and re.search(r"\d", p) and len(first) > 1 and first[-1].isdigit():
+                head = " ".join(first[:-1] + [head])
+            elif head[:1].isdigit() and lead:
+                # "Silverado 1500/HD/ SS, 2500/HD/3500" -> "Silverado 2500/HD/3500"
+                head = lead + " " + head
+            out.append(f"{head} {rest}".strip())
+        pieces = out
+        # A description after the last model code applies to the whole list:
+        # "F-150, F-250 Series Light Duty" -> both are "... Series Light Duty"
+        last = pieces[-1].split()
+        if (len(last) > 1 and re.search(r"\d", last[0])
+                and all(len(p.split()) == 1 for p in pieces[:-1])):
+            tail = " ".join(last[1:])
+            pieces = [f"{p} {tail}" for p in pieces[:-1]] + [pieces[-1]]
         # Distribute a trailing hardware modifier: "Beretta, Corsica w/O Tilt
         # Wheel" -> both models get "w/O Tilt Wheel"
         mod = re.search(r"\s(w/\S.*)$", pieces[-1], re.IGNORECASE)
@@ -317,16 +375,48 @@ def _expand_oem_suffixes(names):
     return out
 
 
+DEALER_ENTRY = {"fob": "Dealer FOB", "key": "Dealer Key"}
+
+
+def join_wrapped_parts(tokens):
+    """Re-join part numbers the guide wraps across lines at a dash:
+    'H72-' + 'GTK#' -> 'H72-GTK#', '164-' + 'R8092' -> '164-R8092',
+    '164-R8149/164-' + 'R8150/164-R8151' -> one slash list."""
+    out = []
+    for tok in tokens:
+        t = tok.strip()
+        if (out and len(out[-1]) > 1 and out[-1].endswith("-")
+                and t[:1].isalnum() and not t.lower().startswith("oem")):
+            out[-1] += t
+        else:
+            out.append(t)
+    return out
+
+
 def clean_part_tokens(tokens, drop):
     """Blank/subs cell tokens -> list of part names (slash groups expanded)."""
     names = []
-    for tok in tokens:
+    # "Dealer FOB" / "Dealer Key": the guide's entry when only the dealer
+    # supplies the key. Kept verbatim and in place; it has no part number.
+    merged = []
+    for tok in join_wrapped_parts(tokens):
+        t = tok.strip().strip(",")
+        if merged and merged[-1].lower() == "dealer" and t.lower() in ("fob", "key"):
+            merged[-1] = DEALER_ENTRY[t.lower()]
+        else:
+            merged.append(tok)
+    for tok in merged:
+        if tok in DEALER_ENTRY.values():
+            names.append(tok)
+            continue
         t = tok.strip().strip(",")
         if not t or t.lower() in drop:
             continue
-        # variant brackets like "[-P]", "[-P,", "-PC]"
+        # variant brackets like "[-P]", "[-P,", "-PC]" — also when printed
+        # with no space after the part ("P1786/Y153[-P,")
         if t.startswith("[") or t.endswith("]"):
             continue
+        t = re.sub(r"\[.*$", "", t)
         # A fully parenthesized part like "(B62-P-1/15)" is unwrapped; inline
         # parenthetical notes ("(LAL)", "HO03-PT(V)") are removed.
         if t.startswith("(") and t.endswith(")"):
@@ -409,21 +499,59 @@ def _year_qualifier(text):
     return ""
 
 
+_MONTH_NAMES = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+MONTH_YEAR_RE = re.compile(r"^(?:([A-Za-z]{3})-|(\d{1,2})/)(\d{2})$")  # APR-05, Mar-05, 1/05
+
+
+def _year_token(t):
+    """(year, month or '') for a year cell token: '2005', 'APR-05', '1/05'."""
+    if YEAR_RE.match(t):
+        return int(t), ""
+    m = MONTH_YEAR_RE.match(t)
+    if m:
+        mon = (m.group(1) or "").lower()
+        if not mon and 1 <= int(m.group(2)) <= 12:
+            mon = _MONTH_NAMES[int(m.group(2)) - 1]
+        if mon in _MONTH_NAMES:
+            yy = int(m.group(3))
+            return (2000 + yy if yy < 50 else 1900 + yy), mon.capitalize()
+    return None
+
+
+def _line_year_cells(line):
+    """[(year, month)] for the start and end year cells on a line (or None)."""
+    def cells(col):
+        return [v for v in (_year_token(t) for _, t in line["cols"].get(col, [])) if v]
+    start, end = cells("start"), cells("end")
+    if not end and len(start) > 1:
+        # a wide end value can sit inside the start column ("JAN-05 Mar-05")
+        end = start[1:]
+    return (start[0] if start else None), (end[0] if end else None)
+
+
 def _line_years(line):
     """(startYear, endYear) if the line carries year cells, else None."""
-    sy = [t for _, t in line["cols"].get("start", []) if YEAR_RE.match(t)]
-    ey = [t for _, t in line["cols"].get("end", []) if YEAR_RE.match(t)]
+    sy, ey = _line_year_cells(line)
     if sy and ey:
-        a, b = int(sy[0]), int(ey[0])
+        a, b = sy[0], ey[0]
         return (min(a, b), max(a, b))
     if sy:
-        return (int(sy[0]), int(sy[0]))
+        return (sy[0], sy[0])
     return None
+
+
+def _line_months(line):
+    """('Jan', 'Mar') month qualifiers on a line's year cells, '' when none."""
+    sy, ey = _line_year_cells(line)
+    return (sy[1] if sy else ""), (ey[1] if ey else "")
 
 
 def _is_header_or_footer(line):
     words = {t.lower().strip(",.") for _, ws in line["cols"].items() for _, t in ws}
-    if words & HEADER_WORDS:
+    # Column-header words only count outside the model column: a model label
+    # can contain one ("F-150, F-250 SERIES", "SUPER DUTY SERIES").
+    data_words = {t.lower().strip(",.") for c, ws in line["cols"].items() if c != "model" for _, t in ws}
+    if data_words & HEADER_WORDS:
         return True
     if "page" in words and any(t.isdigit() for t in words):
         return True
@@ -448,8 +576,10 @@ def _rules_crossing(edges, col, width):
         # still don't, which is exactly the merged-cell signal we want.
         margin = min((e.get("x0", 0) for e in edges), default=0)
         left_tol = margin + 8 * scale
+    # Right end: some pages print the table up to ~1pt left of others
+    # (page 53's borders end at 108.7, not 109.4), so allow 8pt of slack.
     ys = sorted(e["top"] for e in edges
-                if e.get("x0", 0) <= left_tol and e.get("x1", 0) >= (hi - 6) * scale)
+                if e.get("x0", 0) <= left_tol and e.get("x1", 0) >= (hi - 8) * scale)
     out = []
     for y in ys:
         if not out or y - out[-1] > 2:
@@ -509,11 +639,17 @@ def parse_page(words, width, state, edges=None):
     make_anchors = []
     # Model labels (may wrap onto two lines -> merge close ones).
     model_anchors = []
+    label_last_y = []  # y of each label's last physical line
     for ln in lines:
         mtext = _col_text(ln, "model")
         if not mtext:
             continue
-        if is_make_text(mtext):
+        # A make name inside an unfinished label is part of that label, not
+        # a section header: "TORRENT (SISTER MODEL TO" / "CHEVROLET" /
+        # "EQUINOX)" would otherwise file the rest of Pontiac under Chevrolet.
+        in_open_label = bool(model_anchors) and model_anchors[-1][1].count("(") > model_anchors[-1][1].count(")") \
+            and ln["y"] - label_last_y[-1] <= 24
+        if is_make_text(mtext) and not in_open_label:
             make_anchors.append((ln["y"], normalize_make(mtext)))
         else:
             # A wrapped label continues the one above: very close vertically,
@@ -521,7 +657,8 @@ def parse_page(words, width, state, edges=None):
             # ("Caprice PPV (police &" + "Detective)").
             merged = False
             if model_anchors:
-                py, ptext = model_anchors[-1]
+                pcenter, ptext = model_anchors[-1]
+                py = label_last_y[-1]  # wrap distance runs from the label's LAST line
                 dy = ln["y"] - py
                 # A line repeating the first word of the label above starts a
                 # NEW model ("Corolla Wagon" then "Corolla Station Wagon"), so
@@ -536,10 +673,18 @@ def parse_page(words, width, state, edges=None):
                         or mtext[:1].islower()
                         or (mtext.endswith(")") and "(" not in mtext))
                 if not new_model and (dy <= MODEL_MERGE_TOL or (dy <= 24 and cont)):
-                    model_anchors[-1] = ((py + ln["y"]) / 2, ptext + " " + mtext)
+                    first_y = 2 * pcenter - py  # center = (first + last) / 2
+                    # a word hyphenated across lines rejoins: "SIS-" + "TER" -> "SISTER"
+                    if re.search(r"[A-Za-z]{2}-$", ptext) and mtext[:1].isalpha():
+                        joined = ptext[:-1] + mtext
+                    else:
+                        joined = ptext + " " + mtext
+                    model_anchors[-1] = ((first_y + ln["y"]) / 2, joined)
+                    label_last_y[-1] = ln["y"]
                     merged = True
             if not merged:
                 model_anchors.append((ln["y"], mtext))
+                label_last_y.append(ln["y"])
     # A model label printed ON an anchor line starts its model there — earlier
     # bands can't belong to it. Centered labels (between anchor lines) can be
     # claimed from either direction.
@@ -550,6 +695,7 @@ def parse_page(words, width, state, edges=None):
         model_marks.append({"y": my, "text": normalize_model(mtext), "on_line": on_line})
 
     year_lines = [(ln["y"], _line_years(ln)) for ln in lines if _line_years(ln)]
+    year_months = {ln["y"]: _line_months(ln) for ln in lines if _line_years(ln)}
 
     # Apps-column fragments, page-wide. A wide application label wraps upward
     # across physical lines, each fragment but the last ending in "/":
@@ -606,7 +752,7 @@ def parse_page(words, width, state, edges=None):
     blank_lines = [ln for ln in lines if ln["cols"].get("blank")]
     for j, ln in enumerate(blank_lines):
         toks = [t for _, t in ln["cols"]["blank"]]
-        continues = toks[-1].endswith("/") or toks[-1].lower() == "or"
+        continues = (toks[-1].endswith(("/", "-")) and len(toks[-1]) > 1) or toks[-1].lower() == "or"
         if continues and j + 1 < len(blank_lines):
             nxt = blank_lines[j + 1]
             if 0 < nxt["y"] - ln["y"] <= 14:
@@ -644,16 +790,18 @@ def parse_page(words, width, state, edges=None):
         # this row; else the nearest year line (year cells are vertically
         # centered across the rows they span).
         years = _line_years(anchor)
+        months = _line_months(anchor) if years else ("", "")
         if not years and start_rules:
             for yy, yr in year_lines:
                 above, below = _cell_extent(yy, start_rules)
                 if (above is None or above <= ay) and (below is None or ay < below):
-                    years = yr
+                    years, months = yr, year_months[yy]
                     break
         if not years:
-            cands = [(abs(yy - ay), yr) for yy, yr in year_lines if abs(yy - ay) <= YEAR_REACH]
+            cands = [(abs(yy - ay), yr, yy) for yy, yr in year_lines if abs(yy - ay) <= YEAR_REACH]
             if cands:
-                years = min(cands)[1]
+                _, years, yy = min(cands)
+                months = year_months[yy]
         if not years:
             years = state.get("last_years")
         if not years:
@@ -684,7 +832,15 @@ def parse_page(words, width, state, edges=None):
                     start_y, end_y = end_y, start_y
                 years = (start_y, end_y)
                 state["last_years"] = years
-        year_str = f"{qual}{start_y}-{end_y}" if start_y != end_y else f"{qual}{start_y}"
+        start_m, end_m = months if months else ("", "")
+        if start_m or end_m:
+            # month-dated change: "APR-05 2006" -> "Apr 2005-2006",
+            # "JAN-05 Mar-05" -> "Jan 2005-Mar 2005"
+            sm = f"{start_m} " if start_m else qual
+            em = f"{end_m} " if end_m else ""
+            year_str = f"{sm}{start_y}-{em}{end_y}" if (start_y != end_y or em) else f"{sm}{start_y}"
+        else:
+            year_str = f"{qual}{start_y}-{end_y}" if start_y != end_y else f"{qual}{start_y}"
 
         # Code series: value on the anchor line, else the (fragment-joined)
         # value centered beside this row. Kept tight so a row with a genuinely
@@ -997,11 +1153,37 @@ def iter_pages(path, pages=None):
             yield n, page.width, words, h_edges
 
 
+# Where the "Apps" column header sits on a standard modern-guide page.
+REF_APPS_HEADER_X = 171.85
+
+
+def page_x_offset(words, width):
+    """How far this page's table is printed off the standard position. Most
+    pages match exactly, but some sit up to ~9pt left or right (p26 -1.5,
+    p54 -2.5, p116 -9), enough to push values across column boundaries and
+    lose whole pages. Measured from the "Apps" column header."""
+    scale = width / REF_WIDTH if width else 1.0
+    hdr = [w for w in words if w["text"] == "Apps" and w["top"] < 90]
+    return hdr[0]["x0"] - REF_APPS_HEADER_X * scale if hdr else 0.0
+
+
+def align_page(words, edges, width):
+    """Shift a page's words and table rules onto the standard column grid."""
+    dx = page_x_offset(words, width)
+    if abs(dx) < 0.05:
+        return words, edges
+    words = [dict(w, x0=w["x0"] - dx, x1=w.get("x1", w["x0"]) - dx) for w in words]
+    if edges is not None:
+        edges = [dict(e, x0=e.get("x0", 0) - dx, x1=e.get("x1", 0) - dx) for e in edges]
+    return words, edges
+
+
 def parse_page_any(words, width, state, edges=None):
     # The classic book is portrait (~612 wide); the modern guide is
     # landscape (~783). Route each page to the matching engine.
     if width and width < 700:
         return parse_antique_page(words, width, state)
+    words, edges = align_page(words, edges, width)
     return parse_page(words, width, state, edges=edges)
 
 
@@ -1158,10 +1340,70 @@ def selftest():
             print(f"FAIL make-norm: normalize_make({text!r})={normalize_make(text)!r} != {want_norm!r}")
             ok = False
 
+    splits += [
+        # model + comma list of trims (no dash) is one model in several trims
+        (split_model_variants("RAM 2500 ST, Sport, Laramie, Power Wagon, SLT, Trx4"), (["RAM 2500"], None)),
+        (split_model_variants("RAM 1500 Sport, Trx4,st, Laramie"), (["RAM 1500"], None)),
+        # bare series numbers inherit the prefix; a trailing description is shared
+        (split_model_variants("F-250, 350, 450, 550 Super Duty Series"),
+         (["F-250 Super Duty Series", "F-350 Super Duty Series", "F-450 Super Duty Series",
+           "F-550 Super Duty Series"], None)),
+        (split_model_variants("F-150, F-250 Series Light Duty"),
+         (["F-150 Series Light Duty", "F-250 Series Light Duty"], None)),
+        (split_model_variants("Transfer Heavy Trucks 6000, 9000, Cf7000"),
+         (["Transfer Heavy Trucks 6000", "Transfer Heavy Trucks 9000", "Transfer Heavy Trucks Cf7000"], None)),
+        (split_model_variants("Silverado 1500/hd/ SS, 2500/hd/3500"),
+         (["Silverado 1500/hd/ SS", "Silverado 2500/hd/3500"], None)),
+        # separate model names never inherit words
+        (split_model_variants("C/K Pick UP, Silverado, Typhoon"), (["C/K Pick UP", "Silverado", "Typhoon"], None)),
+        (split_model_variants("W4 & W5, Kodiak Trucks, C4500-c8500"), (["W4 & W5", "Kodiak Trucks", "C4500-c8500"], None)),
+    ]
     for gotv, want in splits:
         if gotv != want:
             print("FAIL split:", gotv, "!=", want)
             ok = False
+
+    # Blank cells: parts wrapped at a dash rejoin; "Dealer FOB/Key" kept in
+    # place; variant brackets glued to a part are stripped; Ford 164-R fobs
+    # count as OEM (Prox) part numbers.
+    blank_checks = [
+        (["EK3-H72/EK3LB-H72*/H72-", "GTK#", "H72-PT", "(LAL)"], ["H72"]),
+        (["OEM#", "164-R8091", "or", "164-", "R8092"], ["164-R8091", "164-R8092"]),
+        (["164-R8149/164-", "R8150/164-R8151/164-", "R8163"], ["164-R8149", "164-R8150", "164-R8151", "164-R8163"]),
+        (["Y164-PT", "(LAL),", "or", "Dealer", "FOB"], ["Y164", "Dealer FOB"]),
+        (["Dealer", "Key"], ["Dealer Key"]),
+        (["P1786/Y153[-P,", "-PC]"], ["P1786", "Y153"]),
+    ]
+    for toks, want in blank_checks:
+        gotb = clean_part_tokens(toks, BLANK_DROP)
+        if gotb != want:
+            print("FAIL blanks:", toks, "->", gotb, "!=", want)
+            ok = False
+    if not (OEM_BLANK_RE.match("164-R8091") and OEM_BLANK_RE.match("13598507") and not OEM_BLANK_RE.match("H128")):
+        print("FAIL: OEM fob pattern")
+        ok = False
+
+    # Year cells: month-dated changes keep their months
+    year_checks = [("2005", (2005, "")), ("APR-05", (2005, "Apr")), ("Mar-05", (2005, "Mar")),
+                   ("1/05", (2005, "Jan")), ("12/98", (1998, "Dec")), ("13/05", None), ("HU100", None)]
+    for tok, want in year_checks:
+        if _year_token(tok) != want:
+            print(f"FAIL year token {tok!r}: {_year_token(tok)} != {want}")
+            ok = False
+
+    # A model label containing a column-header word is not the header row
+    hdr_line = {"cols": {"model": [(38, "F-150,"), (60, "F-250"), (80, "SERIES")]}}
+    real_hdr = {"cols": {"apps": [(172, "Apps")], "series": [(210, "Series")]}}
+    if _is_header_or_footer(hdr_line) or not _is_header_or_footer(real_hdr):
+        print("FAIL: header detection (model label 'SERIES' vs real header row)")
+        ok = False
+
+    # Pages printed off the standard grid are shifted back onto it
+    shifted = [{"text": "Apps", "x0": 170.37, "x1": 185, "top": 57}, {"text": "All", "x0": 165.9, "x1": 175, "top": 80}]
+    aligned, _ = align_page(shifted, None, REF_WIDTH)
+    if _col_of(aligned[1]["x0"], REF_WIDTH) != "apps":
+        print("FAIL: page alignment (value left of the Apps column on a shifted page)")
+        ok = False
     # The Alfa Romeo blank-board and legend lines must produce no rows
     if any(g.startswith("Alfa Romeo") for g in got):
         print("FAIL: Alfa Romeo section header leaked rows")
@@ -1390,7 +1632,7 @@ def trace_makes(pdf_path):
     print(f">>> make trace (extractor v{EXTRACTOR_VERSION})")
     state = {}
     for n, width, words, h_edges in iter_pages(pdf_path):
-        rows = parse_page(words, width, state, edges=h_edges)
+        rows = parse_page_any(words, width, state, edges=h_edges)
         makes = []
         for r in rows:
             if r["make"] and r["make"] not in makes:
