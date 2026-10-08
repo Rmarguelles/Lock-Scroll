@@ -1,0 +1,53 @@
+{
+ "_note": "US model-year production spans, used only to flag suspicious reference rows for review (null = still in production). General knowledge, not authoritative.",
+ "Cadillac": {
+  "Allanté": [[1987, 1993]], "ATS": [[2013, 2019]], "Brougham": [[1987, 1992]], "Catera": [[1997, 2001]],
+  "Cimarron": [[1982, 1988]], "Concours": [[1994, 1999]], "CT4": [[2020, null]], "CT5": [[2020, null]],
+  "Ct4/ct5": [[2020, null]], "CTS": [[2003, 2019]], "Cts/cts-v": [[2003, 2019]], "CTS Cts/cts-v": [[2003, 2019]],
+  "CT6": [[2016, 2020]], "Fleetwood": [[1985, 1996]], "Seville": [[1975, 2004]], "SRX": [[2004, 2016]],
+  "STS": [[2005, 2011]], "XLR": [[2004, 2009]], "XTS": [[2013, 2019]], "XT4": [[2019, null]], "XT5": [[2017, null]],
+  "XT6": [[2020, null]], "Escalade": [[1999, null]], "DeVille": [[1959, 2005]], "Eldorado": [[1967, 2002]]
+ },
+ "Chevrolet": {
+  "Aveo": [[2004, 2011]], "Beretta": [[1987, 1996]], "Corsica": [[1987, 1996]], "Camaro": [[1967, 2002], [2010, 2024]],
+  "Z28": [[1967, 2002], [2014, 2015]], "Caprice": [[1965, 1996]], "Caprice PPV": [[2011, 2017]], "Cavalier": [[1982, 2005]],
+  "Cobalt": [[2005, 2010]], "Corvette": [[1953, null]], "Cruze": [[2011, 2019]], "Epica": [[2004, 2006]],
+  "Impala": [[1958, 1985], [1994, 1996], [2000, 2020]], "Lumina": [[1990, 2001]], "Lumina APV": [[1990, 1996]],
+  "Malibu": [[1997, 2025]], "Malibu Classic": [[2004, 2005]], "Metro": [[1998, 2001]], "Monte Carlo": [[1970, 1988], [1995, 2007]],
+  "Nova": [[1985, 1988]], "Sonic": [[2012, 2020]], "Spark": [[2013, 2022]], "Traverse": [[2009, null]], "Volt": [[2011, 2019]],
+  "Astro": [[1985, 2005]], "Avalanche": [[2002, 2013]], "Blazer": [[1969, 2005], [2019, null]], "Colorado": [[2004, null]],
+  "Equinox": [[2005, null]], "Express": [[1996, null]], "HHR": [[2006, 2011]], "S-10": [[1982, 2004]], "Silverado": [[1999, null]],
+  "Suburban": [[1935, null]], "Tahoe": [[1995, null]], "Trailblazer": [[2002, 2009], [2021, null]], "Trax": [[2013, null]],
+  "Uplander": [[2005, 2009]], "Venture": [[1997, 2005]], "Tracker": [[1989, 2004]], "City Express": [[2015, 2018]],
+  "Captiva Sport": [[2012, 2015]], "Orlando": [[2011, 2014]], "SSR": [[2003, 2006]], "Optra": [[2004, 2007]], "Prizm": [[1998, 2002]],
+  "Spectrum": [[1985, 1989]], "Sprint": [[1985, 1988]], "Typhoon": [[1992, 1993]], "Vibe": [], "Trans AM": [], "GTA": [], "Trans Sport": []
+ },
+ "Chrysler": {
+  "200": [[2011, 2017]], "300": [[2005, 2023]], "300c": [[2005, 2023]], "300m": [[1999, 2004]], "Aspen": [[2007, 2009]],
+  "Cirrus": [[1995, 2000]], "Concorde": [[1993, 2004]], "Crossfire": [[2004, 2008]], "LHS": [[1994, 1997], [1999, 2001]],
+  "NEW Yorker": [[1940, 1996]], "Pacifica": [[2004, 2008], [2017, null]], "Prowler": [[2001, 2002]], "PT Cruiser": [[2001, 2010]],
+  "Sebring": [[1995, 2010]], "Town & Country": [[1990, 2016]], "Voyager": [[2000, 2003], [2020, null]]
+ },
+ "Dodge": {
+  "Avenger": [[1995, 2000], [2008, 2014]], "Caliber": [[2007, 2012]], "Challenger": [[2008, 2023]], "Charger": [[1966, 1978], [1982, 1987], [2006, null]],
+  "Charger Daytona": [[2006, 2009], [2024, null]], "Colt": [[1971, 1994]], "Colt Vista": [[1984, 1991]], "Dart": [[2013, 2016]],
+  "Hornet": [[2023, null]], "Intrepid": [[1993, 2004]], "Journey": [[2009, 2020]], "Magnum": [[2005, 2008]], "Monaco": [[1990, 1992]],
+  "Neon": [[1995, 2005]], "SRT 10": [[2004, 2006]], "Nitro": [[2007, 2012]], "Spirit": [[1989, 1995]], "Sprinter": [[2003, 2009]],
+  "Stealth": [[1991, 1996]], "Stratus": [[1995, 2006]], "Viper": [[1992, 2017]], "Durango": [[1998, 2009], [2011, null]],
+  "Dakota": [[1987, 2011]], "Caravan": [[1984, 2020]], "Promaster": [[2014, null]], "Promaster City": [[2015, 2022]],
+  "Raider": [[1987, 1989]], "RAM Charger": [[1974, 1993]], "D50": [[1979, 1993]]
+ },
+ "Ford": {
+  "Aspire": [[1994, 1997]], "Cmax": [[2013, 2018]], "Contour": [[1995, 2000]], "Crown Victoria": [[1992, 2011]],
+  "Ecosport": [[2018, 2022]], "Edge": [[2007, 2024]], "Escape": [[2001, null]], "Escape Hybrid": [[2005, 2012]],
+  "Escort": [[1981, 2003]], "Festiva": [[1988, 1993]], "Fiesta": [[2011, 2019]], "Five Hundred": [[2005, 2007]],
+  "Flex": [[2009, 2019]], "Focus": [[2000, 2018]], "Ford GT": [[2005, 2006], [2017, 2022]], "Freestyle": [[2005, 2007]],
+  "Fusion": [[2006, 2020]], "Mustang": [[1965, null]], "Mustang Cobra": [[1993, 2004]], "Probe": [[1989, 1997]],
+  "Taurus": [[1986, 2019]], "Taurus X": [[2008, 2009]], "Tempo": [[1984, 1994]], "Thunderbird": [[1955, 1997], [2002, 2005]],
+  "Excursion": [[2000, 2005]], "Expedition": [[1997, null]], "Explorer": [[1991, null]], "Explorer Sport": [[1991, 2003]],
+  "Explorer Sport Trac": [[2001, 2010]], "F-150 Heritage": [[2004, 2004]], "Freestar": [[2004, 2007]],
+  "Ranger": [[1983, 2011], [2019, null]], "Transit": [[2015, null]], "Transit Connect": [[2010, 2023]], "Windstar": [[1995, 2003]],
+  "Maverick": [[1970, 1977], [2022, null]], "Lightning": [[1993, 1995], [1999, 2004], [2022, null]], "Mach E": [[2021, null]],
+  "LTD": [[1965, 1986]], "Cobra": []
+ }
+}

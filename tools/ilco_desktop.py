@@ -15,6 +15,7 @@ anywhere). Phones can't run a .exe — use the Lock & Scroll PWA there.
 
   GUI:        python ilco_desktop.py
   Headless:   python ilco_desktop.py --search "TR33" --guide GUIDE.pdf
+  Export:     python ilco_desktop.py --guide GUIDE.pdf --export-makes "Ford,Chevrolet,Dodge"
   Self-test:  python ilco_desktop.py --selftest      (no PDF, no display)
 
 Build a Windows .exe (run on the Windows machine, see README-ilco.md):
@@ -91,6 +92,43 @@ def search_rows(rows, query):
 def rows_to_pipe(rows):
     """Serialize rows to the pipe-delimited text the app's importer reads."""
     return "\n".join(ilco_extract.format_row(r) for r in rows)
+
+
+def make_counts(rows):
+    """[(make, row count)] for every make present, alphabetical."""
+    counts = {}
+    for r in rows:
+        mk = r.get("make") or ""
+        if mk:
+            counts[mk] = counts.get(mk, 0) + 1
+    return sorted(counts.items(), key=lambda kv: kv[0].lower())
+
+
+def make_filename(make):
+    """Same per-make file naming as ilco_extract.py --split-by-make."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", make).strip("_") + ".txt"
+
+
+def export_makes(rows, makes, folder, combined=False):
+    """Write the rows of each chosen make to `folder`: one <Make>.txt per make,
+    or a single ilco_<n>_makes.txt when combined. Row order is kept. Returns
+    [(path, row count)] for the files written."""
+    wanted = {m.lower() for m in makes}
+    picked = [r for r in rows if str(r.get("make", "")).lower() in wanted]
+    os.makedirs(folder, exist_ok=True)
+    written = []
+    if combined:
+        path = os.path.join(folder, f"ilco_{len(wanted)}_makes.txt")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(rows_to_pipe(picked) + "\n")
+        return [(path, len(picked))]
+    for mk, _ in make_counts(picked):
+        mine = [r for r in picked if r.get("make") == mk]
+        path = os.path.join(folder, make_filename(mk))
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(rows_to_pipe(mine) + "\n")
+        written.append((path, len(mine)))
+    return written
 
 
 def _cache_path(pdf_path):
@@ -189,6 +227,19 @@ def selftest():
           and "Camry" not in [r["model"] for r in search_rows(rows, "modern")])
     check("pipe export round-trips through the app's parser format",
           rows_to_pipe(rows[:1]) == "Toyota | Camry | 2007-2011 | All | 10001-15000 | EK3-TOY43/TOY43")
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        check("make counts", make_counts(rows) == [("Ford", 1), ("Honda", 1), ("Toyota", 2)])
+        out = export_makes(rows, ["toyota", "Honda"], tmp)
+        names = sorted(os.path.basename(p) for p, _ in out)
+        check("export makes -> one file per chosen make", names == ["Honda.txt", "Toyota.txt"])
+        with open(os.path.join(tmp, "Toyota.txt"), encoding="utf-8") as fh:
+            check("per-make file holds only that make's rows", fh.read().count("Toyota |") == 2)
+        out = export_makes(rows, ["Toyota", "Ford"], tmp, combined=True)
+        with open(out[0][0], encoding="utf-8") as fh:
+            text = fh.read()
+        check("combined export holds every chosen make", out[0][1] == 3 and "Ford |" in text and "Honda" not in text)
     print("\nSELFTEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -266,6 +317,7 @@ def run_gui():
             ttk.Button(bar, text="Approve all shown", command=self.approve_shown).pack(side="left", padx=4)
             ttk.Button(bar, text="Copy approved", command=self.copy_approved).pack(side="left", padx=4)
             ttk.Button(bar, text="Export approved → .txt", command=self.export_approved).pack(side="left", padx=4)
+            ttk.Button(bar, text="Export makes…", command=self.export_makes_dialog).pack(side="left", padx=4)
             self.status = ttk.Label(bar, text="", foreground="#888")
             self.status.pack(side="right")
 
@@ -428,6 +480,64 @@ def run_gui():
             messagebox.showinfo(APP_NAME, f"Exported {len(rows)} approved row(s).\n\nPaste the file's contents into "
                                           "Lock & Scroll → 📗 Ilco Guide → 📋 Paste Reference.")
 
+        def export_makes_dialog(self):
+            """Pick several makes and export them in one go."""
+            if not self.rows:
+                messagebox.showinfo(APP_NAME, "Link a PDF first so there are rows to export.")
+                return
+            win = tk.Toplevel(self.root)
+            win.title("Export makes")
+            win.transient(self.root)
+            ttk.Label(win, text="Select the makes to export (Ctrl/Shift-click for several):").pack(anchor="w", padx=8, pady=(8, 2))
+            frame = ttk.Frame(win)
+            frame.pack(fill="both", expand=True, padx=8)
+            lb = tk.Listbox(frame, selectmode="extended", height=18, width=34, exportselection=False)
+            sc = ttk.Scrollbar(frame, orient="vertical", command=lb.yview)
+            lb.configure(yscrollcommand=sc.set)
+            lb.pack(side="left", fill="both", expand=True)
+            sc.pack(side="right", fill="y")
+
+            approved_only = tk.BooleanVar(value=False)
+            combined = tk.BooleanVar(value=False)
+
+            def source_rows():
+                return [r for r in self.rows if id(r) in self.approved] if approved_only.get() else self.rows
+
+            def fill():
+                keep = {lb.get(i).rsplit("  (", 1)[0] for i in lb.curselection()}
+                lb.delete(0, "end")
+                for i, (mk, n) in enumerate(make_counts(source_rows())):
+                    lb.insert("end", f"{mk}  ({n})")
+                    if mk in keep:
+                        lb.selection_set(i)
+            fill()
+
+            opts = ttk.Frame(win, padding=(8, 4))
+            opts.pack(fill="x")
+            ttk.Checkbutton(opts, text="Approved rows only", variable=approved_only, command=fill).pack(anchor="w")
+            ttk.Checkbutton(opts, text="One combined file (instead of one file per make)", variable=combined).pack(anchor="w")
+
+            def run():
+                makes = [lb.get(i).rsplit("  (", 1)[0] for i in lb.curselection()]
+                if not makes:
+                    messagebox.showinfo(APP_NAME, "Select at least one make.", parent=win)
+                    return
+                folder = filedialog.askdirectory(title="Folder to export into", parent=win)
+                if not folder:
+                    return
+                written = export_makes(source_rows(), makes, folder, combined=combined.get())
+                total = sum(n for _, n in written)
+                win.destroy()
+                self.set_status(f"Exported {total} row(s) from {len(makes)} make(s) to {folder}")
+                messagebox.showinfo(APP_NAME, f"Exported {total} row(s) from {len(makes)} make(s) "
+                                              f"into {len(written)} file(s) in:\n{folder}")
+
+            btns = ttk.Frame(win, padding=8)
+            btns.pack(fill="x")
+            ttk.Button(btns, text="Select all", command=lambda: lb.selection_set(0, "end")).pack(side="left")
+            ttk.Button(btns, text="Clear", command=lambda: lb.selection_clear(0, "end")).pack(side="left", padx=4)
+            ttk.Button(btns, text="Export…", command=run).pack(side="right")
+
         def open_pdf(self, key):
             path = self.pdf.get(key)
             if not path or not os.path.exists(path):
@@ -458,11 +568,34 @@ def main(argv=None):
     ap.add_argument("--search", help="headless: print rows matching this query and exit")
     ap.add_argument("--guide", help="modern guide PDF (for --search)")
     ap.add_argument("--antique", help="antique book PDF (for --search)")
+    ap.add_argument("--export-makes", metavar="MAKES",
+                    help='headless: export these makes, comma-separated ("Ford,Chevrolet,Dodge") or "all"')
+    ap.add_argument("--out-dir", default="ilco_by_make", help="folder for --export-makes (default ilco_by_make)")
+    ap.add_argument("--combined", action="store_true", help="with --export-makes: one file instead of one per make")
     ap.add_argument("--selftest", action="store_true", help="validate search logic, no PDF/display")
     args = ap.parse_args(argv)
 
     if args.selftest:
         return selftest()
+
+    if args.export_makes:
+        rows = []
+        for path, label in ((args.guide, "guide"), (args.antique, "antique")):
+            if path:
+                rows += load_or_extract(path, label)
+        if not rows:
+            ap.error("--export-makes needs at least one of --guide/--antique")
+        known = [mk for mk, _ in make_counts(rows)]
+        if args.export_makes.strip().lower() == "all":
+            makes = known
+        else:
+            makes = [m.strip() for m in args.export_makes.split(",") if m.strip()]
+            missing = [m for m in makes if m.lower() not in {k.lower() for k in known}]
+            if missing:
+                print(f"Not found in the guide: {', '.join(missing)}", file=sys.stderr)
+        for path, n in export_makes(rows, makes, args.out_dir, combined=args.combined):
+            print(f"{n:5} rows -> {path}")
+        return 0
 
     if args.search is not None:
         rows = []

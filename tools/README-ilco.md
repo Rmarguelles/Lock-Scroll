@@ -36,7 +36,15 @@ python ilco_extract.py "Ilco Guide.pdf" --out ilco_output.txt
 
 # 4. …or split into one file per make (easier to paste in chunks):
 python ilco_extract.py "Ilco Guide.pdf" --split-by-make
+
+# 5. …or only some makes, as separate files or one combined file:
+python ilco_extract.py "Ilco Guide.pdf" --split-by-make --makes "Ford,Chevrolet,Dodge"
+python ilco_extract.py "Ilco Guide.pdf" --makes "Ford,Chevrolet,Dodge" --out three_makes.txt
 ```
+
+In the desktop app (`ilco_desktop.py`), **Export makes…** does the same: tick
+several makes (or Select all), choose a folder, and get one file per make or
+one combined file. Tick "Approved rows only" to export just what you verified.
 
 Then open `ilco_output.txt`, copy it, and paste into the app under
 **📗 Ilco Guide → 📋 Paste Reference** (use **Preview** there before

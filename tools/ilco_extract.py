@@ -16,6 +16,7 @@ Quick start
     python ilco_extract.py GUIDE.pdf --pages 13-14 --preview 40   # sample first
     python ilco_extract.py GUIDE.pdf --out ilco_output.txt        # whole guide
     python ilco_extract.py GUIDE.pdf --split-by-make              # file per make
+    python ilco_extract.py GUIDE.pdf --split-by-make --makes "Ford,Chevrolet,Dodge"
     python ilco_extract.py --selftest                             # no PDF needed
 
 How it works
@@ -1377,6 +1378,8 @@ def main(argv=None):
     ap.add_argument("--preview", type=int, metavar="N",
                     help="print first N rows and stats, don't write a file")
     ap.add_argument("--split-by-make", action="store_true", help="write one file per make")
+    ap.add_argument("--makes", metavar="LIST",
+                    help='only these makes, comma-separated, e.g. "Ford,Chevrolet,Dodge"')
     ap.add_argument("--key", metavar="NAME",
                     help="print only rows whose key blank includes NAME (e.g. --key TR33)")
     ap.add_argument("--selftest", action="store_true",
@@ -1401,6 +1404,14 @@ def main(argv=None):
     except ImportError:
         print("pdfplumber is not installed. Run: pip install pdfplumber", file=sys.stderr)
         return 2
+
+    if args.makes:
+        wanted = {m.strip().lower() for m in args.makes.split(",") if m.strip()}
+        found = {r["make"].lower() for r in rows if r["make"]}
+        missing = sorted(wanted - found)
+        if missing:
+            print(f"Not found in the guide: {', '.join(missing)}", file=sys.stderr)
+        rows = [r for r in rows if r["make"] and r["make"].lower() in wanted]
 
     makes = sorted({r["make"] for r in rows if r["make"]})
     with_blank = sum(1 for r in rows if r["blank"])
