@@ -45,6 +45,7 @@ Each file starts with a `meta` block (`schemaVersion`, `extractedAt`,
 | `lishi-tools.json` | Lishi tools (keyways, door/ignition/trunk, in stock) plus the keyway → tool map |
 | `test-keys.json` | Test key pools by keyway, with pooled quantity |
 | `fids.json` | FID groups: their FCC IDs and keys, plus the prefix table |
+| `vendor-prices.json` | Distributor pricing per part number (SKU, Price A/B, named versions, emergency key, shell, OEM) and the distributor list |
 | `REPORT.md` | Totals, gaps, cleanup decisions, backup cross-check |
 
 ### Key record

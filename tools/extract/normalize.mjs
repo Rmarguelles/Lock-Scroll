@@ -344,6 +344,38 @@ write('lishi-tools.json', { tools: lishiTools, keywayToTool: keywayToLishi });
 write('test-keys.json', { testKeys });
 write('fids.json', { fids, prefixes: S.fidPrefixes || {} });
 
+// Distributor pricing: pn -> distributor -> prices. Kept as the app stores it
+// (after its own PN renames/merges), minus empty entries; prices are text.
+const priceText = v => (v == null || v === '' ? null : String(v).trim() || null);
+const vendorPrices = {};
+const knownPns = new Set(keys.map(k => k.pn));
+let pricedEntries = 0;
+const orphanPricePns = [];
+Object.entries(S.vendorPrices || {}).forEach(([pn, byVendor]) => {
+    const out = {};
+    Object.entries(byVendor || {}).forEach(([vendor, p]) => {
+        if (!p || typeof p !== 'object') return;
+        const e = {
+            sku: priceText(p.sku), priceA: priceText(p.priceA), priceB: priceText(p.priceB),
+            emergency: priceText(p.emergency), shell: priceText(p.shell), oem: priceText(p.oem),
+            variants: (Array.isArray(p.variants) ? p.variants : []).filter(v => v && priceText(v.price)).map(v => ({
+                label: priceText(v.label) || priceText(v.condition), vendorSku: priceText(v.vendorSku), price: priceText(v.price),
+            })),
+        };
+        Object.keys(e).forEach(f => { if (e[f] == null || (Array.isArray(e[f]) && !e[f].length)) delete e[f]; });
+        if (Object.keys(e).some(f => f !== 'sku')) { out[vendor] = e; pricedEntries++; }
+    });
+    if (Object.keys(out).length) {
+        vendorPrices[pn] = out;
+        if (!knownPns.has(pn)) orphanPricePns.push(pn);
+    }
+});
+const vendors = [...(S.DEFAULT_VENDORS || []), ...(S.customVendors || [])]
+    .filter(v => v && v.name).map(v => ({ name: v.name, type: v.type || null }));
+write('vendor-prices.json', { vendors, prices: vendorPrices });
+report.crossCheck.push(`Vendor pricing: ${pricedEntries} distributor prices on ${Object.keys(vendorPrices).length} part numbers` +
+    (orphanPricePns.length ? `; ${orphanPricePns.length} priced PNs are not keys: ${orphanPricePns.slice(0, 20).join(', ')}` : '') + '.');
+
 const count = (arr, f) => arr.reduce((m, x) => (m[f(x)] = (m[f(x)] || 0) + 1, m), {});
 const table = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, n]) => `| ${k} | ${n} |`).join('\n');
 const list = arr => (arr.length ? arr.map(x => `- ${x}`).join('\n') : '- none');

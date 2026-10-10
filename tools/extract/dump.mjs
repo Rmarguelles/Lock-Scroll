@@ -129,7 +129,8 @@ try {
                 testKeyInventory, fidAssignments, fidMerges, fidPrefixes,
                 pnSupersessions, discontinuedPns, customVehicles, vehicleYearNotes,
                 vehicleYearRanges, keyRelationships, fccRelationships, customKeyways,
-                ilcoRef // reference year ranges: a candidate source for the vehicle gate
+                ilcoRef, // reference year ranges: a candidate source for the vehicle gate
+                vendorPrices, customVendors, DEFAULT_VENDORS // distributor pricing per part number
             }
         };
     });
