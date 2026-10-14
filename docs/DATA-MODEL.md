@@ -136,10 +136,39 @@ There are **two different vehicle shapes**. Don't conflate them.
 | `codeSeries` | array\|string\|null | per-row builder | 195/1847 | **Three shapes in live data:** `[{series,years}]`, a bare string (`"Z0001-Z6000"`), and `[]`. Any consumer must handle all three. |
 | `startMonth` / `endMonth` | number | `customVehicle{Start,End}Month{n}` | 0 | Collected by the form, only written when non-zero. |
 | roles | — | `customVehicleRole{n}_{role}` | 0 | Per-vehicle role flags. |
+| `yearsLabel` | string | — | (v269) | The source's own wording when it gives no exact years: `"late 60’s"`, `"1960’s"`, `"All years"`. Shown in place of / beside the numbers by `formatYearRange()`. |
+
+**No-years entries.** `startYear` 0 (or missing) means the source gave no
+years ("All years"). Such an entry belongs to every individual year of its
+make/model in the vehicle browser, and sits under an "All years" button.
+
+**Impossible years are corrected on every load** by `fixVehicleYears()`
+from the `VEHICLE_YEAR_FIXES` table (exact make/model/years matches only),
+and again after a cloud download and a backup restore, so an older device
+cannot sync them back.
 
 A single form row can emit **several** entries — the "extra year range"
 controls (`customVehicleExtra*`) produce additional objects with the same
 make/model but different year spans and `codeSeries: null`.
+
+### 3.1b Browsing by year, production runs (v269)
+
+The vehicle browser goes Make → Model → key type → **one year** → that
+year's keys. A key appears under every year its sources list, so two
+distributors disagreeing by a year at an edge (Mustang 2010–2014 vs
+2011–2014) no longer needs reconciling: a 2011 shows both keys, each card
+saying which years its source lists.
+
+Each distinct `make|model|startYear|endYear` entry is a **production run**.
+Vehicle info (Lishi direction, code series, notes in `lishiVehicleData`) is
+keyed by the run and applies to all of its years. A year where the Lishi
+direction does not hold is recorded on the run as
+`lishiVehicleData[run].exceptions[year] = { direction?, note? }`, never split
+into a run of its own.
+
+The set-year-ranges feature (`vehicleYearRanges`, Edit Ranges, suggested
+ranges, discrepancy badges) was removed in v269; the store is no longer read,
+written, synced or exported.
 
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
 
