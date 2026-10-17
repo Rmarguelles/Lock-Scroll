@@ -189,6 +189,21 @@ reads, so a rename on a built-in key reverted on the next load.
 1967–1985) → `6000, 9000, CF7000 Transfer Heavy Trucks`, v271). It is applied on every load, after a cloud download and
 after a backup restore, so an older device cannot sync the old names back.
 
+### 3.1d Duplicate part numbers (v272)
+
+`executeKeyMerge(target, source)` absorbs one key into another: vehicles,
+stock (summed), vendor prices, purchase and job history, FID stand-ins, and
+`pnSupersessions[source] = target`. A **built-in** survivor keeps those
+changes through `vehicleOverrides` / `keyInfoOverrides`; before v272 they were
+made in memory only and lost on reload (Merge Keys and the old H75x step).
+
+`KEY_MERGES` lists PNs that are the same key (first: custom `H75x` into
+built-in `H75`). It is applied on every load, after a cloud download and
+after a backup restore, but only until the supersession is recorded. After
+that, `pruneSupersededCustomKeys()` drops any copy another device syncs back,
+including when the successor is a built-in key, and discards the copy's stock
+entry rather than adding it a second time.
+
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
 
 These carry key data *per vehicle* rather than per part number, and they

@@ -4570,7 +4570,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v271</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v272</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5331,7 +5331,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v271</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v272</p>
         </div>
 
         <div class="settings-section">
@@ -5343,7 +5343,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v271<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v272<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8956,6 +8956,7 @@ async function downloadFromCloud() {
         // silently undone: a copy still carrying the old PN (stale cloud doc,
         // another device) gets re-added next to the renamed key. Drop those
         // resurrected copies before rendering.
+        applyKeyMerges();
         pruneSupersededCustomKeys();
         // A stale copy from an older device may still carry impossible years
         // or model names that have since been consolidated
@@ -8971,26 +8972,49 @@ async function downloadFromCloud() {
     }
 }
 
-// Removes custom keys whose PN was renamed away (recorded in pnSupersessions
-// by the rename flows and the antique sync) when their renamed successor also
-// exists — the old-named entry is a resurrected pre-rename copy, not a real
-// key. A copy edited AFTER the successor is kept: that's a deliberately
-// recreated key, not a stale one. Returns how many entries were dropped.
+// Removes custom keys whose PN was renamed away or merged (recorded in
+// pnSupersessions by the rename flows, key merges and the antique sync) when
+// their successor also exists — the old-named entry is a resurrected copy, not
+// a real key. A copy edited AFTER a custom successor is kept: that's a
+// deliberately recreated key, not a stale one. A built-in successor has no
+// edit time, so a custom copy superseded by one is always stale (H75x after
+// its merge into H75). The copy's stock was already added to the successor by
+// the merge, so a stale stock entry is dropped, not counted again; a vendor
+// price the successor lacks is kept. Returns how many entries were dropped.
 function pruneSupersededCustomKeys() {
     const ts = k => Date.parse(k.lastEdited || k.addedDate || '') || 0;
     const byLowerPn = {};
     customKeys.forEach(k => { byLowerPn[String(k.pn).toLowerCase()] = k; });
+    const builtInPns = {};
+    DB.forEach(k => { if (!k.isCustom) builtInPns[String(k.pn).toLowerCase()] = String(k.pn); });
     const superLower = {};
     Object.keys(pnSupersessions || {}).forEach(o => { superLower[o.toLowerCase()] = String(pnSupersessions[o]); });
     const stale = new Set();
+    const successorOf = {};
     customKeys.forEach(k => {
         const pnL = String(k.pn).toLowerCase();
         const target = superLower[pnL];
         if (!target || target.toLowerCase() === pnL) return;
         const successor = byLowerPn[target.toLowerCase()];
-        if (successor && ts(k) <= ts(successor)) stale.add(pnL);
+        if (successor ? ts(k) <= ts(successor) : builtInPns[target.toLowerCase()]) {
+            stale.add(pnL);
+            successorOf[String(k.pn)] = successor ? String(successor.pn) : builtInPns[target.toLowerCase()];
+        }
     });
     if (stale.size === 0) return 0;
+    let stockChanged = false, pricesChanged = false;
+    Object.keys(successorOf).forEach(pn => {
+        if (stockData[pn] !== undefined) { delete stockData[pn]; stockChanged = true; }
+        if (vendorPrices[pn]) {
+            const to = successorOf[pn];
+            vendorPrices[to] = vendorPrices[to] || {};
+            Object.keys(vendorPrices[pn]).forEach(v => { if (!vendorPrices[to][v]) vendorPrices[to][v] = vendorPrices[pn][v]; });
+            delete vendorPrices[pn];
+            pricesChanged = true;
+        }
+    });
+    if (stockChanged) saveStock();
+    if (pricesChanged) saveVendorPrices();
     customKeys = customKeys.filter(k => !stale.has(String(k.pn).toLowerCase()));
     for (let i = DB.length - 1; i >= 0; i--) {
         if (DB[i].isCustom && stale.has(String(DB[i].pn).toLowerCase())) DB.splice(i, 1);
@@ -10852,72 +10876,30 @@ function runAntiqueSlashPnMigration() {
     saveToIndexedDB('database', DB);
 }
 
-async function runH75xMergeMigration() {
-    const done = await loadFromIndexedDB('h75xMergeV1');
-    if (done) return;
+// ===================== KEY MERGES =====================
+// Part numbers that are one and the same key, each absorbed into the PN it
+// duplicates. executeKeyMerge moves everything (vehicles, stock, prices,
+// history, FID) and records the old PN in pnSupersessions, which syncs; once
+// that is recorded, a copy another device syncs back is dropped by
+// pruneSupersededCustomKeys instead of being merged again, so stock is only
+// ever added once. Applied on every load, after a cloud download and after a
+// backup restore.
+const KEY_MERGES = [
+    // A custom H75x (Feb 2026) duplicating built-in H75: same blank, same
+    // keyway, same FCC stand-in, and every one of its vehicles already on H75.
+    // Stock and pricing had split across the two.
+    { from: 'H75x', into: 'H75' }
+];
 
-    const sourceKey = DB.find(k => String(k.pn) === 'H75x');
-    if (!sourceKey) {
-        saveToIndexedDB('h75xMergeV1', true);
-        return;
-    }
-
-    let targetKey = DB.find(k => String(k.pn) === 'H75');
-    if (!targetKey) {
-        // No H75 in DB yet — just rename H75x to H75
-        sourceKey.pn = 'H75';
-        const ckIdx = customKeys.findIndex(k => String(k.pn) === 'H75x');
-        if (ckIdx >= 0) customKeys[ckIdx].pn = 'H75';
-    } else {
-        // Merge H75x vehicles into H75
-        if (!targetKey.vehicles) targetKey.vehicles = [];
-        (sourceKey.vehicles || []).forEach(v => {
-            const exists = targetKey.vehicles.some(tv =>
-                tv.make === v.make && tv.model === v.model &&
-                tv.startYear == v.startYear && tv.endYear == v.endYear
-            );
-            if (!exists) targetKey.vehicles.push({ ...v });
-        });
-        if (!targetKey.mergedPNs) targetKey.mergedPNs = [];
-        targetKey.mergedPNs.push('H75x');
-
-        // Remove H75x from DB
-        const dbIdx = DB.indexOf(sourceKey);
-        if (dbIdx >= 0) DB.splice(dbIdx, 1);
-
-        // Remove from customKeys
-        const ckIdx = customKeys.findIndex(k => String(k.pn) === 'H75x');
-        if (ckIdx >= 0) customKeys.splice(ckIdx, 1);
-    }
-
-    // Transfer PN-keyed data
-    if (stockData['H75x']) {
-        stockData['H75'] = (stockData['H75'] || 0) + stockData['H75x'];
-        delete stockData['H75x'];
-    }
-    if (vendorPrices['H75x']) {
-        if (!vendorPrices['H75']) vendorPrices['H75'] = {};
-        for (const v in vendorPrices['H75x']) {
-            if (!vendorPrices['H75'][v]) vendorPrices['H75'][v] = vendorPrices['H75x'][v];
-        }
-        delete vendorPrices['H75x'];
-    }
-    delete vehicleOverrides['H75x'];
-    delete keyInfoOverrides['H75x'];
-    delete keyRelationships['H75x'];
-    purchaseHistory.forEach(p => {
-        if (String(p.partNumber) === 'H75x') p.partNumber = 'H75';
+function applyKeyMerges() {
+    KEY_MERGES.forEach(m => {
+        if (String(pnSupersessions[m.from] || '').toLowerCase() === m.into.toLowerCase()) return;
+        const sourceIdx = DB.findIndex(k => String(k.pn).toLowerCase() === m.from.toLowerCase());
+        const target = DB.find(k => String(k.pn).toLowerCase() === m.into.toLowerCase());
+        if (sourceIdx < 0 || !target) return;
+        executeKeyMerge(target, DB[sourceIdx], sourceIdx);
+        console.log(`Key merge: ${m.from} -> ${m.into}`);
     });
-
-    saveToIndexedDB('database', DB);
-    saveToIndexedDB('stock', stockData);
-    saveVendorPrices();
-    saveVehicleOverrides();
-    saveKeyInfoOverrides();
-    saveCustomKeys();
-    savePurchaseHistory();
-    saveKeyRelationships();
-    saveToIndexedDB('h75xMergeV1', true);
 }
 
 // One-time cleanup: the frequency field used to store whatever precise value was
@@ -11495,12 +11477,12 @@ async function init() {
     applyModelConsolidations();
     await runFccidSplitMigration();
     await runFccidMergeMigration();
-    await runH75xMergeMigration();
     runAntiqueSlashPnMigration();
     // Must run after the override applies above: it reads base keys with their
     // vehicle/key-info overrides already in place and persists on top of them.
     await runAntiqueConsolidationMigration();
-    // Heal renamed keys whose old-named copies were resurrected by past syncs
+    applyKeyMerges();
+    // Heal renamed and merged keys whose old-named copies were resurrected by past syncs
     pruneSupersededCustomKeys();
     // Move test key entries stranded under old keyway labels by past renames
     healTestKeyKeywayRenames();
@@ -15427,6 +15409,14 @@ function executeKeyMerge(target, source, absorbedIdx) {
     const normPn = s => String(s || '').replace(/\//g, '-').toLowerCase();
     const targetPn = String(target.pn);
     const sourcePn = String(source.pn);
+    // A built-in survivor only keeps changes through its override stores (the
+    // catalog is rebuilt from code on every load), so note what it had first
+    const infoFields = ['keyway', 'chip', 'fccid', 'buttons', 'frequency', 'battery', 'brand', 'logo', 'emergencyPN',
+        'ilco', 'notes', 'altParts', 'mergedPNs', 'antiqueBlanksMerged'];
+    const before = target.isCustom ? null : {
+        vehicles: JSON.stringify(target.vehicles || []),
+        info: Object.fromEntries(infoFields.map(f => [f, JSON.stringify(target[f])]))
+    };
 
     // Vehicles: union, deduped by make|model|years; merge code series entries
     if (!Array.isArray(target.vehicles)) target.vehicles = [];
@@ -15562,6 +15552,21 @@ function executeKeyMerge(target, source, absorbedIdx) {
         saveKeyInfoOverrides();
         delete pnRenames[sourceOriginalPn];
         savePnRenames();
+    }
+
+    // A built-in survivor: store what changed where it survives a reload
+    if (before) {
+        const orig = getOriginalCatalogPn(targetPn);
+        if (JSON.stringify(target.vehicles || []) !== before.vehicles) {
+            vehicleOverrides[orig] = target.vehicles;
+            saveVehicleOverrides();
+        }
+        const changed = infoFields.filter(f => JSON.stringify(target[f]) !== before.info[f] && target[f] !== undefined && target[f] !== null);
+        if (changed.length) {
+            keyInfoOverrides[orig] = keyInfoOverrides[orig] || {};
+            changed.forEach(f => { keyInfoOverrides[orig][f] = target[f]; });
+            saveKeyInfoOverrides();
+        }
     }
 
     // Remove the absorbed record from DB and customKeys
@@ -19754,10 +19759,12 @@ function importData(event) {
                 deletedLishiTools = data.deletedLishiTools;
                 saveDeletedLishiTools();
             }
-            // An older backup may still carry impossible vehicle years or
-            // model names that have since been consolidated
+            // An older backup may still carry impossible vehicle years, model
+            // names that have since been consolidated, or merged-away keys
             fixVehicleYears();
             applyModelConsolidations();
+            applyKeyMerges();
+            pruneSupersededCustomKeys();
 
             toast('Data imported successfully');
             applyFilters();
