@@ -170,6 +170,25 @@ The set-year-ranges feature (`vehicleYearRanges`, Edit Ranges, suggested
 ranges, discrepancy badges) was removed in v269; the store is no longer read,
 written, synced or exported.
 
+### 3.1c Model names (v270)
+
+A model name lives in more places than the key list: base-key
+`vehicleOverrides`, `customKeys`, `customVehicles`, `lishiVehicleData` keys
+(`Make|Model|start|end`), `vehicleYearNotes` keys (`Make|Model[|key type]`)
+and jobs (`make`/`model`/`vehicleKey`). `consolidateVehicleModel()` moves all
+of them, folds applications that become identical, and persists base keys
+through `vehicleOverrides`, the only place a base key's vehicles survive a
+reload (the catalog itself is rebuilt from code every time). Rename Model in
+the vehicle browser uses it.
+
+Before v270 Rename Model wrote base keys to an IndexedDB row the app never
+reads, so a rename on a built-in key reverted on the next load.
+
+`MODEL_CONSOLIDATIONS` lists models the user has decided are one vehicle
+(first: Ford `6000` + `9000` → `6000, 9000 Transfer Heavy Trucks`, both
+H75 1996–1999). It is applied on every load, after a cloud download and
+after a backup restore, so an older device cannot sync the old names back.
+
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
 
 These carry key data *per vehicle* rather than per part number, and they
