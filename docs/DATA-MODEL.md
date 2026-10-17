@@ -185,8 +185,8 @@ Before v270 Rename Model wrote base keys to an IndexedDB row the app never
 reads, so a rename on a built-in key reverted on the next load.
 
 `MODEL_CONSOLIDATIONS` lists models the user has decided are one vehicle
-(first: Ford `6000` + `9000` → `6000, 9000 Transfer Heavy Trucks`, both
-H75 1996–1999). It is applied on every load, after a cloud download and
+(first: Ford `6000`, `9000` (H75 1996–1999) and `6000,9000,CF7000` (H51/H50
+1967–1985) → `6000, 9000, CF7000 Transfer Heavy Trucks`, v271). It is applied on every load, after a cloud download and
 after a backup restore, so an older device cannot sync the old names back.
 
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
