@@ -1257,17 +1257,6 @@
             font-style: italic;
         }
         
-        .fid-card {
-            background: var(--card);
-            padding: 14px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
         .fid-card-left {
             display: flex;
             align-items: center;
@@ -1277,6 +1266,31 @@
         .fid-card-actions {
             display: flex;
             gap: 6px;
+        }
+
+        /* FID Manager (bulk): a list box that fills the screen */
+        .fid-manager-list { max-height: calc(100vh - 160px); overflow-y: auto; }
+        .fid-quick-actions { display: flex; flex-direction: column; gap: 8px; }
+
+        /* Desktop: rows side by side in columns instead of one full-width
+           row each, so more FIDs fit on screen and each row's buttons sit
+           next to its FCC ID. Phones keep the single column. */
+        @media (min-width: 900px) {
+            .fid-list,
+            .fid-manager-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                column-gap: 10px;
+                align-content: start;
+            }
+            .fid-manager-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 8px; }
+            .fid-band-separator,
+            .fid-manager-list > :not(.fid-manager-item) { grid-column: 1 / -1; }
+            .fid-card-left,
+            .fid-info { min-width: 0; }
+            .fid-info h4 { overflow-wrap: anywhere; }
+            .fid-quick-actions { flex-direction: row; }
+            .fid-quick-actions .settings-btn { margin-bottom: 0; }
         }
         
         .fid-prefix-item {
@@ -4570,7 +4584,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v273</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v274</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4916,7 +4930,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;">
             <input type="text" class="fid-search" id="fidSearch" placeholder="Search FCC ID or FID..." oninput="filterFids()" style="flex:1;margin:0;">
-            <select id="fidPrefixFilter" onchange="filterFids()" style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;">
+            <select id="fidPrefixFilter" onchange="filterFids()" style="max-width:45%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;">
                 <option value="">All Groups</option>
             </select>
         </div>
@@ -5059,7 +5073,7 @@
         <!-- Quick Actions -->
         <div class="settings-section">
             <h3>⚡ Quick Actions</h3>
-            <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="fid-quick-actions">
                 <button class="settings-btn" onclick="fidManagerAutoAssignAll()" style="background:var(--accent);color:var(--bg);">
                     ⚡ Auto-Assign All Unassigned FIDs
                 </button>
@@ -5119,7 +5133,7 @@
                     </div>
                 </div>
             </div>
-            <div id="fidManagerList" style="max-height:400px;overflow-y:auto;"></div>
+            <div id="fidManagerList" class="fid-manager-list"></div>
         </div>
     </div>
 </div>
@@ -5331,7 +5345,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v273</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v274</p>
         </div>
 
         <div class="settings-section">
@@ -5343,7 +5357,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v273<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v274<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
