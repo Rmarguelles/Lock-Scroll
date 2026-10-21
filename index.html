@@ -1268,14 +1268,10 @@
             gap: 6px;
         }
 
-        /* Unassigned section header (with its A–Z / Make sort switch) and the
-           make sub-headers of the Make sort, on the FID page and FID Manager */
-        .fid-unassigned-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
+        /* Group headers on the FID page and FID Manager: one per prefix and
+           key type ("CH · 0xx — Non-Chip"), the Unassigned header with its
+           A–Z / Make sort switch, and the make sub-headers of the Make sort */
+        .fid-group-header {
             padding: 5px 12px;
             margin: 10px 0 4px;
             font-size: 11px;
@@ -1284,6 +1280,13 @@
             color: var(--dim);
             border-bottom: 1px solid var(--border);
             text-transform: uppercase;
+        }
+        .fid-unassigned-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .fid-make-header { padding: 4px 12px; margin: 8px 0 4px; font-size: 12px; font-weight: 600; color: var(--accent); }
 
@@ -4603,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v276</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v277</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5367,7 +5370,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v276</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v277</p>
         </div>
 
         <div class="settings-section">
@@ -5379,7 +5382,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v276<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v277<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -16073,10 +16076,20 @@ function fidUnassignedHeaderHtml(count, cls) {
         const on = fidUnassignedSort === mode;
         return `<button onclick="event.stopPropagation();setFidUnassignedSort('${mode}')" style="padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'rgba(0,212,255,0.15)' : 'var(--bg)'};color:${on ? 'var(--accent)' : 'var(--text)'};">${label}</button>`;
     };
-    return `<div class="${cls} fid-unassigned-header" data-prefix="">
+    return `<div class="${cls} fid-group-header fid-unassigned-header" data-prefix="">
         <span>Unassigned (${count})</span>
         <span style="display:flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-weight:normal;">Sort ${btn('fcc', 'A–Z')}${btn('make', 'Make')}</span>
     </div>`;
+}
+
+function fidBandHeaderHtml(prefix, digit, count, cls) {
+    return `<div class="${cls} fid-group-header" data-prefix="${prefix}">${prefix} · ${digit}xx — ${FID_BAND_NAMES[digit] || 'Other'} · ${count}</div>`;
+}
+
+// Prefix and key-type group (hundreds digit) of a FID, e.g. CH-104 -> CH|1
+function fidBandKey(fid) {
+    const m = /^([A-Za-z]+)-(\d+)$/.exec(String(fid || ''));
+    return m ? m[1] + '|' + Math.floor(parseInt(m[2], 10) / 100) : String(fid || '').split('-')[0] + '|?';
 }
 
 function fidMakeHeaderHtml(make, count, cls) {
@@ -16120,6 +16133,8 @@ function renderFidList() {
     });
 
     const unassigned = fccList.filter(([fccId]) => !fidAssignments[fccId]);
+    const bandCounts = {};
+    fccList.forEach(([fccId]) => { if (fidAssignments[fccId]) { const b = fidBandKey(fidAssignments[fccId]); bandCounts[b] = (bandCounts[b] || 0) + 1; } });
     const makeCounts = {};
     unassigned.forEach(([fccId]) => { const m = mainMake.get(fccId); makeCounts[m] = (makeCounts[m] || 0) + 1; });
     let prevBandKey = null, prevMake;
@@ -16128,15 +16143,14 @@ function renderFidList() {
         const makesDisplay = makes.slice(0, 3).join(', ');
         const fid = fidAssignments[fccId];
 
-        // Thin separator row whenever the prefix or type band (hundreds digit) changes
+        // Header row whenever the prefix or type band (hundreds digit) changes
         let separator = '';
         if (fid) {
-            const sepPrefix = fid.split('-')[0];
-            const sepDigit = Math.floor((parseInt(fid.split('-')[1]) || 0) / 100);
-            const bandKey = sepPrefix + '|' + sepDigit;
+            const bandKey = fidBandKey(fid);
             if (bandKey !== prevBandKey) {
                 prevBandKey = bandKey;
-                separator = `<div class="fid-band-separator" data-prefix="${sepPrefix}" style="padding:5px 12px;margin:10px 0 4px;font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--dim);border-bottom:1px solid var(--border);text-transform:uppercase;">${sepPrefix} · ${sepDigit}xx — ${FID_BAND_NAMES[sepDigit] || 'Other'}</div>`;
+                const [sepPrefix, sepDigit] = bandKey.split('|');
+                separator = fidBandHeaderHtml(sepPrefix, sepDigit, bandCounts[bandKey], 'fid-band-separator');
             }
         } else {
             if (prevBandKey !== 'unassigned') {
@@ -17129,16 +17143,26 @@ function renderFidManagerList() {
         return;
     }
 
-    // Unassigned header (with the sort switch) and, in Make sort, a header per make
+    // A header per prefix and key-type group, then the Unassigned header (with
+    // the sort switch) and, in Make sort, a header per make
+    const bandCounts = {};
+    filtered.forEach(item => { if (item.fid) { const b = fidBandKey(item.fid); bandCounts[b] = (bandCounts[b] || 0) + 1; } });
     const unassigned = filtered.filter(item => !item.fid);
     const makeCounts = {};
     unassigned.forEach(item => { makeCounts[item.mainMake] = (makeCounts[item.mainMake] || 0) + 1; });
-    let headerShown = false, prevMake;
+    let headerShown = false, prevMake, prevBand;
     container.innerHTML = filtered.map(item => {
         const isSelected = fidManagerSelectedFccs.has(item.fccid);
         const fccArg = item.fccid.replace(/'/g, "\\'");
         let header = '';
-        if (!item.fid) {
+        if (item.fid) {
+            const band = fidBandKey(item.fid);
+            if (band !== prevBand) {
+                prevBand = band;
+                const [prefix, digit] = band.split('|');
+                header = fidBandHeaderHtml(prefix, digit, bandCounts[band], '');
+            }
+        } else {
             if (!headerShown) { headerShown = true; header = fidUnassignedHeaderHtml(unassigned.length, ''); }
             if (fidUnassignedSort === 'make' && item.mainMake !== prevMake) {
                 prevMake = item.mainMake;
