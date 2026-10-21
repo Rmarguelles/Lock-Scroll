@@ -204,6 +204,22 @@ that, `pruneSupersededCustomKeys()` drops any copy another device syncs back,
 including when the successor is a built-in key, and discards the copy's stock
 entry rather than adding it a second time.
 
+### 3.1e Deleting keys and bulk vehicle edits (v273)
+
+The catalog rebuilds every built-in key on each load, so removing one has to
+be recorded. Delete Part Number and a merge whose absorbed key is built-in set
+`keyInfoOverrides[originalPn] = { _deleted: true }`; `dropDeletedBuiltInKeys()`
+removes those keys again on load (before custom keys go in, so a custom key
+may reuse the PN), after a cloud download and after a backup restore.
+Delete Part Number on a custom key adds a `deletedCustomKeys` tombstone, as
+the Settings delete already did, so the cloud copy cannot bring it back.
+
+Delete Model and the code series rename/delete in Settings edit many keys'
+vehicles in place; `persistEditedKeyVehicles()` saves each one where it lives
+(`vehicleOverrides` for built-in, `customKeys` stamped `lastEdited` for
+custom). Before v273 these, and Delete Part Number, wrote a copy of the whole
+`DB` to IndexedDB that nothing reads, so the changes reverted on reload.
+
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
 
 These carry key data *per vehicle* rather than per part number, and they
@@ -253,7 +269,7 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 |---|---|---|
 | `vendorPrices` | `{vendor: {priceA, priceB, oem, emergency, shell}}` | the real price store |
 | `stockData` | number | per-user, **excluded from shared sync** |
-| `keyInfoOverrides` | partial key record — edits to seed keys | 1 |
+| `keyInfoOverrides` | partial key record — edits to seed keys; `{ _deleted: true }` = seed key deleted or merged away (v273) | 1 |
 | `vehicleOverrides` | `vehicles[]` — vehicle edits to seed keys | — |
 | `keyRelationships` | `{keyway, typicalChip}` | 604 |
 | `pnSupersessions` | `oldPN → newPN` | 0 | means **renamed** — `pruneSupersededCustomKeys()` deletes a custom key whose PN appears here |
@@ -528,6 +544,7 @@ Other traps for an importer:
 5. **`oem` price sometimes carries a `$`.**
 6. **`originalMake` ≠ `vehicles[].make`** — the first is a catalog grouping.
 7. **Seed keys can't be mutated** — edits must go to `keyInfoOverrides` / `vehicleOverrides`.
+   No saved copy of `DB` is ever read back, so changing `DB` in memory alone reverts on reload.
 8. **Every new store must be wired in 6 places** (per `CLAUDE.md`): a `saveX()`,
    `loadLocalData()`, both `uploadToCloud()` payloads, the `downloadFromCloud()`
    merge, and `exportData()`/`importData()`.

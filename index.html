@@ -1257,17 +1257,6 @@
             font-style: italic;
         }
         
-        .fid-card {
-            background: var(--card);
-            padding: 14px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
         .fid-card-left {
             display: flex;
             align-items: center;
@@ -1277,6 +1266,31 @@
         .fid-card-actions {
             display: flex;
             gap: 6px;
+        }
+
+        /* FID Manager (bulk): a list box that fills the screen */
+        .fid-manager-list { max-height: calc(100vh - 160px); overflow-y: auto; }
+        .fid-quick-actions { display: flex; flex-direction: column; gap: 8px; }
+
+        /* Desktop: rows side by side in columns instead of one full-width
+           row each, so more FIDs fit on screen and each row's buttons sit
+           next to its FCC ID. Phones keep the single column. */
+        @media (min-width: 900px) {
+            .fid-list,
+            .fid-manager-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                column-gap: 10px;
+                align-content: start;
+            }
+            .fid-manager-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 8px; }
+            .fid-band-separator,
+            .fid-manager-list > :not(.fid-manager-item) { grid-column: 1 / -1; }
+            .fid-card-left,
+            .fid-info { min-width: 0; }
+            .fid-info h4 { overflow-wrap: anywhere; }
+            .fid-quick-actions { flex-direction: row; }
+            .fid-quick-actions .settings-btn { margin-bottom: 0; }
         }
         
         .fid-prefix-item {
@@ -4570,7 +4584,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v272</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v274</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4916,7 +4930,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;">
             <input type="text" class="fid-search" id="fidSearch" placeholder="Search FCC ID or FID..." oninput="filterFids()" style="flex:1;margin:0;">
-            <select id="fidPrefixFilter" onchange="filterFids()" style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;">
+            <select id="fidPrefixFilter" onchange="filterFids()" style="max-width:45%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;">
                 <option value="">All Groups</option>
             </select>
         </div>
@@ -5059,7 +5073,7 @@
         <!-- Quick Actions -->
         <div class="settings-section">
             <h3>⚡ Quick Actions</h3>
-            <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="fid-quick-actions">
                 <button class="settings-btn" onclick="fidManagerAutoAssignAll()" style="background:var(--accent);color:var(--bg);">
                     ⚡ Auto-Assign All Unassigned FIDs
                 </button>
@@ -5119,7 +5133,7 @@
                     </div>
                 </div>
             </div>
-            <div id="fidManagerList" style="max-height:400px;overflow-y:auto;"></div>
+            <div id="fidManagerList" class="fid-manager-list"></div>
         </div>
     </div>
 </div>
@@ -5331,7 +5345,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v272</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v274</p>
         </div>
 
         <div class="settings-section">
@@ -5343,7 +5357,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v272<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v274<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -10834,7 +10848,6 @@ async function runFccidMergeMigration() {
     saveToIndexedDB('fccidMergeV3', true);
 }
 
-// Merge custom key H75x into H75 (H75x only exists in user's IndexedDB/customKeys)
 // Repair antique-generated keys whose PN kept the combined "PN/ILCO" spelling
 // (early generator runs, or a merge that kept the combined-spelling side):
 // pn "S1970AM/RA3" becomes pn "S1970AM" with ILCO "RA3", and everything keyed
@@ -10873,7 +10886,6 @@ function runAntiqueSlashPnMigration() {
     }
     savePnSupersessions();
     saveCustomKeys();
-    saveToIndexedDB('database', DB);
 }
 
 // ===================== KEY MERGES =====================
@@ -11455,6 +11467,7 @@ async function init() {
     
     renderCloudSyncUI();
     await loadLocalData();
+    dropDeletedBuiltInKeys();
     await loadCustomKeys();
     const dupesCleared = dedupeCustomKeys();
     if (dupesCleared) setTimeout(() => toast('Cleaned up ' + dupesCleared + ' duplicate key record(s)'), 1800);
@@ -12003,8 +12016,21 @@ function applyVehicleOverridesToDB() {
     }
 }
 
+// A built-in key that was deleted or merged away is marked { _deleted: true }
+// in keyInfoOverrides: the catalog brings it back on every load, so drop it
+// again. On load this runs before the custom keys go in, so a custom key that
+// reuses the PN is not mistaken for a duplicate of the deleted one.
+function dropDeletedBuiltInKeys() {
+    for (const pn in keyInfoOverrides) {
+        if (!(keyInfoOverrides[pn] && keyInfoOverrides[pn]._deleted)) continue;
+        const idx = findBaseDbIndexForPn(pn);
+        if (idx >= 0) DB.splice(idx, 1);
+    }
+}
+
 function applyKeyInfoOverridesToDB() {
     // Apply saved key info overrides to base database keys
+    dropDeletedBuiltInKeys();
     for (const pn in keyInfoOverrides) {
         const idx = findBaseDbIndexForPn(pn);
         if (idx >= 0) {
@@ -12554,6 +12580,7 @@ function saveEditKeyInfoInner() {
             customKeys[customIdx].battery = newBattery;
             customKeys[customIdx].emergencyPN = newEmergencyPN;
             customKeys[customIdx].notes = newNotes;
+            customKeys[customIdx].memorySeat = newMemorySeat;
             customKeys[customIdx].isVATS = newIsVATS;
             customKeys[customIdx].secondaryKeyPartNumber = newSecondaryPN;
             customKeys[customIdx].removableSleeve = newRemovableSleeve;
@@ -15231,10 +15258,15 @@ function deletePartNumber(idx) {
     // Remove from DB
     DB.splice(idx, 1);
 
-    // Remove from customKeys if it was custom
-    const ckIdx = customKeys.findIndex(k => String(k.pn) === pn);
-    if (ckIdx >= 0) customKeys.splice(ckIdx, 1);
-    saveCustomKeys();
+    // Remove from customKeys if it was custom, and remember the delete so
+    // sync cannot bring it back
+    if (key.isCustom) {
+        const ckIdx = customKeys.findIndex(k => String(k.pn) === pn);
+        if (ckIdx >= 0) customKeys.splice(ckIdx, 1);
+        tombstoneCustomKey(pn);
+        saveDeletedCustomKeys();
+        saveCustomKeys();
+    }
 
     // Clean up associated data
     delete stockData[pn];
@@ -15259,14 +15291,16 @@ function deletePartNumber(idx) {
         delete pnRenames[originalPn];
         savePnRenames();
     }
+    // The catalog brings a built-in key back on every load; this keeps it deleted
+    if (!key.isCustom) {
+        keyInfoOverrides[originalPn] = { _deleted: true };
+        saveKeyInfoOverrides();
+    }
 
     // Remove from purchase history
     const beforePH = purchaseHistory.length;
     purchaseHistory = purchaseHistory.filter(p => String(p.partNumber) !== pn);
     if (purchaseHistory.length !== beforePH) savePurchaseHistory();
-
-    // Save updated DB
-    saveToIndexedDB('database', DB);
 
     // Close detail and refresh
     document.getElementById('detailPanel').classList.remove('on');
@@ -15553,6 +15587,11 @@ function executeKeyMerge(target, source, absorbedIdx) {
         delete pnRenames[sourceOriginalPn];
         savePnRenames();
     }
+    // A built-in source would come back from the catalog on the next load
+    if (!source.isCustom) {
+        keyInfoOverrides[sourceOriginalPn] = { _deleted: true };
+        saveKeyInfoOverrides();
+    }
 
     // A built-in survivor: store what changed where it survives a reload
     if (before) {
@@ -15578,7 +15617,6 @@ function executeKeyMerge(target, source, absorbedIdx) {
     const ckTgtIdx = customKeys.findIndex(k => String(k.pn) === targetPn);
     if (ckTgtIdx >= 0) customKeys[ckTgtIdx] = target;
     saveCustomKeys();
-    saveToIndexedDB('database', DB);
 }
 
 // ===================== STOCK =====================
@@ -19351,19 +19389,22 @@ function saveEditCodeSeries() {
     }
 
     // Update DB vehicles
+    const editedKeys = [];
     DB.forEach(key => {
+        let keyChanged = false;
         (key.vehicles || []).forEach(v => {
             if (v.codeSeries) {
                 if (Array.isArray(v.codeSeries)) {
                     v.codeSeries.forEach(cs => {
-                        if (cs.series === oldVal) { cs.series = newValue; changed = true; }
+                        if (cs.series === oldVal) { cs.series = newValue; keyChanged = true; }
                     });
                 } else if (typeof v.codeSeries === 'string' && v.codeSeries === oldVal) {
                     v.codeSeries = newValue;
-                    changed = true;
+                    keyChanged = true;
                 }
             }
         });
+        if (keyChanged) { editedKeys.push(key); changed = true; }
     });
 
     // Update custom vehicles
@@ -19383,7 +19424,7 @@ function saveEditCodeSeries() {
     if (changed) {
         saveLishiVehicle();
         saveLishiInventory();
-        saveToIndexedDB('database', DB);
+        persistEditedKeyVehicles(editedKeys);
         saveCustomVehicles();
         triggerAutoSync();
     }
@@ -19428,19 +19469,22 @@ function deleteCodeSeriesValue(seriesValue) {
     }
 
     // Remove from DB vehicles
+    const editedKeys = [];
     DB.forEach(key => {
+        let keyChanged = false;
         (key.vehicles || []).forEach(v => {
             if (v.codeSeries) {
                 if (Array.isArray(v.codeSeries)) {
                     const before = v.codeSeries.length;
                     v.codeSeries = v.codeSeries.filter(cs => cs.series !== seriesValue);
-                    if (v.codeSeries.length !== before) changed = true;
+                    if (v.codeSeries.length !== before) keyChanged = true;
                 } else if (typeof v.codeSeries === 'string' && v.codeSeries === seriesValue) {
                     v.codeSeries = '';
-                    changed = true;
+                    keyChanged = true;
                 }
             }
         });
+        if (keyChanged) { editedKeys.push(key); changed = true; }
     });
 
     // Remove from custom vehicles
@@ -19456,7 +19500,7 @@ function deleteCodeSeriesValue(seriesValue) {
     if (changed) {
         saveLishiVehicle();
         saveLishiInventory();
-        saveToIndexedDB('database', DB);
+        persistEditedKeyVehicles(editedKeys);
         saveCustomVehicles();
         triggerAutoSync();
     }
@@ -19709,13 +19753,7 @@ function importData(event) {
             if (data.keyInfoOverrides) {
                 keyInfoOverrides = { ...keyInfoOverrides, ...data.keyInfoOverrides };
                 saveKeyInfoOverrides();
-                // Apply to in-memory DB
-                Object.keys(data.keyInfoOverrides).forEach(pn => {
-                    const idx = DB.findIndex(k => String(k.pn) == pn);
-                    if (idx >= 0) {
-                        Object.assign(DB[idx], data.keyInfoOverrides[pn]);
-                    }
-                });
+                applyKeyInfoOverridesToDB();
             }
 
             if (data.autelIKeyCompatibility) {
@@ -23236,35 +23274,24 @@ function deleteVehicleModel() {
 
     if (!confirm(msg)) return;
 
-    // Remove vehicle associations from DB keys
-    DB.forEach(key => {
-        if (key.vehicles) {
-            key.vehicles = key.vehicles.filter(v => !(v.make === make && v.model === modelName));
-        }
-    });
+    const isDeleted = v => v.make === make && v.model === modelName;
 
     // Remove from vehicleOverrides
     for (const pn in vehicleOverrides) {
         const vehicles = vehicleOverrides[pn];
         if (Array.isArray(vehicles)) {
-            vehicleOverrides[pn] = vehicles.filter(v => !(v.make === make && v.model === modelName));
+            vehicleOverrides[pn] = vehicles.filter(v => !isDeleted(v));
         }
     }
 
-    // Remove from customKeys
-    customKeys.forEach(key => {
-        if (key.vehicles) {
-            key.vehicles = key.vehicles.filter(v => !(v.make === make && v.model === modelName));
-        }
-    });
+    // Remove vehicle associations from DB keys, and save each where it lives
+    const edited = DB.filter(key => (key.vehicles || []).some(isDeleted));
+    edited.forEach(key => { key.vehicles = key.vehicles.filter(v => !isDeleted(v)); });
+    persistEditedKeyVehicles(edited);
+    saveVehicleOverrides();
 
     // Remove from customVehicles
-    customVehicles = customVehicles.filter(v => !(v.make === make && v.model === modelName));
-
-    // Save all affected stores
-    saveToIndexedDB('database', DB);
-    saveVehicleOverrides();
-    saveCustomKeys();
+    customVehicles = customVehicles.filter(v => !isDeleted(v));
     saveCustomVehicles();
 
     closeRenameModelModal();
@@ -32525,6 +32552,32 @@ function persistCustomKeyVehicles(key, vehicles) {
     customKeys[idx].lastEdited = new Date().toISOString();
     saveCustomKeys();
     return true;
+}
+
+// Save the vehicle lists of keys edited in place by a bulk change (model
+// delete, code series rename). A built-in key is rebuilt from the catalog on
+// every load, so its list is kept as a vehicle override; a custom key's goes
+// to customKeys, stamped so the cloud merge sees it as newer.
+function persistEditedKeyVehicles(keys) {
+    const stamp = new Date().toISOString();
+    let customChanged = false, overridesChanged = false;
+    keys.forEach(key => {
+        if (key.isCustom) {
+            const ck = customKeys.find(k => String(k.pn) === String(key.pn));
+            if (!ck) return;
+            ck.vehicles = key.vehicles;
+            ck.lastEdited = stamp;
+            customChanged = true;
+            return;
+        }
+        const pn = String(key.pn), orig = getOriginalCatalogPn(pn);
+        vehicleOverrides[orig] = key.vehicles;
+        // Older saves of a renamed key sit under its display PN; keep them in step
+        if (pn !== orig && vehicleOverrides[pn]) vehicleOverrides[pn] = key.vehicles;
+        overridesChanged = true;
+    });
+    if (customChanged) saveCustomKeys();
+    if (overridesChanged) saveVehicleOverrides();
 }
 
 // Render custom keys list in settings
