@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v277</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v278</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5370,7 +5370,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v277</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v278</p>
         </div>
 
         <div class="settings-section">
@@ -5382,7 +5382,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v277<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v278<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8997,6 +8997,7 @@ async function downloadFromCloud() {
         // resurrected copies before rendering.
         applyKeyMerges();
         pruneSupersededCustomKeys();
+        alignFidAssignmentSpellings();
         // A stale copy from an older device may still carry impossible years
         // or model names that have since been consolidated
         fixVehicleYears();
@@ -11522,6 +11523,7 @@ async function init() {
     applyKeyMerges();
     // Heal renamed and merged keys whose old-named copies were resurrected by past syncs
     pruneSupersededCustomKeys();
+    alignFidAssignmentSpellings();
     // Move test key entries stranded under old keyway labels by past renames
     healTestKeyKeywayRenames();
     await initializeVendorPricesFromDB();
@@ -13112,6 +13114,35 @@ function getFidIndex() {
     return _fidIndex;
 }
 
+// FID assignments are keyed by an FCC ID exactly as a key spells it; the FID
+// page, FID Manager and FID-grouped search look them up that way. Add Custom
+// Key used to store the FCC ID upper-cased ("HO01 TEST KEY" for the key
+// "HO01 Test Key"), which left the key looking unassigned there. Re-key such
+// entries to the key's own spelling. One that disagrees with a FID already
+// stored under that spelling, and the old combined "FCC1, FCC2" entries, are
+// left alone. Run on load, after a cloud download and after a backup restore.
+function alignFidAssignmentSpellings() {
+    const spellings = new Map();
+    DB.forEach(k => getKeyFccIds(k).forEach(f => {
+        const n = normalizeFccId(f);
+        if (!spellings.has(n)) spellings.set(n, new Set());
+        spellings.get(n).add(f);
+    }));
+    let changed = 0;
+    Object.keys(fidAssignments).forEach(stored => {
+        if (stored.includes(',')) return;
+        const onKeys = spellings.get(normalizeFccId(stored));
+        if (!onKeys || onKeys.has(stored)) return;
+        const fid = fidAssignments[stored];
+        if ([...onKeys].some(f => fidAssignments[f] !== undefined && fidAssignments[f] !== fid)) return;
+        onKeys.forEach(f => { fidAssignments[f] = fid; });
+        delete fidAssignments[stored];
+        changed++;
+    });
+    if (changed) saveFidAssignments();
+    return changed;
+}
+
 // Resolve one FCC ID to its FID. Follows a fidMerges redirect first (merging
 // FCC A into B deletes A's assignment, so A must inherit B's), then matches
 // ignoring case, dashes and spacing.
@@ -13493,14 +13524,11 @@ function renderKeysByFid(list, keys, prefixHtml = '') {
 
     keys.forEach(key => {
         const allFccs = getKeyFccIds(key);
-        // Map each FCC ID to its FID; group entries by FID. A key with FCCs in multiple
-        // FIDs appears once under each FID. FCCs without an FID assignment fall into
-        // a single shared "no FID" group.
-        const fidsForKey = new Set();
-        allFccs.forEach(f => {
-            const fid = fidAssignments[f] || null;
-            fidsForKey.add(fid);
-        });
+        // Map each FCC ID to its FID the way the FID detail page does
+        // (lookupFidForFcc) and group by FID, so a group never opens to an
+        // empty page. A key with FCCs in multiple FIDs appears once under
+        // each FID; only a key with no FID at all goes in the "no FID" group.
+        const fidsForKey = new Set(allFccs.map(f => lookupFidForFcc(f)).filter(Boolean));
         if (fidsForKey.size === 0) fidsForKey.add(null);
 
         fidsForKey.forEach(fid => {
@@ -13512,7 +13540,7 @@ function renderKeysByFid(list, keys, prefixHtml = '') {
             g.keys.push(key);
             // Only show FCC IDs in the group preview that actually belong to this FID
             allFccs.forEach(f => {
-                if ((fidAssignments[f] || null) === fid) g.fccIds.add(f);
+                if ((lookupFidForFcc(f) || null) === fid) g.fccIds.add(f);
             });
         });
     });
@@ -16445,7 +16473,7 @@ function autoAssignAllFids() {
 }
 
 function autoAssignFidForNewKey() {
-    const fccId = document.getElementById('customKeyFCC').value.trim().toUpperCase();
+    const fccId = document.getElementById('customKeyFCC').value.trim();
 
     if (!fccId) {
         toast('Enter an FCC ID first');
@@ -16453,8 +16481,8 @@ function autoAssignFidForNewKey() {
     }
 
     // Check if this FCC ID already has an assignment
-    if (fidAssignments[fccId]) {
-        const existingFid = fidAssignments[fccId];
+    if (lookupFidForFcc(fccId)) {
+        const existingFid = lookupFidForFcc(fccId);
         document.getElementById('newKeyFidDisplay').textContent = `✓ Already assigned: ${existingFid}`;
         document.getElementById('newKeyFidDisplay').style.display = 'block';
         document.getElementById('newKeyFidDisplay').style.color = 'var(--accent)';
@@ -19994,6 +20022,7 @@ function importData(event) {
             applyModelConsolidations();
             applyKeyMerges();
             pruneSupersededCustomKeys();
+            alignFidAssignmentSpellings();
 
             toast('Data imported successfully');
             applyFilters();
@@ -30932,8 +30961,8 @@ function openAddCustomKey(prefillFcc = null) {
         if (existingFidEl) existingFidEl.value = '';
 
         // If FCC ID is pre-filled and already has a FID, show it
-        if (prefillFcc && fidAssignments[prefillFcc.toUpperCase()]) {
-            const existingFid = fidAssignments[prefillFcc.toUpperCase()];
+        if (prefillFcc && lookupFidForFcc(prefillFcc)) {
+            const existingFid = lookupFidForFcc(prefillFcc);
             document.getElementById('newKeyFidDisplay').textContent = `✓ FID: ${existingFid}`;
             document.getElementById('newKeyFidDisplay').style.display = 'block';
             document.getElementById('newKeyFidDisplay').style.color = 'var(--accent)';
@@ -31753,12 +31782,12 @@ function showAssignedFidOnNewKey(fid, color) {
 }
 
 function applyExistingFidToNewKey() {
-    const fccId = document.getElementById('customKeyFCC').value.trim().toUpperCase();
+    const fccId = document.getElementById('customKeyFCC').value.trim();
     if (!fccId) { toast('Enter an FCC ID first'); return; }
     const selectedFid = document.getElementById('customKeyExistingFid').value;
     if (!selectedFid) { toast('Select an existing FID'); return; }
 
-    const current = fidAssignments[fccId];
+    const current = lookupFidForFcc(fccId);
     if (current && current !== selectedFid) {
         if (!confirm('This FCC ID is currently assigned to ' + current + '. Reassign to ' + selectedFid + '?')) return;
     }
@@ -31770,7 +31799,7 @@ function applyExistingFidToNewKey() {
 }
 
 function applyManualFidToNewKey() {
-    const fccId = document.getElementById('customKeyFCC').value.trim().toUpperCase();
+    const fccId = document.getElementById('customKeyFCC').value.trim();
     if (!fccId) { toast('Enter an FCC ID first'); return; }
 
     const prefix = document.getElementById('customKeyManualPrefix').value;
@@ -32540,8 +32569,11 @@ function saveCustomKey() {
     // auto-suggested next free number) left un-applied is assigned here at
     // save time instead of being silently lost.
     let assignedFid = null;
-    const fidFcc = newKey.fccid ? String(newKey.fccid).trim().toUpperCase() : '';
-    if (fidFcc && !fidAssignments[fidFcc]) {
+    // Stored under the FCC ID exactly as the key spells it (for a non-chip key
+    // that is its PN, e.g. "HO01 Test Key"): the FID page, FID Manager and
+    // FID-grouped search look it up that way
+    const fidFcc = newKey.fccid ? String(newKey.fccid).trim() : '';
+    if (fidFcc && !lookupFidForFcc(fidFcc)) {
         const existingFidChoice = document.getElementById('customKeyExistingFid')?.value || '';
         const manualPrefix = document.getElementById('customKeyManualPrefix')?.value || '';
         const manualNum = parseInt((document.getElementById('customKeyManualNumber')?.value || '').trim(), 10);
