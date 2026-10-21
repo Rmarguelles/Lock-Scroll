@@ -4603,7 +4603,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v275</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v276</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5099,6 +5099,9 @@
                 <button class="settings-btn" onclick="fidManagerReorganizeByType()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
                     🔃 Reorganize All by Key Type
                 </button>
+                <button class="settings-btn" onclick="fidManagerFixPrefixMismatches()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
+                    🩹 Fix Keys Under the Wrong Make Prefix
+                </button>
                 <button class="settings-btn" onclick="fidManagerReassignAll()" style="background:var(--accent2);color:var(--bg);">
                     🔄 Reassign All FIDs (Fresh Start)
                 </button>
@@ -5364,7 +5367,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v275</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v276</p>
         </div>
 
         <div class="settings-section">
@@ -5376,7 +5379,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v275<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v276<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -16989,11 +16992,12 @@ let fidManagerSelectedFccs = new Set();
 function openFidManager() {
     try {
         fidManagerSelectedFccs.clear();
-        renderFidManagerStats();
-        renderFidManagerList();
         populateFidManagerPrefixFilter();
         document.getElementById('fidManagerSearch').value = '';
         document.getElementById('fidManagerPrefixFilter').value = '';
+        if (fidDragModeActive) cancelFidDragMode();
+        renderFidManagerStats();
+        renderFidManagerList();
         document.getElementById('fidBulkActions').style.display = 'none';
         document.getElementById('fidManagerPanel').classList.add('on');
     } catch (e) {
@@ -17161,6 +17165,13 @@ function renderFidManagerList() {
 }
 
 function filterFidManagerList() {
+    // Reorder Mode works on the list it started with; a new search or prefix
+    // ends it rather than leaving Save Order live on keys no longer shown
+    if (fidDragModeActive) {
+        cancelFidDragMode();
+        toast('Reorder Mode cancelled');
+        return;
+    }
     renderFidManagerList();
 }
 
@@ -17233,6 +17244,77 @@ function fidManagerReorganizeByType() {
         renderFidList();
     }
     toast(`Reorganized ${changed} FID${changed !== 1 ? 's' : ''} by key type`);
+}
+
+// FIDs whose prefix is for makes the key doesn't fit at all, e.g. Chrysler
+// keys under F- (Ford/Lincoln/Mercury) after the old Reorder Mode bug.
+// Catch-all prefixes (no makes: Cloneable, Tibbe, Other) are deliberate
+// placements and stay, as do FCC IDs whose keys list no vehicle makes or
+// whose makes have no prefix of their own.
+function findFidPrefixMismatches() {
+    const makesBy = {};
+    DB.forEach(k => getKeyFccIds(k).forEach(fcc => {
+        if (!makesBy[fcc]) makesBy[fcc] = new Set();
+        (k.vehicles || []).forEach(v => { if (v.make) makesBy[fcc].add(v.make); });
+    }));
+    const found = [];
+    Object.keys(makesBy).forEach(fcc => {
+        const m = /^([A-Za-z]+)-(\d+)$/.exec(String(fidAssignments[fcc] || ''));
+        if (!m) return;
+        const prefixMakes = (fidPrefixes[m[1]] || {}).makes || [];
+        const makes = Array.from(makesBy[fcc]);
+        // A make fits when it names one of the prefix's makes as a word, so
+        // "Datsun (Nissan)" fits N- (Nissan/Infiniti)
+        const words = x => ' ' + String(x).toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
+        const fits = makes.some(x => prefixMakes.some(pm => words(x).includes(words(pm))));
+        if (!prefixMakes.length || !makes.length || fits) return;
+        const target = getPrefixForMakes(makes);
+        if (!((fidPrefixes[target] || {}).makes || []).length) return;
+        found.push({ fcc, fid: fidAssignments[fcc], num: parseInt(m[2], 10), target });
+    });
+    return found.sort((a, b) => a.num - b.num || a.fcc.localeCompare(b.fcc));
+}
+
+// Move those FIDs to the prefix matching their makes, keeping each number or
+// taking the next free one above it in the same group. A Reorder Mode save
+// kept the order but closed up numbers held by entries on no key (an old
+// combined "FCC1, FCC2" entry on CH-502), so stepping past those, in
+// ascending order, puts the keys back on their old numbers. A full group
+// falls back to the next free number in the key's type group. Shows the plan
+// and asks first.
+function fidManagerFixPrefixMismatches() {
+    const items = findFidPrefixMismatches();
+    if (items.length === 0) {
+        toast('Every FID prefix matches its keys\' makes');
+        return;
+    }
+    const moving = new Set(items.map(i => i.fcc));
+    const taken = new Set(Object.keys(fidAssignments).filter(f => !moving.has(f)).map(f => fidAssignments[f]));
+    items.forEach(item => {
+        const bandEnd = Math.floor(item.num / 100) * 100 + 99;
+        for (let n = item.num; n <= bandEnd && !item.newFid; n++) {
+            const fid = item.target + '-' + formatFidNumber(n);
+            if (!taken.has(fid)) { item.newFid = fid; taken.add(fid); }
+        }
+    });
+
+    const preview = items.slice(0, 15).map(i => `• ${i.fcc}: ${i.fid} → ${i.newFid || i.target + '- (next free number)'}`).join('\n');
+    const more = items.length > 15 ? `\n…and ${items.length - 15} more` : '';
+    if (!confirm(`${items.length} FID${items.length !== 1 ? 's are' : ' is'} under a prefix for makes the key doesn't fit:\n\n${preview}${more}\n\nMove ${items.length !== 1 ? 'them' : 'it'} to the prefix that matches?`)) return;
+
+    let moved = 0, full = 0;
+    items.filter(i => i.newFid).forEach(i => { fidAssignments[i.fcc] = i.newFid; moved++; });
+    items.filter(i => !i.newFid).forEach(i => {
+        const next = getNextFidNumber(i.target, getFidTypeDigitForFcc(i.fcc));
+        if (next === null) { full++; return; }
+        fidAssignments[i.fcc] = i.target + '-' + formatFidNumber(next);
+        moved++;
+    });
+    saveFidAssignments();
+    renderFidManagerStats();
+    renderFidManagerList();
+    renderFidList();
+    toast(`Moved ${moved} FID${moved !== 1 ? 's' : ''} to the right prefix` + (full ? ` — ${full} skipped (group full)` : ''));
 }
 
 function fidManagerCleanOrphans() {
@@ -17503,6 +17585,10 @@ function fidManagerBulkRemove() {
 
 // FID Drag and Drop Reorder
 let fidDragModeActive = false;
+// The prefix being reordered, fixed when Reorder Mode starts. Save Order used
+// to read the prefix dropdown instead, so switching it (e.g. CH to F) before
+// saving renumbered every CH key into F-.
+let fidDragPrefix = '';
 let fidDragOrder = []; // Stores the current order of FCC IDs during drag mode
 let fidDraggedItem = null;
 
@@ -17523,6 +17609,7 @@ function enableFidDragMode() {
     }
 
     fidDragModeActive = true;
+    fidDragPrefix = prefixFilter;
     document.getElementById('fidDragModeBtn').style.display = 'none';
     document.getElementById('fidDragModeBar').style.display = 'block';
     document.getElementById('fidBulkActions').style.display = 'none';
@@ -17540,6 +17627,7 @@ function enableFidDragMode() {
 
 function cancelFidDragMode() {
     fidDragModeActive = false;
+    fidDragPrefix = '';
     fidDragOrder = [];
     document.getElementById('fidDragModeBtn').style.display = 'inline-block';
     document.getElementById('fidDragModeBar').style.display = 'none';
@@ -17551,7 +17639,6 @@ function cancelFidDragMode() {
 // list order. The band comes from the item's current FID so manual group
 // placements survive a reorder; unassigned items fall back to their key type.
 function computeFidDragAssignments() {
-    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
     const bandCounters = {};
     const projected = {};
     fidDragOrder.forEach(fccId => {
@@ -17560,7 +17647,7 @@ function computeFidDragAssignments() {
         bandCounters[d] = (bandCounters[d] || 0) + 1;
         // Past d99 the numbers keep counting up rather than dropping items,
         // matching computeFidBandRepackMapping.
-        projected[fccId] = prefixFilter + '-' + formatFidNumber(d * 100 + bandCounters[d]);
+        projected[fccId] = fidDragPrefix + '-' + formatFidNumber(d * 100 + bandCounters[d]);
     });
     return projected;
 }
@@ -17668,11 +17755,7 @@ function fidDragEnd(e) {
 }
 
 function saveFidDragOrder() {
-    const prefixFilter = document.getElementById('fidManagerPrefixFilter').value;
-    if (!prefixFilter) {
-        toast('No prefix selected');
-        return;
-    }
+    if (!fidDragModeActive || !fidDragPrefix) return;
 
     // Reassign FID numbers based on the new order, keeping each item inside
     // its key-type band (hundreds digit). Flat 1..N numbering here used to
@@ -17686,6 +17769,7 @@ function saveFidDragOrder() {
 
     // Exit drag mode
     fidDragModeActive = false;
+    fidDragPrefix = '';
     fidDragOrder = [];
     document.getElementById('fidDragModeBtn').style.display = 'inline-block';
     document.getElementById('fidDragModeBar').style.display = 'none';
