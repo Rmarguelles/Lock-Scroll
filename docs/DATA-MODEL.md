@@ -282,7 +282,7 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 | Store | Value shape | Live count |
 |---|---|---|
 | `fccRelationships` | `{frequency, buttonCount}` | 186 |
-| `fidAssignments` | `fccid → FID` (e.g. `"H73" → "F-102"`) | many |
+| `fidAssignments` | `fccid → FID` (e.g. `"H73" → "F-102"`), keyed by the FCC ID exactly as the key spells it; `alignFidAssignmentSpellings()` re-keys other spellings on load (v278) | many |
 | `fidPrefixes` | `prefix → {makes[], name}` | `N`, `F`, `GM`, … |
 | `fidMerges` | — | 0 |
 
