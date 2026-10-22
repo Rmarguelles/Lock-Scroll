@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v278</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v279</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5370,7 +5370,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v278</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v279</p>
         </div>
 
         <div class="settings-section">
@@ -5382,7 +5382,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v278<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v279<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14991,7 +14991,8 @@ function renderSameOemParts(key) {
     Object.values(vendorPrices[key.pn] || {}).forEach(e => {
         (e && Array.isArray(e.variants) ? e.variants : []).forEach(v => { if (v.vendorSku) siblings.add(importPnKey(v.vendorSku)); });
     });
-    const rows = DB.filter(k => k !== key && String(k.pn) !== String(key.pn) && !siblings.has(importPnKey(k.pn)))
+    const rows = DB.filter(k => k !== key && String(k.pn) !== String(key.pn) &&
+            ![k.pn].concat(k.mergedPNs || []).some(s => siblings.has(importPnKey(s))))
         .map(k => {
             const shared = getKeyOemNumbers(k).find(o => want.has(importPnKey(o)));
             if (!shared) return null;
@@ -15049,9 +15050,13 @@ function renderVendorPrices(pn) {
         // key together: this key's own option marked, the others tappable to
         // open their keys, each with stock on hand. Price A / B is Keyless
         // Ride's split and shows only when set.
+        // A No Logo key can be sold under a SKU per listing; each of them is
+        // this key, and each other row opens the key its SKU is filed under.
         const optRows = opts.map(v => {
-            const own = p.sku && v.vendorSku && importPnKey(v.vendorSku) === importPnKey(p.sku);
-            const sib = !own && v.vendorSku ? DB.find(k => importPnKey(k.pn) === importPnKey(v.vendorSku)) : null;
+            const holder = v.vendorSku ? findKeyBySku(v.vendorSku) : null;
+            const own = !!(v.vendorSku && ((p.sku && importPnKey(v.vendorSku) === importPnKey(p.sku)) ||
+                (holder && String(holder.pn) === String(pn))));
+            const sib = own ? null : holder;
             const qty = own ? (stockData[pn] || 0) : (sib ? (stockData[sib.pn] || 0) : null);
             const stockTag = qty === null ? '' : ' <span style="font-size:10px;font-weight:normal;color:' +
                 (qty > 0 ? 'var(--success)' : 'var(--dim)') + ';">' + (qty > 0 ? qty + ' in stock' : 'none in stock') + '</span>';
@@ -15723,7 +15728,8 @@ function openEditPricesModal(pn, vendor) {
         ? '<div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Changes apply to every version of this key.</div>' : '') +
         opts.map((v, i) =>
         '<div class="modal-input-group"><label>' + escapeJobText(v.label || v.condition || 'Option') +
-        (prices.sku && v.vendorSku && importPnKey(v.vendorSku) === importPnKey(prices.sku) ? ' <span style="color:var(--accent);">(this key)</span>' : '') +
+        (v.vendorSku && ((prices.sku && importPnKey(v.vendorSku) === importPnKey(prices.sku)) ||
+            String((findKeyBySku(v.vendorSku) || {}).pn) === String(pn)) ? ' <span style="color:var(--accent);">(this key)</span>' : '') +
         (v.vendorSku ? ' <span class="mono" style="color:var(--dim);font-weight:normal;text-transform:none;">' + escapeJobText(v.vendorSku) + '</span>' : '') +
         '</label><input type="text" class="modal-input" id="editPriceOpt' + i + '" placeholder="0.00 (blank removes it)" value="' +
         escapeJobText(v.price || '') + '"></div>').join('');
@@ -15743,16 +15749,25 @@ function closeEditPricesModal() {
     editingVendor = null;
 }
 
-// Copy an edited option list onto every sibling key (the keys named by the
-// options' SKUs) that holds this vendor's list. Each sibling keeps its own sku.
+// Carry an edited option list over to every sibling key (the keys the options'
+// SKUs are filed under) that holds this vendor's list: each option there with
+// one of these SKUs takes the edited price, or goes when it was removed. A
+// sibling's other options stay — a No Logo key also lists the versions from
+// the other listings it is sold on. Each sibling keeps its own sku.
 function syncVendorOptionSiblings(pn, vendor, before, after) {
     const skus = new Set();
     (before || []).concat(after || []).forEach(v => { if (v && v.vendorSku) skus.add(importPnKey(v.vendorSku)); });
+    const edited = new Map();
+    (after || []).forEach(v => { if (v && v.vendorSku) edited.set(importPnKey(v.vendorSku), v); });
     DB.forEach(k => {
-        if (String(k.pn) === String(pn) || !skus.has(importPnKey(k.pn))) return;
+        if (String(k.pn) === String(pn) || ![k.pn].concat(k.mergedPNs || []).some(s => skus.has(importPnKey(s)))) return;
         const e = vendorPrices[k.pn] && vendorPrices[k.pn][vendor];
         if (!e || !Array.isArray(e.variants)) return;
-        e.variants = after.map(v => Object.assign({}, v));
+        e.variants = e.variants.map(v => {
+            const s = v && v.vendorSku ? importPnKey(v.vendorSku) : null;
+            if (!s || !skus.has(s)) return v;
+            return edited.has(s) ? Object.assign({}, v, { price: edited.get(s).price }) : null;
+        }).filter(Boolean);
     });
 }
 
@@ -21361,6 +21376,9 @@ function createImportedKey(cand, pn, brand, refs) {
         importedFrom: cand.source
     };
     if (brand) rec.brand = brand;
+    // A count with no layout the picklist matches is kept, so a later listing
+    // can tell a 3-button key from a 4-button one on the same FCC ID.
+    if (!p.buttons && p.buttonCount) rec.buttonCount = p.buttonCount;
     if (p.fccids) rec.fccids = p.fccids.slice();
     if (refs && refs.length) rec.altParts = refs.map(a => ({ pn: a.pn, brand: a.brand }));
     customKeys.push(rec);
@@ -21372,14 +21390,167 @@ function createImportedKey(cand, pn, brand, refs) {
 // This vendor's price entry on one key: the listing's options, each under its
 // own name and SKU, with `sku` naming the one this key is. Price A / Price B is Keyless Ride's new/refurbished split
 // and is not forced onto other distributors.
-function setImportedVendorPrice(pn, vendor, sku, variants) {
+//
+// With `page` (the listing the options came from) each option is tagged with
+// it, and options other listings put on this key stay: a No Logo key sold on
+// the Ford page and the Bronco page lists the versions of both. The options
+// this listing put there before are replaced, as is any option with a SKU on
+// this listing; options saved before tagging count as another listing's.
+function setImportedVendorPrice(pn, vendor, sku, variants, page) {
     if (!vendorPrices[pn]) vendorPrices[pn] = {};
+    let rows = variants;
+    if (page) {
+        rows = variants.map(v => Object.assign({}, v, { page: page }));
+        const prev = vendorPrices[pn][vendor];
+        const skus = new Set(rows.filter(v => v.vendorSku).map(v => importPnKey(v.vendorSku)));
+        const labels = new Set(rows.filter(v => !v.vendorSku).map(v => String(v.label || v.condition || '').toLowerCase()));
+        const kept = (prev && Array.isArray(prev.variants) ? prev.variants : []).filter(v => v && v.page !== page &&
+            (v.vendorSku ? !skus.has(importPnKey(v.vendorSku)) : !labels.has(String(v.label || v.condition || '').toLowerCase())));
+        rows = kept.concat(rows).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    }
     vendorPrices[pn][vendor] = {
         sku: sku || null,
         priceA: '', priceB: '',
         emergency: '', shell: '', oem: '',
-        variants: variants
+        variants: rows
     };
+}
+
+// The key a distributor SKU is filed under: the key with that part number, or
+// the key it was folded into (a No Logo option's second SKU, or a key merged
+// by hand), which lists it in mergedPNs.
+function findKeyBySku(sku) {
+    const want = importPnKey(sku);
+    if (!want) return null;
+    return DB.find(k => importPnKey(k.pn) === want) ||
+        DB.find(k => (k.mergedPNs || []).some(p => importPnKey(p) === want)) || null;
+}
+
+// The FCC IDs of an import, normalized.
+function importFccSet(cand) {
+    const p = cand.proposed || {};
+    const list = p.fccids && p.fccids.length ? p.fccids : (p.fccid ? [p.fccid] : []);
+    return new Set(list.map(normalizeFccId).filter(Boolean));
+}
+
+function keySharesImportFcc(key, cand) {
+    const fccs = importFccSet(cand);
+    return getKeyFccIds(key).some(f => fccs.has(normalizeFccId(f)));
+}
+
+// A shell with no logo on it ("OEM Recased (No Logo)") fits every listing of
+// its key, and Your Car Key Guys sells it on each one: the Ford page and the
+// Bronco page both carry it, sometimes under one SKU, sometimes a SKU apiece.
+function isNoLogoOption(label) {
+    return /\bno[\s-]*logo\b/i.test(String(label || ''));
+}
+
+// How many buttons an imported key has: its layout says, else the count its
+// import kept, else the approved import that made it (keys made before the
+// count was kept; only on the device that approved it). Null when unknown.
+function importKeyButtonCount(key) {
+    const n = parseInt(key.buttons, 10) || parseInt(key.buttonCount, 10);
+    if (n) return n;
+    const made = distImportQueue.find(c => c.status === 'applied' &&
+        importOptionsWithSku(c).some(v => importPnKey(v.vendorSku) === importPnKey(key.pn)));
+    return made ? (parseInt(made.proposed.buttonCount, 10) || null) : null;
+}
+
+// The No Logo key this option already is: one an earlier listing from the same
+// distributor made under the same option name, for the same FCC ID and button
+// layout (one FCC ID can cover a 3- and a 4-button key). Keys this listing
+// files its own options under are not candidates. Null when there is none, the
+// button count is unknown, or the option is not a No Logo one.
+function findNoLogoTwin(cand, v, optKeys) {
+    if (!isNoLogoOption(v.label)) return null;
+    const p = cand.proposed || {};
+    const name = String(v.label).trim().replace(/\s+/g, ' ').toLowerCase();
+    const count = parseInt(p.buttons, 10) || parseInt(p.buttonCount, 10) || null;
+    return DB.find(k => k.isCustom && k.importedFrom === cand.source &&
+        String(k.brand || '').trim().replace(/\s+/g, ' ').toLowerCase() === name &&
+        !optKeys.has(importPnKey(k.pn)) &&
+        keySharesImportFcc(k, cand) &&
+        (p.buttons && k.buttons ? p.buttons === k.buttons : !!count && importKeyButtonCount(k) === count) &&
+        (!p.keyType || !k.keyType || p.keyType === k.keyType)) || null;
+}
+
+// File a second distributor SKU on a key, so searching it finds the key and
+// the listing that sells it under that SKU links to it.
+function addSkuToKey(key, sku) {
+    const ck = customKeys.find(k => String(k.pn) === String(key.pn));
+    if (!ck) return;
+    const list = (ck.mergedPNs || []).slice();
+    if (list.some(p => importPnKey(p) === importPnKey(sku))) return;
+    list.push(sku);
+    ck.mergedPNs = list;
+    key.mergedPNs = list;
+    ck.lastEdited = new Date().toISOString();
+    saveCustomKeys();
+}
+
+// Add a listing's vehicles to a key made by an earlier import that this
+// listing also sells, so a No Logo key carries the fitment of every page it
+// is on rather than only the first one approved. A row already covered is
+// skipped; one that overlaps or abuts an imported row of the same model
+// widens it. Returns how many rows changed.
+function addImportedVehicles(key, vehicles) {
+    const ck = key.isCustom ? customKeys.find(k => String(k.pn) === String(key.pn)) : null;
+    if (!ck) return 0;
+    const list = (key.vehicles || []).map(v => Object.assign({}, v));
+    let changed = 0;
+    (vehicles || []).forEach(v => {
+        const same = r => String(r.make).toLowerCase() === String(v.make).toLowerCase() &&
+            String(r.model).toLowerCase() === String(v.model).toLowerCase();
+        const end = r => r.endYear || r.startYear;
+        if (list.some(r => same(r) && r.startYear <= v.startYear && end(r) >= end(v))) return;
+        const near = list.find(r => same(r) && !r.codeSeries && r.startYear <= end(v) + 1 && end(r) >= v.startYear - 1);
+        if (near) {
+            near.startYear = Math.min(near.startYear, v.startYear);
+            near.endYear = Math.max(end(near), end(v));
+        } else {
+            list.push(JSON.parse(JSON.stringify(v)));
+        }
+        changed++;
+    });
+    if (!changed) return 0;
+    key.vehicles = list;
+    ck.vehicles = list;
+    ck.lastEdited = new Date().toISOString();
+    saveCustomKeys();
+    return changed;
+}
+
+// What is wrong with the SKUs on a listing's options. Two options on one SKU:
+// the shop's picker shows a sold-out option under another option's SKU, and
+// the extractor copied it. An option whose SKU is already a key for another
+// FCC ID: the SKU was copied from another page. Checked live, so a flag
+// clears as soon as the SKUs are put right. Returns [{ sku, msg }].
+function getImportSkuProblems(cand) {
+    const out = [];
+    const bySku = new Map();
+    ((cand.vendor && cand.vendor.variants) || []).forEach(v => {
+        if (!v || !v.vendorSku) return;
+        const k = importPnKey(v.vendorSku);
+        if (!bySku.has(k)) bySku.set(k, []);
+        bySku.get(k).push(v);
+    });
+    const fccs = importFccSet(cand);
+    bySku.forEach(list => {
+        const sku = list[0].vendorSku;
+        if (list.length > 1) {
+            out.push({ sku: sku, msg: sku + ' is on ' + list.length + ' options (' +
+                list.map(v => v.label || v.condition || 'Option').join(', ') +
+                '). The page shows a sold-out option under another option\'s SKU. Fix the SKU of the one that is not really ' +
+                sku + ', or remove it.' });
+        }
+        const key = findKeyBySku(sku);
+        const keyFccs = key ? getKeyFccIds(key).map(normalizeFccId).filter(Boolean) : [];
+        if (key && fccs.size && keyFccs.length && !keyFccs.some(f => fccs.has(f))) {
+            out.push({ sku: sku, msg: sku + ' is already key ' + key.pn + ' for FCC ID ' + keyFccs[0] +
+                ', not ' + Array.from(fccs)[0] + '. Check the SKU on the page.' });
+        }
+    });
+    return out;
 }
 
 // The options of a listing that carry their own SKU — each is its own part
@@ -21397,16 +21568,20 @@ function importOptionsWithSku(cand) {
 }
 
 // Commit one reviewed candidate. Each option with its own SKU becomes (or
-// updates) a key under that SKU with that option's price. A listing whose
-// options have no SKUs falls back to one key holding every option. A key the
-// listing matched by FCC ID that is not one of those (a catalog key) only has
-// its empty fields filled. Returns a short description of what changed.
+// updates) a key under that SKU with that option's price. A No Logo option
+// whose SKU is new joins the No Logo key of the same name another listing of
+// this key already made, rather than becoming a second copy of it. A listing
+// whose options have no SKUs falls back to one key holding every option. A
+// key the listing matched by FCC ID that is not one of those (a catalog key)
+// only has its empty fields filled. Returns a short description of what
+// changed.
 function applyImportCandidate(cand) {
     const changes = [];
     const p = cand.proposed;
     const vendor = cand.vendor.name;
     const opts = importOptionsWithSku(cand);
     const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
+    const page = cand.raw.productUrl || importSkuOf(cand) || cand._id;
 
     if (cand.matchedPn && !optKeys.has(importPnKey(cand.matchedPn))) {
         changes.push(...fillImportedKeyFields(cand.matchedPn, p, null, false));
@@ -21415,11 +21590,21 @@ function applyImportCandidate(cand) {
     if (opts.length) {
         opts.forEach(v => {
             const brand = v.label || null;
-            const existing = DB.find(k => importPnKey(k.pn) === importPnKey(v.vendorSku));
+            let existing = findKeyBySku(v.vendorSku);
+            const twin = existing ? null : findNoLogoTwin(cand, v, optKeys);
+            if (twin) {
+                existing = twin;
+                addSkuToKey(twin, v.vendorSku);
+                changes.push(v.vendorSku + ' filed on ' + twin.pn + ' (same ' + brand + ' key)');
+            }
             let pn = v.vendorSku;
             if (existing) {
                 pn = String(existing.pn);
                 changes.push(...fillImportedKeyFields(pn, p, brand, true));
+                if (keySharesImportFcc(existing, cand)) {
+                    const n = addImportedVehicles(existing, p.vehicles);
+                    if (n) changes.push(pn + ': ' + n + ' vehicle(s) from this listing');
+                }
             } else {
                 const err = createImportedKey(cand, pn, brand, p.altParts);
                 if (err) { changes.push(err); return; }
@@ -21427,7 +21612,7 @@ function applyImportCandidate(cand) {
             }
             // Every option key carries the whole listing (its own SKU marked),
             // so its card shows the other versions of the same key.
-            setImportedVendorPrice(pn, vendor, v.vendorSku, cand.vendor.variants.map(x => Object.assign({}, x)));
+            setImportedVendorPrice(pn, vendor, pn, cand.vendor.variants.map(x => Object.assign({}, x)), page);
         });
         saveVendorPrices();
     } else {
@@ -21736,7 +21921,7 @@ function previewDistImport() {
     }
     const nu = res.staged.filter(c => c.isNew).length;
     const ex = res.staged.length - nu;
-    const flagged = res.staged.filter(c => c.issues.length).length;
+    const flagged = res.staged.filter(c => c.issues.length || getImportSkuProblems(c).length).length;
     const lowConf = res.staged.filter(c => c.raw.confidence === 'low').length;
     el.innerHTML =
         '<div style="font-size:13px;line-height:1.7;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
@@ -21802,6 +21987,10 @@ function renderDistImportQueue() {
             ? '<div style="font-size:11px;color:#e0a800;">extractor unsure of: ' + escapeJobText(flags.names.join(', ')) + '</div>' : '';
         const iss = c.issues.length
             ? '<div style="font-size:11px;color:#e0a800;">' + c.issues.map(i => escapeJobText(i.msg)).join('<br>') + '</div>' : '';
+        const skuIss = flags.skuProblems.length
+            ? '<div style="font-size:11px;color:#e0a800;">' + flags.skuProblems.map(i => '&#9888;&#65039; ' + escapeJobText(i.msg)).join('<br>') + '</div>' : '';
+        const repeated = new Set(flags.skuProblems.map(i => importPnKey(i.sku)));
+        const flagCount = flags.names.length + flags.skuProblems.length;
         const fixed = (c.resolved || []).length
             ? '<div style="font-size:11px;color:var(--accent);">you reviewed: ' + escapeJobText(c.resolved.map(distEditLabel).join(', ')) + '</div>' : '';
         const spec = [
@@ -21818,17 +22007,23 @@ function renderDistImportQueue() {
         const optTag = v => {
             if (!opts.length) return '';
             if (!v.vendorSku) return ' <span style="color:#e0a800;font-size:10px;">no SKU — not saved</span>';
-            const have = DB.some(k => importPnKey(k.pn) === importPnKey(v.vendorSku));
-            return have
-                ? ' <span style="color:var(--dim);font-size:10px;">updates key</span>'
-                : ' <span style="color:var(--accent);font-size:10px;">+ new key</span>';
+            const flag = repeated.has(importPnKey(v.vendorSku)) ? ' <span style="color:#e0a800;font-size:10px;">&#9888;&#65039; check SKU</span>' : '';
+            const have = findKeyBySku(v.vendorSku);
+            const twin = have ? null : findNoLogoTwin(c, v, optKeys);
+            return flag + (have
+                ? ' <span style="color:var(--dim);font-size:10px;">updates ' +
+                    (importPnKey(have.pn) === importPnKey(v.vendorSku) ? 'key' : escapeJobText(String(have.pn))) + '</span>'
+                : twin
+                    ? ' <span style="color:var(--accent);font-size:10px;">joins ' + escapeJobText(String(twin.pn)) + '</span>'
+                    : ' <span style="color:var(--accent);font-size:10px;">+ new key</span>');
         };
         const prices = c.vendor.variants.map(v =>
             '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:1px 0;">' +
             '<span style="color:var(--dim);">' + escapeJobText(v.label || v.condition) + optTag(v) + '</span>' +
             '<span class="mono">$' + escapeJobText(v.price) + (v.vendorSku ? ' <span style="color:var(--dim);font-size:10px;">' + escapeJobText(v.vendorSku) + '</span>' : '') + '</span></div>').join('');
         const skuLine = opts.length
-            ? '<div style="font-size:12px;color:var(--dim);">Each option is saved as its own key under its SKU; OEM numbers go on each as cross-references.</div>'
+            ? '<div style="font-size:12px;color:var(--dim);">Each option is saved as its own key under its SKU; OEM numbers go on each as cross-references. ' +
+                'A No Logo option joins the No Logo key of the same name another listing of this key already made.</div>'
             : (importSkuOf(c) && c.isNew ? '<div style="font-size:12px;color:var(--dim);">SKU: <span class="mono" style="color:var(--text);">' +
                 escapeJobText(importSkuOf(c)) + '</span> (part number)</div>' : '');
         // A key an earlier import made for this listing under its OEM number
@@ -21848,11 +22043,11 @@ function renderDistImportQueue() {
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            staleNote + oemNote + unc + iss + fixed +
+            staleNote + oemNote + skuIss + unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
                 '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
-                (flags.names.length ? '<button onclick="openDistImportEdit(\'' + id + '\',\'flagged\')" style="flex:1;padding:8px;background:var(--bg);color:#e0a800;border:1px solid #e0a800;border-radius:6px;font-size:12px;cursor:pointer;">Fix flagged (' + flags.names.length + ')</button>' : '') +
+                (flagCount ? '<button onclick="openDistImportEdit(\'' + id + '\',\'flagged\')" style="flex:1;padding:8px;background:var(--bg);color:#e0a800;border:1px solid #e0a800;border-radius:6px;font-size:12px;cursor:pointer;">Fix flagged (' + flagCount + ')</button>' : '') +
                 (c.raw.productUrl ? '<button onclick="window.open(\'' + escapeJobText(c.raw.productUrl) + '\',\'_blank\')" style="padding:8px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">Page</button>' : '') +
             '</div>' +
             '<div style="display:flex;gap:8px;margin-top:8px;">' +
@@ -21982,9 +22177,13 @@ function getDistImportFlags(cand) {
         left.forEach(f => { if (fields.indexOf(f) < 0) fields.push(f); });
         names.push(n);
     });
+    // A SKU problem is a fact about the options, not a guess, so it stays
+    // flagged until the SKUs are put right — saving the editor does not clear it.
+    const skuProblems = getImportSkuProblems(cand);
+    if (skuProblems.length && fields.indexOf('variants') < 0) fields.push('variants');
     const order = DIST_IMPORT_EDIT_FIELDS.map(f => f.key);
     fields.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    return { fields: fields, names: names, unmapped: unmapped };
+    return { fields: fields, names: names, unmapped: unmapped, skuProblems: skuProblems };
 }
 
 // Buttons must offer the whole picklist, not just the rows already in use —
@@ -22052,7 +22251,11 @@ function renderDistEditVariants() {
         el.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:6px 0;">No priced option. Approving adds no vendor price.</div>';
         return;
     }
+    // A SKU on more than one option is outlined: one of them is wrong.
+    const skuCount = {};
+    distImportEditVariants.forEach(v => { if (v.vendorSku) skuCount[importPnKey(v.vendorSku)] = (skuCount[importPnKey(v.vendorSku)] || 0) + 1; });
     el.innerHTML = distImportEditVariants.map((v, i) => {
+        const dupSku = v.vendorSku && skuCount[importPnKey(v.vendorSku)] > 1;
         const cond = String(v.condition || 'unknown').toLowerCase();
         // A condition the extractor sent that is outside the vocabulary stays
         // selectable rather than snapping to the first row on re-render.
@@ -22063,7 +22266,8 @@ function renderDistEditVariants() {
                 '<input type="text" class="modal-input" id="distVarLabel' + i + '" placeholder="Label" value="' +
                     escapeJobText(v.label || '') + '" style="flex:2;min-width:0;font-size:12px;padding:7px;">' +
                 '<input type="text" class="modal-input" id="distVarSku' + i + '" placeholder="SKU" value="' +
-                    escapeJobText(v.vendorSku || '') + '" style="flex:1;min-width:0;font-size:12px;padding:7px;">' +
+                    escapeJobText(v.vendorSku || '') + '" style="flex:1;min-width:0;font-size:12px;padding:7px;' +
+                    (dupSku ? 'border-color:#e0a800;' : '') + '"' + (dupSku ? ' title="Same SKU as another option"' : '') + '>' +
             '</div>' +
             '<div style="display:flex;gap:6px;">' +
                 '<input type="text" class="modal-input" id="distVarPrice' + i + '" placeholder="Price" value="' +
@@ -22155,6 +22359,7 @@ function openDistImportEdit(id, mode) {
                 flags.unmapped.join(', ') + ', which is not a field this import writes — check the ' +
                 'product page. Saving clears the flag.');
         }
+        flags.skuProblems.forEach(i => parts.push(i.msg));
         hint = parts.join(' ') || 'Nothing left to settle on this entry.';
     } else {
         hint = 'Every field this import would write. On a key that already exists only the empty ones are filled, so a value here is a proposal, not an overwrite.';
