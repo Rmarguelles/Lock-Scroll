@@ -55,7 +55,7 @@ get mutated in place — the edit goes to an override store (`keyInfoOverrides`,
 | `fccid` | string | `customKeyFCC` | 500/515 | Can hold a comma-joined list (`"NBG009768T, NBGG093UCC"`). For non-chip keys it defaults to the PN. |
 | `brand` | string | `customKeyBrand` / `…BrandOther` | **0** | Written by the current form; **absent from all stored records.** See §6. |
 | `altParts` | array | `gatherCustomKeyAltParts()` | **0** | Additional PNs for the same key. Same drift. |
-| `mergedPNs` | array of string | — | 38/515 | Seed-only. Other PNs folded into this record. |
+| `mergedPNs` | array of string | — | 38/515 | Other PNs folded into this record: merges, and a No Logo key's other distributor SKUs (§5e). |
 | `secondaryKeyPartNumber` | — | — | **0/515** | Dead field. Present in the schema, never populated. |
 | `memorySeat` | number\|null | `customKeyMemorySeat` / `editKeyInfoMemorySeat` | 2 | Driver memory position (1/2/3) when the fob is paired to a seat/mirror profile. Added v242. |
 
@@ -423,12 +423,27 @@ What the normalizers fix, so the extractor never has to:
 Identity on approve, per the model in §7:
 
 - **FCC ID** matches the candidate against existing keys (via `normalizeFccId`).
-- **The OEM part number becomes the `pn`** for a new key — never the store's SKU,
-  which is per-vendor. Falls back to the FCC ID when no OEM number is given.
-- **The store SKU** rides in `vendorPrices[pn][vendor].variants[]` alongside its
-  price, condition and label.
-- An existing key is only **filled where empty** — an import never overwrites a
-  hand-entered value, and base keys are written through `keyInfoOverrides`.
+- **Each option with its own SKU is its own key, filed under that SKU** (OEM
+  numbers go on it as cross-references). A listing whose options have no SKUs
+  falls back to one key under the listing SKU, else the first OEM number, else
+  the FCC ID.
+- Every option key's `vendorPrices[pn][vendor].variants[]` lists the listing's
+  options, each tagged `page` (the listing URL). A key sold on several listings
+  keeps every listing's options; re-approving a listing replaces only its own.
+- **A No Logo option is one key across listings** (`findNoLogoTwin()`). Your
+  Car Key Guys sells it on every logo's page of the same key, sometimes under a
+  SKU per page. A No Logo option with a new SKU joins the key of the same name
+  that distributor already has for that FCC ID and button layout (or count: a
+  key imported with a count but no layout keeps it as `buttonCount`). The SKU
+  goes in its `mergedPNs` (searchable, and `findKeyBySku()` resolves it).
+- An option key that already exists gets the listing's **vehicles** it lacks.
+  Otherwise an existing key is only **filled where empty**: an import never
+  overwrites a hand-entered value, and base keys are written through
+  `keyInfoOverrides`.
+- **SKU flags** (`getImportSkuProblems()`, checked live): two options on one
+  SKU, or an option whose SKU is already a key for another FCC ID. Both come
+  from a sold-out option showing another option's SKU on the page; the flag
+  stays until the SKUs are fixed.
 
 `vendorPrices[pn][vendor]` now carries a `variants` array in addition to
 `priceA`/`priceB`; the two slots are kept populated (cheapest `new` → `priceA`,
