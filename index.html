@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v279</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v280</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5370,7 +5370,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v279</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v280</p>
         </div>
 
         <div class="settings-section">
@@ -5382,7 +5382,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v279<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v280<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5888,7 +5888,8 @@
             <button onclick="stageDistImport()" style="flex:1;padding:10px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Stage for review</button>
         </div>
         <div id="distImportPreview" style="margin-top:10px;"></div>
-        <button onclick="showDistImportFootprint()" style="width:100%;margin-top:10px;padding:9px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">&#129529; Start over: review everything imports added</button>
+        <button onclick="showImportDuplicates()" style="width:100%;margin-top:10px;padding:9px;background:var(--bg);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">&#128269; Find duplicate keys from imports</button>
+        <button onclick="showDistImportFootprint()" style="width:100%;margin-top:8px;padding:9px;background:var(--bg);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;">&#129529; Start over: review everything imports added</button>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border);">
             <h3 style="margin:0;font-size:15px;">Waiting for review (<span id="distQueueCount">0</span>)</h3>
@@ -15283,6 +15284,11 @@ function toggleKeyLishiToolDirection(idx, i) {
 
 function closeDetail() {
     document.getElementById('detailPanel').classList.remove('on');
+    // Back on the import panel's duplicates report: a merge on the key just
+    // closed may have settled one, so redraw it.
+    if (document.getElementById('distDupReport') && document.getElementById('distImportPanel').classList.contains('on')) {
+        showImportDuplicates();
+    }
 
     if (cameFromVehicle) {
         // Return to vehicle detail page
@@ -15750,24 +15756,35 @@ function closeEditPricesModal() {
 }
 
 // Carry an edited option list over to every sibling key (the keys the options'
-// SKUs are filed under) that holds this vendor's list: each option there with
-// one of these SKUs takes the edited price, or goes when it was removed. A
-// sibling's other options stay — a No Logo key also lists the versions from
-// the other listings it is sold on. Each sibling keeps its own sku.
+// SKUs are filed under) that holds this vendor's list: the options there with
+// one of these SKUs become the edited ones — new prices, and a removed option
+// gone, including one of two options listed under the same SKU. A sibling's
+// other options stay — a No Logo key also lists the versions from the other
+// listings it is sold on. Each sibling keeps its own sku.
 function syncVendorOptionSiblings(pn, vendor, before, after) {
     const skus = new Set();
     (before || []).concat(after || []).forEach(v => { if (v && v.vendorSku) skus.add(importPnKey(v.vendorSku)); });
     const edited = new Map();
-    (after || []).forEach(v => { if (v && v.vendorSku) edited.set(importPnKey(v.vendorSku), v); });
+    (after || []).forEach(v => {
+        if (!v || !v.vendorSku) return;
+        const s = importPnKey(v.vendorSku);
+        if (!edited.has(s)) edited.set(s, []);
+        edited.get(s).push(v);
+    });
     DB.forEach(k => {
         if (String(k.pn) === String(pn) || ![k.pn].concat(k.mergedPNs || []).some(s => skus.has(importPnKey(s)))) return;
         const e = vendorPrices[k.pn] && vendorPrices[k.pn][vendor];
         if (!e || !Array.isArray(e.variants)) return;
-        e.variants = e.variants.map(v => {
+        const done = new Set();
+        const next = [];
+        e.variants.forEach(v => {
             const s = v && v.vendorSku ? importPnKey(v.vendorSku) : null;
-            if (!s || !skus.has(s)) return v;
-            return edited.has(s) ? Object.assign({}, v, { price: edited.get(s).price }) : null;
-        }).filter(Boolean);
+            if (!s || !skus.has(s)) { next.push(v); return; }
+            if (done.has(s)) return;
+            done.add(s);
+            (edited.get(s) || []).forEach(a => next.push(Object.assign({}, a)));
+        });
+        e.variants = next;
     });
 }
 
@@ -21445,6 +21462,11 @@ function isNoLogoOption(label) {
     return /\bno[\s-]*logo\b/i.test(String(label || ''));
 }
 
+// An option name compared without case or extra spaces.
+function noLogoName(label) {
+    return String(label || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 // How many buttons an imported key has: its layout says, else the count its
 // import kept, else the approved import that made it (keys made before the
 // count was kept; only on the device that approved it). Null when unknown.
@@ -21464,10 +21486,10 @@ function importKeyButtonCount(key) {
 function findNoLogoTwin(cand, v, optKeys) {
     if (!isNoLogoOption(v.label)) return null;
     const p = cand.proposed || {};
-    const name = String(v.label).trim().replace(/\s+/g, ' ').toLowerCase();
+    const name = noLogoName(v.label);
     const count = parseInt(p.buttons, 10) || parseInt(p.buttonCount, 10) || null;
     return DB.find(k => k.isCustom && k.importedFrom === cand.source &&
-        String(k.brand || '').trim().replace(/\s+/g, ' ').toLowerCase() === name &&
+        noLogoName(k.brand) === name &&
         !optKeys.has(importPnKey(k.pn)) &&
         keySharesImportFcc(k, cand) &&
         (p.buttons && k.buttons ? p.buttons === k.buttons : !!count && importKeyButtonCount(k) === count) &&
@@ -21712,6 +21734,140 @@ async function pullDistImportInbox() {
         '</div>';
     if (btn) { btn.disabled = false; btn.textContent = '☁️ Pull from inbox'; }
     toast(staged ? staged + ' staged from the inbox' : 'Nothing new in the inbox');
+}
+
+// ---- Duplicates ---------------------------------------------------------
+// What earlier imports doubled up, for a person to look through and merge.
+//  - No Logo keys saved more than once: before v279 each listing's No Logo
+//    option became its own key when the listing gave it its own SKU. Grouped
+//    the way findNoLogoTwin() joins them now: same distributor, option name,
+//    FCC ID and button layout or count. A key whose button count is unknown
+//    still groups on the rest, marked for checking.
+//  - Version lists naming one SKU twice: a sold-out option copied another
+//    option's SKU on the page. Every key from that listing shows it.
+function findImportDuplicates() {
+    const noLogo = DB.filter(k => k.isCustom && k.importedFrom && isNoLogoOption(k.brand));
+    const count = new Map(noLogo.map(k => [k, importKeyButtonCount(k)]));
+    const fccs = new Map(noLogo.map(k => [k, getKeyFccIds(k).map(normalizeFccId).filter(Boolean)]));
+    const parent = noLogo.map((_, i) => i);
+    const root = i => parent[i] === i ? i : (parent[i] = root(parent[i]));
+    for (let i = 0; i < noLogo.length; i++) {
+        for (let j = i + 1; j < noLogo.length; j++) {
+            const a = noLogo[i], b = noLogo[j];
+            if (a.importedFrom !== b.importedFrom || noLogoName(a.brand) !== noLogoName(b.brand)) continue;
+            if (!fccs.get(a).some(f => fccs.get(b).indexOf(f) >= 0)) continue;
+            if (a.keyType && b.keyType && a.keyType !== b.keyType) continue;
+            if (a.buttons && b.buttons ? a.buttons !== b.buttons
+                : (count.get(a) && count.get(b) && count.get(a) !== count.get(b))) continue;
+            parent[root(j)] = root(i);
+        }
+    }
+    const byRoot = new Map();
+    noLogo.forEach((k, i) => {
+        const r = root(i);
+        if (!byRoot.has(r)) byRoot.set(r, []);
+        byRoot.get(r).push(k);
+    });
+    const noLogoGroups = Array.from(byRoot.values()).filter(g => g.length > 1).map(keys => {
+        // Suggested keeper: fits the most vehicles, then most stock, then oldest.
+        const rank = k => [(k.vehicles || []).length, stockData[k.pn] || 0, -(Date.parse(k.addedDate || '') || 0)];
+        const keep = keys.slice().sort((a, b) => {
+            const x = rank(a), y = rank(b);
+            return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2]);
+        })[0];
+        return { keys: keys, keep: keep, unsure: keys.filter(k => !count.get(k)) };
+    }).sort((a, b) => String(a.keys[0].brand).localeCompare(String(b.keys[0].brand)) ||
+        String(a.keys[0].fccid).localeCompare(String(b.keys[0].fccid)));
+
+    const repeats = new Map();   // vendor|sku -> { vendor, sku, labels, pns }
+    Object.keys(vendorPrices).forEach(pn => {
+        if (!DB.some(k => String(k.pn) === String(pn))) return;
+        Object.keys(vendorPrices[pn] || {}).forEach(vendor => {
+            const e = vendorPrices[pn][vendor];
+            const seen = new Map();
+            (e && Array.isArray(e.variants) ? e.variants : []).forEach(v => {
+                if (!v || !v.vendorSku) return;
+                const s = importPnKey(v.vendorSku);
+                if (!seen.has(s)) seen.set(s, []);
+                seen.get(s).push(v);
+            });
+            seen.forEach((list, s) => {
+                if (list.length < 2) return;
+                const id = vendor + '|' + s;
+                if (!repeats.has(id)) repeats.set(id, { vendor: vendor, sku: list[0].vendorSku, labels: list.map(v => v.label || v.condition || 'Option'), pns: [] });
+                repeats.get(id).pns.push(String(pn));
+            });
+        });
+    });
+    return { noLogoGroups: noLogoGroups, repeatedSkus: Array.from(repeats.values()) };
+}
+
+function openImportReportKey(pn) {
+    const idx = DB.findIndex(k => String(k.pn) === String(pn));
+    if (idx < 0) { toast('Key ' + pn + ' is not in the database'); return; }
+    cameFromVehicle = null;
+    openKey(idx);
+}
+
+function showImportDuplicates() {
+    const d = findImportDuplicates();
+    const el = document.getElementById('distImportPreview');
+    const box = inner => '<div id="distDupReport" style="font-size:12px;line-height:1.5;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' + inner + '</div>';
+    if (!d.noLogoGroups.length && !d.repeatedSkus.length) {
+        el.innerHTML = box('<div style="font-weight:700;margin-bottom:4px;">Duplicates</div>' +
+            '<div style="color:var(--dim);">No duplicates found: no No Logo key is saved twice, and no version list names a SKU twice.</div>');
+        return;
+    }
+    const q = pn => String(pn).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const stockTag = pn => {
+        const n = stockData[pn] || 0;
+        return '<span style="color:' + (n > 0 ? 'var(--success)' : 'var(--dim)') + ';">' + (n > 0 ? n + ' in stock' : 'none in stock') + '</span>';
+    };
+    const groups = d.noLogoGroups.map(g => {
+        const k0 = g.keys[0];
+        const withButtons = g.keys.find(k => k.buttons);
+        const head = escapeJobText(k0.brand) + ' &middot; <span class="mono">' + escapeJobText(k0.fccid || '') + '</span>' +
+            (withButtons ? ' &middot; ' + escapeJobText(String(withButtons.buttons).replace(/\s*\(.*$/, '')) : '') +
+            ' <span style="color:var(--dim);">(' + escapeJobText(k0.importedFrom) + ')</span>';
+        const rows = g.keys.map(k => {
+            const pp = getKeyPricePoint(k.pn);
+            const price = pp && isPriceLike(pp.price) && !isNaN(parseFloat(pp.price)) ? '$' + parseFloat(pp.price).toFixed(2) : '';
+            const models = Array.from(new Set((k.vehicles || []).map(v => v.model)));
+            const fits = models.length ? (models.length <= 3 ? models.join(', ') : models.length + ' models') : 'no vehicles';
+            return '<div onclick="openImportReportKey(\'' + q(k.pn) + '\')" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border);cursor:pointer;">' +
+                '<span><span class="mono" style="color:var(--accent);">' + escapeJobText(String(k.pn)) + '</span>' +
+                    ((k.mergedPNs || []).length ? ' <span style="color:var(--dim);font-size:11px;">also ' + escapeJobText(k.mergedPNs.join(', ')) + '</span>' : '') +
+                    (k === g.keep ? ' <span style="color:var(--accent);font-size:10px;font-weight:700;">KEEP?</span>' : '') +
+                    '<br><span style="color:var(--dim);font-size:11px;">fits ' + escapeJobText(fits) + ' &middot; ' + stockTag(k.pn) + '</span></span>' +
+                '<span class="mono" style="white-space:nowrap;">' + price + ' <span style="color:var(--accent);">&rsaquo;</span></span></div>';
+        }).join('');
+        const unsure = g.unsure.length
+            ? '<div style="color:#e0a800;font-size:11px;padding-top:4px;">Button count unknown on ' + escapeJobText(g.unsure.map(k => k.pn).join(', ')) +
+                ' &mdash; check it is the same key before merging.</div>' : '';
+        return '<div style="margin:8px 0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);">' +
+            '<div style="font-weight:700;margin-bottom:2px;">' + head + '</div>' + rows + unsure + '</div>';
+    }).join('');
+    const reps = d.repeatedSkus.map(r =>
+        '<div style="margin:8px 0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);">' +
+            '<div><span class="mono" style="font-weight:700;">' + escapeJobText(r.sku) + '</span> is listed ' + r.labels.length + ' times (' +
+                escapeJobText(r.labels.join(', ')) + ') <span style="color:var(--dim);">(' + escapeJobText(r.vendor) + ')</span></div>' +
+            '<div style="margin-top:4px;color:var(--dim);font-size:11px;">On the cards of: ' +
+                r.pns.map(pn => '<span onclick="openImportReportKey(\'' + q(pn) + '\')" class="mono" style="color:var(--accent);cursor:pointer;white-space:nowrap;">' +
+                    escapeJobText(pn) + '</span>').join(', ') + '</div>' +
+        '</div>').join('');
+    el.innerHTML = box(
+        '<div style="font-weight:700;margin-bottom:4px;">Duplicates</div>' +
+        (d.noLogoGroups.length
+            ? '<div style="margin-top:6px;"><b>' + d.noLogoGroups.length + '</b> No Logo key(s) saved more than once' +
+                ' (' + d.noLogoGroups.reduce((n, g) => n + g.keys.length, 0) + ' keys):</div>' + groups +
+              '<div style="color:var(--dim);font-size:11px;">To fix one, open the key to keep (KEEP? fits the most vehicles), tap Merge and pick the other. ' +
+                'Its vehicles, stock and prices move over and its SKU stays searchable.</div>'
+            : '<div style="color:var(--dim);margin-top:6px;">No No Logo key is saved twice.</div>') +
+        (d.repeatedSkus.length
+            ? '<div style="margin-top:12px;"><b>' + d.repeatedSkus.length + '</b> SKU(s) listed twice in a version list:</div>' + reps +
+              '<div style="color:var(--dim);font-size:11px;">The page showed a sold-out option under another option\'s SKU. Open any of those cards, tap Edit on the prices ' +
+                'and blank the row that is not really that SKU. The other cards follow.</div>'
+            : '<div style="color:var(--dim);margin-top:12px;">No version list names a SKU twice.</div>'));
 }
 
 // ---- Start over ---------------------------------------------------------

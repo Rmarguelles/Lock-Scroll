@@ -444,6 +444,11 @@ Identity on approve, per the model in §7:
   SKU, or an option whose SKU is already a key for another FCC ID. Both come
   from a sold-out option showing another option's SKU on the page; the flag
   stays until the SKUs are fixed.
+- **Find duplicate keys from imports** (`findImportDuplicates()`, v280) lists
+  what imports before v279 doubled up: No Logo keys saved once per listing
+  (grouped by the same rule as `findNoLogoTwin()`; an unknown button count is
+  grouped but marked to check), and version lists naming one SKU twice. Each
+  key opens from the report; merging and removing the copy are done by hand.
 
 `vendorPrices[pn][vendor]` now carries a `variants` array in addition to
 `priceA`/`priceB`; the two slots are kept populated (cheapest `new` → `priceA`,
