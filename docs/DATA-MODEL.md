@@ -539,6 +539,32 @@ document is 333 KB.
 
 Cost: a download now reads each store document (~35 reads instead of 1).
 
+## 5h. AI agent access (v281)
+
+Agents (Grok, Claude, ChatGPT) connect to `agent-bridge/`, an MCP server
+running as a Firebase Function. Setup and tools: `agent-bridge/README.md`.
+
+| Firestore path | Written by | Holds |
+|---|---|---|
+| `users/<uid>/agent/view`, `view__2` ... | the app, after each sync | `buildAgentSnapshot()` as JSON text in `json`, split like a store (`parts`, `builtAt`, `schema`) |
+| `agentTokens/<sha256 of token>` | the app (Settings → AI Agents) | `uid`, `email`, `name`, `canWrite`, `createdAt`; `lastUsedAt` from the bridge |
+
+- **The bridge never reads the stores.** The full key list exists only once the
+  app has merged the catalog with overrides, renames and merges, so the app
+  publishes the merged view, and agents see the data as of the last sync.
+  It is published only while the user has an access link, and only when it
+  changed; one batch, so parts never mix two versions.
+- **Snapshot schema 1:** `keys[]` (pn, brand, fccIds, fids, keyType, chip,
+  keyway, buttons, frequency, battery, emergencyPN, oem, crossRefs, otherPns,
+  discontinued, lishi, stock, prices[{vendor, sku, priceA, priceB, emergency,
+  shell, oem, options[{label, sku, price, condition, key, soldOut}]}],
+  vehicles, notes, source, importedFrom), `renamedPns`, `testKeys`, `tools`,
+  `activeJobs`, `jobs` (newest 500; `cables` is `equipment`), `purchases`
+  (newest 1000), `vendors`. Empty values are left out.
+- **Access links** are `lsa_` + 32 random bytes (base64url), shown once. The
+  bridge looks the hash up on each request (cached a minute); deleting the
+  document revokes the link.
+
 ## 6. Schema drift — fix before importing
 
 Four fields are written by the **current** Add Custom Key form but appear in

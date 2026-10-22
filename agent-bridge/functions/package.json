@@ -1,0 +1,22 @@
+{
+  "name": "lock-scroll-agent-bridge",
+  "description": "MCP server that lets AI agents read (and later write) Lock & Scroll data",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "express": "5.3.0"
+  }
+}
