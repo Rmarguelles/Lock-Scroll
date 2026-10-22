@@ -11,6 +11,24 @@ service cloud.firestore {
       match /stores/{storeId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // What this user's AI agents read (v281+): the snapshot the app saves
+      // after each sync. The agent bridge reads it with the project's own
+      // service account, which these rules do not apply to.
+      match /agent/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // AI agent access links (v281+). The document ID is a SHA-256 hash of the
+    // link's token; the token itself is never stored. Only the owner can make,
+    // see or revoke their links. The bridge checks them with the service account.
+    match /agentTokens/{tokenHash} {
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'canWrite', 'createdAt']);
+      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
     }
 
     // Shared data: any authenticated user can read/write

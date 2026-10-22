@@ -40,6 +40,13 @@ numbers in the same commit:
   reach into subcollections by themselves.
 - Escape user text with `escapeJobText()` before injecting into innerHTML, and
   escape quotes (`.replace(/'/g, "\\'")`) inside inline onclick args.
+- AI agents (Grok, Claude, ChatGPT) read the data through `agent-bridge/`, an
+  MCP server deployed as a Firebase Function. It answers from the snapshot
+  `buildAgentSnapshot()` builds and `publishAgentSnapshot()` saves after each
+  sync (`users/<uid>/agent`), never from the stores. A field or store agents
+  should see goes into `buildAgentSnapshot()` and, if it needs its own
+  question, a tool in `agent-bridge/functions/lib/`. The bridge has its own
+  tests: `cd agent-bridge/functions && npm ci && npm test`.
 
 ## Verifying changes
 

@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v280</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v281</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5255,6 +5255,12 @@
         </div>
 
         <div class="settings-section">
+            <h3>🤖 AI Agents</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Let Grok, Claude or ChatGPT look up your keys, stock, prices and jobs. Each agent gets its own link you can revoke.</p>
+            <div id="agentAccessUI"></div>
+        </div>
+
+        <div class="settings-section">
             <h3>Manage Data</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
                 <button class="settings-nav-btn" onclick="openLishiSettingsPanel()">
@@ -5370,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v280</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v281</p>
         </div>
 
         <div class="settings-section">
@@ -5382,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v280<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v281<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8105,6 +8111,7 @@ function renderCloudSyncUI() {
             </div>
             <button class="sync-btn" onclick="location.reload()" style="background:var(--accent);color:#000;font-weight:700;">\u21BB Retry Connection</button>
         `;
+        renderAgentAccessUI();
         return;
     }
     
@@ -8171,6 +8178,7 @@ function renderCloudSyncUI() {
             ${renderSharedUsersSection()}
         `;
     }
+    renderAgentAccessUI();
 }
 
 function formatLastSync(date) {
@@ -8432,14 +8440,347 @@ async function syncNow() {
             lastSyncTime = new Date();
             localStorage.setItem('lockscroll_last_sync', lastSyncTime.toISOString());
             toast('Sync complete!');
+            // What AI agents see is refreshed from the merged data; a failure
+            // there must never fail the sync itself.
+            publishAgentSnapshot().catch(e => console.warn('Agent snapshot not published:', e));
         }
     } catch (error) {
         console.error('Sync error:', error);
         toast('Sync failed: ' + error.message);
     }
-    
+
     isSyncing = false;
     renderCloudSyncUI();
+}
+
+// ===================== AI AGENT ACCESS =====================
+// Grok, Claude and ChatGPT reach the data through a small server
+// (agent-bridge/, a Firebase Function speaking MCP). The server does not read
+// the stores: the real key list only exists once this app has merged the
+// built-in catalog with every override, rename and merge. So after each sync
+// the app saves what it sees as one read-only snapshot, users/<uid>/agent/view
+// (split into parts view, view__2 ... like a store), and the server answers
+// from that. Agents see the data as of the last sync.
+//
+// Each agent gets its own access link. Only a SHA-256 hash of the link's token
+// is stored (agentTokens/<hash>: owner uid, name, whether it may write), so a
+// link is shown once and cannot be read back. Revoking deletes the document.
+
+const AGENT_SNAPSHOT_SCHEMA = 1;
+const AGENT_JOBS_KEPT = 500;
+const AGENT_PURCHASES_KEPT = 1000;
+const AGENT_SERVER_DEFAULT = 'https://us-central1-locknscroll.cloudfunctions.net/agent';
+let agentTokens = null;          // this user's access links; null until loaded
+let agentTokensUid = null;       // whose links agentTokens holds
+let agentTokensLoading = null;   // the load in flight, so redraws do not stack loads
+let agentAccessError = null;     // why the links could not be loaded
+let agentSnapshotSeen = null;    // snapshot text last published this session
+let agentSnapshotAt = null;      // when it was published
+let agentNewLink = null;         // { name, url } shown once after creating
+
+function agentServerBase() {
+    let v = '';
+    try { v = localStorage.getItem('lockscroll_agent_server') || ''; } catch (e) {}
+    return (v.trim() || AGENT_SERVER_DEFAULT).replace(/\/+$/, '');
+}
+
+// Drop empty values so the snapshot (and every answer an agent reads) stays small.
+function agentCompact(obj) {
+    const out = {};
+    Object.keys(obj).forEach(k => {
+        const v = obj[k];
+        if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return;
+        out[k] = v;
+    });
+    return out;
+}
+
+// Everything an agent can look up, as the app sees it right now: every key
+// (built-in and custom, after overrides, renames and merges) with its
+// vehicles, stock, prices and distributor versions, plus recent jobs and
+// purchases, test keys and tools. Pure: reads state, writes nothing.
+function buildAgentSnapshot() {
+    const money = v => {
+        const n = parseFloat(v);
+        return isPriceLike(v) && !isNaN(n) ? Math.round(n * 100) / 100 : null;
+    };
+    // SKU -> part number, for marking which distributor option is which key
+    const skuIndex = new Map();
+    DB.forEach(k => [k.pn].concat(k.mergedPNs || []).forEach(s => {
+        const n = importPnKey(s);
+        if (n && !skuIndex.has(n)) skuIndex.set(n, String(k.pn));
+    }));
+    const keys = DB.map(k => {
+        const pn = String(k.pn);
+        const vp = vendorPrices[pn] || {};
+        const prices = Object.keys(vp).map(vendor => {
+            const e = vp[vendor] || {};
+            const options = (Array.isArray(e.variants) ? e.variants : []).filter(v => v && v.price).map(v => agentCompact({
+                label: v.label || v.condition || null,
+                sku: v.vendorSku || null,
+                price: money(v.price),
+                condition: v.condition || null,
+                key: v.vendorSku ? (skuIndex.get(importPnKey(v.vendorSku)) || null) : null,
+                soldOut: v.available === false ? true : null
+            }));
+            return agentCompact({
+                vendor: vendor, sku: e.sku || null,
+                priceA: money(e.priceA), priceB: money(e.priceB),
+                emergency: money(e.emergency), shell: money(e.shell), oem: money(e.oem),
+                options: options
+            });
+        }).filter(p => Object.keys(p).length > 1);
+        const disc = getDiscontinuedInfo(pn);
+        return agentCompact({
+            pn: pn,
+            brand: k.brand || null,
+            fccIds: getKeyFccIds(k),
+            fids: getKeyFids(k),
+            keyType: k.keyType || null,
+            chip: k.chip || null,
+            keyway: k.keyway || null,
+            buttons: k.buttons || null,
+            frequency: k.frequency || null,
+            battery: k.battery || null,
+            emergencyPN: k.emergencyPN || null,
+            ilco: k.ilco || null,
+            oem: getKeyOemNumbers(k),
+            crossRefs: (k.altParts || []).filter(a => a && a.pn).map(a => agentCompact({ pn: String(a.pn), brand: a.brand || null })),
+            otherPns: (k.mergedPNs || []).map(String),
+            discontinued: disc ? agentCompact({ replacedBy: resolveDiscontinuedReplacement(pn) || null, note: disc.note || null }) : null,
+            lishi: getKeyLishiTools(k).map(t => agentCompact({ tool: t.tool, direction: t.direction || null })),
+            stock: stockData[pn] || 0,
+            prices: prices,
+            vehicles: (k.vehicles || []).filter(v => v && v.make && v.model).map(v => ({
+                make: v.make, model: v.model, startYear: v.startYear, endYear: v.endYear || v.startYear
+            })),
+            notes: k.notes || null,
+            source: k.isCustom ? 'custom' : 'builtin',
+            importedFrom: k.importedFrom || null
+        });
+    });
+    const toolPlatforms = (toolsDatabase && toolsDatabase.platforms) || {};
+    return {
+        schema: AGENT_SNAPSHOT_SCHEMA,
+        app: ((document.getElementById('currentVersionDisplay') || {}).textContent || '').replace(/^Current:\s*/, '') || null,
+        owner: currentUser ? currentUser.email : null,
+        keys: keys,
+        renamedPns: Object.assign({}, pnSupersessions),
+        testKeys: Object.keys(testKeyInventory).filter(kw => isLiveTestKeyEntry(testKeyInventory[kw])).map(kw => agentCompact({
+            keyway: kw, qty: getTestKeyPoolQty(kw), pn: testKeyInventory[kw].pn || null, notes: testKeyInventory[kw].notes || null
+        })),
+        tools: Object.keys((toolsDatabase && toolsDatabase.tools) || {}).map(id => {
+            const t = toolsDatabase.tools[id] || {};
+            return agentCompact({
+                id: id, name: t.name || null, partNumber: t.partNumber || null, category: t.category || null,
+                status: t.status || null,
+                platforms: (Array.isArray(t.compatiblePlatforms) ? t.compatiblePlatforms : [])
+                    .map(p => (toolPlatforms[p] && toolPlatforms[p].name) || p),
+                jobTypes: Array.isArray(t.jobTypes) ? t.jobTypes : null
+            });
+        }),
+        activeJobs: Object.values(activeJobs || {}).map(j => agentCompact({
+            id: j.id, make: j.make, model: j.model, startYear: j.startYear, endYear: j.endYear,
+            jobType: j.jobType || null, label: j.label || null, startedAt: j.startedAt, startedBy: j.startedBy || null
+        })),
+        jobs: (jobHistory || []).slice(0, AGENT_JOBS_KEPT).map(j => agentCompact({
+            id: j.id, completedAt: j.completedAt, make: j.make, model: j.model, startYear: j.startYear, endYear: j.endYear,
+            jobType: j.jobType || null, label: j.label || null,
+            keysUsed: (j.keysUsed || []).map(u => ({ pn: String(u.pn), qty: u.qty })),
+            testKeysUsed: j.testKeysUsed || null, testKeyway: j.testKeyway || null,
+            equipment: j.cables || null, charge: j.charge || null, durationMin: j.durationMin || null,
+            notes: j.notes || null, by: j.completedBy || null
+        })),
+        purchases: (purchaseHistory || []).slice(0, AGENT_PURCHASES_KEPT).map(p => agentCompact({
+            id: p.id, date: p.date, vendor: p.vendor || null, pn: p.partNumber != null ? String(p.partNumber) : null,
+            qty: p.quantity, priceEach: money(p.priceEach), total: money(p.total), invoice: p.invoice || null,
+            brand: p.brand || null, notes: p.notes || null
+        })),
+        vendors: getAllVendors().map(v => v.name)
+    };
+}
+
+// Save the snapshot for this user's agents. Only when the user has an access
+// link, and only when something changed since this session last saved it.
+// One batch, so the server never sees half of an old and half of a new one;
+// parts left over from a bigger snapshot are deleted in the same batch.
+async function publishAgentSnapshot() {
+    if (!currentUser || !firebaseDb) return false;
+    if (agentTokens === null || agentTokensUid !== currentUser.uid) await loadAgentTokens();
+    if (!agentTokens || !agentTokens.length) return false;
+    const text = JSON.stringify(buildAgentSnapshot());
+    if (text === agentSnapshotSeen) return false;
+    const col = firebaseDb.collection('users').doc(currentUser.uid).collection('agent');
+    const parts = Math.max(1, Math.ceil(text.length / CLOUD_PART_CHARS));
+    const builtAt = new Date().toISOString();
+    const batch = firebaseDb.batch();
+    for (let i = 0; i < parts; i++) {
+        batch.set(col.doc(cloudStoreDocId('view', i)), {
+            parts: parts, builtAt: builtAt, schema: AGENT_SNAPSHOT_SCHEMA,
+            json: text.slice(i * CLOUD_PART_CHARS, (i + 1) * CLOUD_PART_CHARS)
+        });
+    }
+    const existing = await col.get();
+    existing.forEach(d => {
+        const m = /^view(?:__(\d+))?$/.exec(d.id);
+        if (m && (m[1] ? parseInt(m[1], 10) : 1) > parts) batch.delete(d.ref);
+    });
+    await batch.commit();
+    agentSnapshotSeen = text;
+    agentSnapshotAt = new Date(builtAt);
+    renderAgentAccessUI();
+    return true;
+}
+
+function loadAgentTokens() {
+    if (!currentUser || !firebaseDb) { agentTokens = null; return Promise.resolve(); }
+    if (agentTokensLoading) return agentTokensLoading;
+    const uid = currentUser.uid;
+    agentTokensLoading = (async () => {
+        try {
+            const snap = await firebaseDb.collection('agentTokens').where('uid', '==', uid).get();
+            agentTokens = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
+                .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+            agentAccessError = null;
+        } catch (e) {
+            agentTokens = [];
+            agentAccessError = e && e.code === 'permission-denied'
+                ? 'The cloud rules for AI agents are not in place yet. Add the agentTokens and agent rules from tools/firestore.rules (see agent-bridge/README.md).'
+                : (e.message || String(e));
+        }
+        agentTokensUid = uid;
+        agentTokensLoading = null;
+        renderAgentAccessUI();
+    })();
+    return agentTokensLoading;
+}
+
+async function agentSha256Hex(text) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function createAgentLink() {
+    if (!currentUser || !firebaseDb) { toast('Sign in first'); return; }
+    const name = document.getElementById('agentNewName').value.trim();
+    const canWrite = document.getElementById('agentNewAccess').value === 'write';
+    if (!name) { toast('Name the agent first (e.g. Grok)'); return; }
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = 'lsa_' + btoa(String.fromCharCode.apply(null, Array.from(bytes)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    try {
+        const hash = await agentSha256Hex(token);
+        await firebaseDb.collection('agentTokens').doc(hash).set({
+            uid: currentUser.uid, email: currentUser.email || null,
+            name: name, canWrite: canWrite, createdAt: new Date().toISOString()
+        });
+    } catch (e) {
+        toast('Could not create the link: ' + (e.message || e));
+        return;
+    }
+    agentNewLink = { name: name, url: agentServerBase() + '/mcp/' + token };
+    document.getElementById('agentNewName').value = '';
+    await loadAgentTokens();
+    // The first link makes the snapshot exist; agents can answer right away.
+    publishAgentSnapshot().catch(e => console.warn('Agent snapshot not published:', e));
+}
+
+async function revokeAgentLink(id) {
+    const t = (agentTokens || []).find(x => x.id === id);
+    if (!t || !confirm('Revoke the access link for ' + t.name + '?\n\nThat agent loses access right away. You can make a new link any time.')) return;
+    try {
+        await firebaseDb.collection('agentTokens').doc(id).delete();
+    } catch (e) {
+        toast('Could not revoke: ' + (e.message || e));
+        return;
+    }
+    await loadAgentTokens();
+    toast('Access revoked for ' + t.name);
+}
+
+function copyAgentLink() {
+    const el = document.getElementById('agentNewLinkText');
+    if (!el) return;
+    const done = () => toast('Link copied');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.value).then(done, () => { el.select(); document.execCommand('copy'); done(); });
+    } else {
+        el.select(); document.execCommand('copy'); done();
+    }
+}
+
+function dismissAgentLink() {
+    agentNewLink = null;
+    renderAgentAccessUI();
+}
+
+function saveAgentServerUrl() {
+    const v = document.getElementById('agentServerInput').value.trim();
+    try {
+        if (v && v !== AGENT_SERVER_DEFAULT) localStorage.setItem('lockscroll_agent_server', v);
+        else localStorage.removeItem('lockscroll_agent_server');
+    } catch (e) {}
+    toast('Server address saved');
+    renderAgentAccessUI();
+}
+
+function renderAgentAccessUI() {
+    const el = document.getElementById('agentAccessUI');
+    if (!el) return;
+    if (!firebaseEnabled || !currentUser) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--dim);">Sign in under Cloud Sync to connect AI agents.</div>';
+        return;
+    }
+    if (agentTokensUid && agentTokensUid !== currentUser.uid) {
+        // Another account signed in: nothing of the last one's carries over.
+        agentTokens = null; agentTokensUid = null; agentNewLink = null;
+        agentSnapshotSeen = null; agentSnapshotAt = null; agentAccessError = null;
+    }
+    if (agentTokens === null) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--dim);">Loading&hellip;</div>';
+        loadAgentTokens();
+        return;
+    }
+    // A sync redraws this; keep what is being typed.
+    const typedName = (document.getElementById('agentNewName') || {}).value || '';
+    const typedAccess = (document.getElementById('agentNewAccess') || {}).value || 'read';
+    const btn = 'padding:8px 10px;border-radius:6px;font-size:12px;cursor:pointer;';
+    const fresh = agentNewLink
+        ? '<div style="border:1px solid var(--accent);border-radius:8px;padding:10px;margin-bottom:10px;">' +
+            '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">Access link for ' + escapeJobText(agentNewLink.name) + '</div>' +
+            '<div style="font-size:11px;color:#e0a800;margin-bottom:6px;">Copy it now. It is shown only once, and anyone with it can use this access.</div>' +
+            '<input id="agentNewLinkText" class="modal-input" readonly value="' + escapeJobText(agentNewLink.url) + '" style="font-size:11px;font-family:monospace;" onclick="this.select()">' +
+            '<div style="display:flex;gap:8px;margin-top:6px;">' +
+                '<button onclick="copyAgentLink()" style="flex:1;' + btn + 'background:var(--accent);color:var(--bg);border:none;font-weight:700;">Copy</button>' +
+                '<button onclick="dismissAgentLink()" style="flex:1;' + btn + 'background:var(--bg);color:var(--dim);border:1px solid var(--border);">Done</button>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--dim);margin-top:6px;">Paste it as a custom connector (MCP server URL) in Grok, Claude or ChatGPT.</div>' +
+          '</div>' : '';
+    const list = agentTokens.length
+        ? agentTokens.map(t =>
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+                '<div><div style="font-size:13px;font-weight:600;">' + escapeJobText(t.name || 'Agent') + '</div>' +
+                    '<div style="font-size:11px;color:var(--dim);">' + (t.canWrite ? 'Read + write' : 'Read only') +
+                    (t.lastUsedAt ? ' &middot; used ' + escapeJobText(formatLastSync(new Date(t.lastUsedAt))) : ' &middot; not used yet') + '</div></div>' +
+                '<button onclick="revokeAgentLink(\'' + String(t.id).replace(/'/g, "\\'") + '\')" style="' + btn + 'background:var(--bg);color:#d9534f;border:1px solid var(--border);">Revoke</button>' +
+            '</div>').join('')
+        : '<div style="font-size:12px;color:var(--dim);padding:4px 0 8px;">No agents connected.</div>';
+    const status = agentTokens.length
+        ? '<div style="font-size:11px;color:var(--dim);margin-top:8px;">Agents see your data as of the last sync' +
+            (agentSnapshotAt ? ' (' + escapeJobText(formatLastSync(agentSnapshotAt)) + ')' : '') + '.</div>' : '';
+    el.innerHTML =
+        (agentAccessError ? '<div style="font-size:12px;color:#e0a800;margin-bottom:8px;">' + escapeJobText(agentAccessError) + '</div>' : '') +
+        fresh + list + status +
+        '<div style="display:flex;gap:6px;margin-top:10px;">' +
+            '<input id="agentNewName" class="modal-input" placeholder="Agent name, e.g. Grok" style="flex:2;min-width:0;font-size:12px;" value="' + escapeJobText(typedName) + '">' +
+            '<select id="agentNewAccess" class="modal-input" style="flex:1;min-width:0;font-size:12px;">' +
+                '<option value="read">Read only</option><option value="write"' + (typedAccess === 'write' ? ' selected' : '') + '>Read + write</option></select>' +
+        '</div>' +
+        '<button onclick="createAgentLink()" style="width:100%;margin-top:6px;' + btn + 'background:var(--bg);color:var(--accent);border:1px solid var(--accent);">+ New access link</button>' +
+        '<details style="margin-top:10px;font-size:11px;color:var(--dim);"><summary style="cursor:pointer;">Server address</summary>' +
+            '<input id="agentServerInput" class="modal-input" value="' + escapeJobText(agentServerBase()) + '" style="font-size:11px;font-family:monospace;margin-top:6px;">' +
+            '<button onclick="saveAgentServerUrl()" style="margin-top:6px;' + btn + 'background:var(--bg);color:var(--accent);border:1px solid var(--border);">Save</button>' +
+        '</details>';
 }
 
 // ===== Cloud storage layout =====
