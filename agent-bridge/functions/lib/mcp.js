@@ -34,7 +34,7 @@ export function buildServer({ getData, access }) {
 
   server.registerTool('snapshot_info', {
     title: 'Data status',
-    description: 'When the data was last synced from the app, how much there is (keys, stock, jobs, purchases), the vendors on file, and whether this connection may write.',
+    description: 'When the data was last synced from the app, how much there is (keys, stock, jobs, purchases), the vendors on file, and what this connection can do (every tool only reads).',
     inputSchema: {},
     annotations: READ
   }, withSnap(d => T.snapshotInfo(d.snap, d.meta, access)));
@@ -51,8 +51,8 @@ export function buildServer({ getData, access }) {
 
   server.registerTool('get_key', {
     title: 'Get key',
-    description: 'Everything on one key: FCC IDs, FIDs, chip, keyway, buttons, frequency, battery, emergency blade, Lishi tools, OEM and cross-reference numbers, stock, every vendor price and distributor version (with the stock of each version), vehicles, test keys for its keyway, notes. Accepts a part number, any of its SKUs, or an old part number that was renamed.',
-    inputSchema: { pn: z.string().describe('Part number or SKU, e.g. "8701" or "YCKG#1105".') },
+    description: 'Everything on one key: FCC IDs, FIDs, chip, keyway, buttons, frequency, battery, emergency blade, Lishi tools, OEM and cross-reference numbers, stock, every vendor price and distributor version (with the stock of each version), vehicles, test keys for its keyway, notes. Accepts a part number, any of its SKUs, an old part number that was renamed, or an OEM or cross-reference number listed on the key.',
+    inputSchema: { pn: z.string().describe('Part number, SKU or OEM number, e.g. "8701", "YCKG#1105" or "13530712".') },
     annotations: READ
   }, withSnap((d, a) => T.getKey(d.snap, a)));
 
@@ -81,13 +81,13 @@ export function buildServer({ getData, access }) {
 
   server.registerTool('list_jobs', {
     title: 'Job history',
-    description: 'Completed jobs, newest first: vehicle, job type, keys used from stock, test keys, equipment (cables/adapters), amount charged, notes. Also lists jobs in progress. Filter by dates, make, model or a word in the label, notes or equipment.',
+    description: 'Completed jobs, newest first: vehicle, job type, customer, VIN, work order or property reference, keys used from stock, test keys, equipment (cables/adapters), amount charged, notes. Also lists jobs in progress. Filter by dates, make, model or a word in the label, customer, VIN, reference, notes or equipment.',
     inputSchema: {
       since: z.string().optional().describe('ISO date, e.g. "2026-10-01".'),
       until: z.string().optional().describe('ISO date.'),
       make: z.string().optional(),
       model: z.string().optional(),
-      query: z.string().optional().describe('Word in the label, notes, equipment, job type or a key part number.'),
+      query: z.string().optional().describe('Word in the label, customer, VIN, reference, notes, equipment, job type or a key part number.'),
       limit: z.number().int().min(1).max(500).optional().describe('Default 25.')
     },
     annotations: READ

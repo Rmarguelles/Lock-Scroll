@@ -22,10 +22,11 @@ const SNAP = {
   schema: 1, app: 'v281', owner: 'me@example.com',
   keys: [
     { pn: '8701', fccIds: ['M3NWXF0B1'], keyType: 'Proximity', keyway: 'Y159', buttons: '3 Button: L, U, P (Lock, Unlock, Panic)', stock: 3,
+      crossRefs: [{ pn: '68417820AA', brand: 'Strattec' }],
       prices: [{ vendor: 'Keyless Ride', priceA: 84 }], vehicles: [{ make: 'Jeep', model: 'Wagoneer', startYear: 2022, endYear: 2023 }], source: 'builtin' },
-    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2,
+    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2, oem: ['164-R8198'],
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#0011', options: yckgOptions }], vehicles: FORD, source: 'custom', importedFrom: 'Your Car Key Guys' },
-    { pn: 'YCKG#B-RC', brand: 'OEM Recased (No Logo)', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 1, otherPns: ['YCKG#F-RC'],
+    { pn: 'YCKG#B-RC', brand: 'OEM Recased (No Logo)', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 1, otherPns: ['YCKG#F-RC'], oem: ['164-R8198'],
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#B-RC', options: yckgOptions }], vehicles: FORD, source: 'custom' },
     { pn: 'YCKG#1105', brand: 'OEM Board OEM Shell', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', stock: 0,
       vehicles: [FORD[0]], source: 'custom' },
@@ -37,7 +38,8 @@ const SNAP = {
   tools: [{ id: 't1', name: 'Autel IM608', category: 'Programmers', status: 'owned', platforms: ['Autel'] }],
   activeJobs: [],
   jobs: [
-    { id: 'j2', completedAt: '2026-10-20T15:00:00Z', make: 'Ford', model: 'F-150', startYear: 2018, endYear: 2023, jobType: 'AKL', keysUsed: [{ pn: 'YCKG#0011', qty: 1 }], equipment: 'FDRS', charge: 300 },
+    { id: 'j2', completedAt: '2026-10-20T15:00:00Z', make: 'Ford', model: 'F-150', startYear: 2018, endYear: 2023, jobType: 'AKL', keysUsed: [{ pn: 'YCKG#0011', qty: 1 }], equipment: 'FDRS', charge: 300,
+      customer: 'Jane Doe', vin: '1FTEW1EP5JFA00001', ref: 'WO-4821' },
     { id: 'j1', completedAt: '2026-09-02T15:00:00Z', make: 'Jeep', model: 'Wagoneer', startYear: 2022, endYear: 2023, jobType: 'Add key', keysUsed: [{ pn: '8701', qty: 1 }], charge: 180 }
   ],
   purchases: [{ id: 'p1', date: '2026-10-18', vendor: 'Your Car Key Guys', pn: 'YCKG#0011', qty: 2, priceEach: 50, total: 100, invoice: 'INV-1001' }],
@@ -128,6 +130,28 @@ test('get_key: by second SKU, versions carry their stock, test keys for the keyw
   await c.close();
 });
 
+test('get_key: by an OEM or cross-reference number the key lists', async () => {
+  const c = await connect(base + '/mcp/' + TOKEN);
+  const one = await call(c, 'get_key', { pn: '68417820-aa' });
+  assert.equal(one.pn, '8701');
+  assert.match(one.note, /cross-reference number on this key/);
+  // Two keys list it: name them rather than pick one
+  const several = await call(c, 'get_key', { pn: '164R8198' });
+  assert.equal(several.pn, undefined);
+  assert.deepEqual(several.keys.map(k => k.pn).sort(), ['YCKG#0011', 'YCKG#B-RC']);
+  await c.close();
+});
+
+test('a link made with write access reports read only: no tool writes', async () => {
+  const t = 'lsa_' + 'd'.repeat(43);
+  await db.collection('agentTokens').doc(hashToken(t)).set({ uid: 'u1', name: 'W', canWrite: true });
+  const c = await connect(base + '/mcp/' + t);
+  const r = await call(c, 'snapshot_info');
+  assert.equal(r.access, 'read only');
+  assert.match(r.accessNote, /no write tools/);
+  await c.close();
+});
+
 test('find_keys_for_vehicle: in-stock first, aliases and loose model names', async () => {
   const c = await connect(base + '/mcp/' + TOKEN);
   const r = await call(c, 'find_keys_for_vehicle', { make: 'ford', model: 'f150', year: 2019 });
@@ -163,6 +187,10 @@ test('list_jobs and list_purchases: filters and totals', async () => {
   assert.equal(jobs.jobs[0].equipment, 'FDRS');
   const byKey = await call(c, 'list_jobs', { query: '8701' });
   assert.equal(byKey.jobs[0].id, 'j1');
+  const byRef = await call(c, 'list_jobs', { query: 'wo4821' });
+  assert.deepEqual(byRef.jobs.map(j => j.id), ['j2']);
+  const byCustomer = await call(c, 'list_jobs', { query: 'jane' });
+  assert.deepEqual(byCustomer.jobs.map(j => j.id), ['j2']);
   const inv = await call(c, 'list_purchases', { invoice: 'inv 1001' });
   assert.equal(inv.total, 1);
   const byPn = await call(c, 'list_purchases', { pn: 'yckg0011' });

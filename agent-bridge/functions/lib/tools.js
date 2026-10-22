@@ -56,6 +56,16 @@ export function findKey(snap, pn) {
   return null;
 }
 
+// Keys that list a number as an OEM or cross-reference number. An imported key
+// is filed under the distributor's SKU (GM-074) with the OEM number
+// (13530712) only as a cross-reference, so asking for the OEM number lands here.
+export function findKeysByRef(snap, pn) {
+  const want = pnKey(pn);
+  if (!want) return [];
+  return snap.keys.filter(k => (k.oem || []).some(p => pnKey(p) === want) ||
+    (k.crossRefs || []).some(c => pnKey(c.pn) === want));
+}
+
 // One line of a list: enough to pick a key and ask for more with get_key.
 export function keyRow(key) {
   const pp = pricePoint(key);
@@ -93,7 +103,10 @@ export function snapshotInfo(snap, meta, access) {
     note: 'This is the data as of the last time the Lock & Scroll app synced. Changes made since then on a device that has not synced are not here.',
     app: snap.app,
     owner: snap.owner,
-    access: access.canWrite ? 'read + write' : 'read only',
+    // Every tool here only reads, so a link made with write access still
+    // only reads. Say what the connection can do, not what the link allows.
+    access: 'read only',
+    accessNote: access.canWrite ? 'This link was made with write access, but the bridge has no write tools yet.' : null,
     counts: {
       keys: snap.keys.length,
       customKeys: snap.keys.filter(k => k.source === 'custom').length,
@@ -159,8 +172,18 @@ export function searchKeys(snap, { query, limit = 20 }) {
 
 // ---- get_key --------------------------------------------------------------
 export function getKey(snap, { pn }) {
-  const hit = findKey(snap, pn);
-  if (!hit) return { error: 'No key with part number, SKU or old part number "' + pn + '". Try search_keys.' };
+  let hit = findKey(snap, pn);
+  if (!hit) {
+    const refs = findKeysByRef(snap, pn);
+    if (refs.length > 1) {
+      return {
+        note: 'No key is filed under "' + pn + '", but ' + refs.length + ' keys list it as an OEM or cross-reference number. Ask get_key for one of these part numbers.',
+        keys: refs.map(keyRow)
+      };
+    }
+    if (refs.length === 1) hit = { key: refs[0], matchedRef: pn };
+  }
+  if (!hit) return { error: 'No key with part number, SKU, OEM or cross-reference number, or old part number "' + pn + '". Try search_keys.' };
   const k = hit.key;
   // Each distributor version names the key it is filed under; add that key's stock.
   const prices = (k.prices || []).map(p => compact({
@@ -173,6 +196,7 @@ export function getKey(snap, { pn }) {
   const testKeys = k.keyway ? (snap.testKeys || []).filter(t => norm(t.keyway) === norm(k.keyway)) : [];
   return compact({
     renamedFrom: hit.renamedFrom || null,
+    note: hit.matchedRef ? '"' + hit.matchedRef + '" is an OEM or cross-reference number on this key; its part number is ' + k.pn + '.' : null,
     ...k,
     prices,
     vehicles: (k.vehicles || []).map(vehicleLine),
@@ -248,7 +272,8 @@ export function listJobs(snap, { since, until, make, model, query, limit = 25 })
   if (model) jobs = jobs.filter(j => norm(j.model).includes(norm(model)));
   if (query) {
     const t = norm(query);
-    jobs = jobs.filter(j => [j.label, j.notes, j.equipment, j.jobType, ...(j.keysUsed || []).map(u => u.pn)].some(x => norm(x).includes(t)));
+    jobs = jobs.filter(j => [j.label, j.customer, j.vin, j.ref, j.notes, j.equipment, j.jobType,
+      ...(j.keysUsed || []).map(u => u.pn)].some(x => norm(x).includes(t)));
   }
   const max = Math.max(1, Math.min(Number(limit) || 25, 500));
   return {

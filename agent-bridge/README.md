@@ -76,7 +76,8 @@ commands again.
 Lock & Scroll → **Settings → AI Agents**, signed in:
 
 1. Type the agent's name (Grok, Claude, ChatGPT), pick **Read only** or
-   **Read + write**, tap **New access link**.
+   **Read + write (later)**, tap **New access link**. Every tool only reads
+   for now, so either link can only read, and `snapshot_info` says so.
 2. **Copy** the link. It is shown once. Make one per agent, so each can be
    revoked on its own.
 3. If step 3 printed a different address, open **Server address**, paste it,

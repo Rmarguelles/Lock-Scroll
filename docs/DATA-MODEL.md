@@ -290,10 +290,32 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 
 **Keyed by `make\|model`:** `vehicleYearNotes`.
 
-**Other:** `purchaseHistory`, `jobHistory`, `activeJobs`, `toolsDatabase`,
-`lishiInventory`, `testKeyInventory`, `customVendors`, `customDropdownValues`,
-`ilcoRef`, `ilcoReviewQueue`, `antiqueCustom`, `antiqueOverrides`,
-`deletedLishiTools`, `deletedPnSupersessions`.
+**Other:** `purchaseHistory`, `jobHistory`, `activeJobs`, `deletedJobs`,
+`toolsDatabase`, `lishiInventory`, `testKeyInventory`, `customVendors`,
+`customDropdownValues`, `ilcoRef`, `ilcoReviewQueue`, `antiqueCustom`,
+`antiqueOverrides`, `deletedLishiTools`, `deletedPnSupersessions`.
+
+### Jobs (v282)
+
+A `jobHistory` record also carries the optional `customer`, `phone`, `vin`
+and `ref` (work order or property number). `testKeyDrawn` records where its
+test keys came from (`[{pn, n}]` from a key's stock, `[{kw, n}]` from a
+keyway count), so they go back exactly when the job changes. `countEdits`
+keeps the last ten key/test-key count changes as undo entries, with the
+counts from before each change.
+
+- **Editing counts** puts the old counts back in stock and takes the new ones out.
+- **Reopen** puts the job's stock back and moves it to `activeJobs` under a new
+  id, carrying the record as `prior` so the Complete dialog starts from it;
+  **Undo reopen** (Cancel on that job) restores the record and takes the stock again.
+- **Delete** removes the record, and asks whether to put its stock back.
+- `deletedJobs` (`[{id, at}]`) tombstones deleted, reopened and canceled jobs.
+  Both job stores merge additively by id, so without it the next download
+  would bring the job back. A record edited after its tombstone is kept. On
+  download a job record that exists on both sides takes the copy edited last
+  (`editedAt`, else `completedAt`).
+- `startedBy` / `completedBy` are blank on a device that is not signed in
+  (older records say `Unknown`).
 
 ---
 
@@ -341,7 +363,7 @@ verbatim rather than guess at our formats.
 | `frequency` | `bucketizeFrequency()` | Parses the digits and buckets by average, so `315MHz`, `315 MHz` and `314.95 MHz` all become `305-320 MHz`; `433 Mhz`, `434MHz` and `433.66-434.18 MHz` all become `434 MHz`. Spacing and case are irrelevant. A value outside every known band (e.g. `13.56 MHz`) is left untouched, as is text with no digits (`None (Transponder Only)`). |
 | price fields | `normalizePriceInput()` | Strips a leading `$` and thousands commas; leaves non-numeric notes as typed. |
 | `battery` | — | Canonical form is `<type> qty <n>`, e.g. `2032 qty 1`. Three spellings exist in legacy data (`2032`, `2032 x1`, `2032 qty 1`); only the last is written by the form. |
-| `chip` | **none yet** | 48 distinct values, already inconsistent in case. Distributors use a different vocabulary again (`ID46`, `ID47`, `4A` vs our `PH 46`, `Hitag AES PCF7953M`). **A mapping table is still needed before any import can fill this field.** |
+| `chip` | `mapImportChip()` (v282) | 48 distinct values, already inconsistent in case. Distributors use a different vocabulary (`ID46`, `ID47`, `4A`). A name the chip list already has is taken as is; otherwise `IMPORT_CHIP_FAMILIES` maps a name that means one catalog chip (`ID46` → `PH 46`, `4A` → `Hitag AES Type 4A`, `8A`/H-chip → `H-Chip Master 128-BIT` ...). An ambiguous one (a bare `4D67` is three catalog chips) is left for review. |
 
 Bands, for reference: 300–400 → `305-320 MHz`, 420–450 → `434 MHz`,
 850–885 → `868 MHz`, 890–915 → `902 MHz`, 915–935 → `923 MHz`.
@@ -418,7 +440,7 @@ What the normalizers fix, so the extractor never has to:
 | price | `normalizePriceInput()` |
 | `battery` | `2032`, `2032 x1`, `CR2032` → `2032 qty 1` |
 | `emergencyPN` | only `IN-<digits>`; a generic blade description is rejected and flagged |
-| `chip` | **deliberately not mapped** — kept as `chipRaw` for review, since one FCC ID can carry several chips (§5d) |
+| `chip` | `mapImportChip()` into `proposed.chip` with `chipFrom: 'listing'`; `chipRaw` keeps the listing's wording. Written only to the keys the listing is the part for, never to a key matched by FCC ID alone, since one FCC ID can carry several chips (§5d). Unmappable text is flagged |
 
 Identity on approve, per the model in §7:
 
@@ -436,6 +458,17 @@ Identity on approve, per the model in §7:
   that distributor already has for that FCC ID and button layout (or count: a
   key imported with a count but no layout keeps it as `buttonCount`). The SKU
   goes in its `mergedPNs` (searchable, and `findKeyBySku()` resolves it).
+- **FID** (v282): when none of the listing's FCC IDs has one, approving assigns
+  one as Auto-Assign does (prefix from the vehicles' makes, next number in the
+  key type's band), so the new keys group with their make. FIDs stay keyed by
+  FCC ID; the chip does not split them (§5d).
+- **Fill missing chips and FIDs on imported keys** (v282) does both for keys
+  imported earlier, where empty; the chip only for imports approved on that
+  device (applied queue rows are local).
+- **Vendor names** (v282): `canonicalVendorName()` files a distributor under the
+  vendor list's spelling (`Keyless City` → `Keyless-City`), and
+  `normalizeVendorNames()` re-files the stores on load, after a download and
+  after a restore.
 - An option key that already exists gets the listing's **vehicles** it lacks.
   Otherwise an existing key is only **filled where empty**: an import never
   overwrites a hand-entered value, and base keys are written through
@@ -488,10 +521,11 @@ Flag bookkeeping:
   **reported in the hint, never swallowed**, and Save acknowledges it — otherwise
   a card would sit yellow forever over something with nothing to edit.
 
-`proposed.chip` is new and separate from `chipRaw`: the importer still refuses
-to guess a chip (§5d), so it stays `null` until set by hand here, and only then
-does `applyImportCandidate()` write it. `chipRaw` keeps the distributor's own
-wording (`ID47`) next to it for reference.
+`proposed.chip` is separate from `chipRaw`. Since v282 it starts as the mapped
+listing chip (`chipFrom: 'listing'`) or `null` when the wording maps to no one
+chip. Setting it here clears `chipFrom`, and a chip set by hand is written
+wherever the other fields go. `chipRaw` keeps the distributor's own wording
+(`ID47`) next to it for reference.
 
 Values are re-normalized on save through the same functions the import path
 uses — `bucketizeFrequency()`, `normalizeBatteryValue()`, `normalizePriceInput()`
@@ -559,8 +593,12 @@ running as a Firebase Function. Setup and tools: `agent-bridge/README.md`.
   discontinued, lishi, stock, prices[{vendor, sku, priceA, priceB, emergency,
   shell, oem, options[{label, sku, price, condition, key, soldOut}]}],
   vehicles, notes, source, importedFrom), `renamedPns`, `testKeys`, `tools`,
-  `activeJobs`, `jobs` (newest 500; `cables` is `equipment`), `purchases`
+  `activeJobs`, `jobs` (newest 500; `cables` is `equipment`; `customer`, `vin`
+  and `ref` since v282, the phone number stays in the app), `purchases`
   (newest 1000), `vendors`. Empty values are left out.
+- `get_key` also takes an OEM or cross-reference number a key lists (v282).
+  Every tool only reads, so `snapshot_info` reports `read only` even for a
+  link made with write access.
 - **Access links** are `lsa_` + 32 random bytes (base64url), shown once. The
   bridge looks the hash up on each request (cached a minute); deleting the
   document revokes the link.
