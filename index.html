@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v283</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v284</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v283</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v284</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v283<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v284<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -26540,7 +26540,9 @@ function renderVehicleYearGrid(make, model) {
         html += '<div style="text-align:center;color:var(--dim);padding:24px;">No years yet</div>';
     } else {
         html += '<div class="year-grid">' + years.map(({ year, pns }) => {
-            const inStock = [...pns].some(pn => (stockData[pn] || 0) > 0);
+            // How many of the keys that fit have stock, not just whether one does:
+            // "4 keys · in stock" read as four on the shelf when one was
+            const inStock = [...pns].filter(pn => (stockData[pn] || 0) > 0).length;
             const classes = ['year-chip'];
             if (inStock) classes.push('in-stock');
             if (year === 'all') classes.push('all-years');
@@ -26548,7 +26550,7 @@ function renderVehicleYearGrid(make, model) {
             return `
                 <div class="${classes.join(' ')}" onclick="selectVehicleYear(${year === 'all' ? "'all'" : year})">
                     <div class="year-chip-year">${year === 'all' ? 'All years' : year}</div>
-                    <div class="year-chip-count">${pns.size} key${pns.size !== 1 ? 's' : ''}${inStock ? ' · in stock' : ''}</div>
+                    <div class="year-chip-count">${pns.size} key${pns.size !== 1 ? 's' : ''}${inStock ? ' · ' + inStock + ' in stock' : ''}</div>
                 </div>`;
         }).join('') + '</div>';
     }
