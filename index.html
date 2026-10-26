@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v286</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v287</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v286</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v287</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v286<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v287<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -13996,7 +13996,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
         </div>
     ` : (allKeyFccs.length > 0 ? `
         <div style="text-align:center;margin-bottom:16px;">
-            <span onclick="openEditFidModal('${allKeyFccs[0].replace(/'/g, "\\'")}')" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">
+            <span onclick="openEditFidModal('${jsAttrArg(allKeyFccs[0])}')" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">
                 No FID assigned - Click to assign →
             </span>
         </div>
@@ -14158,14 +14158,14 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
                 <span class="detail-label">Emergency Key PN</span>
                 <span class="detail-value mono">${key.emergencyPN}</span>
             </div>` : ''}
-            ${allKeyFccs.length === 1 ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${allKeyFccs[0]}')">
+            ${allKeyFccs.length === 1 ? `<div class="detail-row" style="cursor:pointer" onclick="openFccPage('${jsAttrArg(allKeyFccs[0])}')">
                 <span class="detail-label">FCC ID</span>
                 <span class="detail-value mono" style="color:var(--accent)">${allKeyFccs[0]} &#8594;</span>
             </div>` : ''}
             ${allKeyFccs.length > 1 ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;">
                 <span class="detail-label" style="margin-bottom:4px;">FCC IDs</span>
                 <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
-                    ${allKeyFccs.map(f => `<span class="detail-value mono" style="color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();openFccPage('${f}')">${f}${fidAssignments[f] ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">(FID: ${fidAssignments[f]})</span>` : ''} &#8594;</span>`).join('')}
+                    ${allKeyFccs.map(f => `<span class="detail-value mono" style="color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();openFccPage('${jsAttrArg(f)}')">${escapeJobText(f)}${fidAssignments[f] ? ` <span style="font-size:11px;color:var(--dim);font-family:inherit;">(FID: ${fidAssignments[f]})</span>` : ''} &#8594;</span>`).join('')}
                 </div>
             </div>` : ''}
             ${key.mergedPNs && key.mergedPNs.length > 0 ? `<div class="detail-row">
@@ -16395,7 +16395,7 @@ function openFidDetail(fid) {
         </div>` : ''}
     `;
 
-    const primaryFccJs = primaryFcc ? `'${primaryFcc}'` : 'null';
+    const primaryFccJs = primaryFcc ? `'${jsAttrArg(primaryFcc)}'` : 'null';
     document.getElementById('fidDetailContent').innerHTML = `
         <button class="fid-detail-add-btn" onclick="openAddCustomKey(${primaryFccJs})">
             + Add New Part Number
@@ -16595,7 +16595,7 @@ function renderFidList() {
         const mergedFccs = Object.entries(fidMerges).filter(([src, tgt]) => tgt === fccId).map(([src]) => src);
         
         return `${separator}
-            <div class="fid-card" data-fccid="${fccId}" data-fid="${fid || ''}" data-makes="${makes.join(',')}">
+            <div class="fid-card" data-fccid="${escapeJobText(fccId)}" data-fid="${fid || ''}" data-makes="${makes.join(',')}">
                 <div class="fid-card-left">
                     <div>
                         ${fid 
@@ -16604,22 +16604,22 @@ function renderFidList() {
                         }
                     </div>
                     <div class="fid-info">
-                        <h4>${fccId}</h4>
+                        <h4>${escapeJobText(fccId)}</h4>
                         ${mergedFccs.length > 0 ? `
                             <div style="font-size:11px;color:var(--accent);margin:4px 0;">
-                                🔗 Merged: ${mergedFccs.map(fc => `<span style="cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openEditFidModal('${fc}')">${fc}</span>`).join(', ')}
+                                🔗 Merged: ${mergedFccs.map(fc => `<span style="cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();openEditFidModal('${jsAttrArg(fc)}')">${escapeJobText(fc)}</span>`).join(', ')}
                             </div>
                         ` : ''}
                         <p>${keys.length} key${keys.length !== 1 ? 's' : ''} • ${makesDisplay || 'Unknown'}</p>
                     </div>
                 </div>
                 <div class="fid-card-actions">
-                    ${ENABLE_QUICK_MOVE_TO_GROUP ? `<select class="fid-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:11px;padding:6px 8px;max-width:90px;" onchange="quickMoveToGroup('${fccId}', this.value); this.value='';" title="Move to group">
+                    ${ENABLE_QUICK_MOVE_TO_GROUP ? `<select class="fid-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:11px;padding:6px 8px;max-width:90px;" onchange="quickMoveToGroup('${jsAttrArg(fccId)}', this.value); this.value='';" title="Move to group">
                         <option value="">Group</option>
                         ${Object.entries(fidPrefixes).map(([p, d]) => '<option value="' + p + '">' + p + ' - ' + d.name + '</option>').join('')}
                     </select>` : ''}
-                    <button class="fid-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border);" onclick="openEditFidModal('${fccId}')">${fid ? 'Edit' : 'Assign'}</button>
-                    <button class="fid-btn" onclick="openFccFromFid('${fccId}')">View →</button>
+                    <button class="fid-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border);" onclick="openEditFidModal('${jsAttrArg(fccId)}')">${fid ? 'Edit' : 'Assign'}</button>
+                    <button class="fid-btn" onclick="openFccFromFid('${jsAttrArg(fccId)}')">View →</button>
                 </div>
             </div>
         `;
@@ -17152,7 +17152,7 @@ function openEditFidModal(fccId) {
     if (fidMerges[fccId]) {
         const targetFcc = fidMerges[fccId];
         const targetFid = fidAssignments[targetFcc];
-        document.getElementById('mergeInfo').innerHTML = '⚠️ This FCC ID is currently merged into <strong>' + targetFid + '</strong> (' + targetFcc + ').<br><button onclick="unmergeFid(\'' + fccId + '\')" style="margin-top:8px;padding:6px 12px;background:#ff4444;color:white;border:none;border-radius:4px;cursor:pointer;">Unmerge</button>';
+        document.getElementById('mergeInfo').innerHTML = '⚠️ This FCC ID is currently merged into <strong>' + targetFid + '</strong> (' + escapeJobText(targetFcc) + ').<br><button onclick="unmergeFid(\'' + jsAttrArg(fccId) + '\')" style="margin-top:8px;padding:6px 12px;background:#ff4444;color:white;border:none;border-radius:4px;cursor:pointer;">Unmerge</button>';
         document.getElementById('mergeInfo').style.display = 'block';
     }
     
@@ -17580,7 +17580,7 @@ function renderFidManagerList() {
     let headerShown = false, prevMake, prevBand;
     container.innerHTML = filtered.map(item => {
         const isSelected = fidManagerSelectedFccs.has(item.fccid);
-        const fccArg = item.fccid.replace(/'/g, "\\'");
+        const fccArg = jsAttrArg(item.fccid);
         let header = '';
         if (item.fid) {
             const band = fidBandKey(item.fid);
@@ -17597,10 +17597,10 @@ function renderFidManagerList() {
             }
         }
         return `${header}
-            <div class="fid-manager-item" data-fccid="${item.fccid}" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${fccArg}')">
+            <div class="fid-manager-item" data-fccid="${escapeJobText(item.fccid)}" style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleFidManagerSelection('${fccArg}')">
                 <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFidManagerSelection('${fccArg}')" style="width:18px;height:18px;cursor:pointer;">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${item.fccid}</div>
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${escapeJobText(item.fccid)}</div>
                     <div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.makes || 'Unknown'} ${item.keyType ? '• ' + item.keyType : ''}</div>
                 </div>
                 <div style="text-align:right;">
@@ -18120,7 +18120,7 @@ function renderFidDragList() {
 
         return `
             <div class="fid-manager-item fid-drag-item"
-                 data-fccid="${fccId}"
+                 data-fccid="${escapeJobText(fccId)}"
                  data-index="${index}"
                  draggable="true"
                  ondragstart="fidDragStart(event)"
@@ -18133,7 +18133,7 @@ function renderFidDragList() {
                 <div style="color:var(--dim);font-size:16px;">☰</div>
                 <div style="width:40px;text-align:center;font-weight:700;color:var(--accent);font-size:14px;">#${index + 1}</div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${fccId}</div>
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent2);">${escapeJobText(fccId)}</div>
                     <div style="font-size:11px;color:var(--dim);">${keyType || 'Unknown type'}</div>
                 </div>
                 <div style="text-align:right;">
@@ -30810,6 +30810,14 @@ function escapeJobText(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+// A value for a quoted argument of an inline handler, onclick="fn('...')":
+// JS-escaped for the string, then HTML-escaped for the attribute. Escaping
+// only the ' let a " end the attribute: the FCC ID TOY43RT45 "Subaru G" gave
+// an Assign button that did nothing.
+function jsAttrArg(value) {
+    return escapeJobText(String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
 }
 
 function rangesOverlap(aStart, aEnd, bStart, bEnd) {
