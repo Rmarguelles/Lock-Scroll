@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v287</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v288</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v287</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v288</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v287<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v288<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -13464,6 +13464,72 @@ function getKeyFids(key) {
     return [...fids];
 }
 
+// The key page's FID block. An FID belongs to an FCC ID, not to a key, so
+// each of the key's FCC IDs gets a line: its FID (tap for every part that
+// shares it) and a button to assign or change it. When an FID's group (its
+// first digit) is not this key's type, the line says why. One shared with
+// keys of that group stays for them; this key gets filed by an FCC ID of its
+// own instead. One nothing else holds there can move in one tap.
+function keyFidSectionHtml(key) {
+    const fccs = getKeyFccIds(key);
+    if (!fccs.length) return '';
+    const want = getFidTypeDigit(key.keyType);
+    const many = fccs.length > 1;
+    const bandOf = fid => { const num = fid ? parseInt(String(fid).split('-')[1], 10) : NaN; return isNaN(num) ? null : Math.floor(num / 100); };
+    const items = fccs.map(f => ({ f, fid: lookupFidForFcc(f) }));
+    // Filed in its own group already: other groups' FIDs only need saying why
+    const hasOwn = items.some(i => bandOf(i.fid) === want);
+    const unassigned = items.filter(i => !i.fid).map(i => i.f);
+    const lines = items.map(({ f, fid }) => {
+        const arg = jsAttrArg(f);
+        const chip = fid
+            ? `<span onclick="openFidDetail('${jsAttrArg(fid)}')" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">FID: ${escapeJobText(fid)} →</span>`
+            : `<span onclick="openEditFidModal('${arg}')" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">No FID</span>`;
+        const btn = `<button onclick="openEditFidModal('${arg}')" style="padding:6px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:14px;font-size:12px;cursor:pointer;">${fid ? 'Edit' : 'Assign'}</button>`;
+        let note = '', calm = false;
+        const have = bandOf(fid);
+        if (have !== null && have !== want && FID_BAND_NAMES[have] !== undefined) {
+            const n = normalizeFccId(f);
+            const holders = DB.filter(k => String(k.pn) !== String(key.pn) &&
+                getFidTypeDigit(k.keyType) === have && getKeyFccIds(k).some(x => normalizeFccId(x) === n));
+            const merged = Object.keys(fidMerges || {}).some(src => normalizeFccId(src) === n);
+            const why = `In the ${FID_BAND_NAMES[have]} group (${have}xx)` +
+                (holders.length ? `: ${holders.length} ${FID_BAND_NAMES[have]} key${holders.length !== 1 ? 's' : ''} share this FCC ID, so it stays there.` : '.');
+            calm = hasOwn && (holders.length || merged);
+            note = holders.length || merged
+                ? why + (hasOwn ? '' : ` This key is ${FID_BAND_NAMES[want]} (${want}xx): ` + (unassigned.length
+                    ? `assign ${escapeJobText(unassigned[0])} a ${want}xx FID.`
+                    : 'give it an FCC ID of its own and assign that one.'))
+                : `In the ${FID_BAND_NAMES[have]} group (${have}xx), but this key is ${FID_BAND_NAMES[want]}. ` +
+                    `<button onclick="moveFidToBand('${arg}', ${want})" style="margin-left:4px;padding:4px 10px;background:var(--accent);color:var(--bg);border:none;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;">Move to ${want}xx</button>`;
+        }
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+                ${chip}${many ? `<span class="mono" style="font-size:11px;color:var(--dim);">${escapeJobText(f)}</span>` : ''}${btn}
+            </div>
+            ${note ? `<div style="font-size:11px;color:${calm ? 'var(--dim)' : '#e0a800'};text-align:center;max-width:420px;line-height:1.4;">${note}</div>` : ''}
+        </div>`;
+    });
+    return `<div style="margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">${lines.join('')}</div>`;
+}
+
+// Move an FCC ID's FID to another type group, same prefix, at that group's
+// next free number. Offered where nothing else holds the FID in its group.
+function moveFidToBand(fccId, digit) {
+    const fid = lookupFidForFcc(fccId);
+    if (!fid) return;
+    const prefix = String(fid).split('-')[0];
+    const next = getNextFidNumber(prefix, digit);
+    if (next === null) { toast('The ' + FID_BAND_NAMES[digit] + ' group (' + digit + 'xx) is full for ' + prefix); return; }
+    const n = normalizeFccId(fccId);
+    const stored = Object.keys(fidAssignments).find(k => fidAssignments[k] === fid && normalizeFccId(k) === n) || fccId;
+    const newFid = prefix + '-' + formatFidNumber(next);
+    fidAssignments[stored] = newFid;
+    saveFidAssignments();
+    refreshFidViews();
+    toast(fid + ' moved to ' + newFid);
+}
+
 // Normalized index over fidAssignments, rebuilt when the store changes.
 // Without it every lookup would linear-scan ~240 assignments per FCC per key.
 let _fidIndex = null;
@@ -13985,22 +14051,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
 
     document.getElementById('detailTitle').textContent = `Part #${key.pn}`;
 
-    // Build FID display — one badge per assigned FID (a key with multiple FCC IDs may belong to multiple FIDs)
-    const fidHtml = assignedFids.length > 0 ? `
-        <div style="text-align:center;margin-bottom:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;">
-            ${assignedFids.map(f => `
-                <span onclick="openFidDetail('${String(f).replace(/'/g, "\\'")}')" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">
-                    FID: ${f} →
-                </span>
-            `).join('')}
-        </div>
-    ` : (allKeyFccs.length > 0 ? `
-        <div style="text-align:center;margin-bottom:16px;">
-            <span onclick="openEditFidModal('${jsAttrArg(allKeyFccs[0])}')" style="display:inline-block;padding:8px 16px;background:var(--bg);color:var(--dim);border:1px dashed var(--border);border-radius:20px;font-size:13px;cursor:pointer;">
-                No FID assigned - Click to assign →
-            </span>
-        </div>
-    ` : '');
+    const fidHtml = keyFidSectionHtml(key);
 
     // Build Autel iKey compatibility badge section — Autel iKeys are proximity-only,
     // so this section is hidden for transponder/chip/remote keys.
@@ -17070,9 +17121,11 @@ function openEditFidModal(fccId) {
         bandSelect.value = FID_BAND_NAMES[currentDigit] !== undefined ? currentDigit : getFidTypeDigitForFcc(fccId);
     } else {
         // Suggest prefix based on makes
+        // Any key holding this FCC ID, as one of several or spelled differently
         const makes = [];
+        const want = normalizeFccId(fccId);
         DB.forEach(key => {
-            if (key.fccid === fccId) {
+            if (getKeyFccIds(key).some(x => normalizeFccId(x) === want)) {
                 (key.vehicles || []).forEach(v => {
                     if (v.make) makes.push(v.make);
                 });
@@ -17172,6 +17225,10 @@ function refreshFidViews() {
     if (document.getElementById('fidManagerPanel').classList.contains('on')) {
         renderFidManagerStats();
         renderFidManagerList();
+    }
+    // A key page left open behind the FID editor shows the new FID
+    if (currentKeyIdx !== null && document.getElementById('detailPanel').classList.contains('on')) {
+        openKey(currentKeyIdx, cameFromFcc, cameFromFid, cameFromFidDetail);
     }
 }
 
