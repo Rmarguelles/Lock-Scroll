@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v281</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v282</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v281</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v282</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v281<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v282<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8830,7 +8830,7 @@ function cloudStorePayload() {
         fidMerges: fidMerges,
         pnSupersessions: pnSupersessions,
         discontinuedPns: discontinuedPns,
-        distImportQueue: pendingDistImportQueueForCloud(),
+        distImportQueue: distImportQueueForCloud(),
         deletedPnSupersessions: deletedPnSupersessions,
         deletedCustomKeys: deletedCustomKeys,
         fidPrefixes: fidPrefixes,
@@ -8853,10 +8853,12 @@ function cloudStorePayload() {
     };
 }
 
-// Only undecided review rows travel; applied and rejected ones are local
-// history. sourceText is an extractor audit note a second device never needs.
-function pendingDistImportQueueForCloud() {
-    return distImportQueue.filter(c => c.status === 'pending').map(c => {
+// Decided review rows travel as well as undecided ones. A row approved on one
+// device otherwise stayed waiting on every other device, which then sent it
+// back up as undecided. sourceText is an extractor audit note a second device
+// never needs.
+function distImportQueueForCloud() {
+    return distImportQueue.map(c => {
         const copy = JSON.parse(JSON.stringify(c));
         if (copy.raw) delete copy.raw.sourceText;
         return copy;
@@ -9189,7 +9191,11 @@ async function downloadFromCloud() {
                 const local = byId[c._id];
                 // A decision beats an undecided copy; otherwise keep local.
                 if (!local) distImportQueue.push(c);
-                else if (local.status === 'pending' && c.status !== 'pending') Object.assign(local, c);
+                else if (local.status === 'pending' && c.status !== 'pending') {
+                    const text = local.raw && local.raw.sourceText;
+                    Object.assign(local, c);
+                    if (text && local.raw && !local.raw.sourceText) local.raw.sourceText = text;
+                }
             });
             saveDistImportQueue();
         }
@@ -21643,6 +21649,120 @@ function refreshImportMatch(cand) {
     return changed;
 }
 
+// One listing: the page a record was read from and its SKU. Every copy of the
+// listing an extractor sends shares this. A record with neither has none and
+// is never taken for a copy of another.
+function importListingKey(cand) {
+    const r = cand.raw || {};
+    const url = String(r.productUrl || '').trim();
+    const sku = String(r.vendorSku || r.pn || '').trim();
+    return url || sku ? url + '|' + sku : null;
+}
+
+// What a copy says, under the review editor's field keys, in a form two
+// copies compare on. Chip is left out: it is never imported.
+function importCopyFields(cand) {
+    const p = cand.proposed || {};
+    const s = v => v === undefined || v === null ? '' : String(v).trim();
+    const list = (a, f) => (a || []).map(f).sort().join(',');
+    return {
+        fccid: normalizeFccId(p.fccid),
+        fccids: list(p.fccids, normalizeFccId),
+        pn: importPnKey(importSkuOf(cand)),
+        altParts: list(p.altParts, a => importPnKey(a && a.pn)),
+        keyType: s(p.keyType), keyway: s(p.keyway), buttons: s(p.buttons),
+        buttonCount: s(p.buttonCount), frequency: s(p.frequency),
+        battery: s(p.battery), emergencyPN: s(p.emergencyPN),
+        vehicles: list(p.vehicles, v => [v.make, v.model, v.startYear, v.endYear].map(s).join('|').toLowerCase()),
+        variants: list(cand.vendor && cand.vendor.variants, v =>
+            [importPnKey(v.vendorSku), s(v.label).toLowerCase(), s(v.condition), parseFloat(v.price), s(v.available)].join('|'))
+    };
+}
+
+// The fields a later copy of a listing changes from an earlier, decided one,
+// measured against what the extractor read the first time, not what a person
+// changed it to (`extracted`, kept on the first edit). A row edited before
+// v282 has no such record, so the fields a person edited or signed off on it
+// do not count.
+function importCopyDiff(prev, cand) {
+    const a = prev.extracted || importCopyFields(prev);
+    const skip = new Set(prev.extracted ? [] : (prev.resolved || []));
+    // Saving either of these in the editor rewrites its partner too
+    if (skip.has('buttons')) skip.add('buttonCount');
+    if (skip.has('fccid')) skip.add('fccids');
+    const b = importCopyFields(cand);
+    return Object.keys(b).filter(k => !skip.has(k) && a[k] !== b[k]);
+}
+
+// The latest approved or rejected copy of each listing, by importListingKey().
+function decidedImportCopies() {
+    const at = c => c.appliedAt || c.rejectedAt || '';
+    const by = new Map();
+    distImportQueue.forEach(c => {
+        if (c.status !== 'applied' && c.status !== 'rejected') return;
+        const k = importListingKey(c);
+        if (k && (!by.has(k) || at(by.get(k)) < at(c))) by.set(k, c);
+    });
+    return by;
+}
+
+// Whether the keys a copy files under are all in the database: each option's
+// SKU, or the key it matched when its options have none.
+function importKeysPresent(cand) {
+    const opts = importOptionsWithSku(cand);
+    return opts.length ? opts.every(v => findKeyBySku(v.vendorSku)) : !cand.isNew;
+}
+
+// A copy needs no review when an earlier one was decided and this one changes
+// nothing in it. An approved copy whose keys have since gone from the database
+// is not enough, so the listing can be imported again.
+function importCopySettled(prev, cand) {
+    if (!prev || importCopyDiff(prev, cand).length) return false;
+    return prev.status === 'rejected' || importKeysPresent(cand);
+}
+
+// Add freshly read records to the review queue. A listing already waiting is
+// not queued twice, and a copy of one already approved or rejected is not
+// queued when it changes nothing: an extractor sending the same pages again
+// must not put keys that are already in back up for review.
+// Returns { added, waiting, decided }: queued, already waiting, already done.
+function queueImportCandidates(list) {
+    const waiting = new Set(distImportQueue.filter(c => c.status === 'pending').map(importListingKey).filter(Boolean));
+    const decided = decidedImportCopies();
+    const out = { added: 0, waiting: 0, decided: 0 };
+    list.forEach(c => {
+        const k = importListingKey(c);
+        if (k && waiting.has(k)) { out.waiting++; return; }
+        if (k && importCopySettled(decided.get(k), c)) { out.decided++; return; }
+        if (k) waiting.add(k);
+        distImportQueue.push(c);
+        out.added++;
+    });
+    return out;
+}
+
+// Rows waiting for review that an approved or rejected copy of the same
+// listing already settles. Before v282 a batch sent again was queued again
+// whatever had been decided on it. They leave the list as 'duplicate', which
+// syncs like any decision. A row someone has started editing stays. Returns
+// how many were taken off.
+function settleRepeatedImports() {
+    const decided = decidedImportCopies();
+    const now = new Date().toISOString();
+    let n = 0;
+    distImportQueue.forEach(c => {
+        if (c.status !== 'pending' || (c.resolved || []).length || c.editedAt) return;
+        const k = importListingKey(c);
+        const prev = k && decided.get(k);
+        if (!importCopySettled(prev, c)) return;
+        c.status = 'duplicate';
+        c.duplicateOf = prev._id;
+        c.duplicateAt = now;
+        n++;
+    });
+    return n;
+}
+
 // Accept an extractor batch. Returns { staged, skipped, errors } and never
 // throws on bad input — a malformed file should report, not break the app.
 function parseImportBatch(text) {
@@ -22022,7 +22142,6 @@ async function pullDistImportInbox() {
         if (snap.empty) {
             report.push('Inbox is empty.');
         } else {
-            const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
             for (const docSnap of snap.docs) {
                 const d = docSnap.data() || {};
                 const label = d.batchLabel || docSnap.id;
@@ -22038,15 +22157,10 @@ async function pullDistImportInbox() {
                     badDocs++;
                     continue;
                 }
-                let n = 0;
-                res.staged.forEach(c => {
-                    const k = c.raw.productUrl + '|' + c.raw.vendorSku;
-                    if (have.has(k)) return;
-                    have.add(k);
-                    distImportQueue.push(c);
-                    n++; staged++;
-                });
-                report.push(label + ': ' + res.staged.length + ' read, ' + n + ' new' +
+                const q = queueImportCandidates(res.staged);
+                staged += q.added;
+                report.push(label + ': ' + res.staged.length + ' read, ' + q.added + ' new' +
+                    (q.decided ? ', ' + q.decided + ' already imported' : '') +
                     (res.errors.length ? ', ' + res.errors.length + ' problem(s)' : ''));
                 // Persist BEFORE clearing the inbox copy. If the tab closes
                 // between the two, the worst case is the batch being pulled
@@ -22377,17 +22491,10 @@ function loadDistImportFiles(event) {
         const reader = new FileReader();
         reader.onload = e => {
             const res = parseImportBatch(e.target.result);
-            if (res.staged.length) {
-                const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
-                res.staged.forEach(c => {
-                    const k = c.raw.productUrl + '|' + c.raw.vendorSku;
-                    if (have.has(k)) return;
-                    have.add(k);
-                    distImportQueue.push(c);
-                    staged++;
-                });
-            }
+            const q = queueImportCandidates(res.staged);
+            staged += q.added;
             notes.push(file.name + ': ' + res.staged.length + ' read' +
+                (q.decided ? ', ' + q.decided + ' already imported' : '') +
                 (res.errors.length ? ', ' + res.errors.length + ' problem(s)' : ''));
             if (++done === files.length) {
                 saveDistImportQueue();
@@ -22420,12 +22527,15 @@ function previewDistImport() {
     const ex = res.staged.length - nu;
     const flagged = res.staged.filter(c => c.issues.length || getImportSkuProblems(c).length).length;
     const lowConf = res.staged.filter(c => c.raw.confidence === 'low').length;
+    const decided = decidedImportCopies();
+    const done = res.staged.filter(c => importCopySettled(decided.get(importListingKey(c)), c)).length;
     el.innerHTML =
         '<div style="font-size:13px;line-height:1.7;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">' +
             '<div><b>' + res.staged.length + '</b> record(s) from <b>' + escapeJobText(res.source) + '</b></div>' +
             '<div style="color:var(--accent);">' + nu + ' new &bull; ' + ex + ' already in your database</div>' +
             (flagged ? '<div style="color:#e0a800;">' + flagged + ' with a field the app could not read</div>' : '') +
             (lowConf ? '<div style="color:#d9534f;">' + lowConf + ' the extractor itself marked low confidence</div>' : '') +
+            (done ? '<div style="color:var(--dim);">' + done + ' already imported, unchanged — not staged again</div>' : '') +
             (res.skipped ? '<div style="color:var(--dim);">' + res.skipped + ' skipped (no FCC ID and no price)</div>' : '') +
             (res.errors.length ? '<div style="color:#d9534f;">' + res.errors.map(escapeJobText).join('<br>') + '</div>' : '') +
             '<div style="color:var(--dim);font-size:11px;margin-top:6px;">Nothing is saved until you approve each row below.</div>' +
@@ -22436,29 +22546,27 @@ function previewDistImport() {
 function stageDistImport() {
     const staged = window._distImportStaged;
     if (!staged || !staged.length) { toast('Preview first'); return; }
-    const have = new Set(distImportQueue.filter(c => c.status === 'pending').map(c => c.raw.productUrl + '|' + c.raw.vendorSku));
-    let added = 0;
-    staged.forEach(c => {
-        const k = c.raw.productUrl + '|' + c.raw.vendorSku;
-        if (have.has(k)) return;
-        distImportQueue.push(c); added++;
-    });
+    const q = queueImportCandidates(staged);
     saveDistImportQueue();
     document.getElementById('distImportText').value = '';
     document.getElementById('distImportPreview').innerHTML = '';
     window._distImportStaged = null;
     renderDistImportQueue();
-    toast(added + ' staged for review' + (added < staged.length ? ' (' + (staged.length - added) + ' already queued)' : ''));
+    const skipped = [q.waiting ? q.waiting + ' already queued' : '', q.decided ? q.decided + ' already imported' : ''].filter(Boolean);
+    toast(q.added + ' staged for review' + (skipped.length ? ' (' + skipped.join(', ') + ')' : ''));
 }
 
 function renderDistImportQueue() {
     const el = document.getElementById('distImportQueueList');
     if (!el) return;
-    const pending = distImportQueue.filter(c => c.status === 'pending');
     // Badges reflect the database now, not when the batch was staged.
     let rematched = false;
-    pending.forEach(c => { if (refreshImportMatch(c)) rematched = true; });
-    if (rematched) saveDistImportQueue();
+    distImportQueue.forEach(c => { if (c.status === 'pending' && refreshImportMatch(c)) rematched = true; });
+    const settled = settleRepeatedImports();
+    if (rematched || settled) saveDistImportQueue();
+    if (settled) toast(settled + ' already imported — taken off the review list');
+    const pending = distImportQueue.filter(c => c.status === 'pending');
+    const decided = decidedImportCopies();
     document.getElementById('distQueueCount').textContent = pending.length;
     if (!pending.length) {
         el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:24px;font-size:13px;">Nothing waiting for review.</div>';
@@ -22527,6 +22635,17 @@ function renderDistImportQueue() {
         // is superseded by the option keys.
         const matchedKey = c.matchedPn && !optKeys.has(importPnKey(c.matchedPn))
             ? DB.find(k => String(k.pn) === String(c.matchedPn)) : null;
+        // A listing decided before that came in again: say what this copy changes.
+        const prev = decided.get(importListingKey(c));
+        const prevAt = prev && (prev.appliedAt || prev.rejectedAt);
+        const prevDiff = prev ? importCopyDiff(prev, c) : [];
+        const prevNote = prev
+            ? '<div style="font-size:11px;color:#e0a800;">You ' + (prev.status === 'applied' ? 'approved' : 'rejected') + ' this listing' +
+                (prevAt ? ' on ' + escapeJobText(new Date(prevAt).toLocaleDateString()) : '') + '. ' +
+                (prevDiff.length ? 'This copy differs in: ' + escapeJobText(prevDiff.map(distEditLabel).join(', ')) + '.'
+                    : prev.status === 'applied' && !importKeysPresent(c) ? 'A key it made is no longer in your database.'
+                    : 'This copy is the same.') + '</div>'
+            : '';
         const staleNote = opts.length && matchedKey && matchedKey.importedFrom === c.source
             ? '<div style="font-size:11px;color:#e0a800;">Key ' + escapeJobText(c.matchedPn) + ' was made by an earlier import of this listing. ' +
                 'Once the option keys are in, delete it if they replace it.</div>' : '';
@@ -22540,7 +22659,7 @@ function renderDistImportQueue() {
             '<div style="font-size:12px;color:var(--text);margin:4px 0;">' + spec + '</div>' +
             (veh ? '<div style="font-size:11px;color:var(--dim);">' + escapeJobText(veh) + '</div>' : '') +
             '<div style="margin:8px 0;">' + prices + '</div>' +
-            staleNote + oemNote + skuIss + unc + iss + fixed +
+            prevNote + staleNote + oemNote + skuIss + unc + iss + fixed +
             (conf ? '<div style="margin-top:4px;">' + conf + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:10px;">' +
                 '<button onclick="openDistImportEdit(\'' + id + '\',\'all\')" style="flex:1;padding:8px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;cursor:pointer;">Edit all</button>' +
@@ -22905,6 +23024,9 @@ function parseDistEditVehicles(text) {
 function saveDistImportEdit() {
     const c = distImportQueue.find(x => x._id === distImportEditingId);
     if (!c) { closeDistImportEdit(); return; }
+    // The extractor's reading before anyone changed it, so a later copy of the
+    // listing is compared with that (importCopyDiff)
+    if (!c.extracted) c.extracted = importCopyFields(c);
     const p = c.proposed;
     const keys = distImportEditFieldKeys;
     const has = k => keys.indexOf(k) >= 0;
@@ -23005,7 +23127,10 @@ function clearDistImportQueue() {
     const pending = distImportQueue.filter(c => c.status === 'pending').length;
     if (!pending) { toast('Queue is already empty'); return; }
     if (!confirm('Discard all ' + pending + ' record(s) waiting for review?\n\nNothing already approved is affected.')) return;
-    distImportQueue = distImportQueue.filter(c => c.status !== 'pending');
+    // Marked, not removed: a removed row came back at the next sync from any
+    // other device that still had it waiting.
+    const now = new Date().toISOString();
+    distImportQueue.forEach(c => { if (c.status === 'pending') { c.status = 'discarded'; c.discardedAt = now; } });
     saveDistImportQueue();
     renderDistImportQueue();
     toast('Review queue cleared');

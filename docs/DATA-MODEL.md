@@ -449,6 +449,24 @@ Identity on approve, per the model in §7:
   (grouped by the same rule as `findNoLogoTwin()`; an unknown button count is
   grouped but marked to check), and version lists naming one SKU twice. Each
   key opens from the report; merging and removing the copy are done by hand.
+- **A listing sent again** (v282). `importListingKey()` (page URL + SKU) names
+  a listing across copies. `queueImportCandidates()`, used by the inbox pull,
+  file pick and paste, skips a copy when that listing is already waiting, or
+  when its latest approved or rejected copy has the same content
+  (`importCopyDiff()`). The comparison is with what the extractor read, not
+  with a person's edits: the first save in the review editor keeps the reading
+  as `extracted`. On a row edited before v282 the fields a person edited or
+  signed off are left out instead. An approved copy only counts while the keys it files under are
+  still in the database. A changed copy is queued, and its card names what
+  changed. `settleRepeatedImports()` runs on render and takes such copies off
+  the list as `status: 'duplicate'` (`duplicateOf` = the earlier row's `_id`).
+  A row someone has started editing stays.
+- **Statuses**: `pending`, `applied`, `rejected`, `duplicate`, `discarded`
+  (**Clear**), `undone` (**Start over**). Every row syncs, not only pending
+  ones (minus `raw.sourceText`), so a decision made on one device reaches the
+  others. Before v282 only pending rows synced, so a row approved on one device
+  stayed waiting on the rest, and Clear deleted rows that another device then
+  sent back.
 
 `vendorPrices[pn][vendor]` now carries a `variants` array in addition to
 `priceA`/`priceB`; the two slots are kept populated (cheapest `new` → `priceA`,
