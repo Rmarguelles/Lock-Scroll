@@ -465,8 +465,9 @@ Identity on approve, per the model in §7:
   (else the lowest), and keeps each page's price and stock in `pages`
   (`{ <listing URL>: { price, available } }`). Importing a page again updates
   only its own entry, and a page that no longer lists the SKU drops out.
-- **A listing sent again** (v282). `importListingKey()` (page URL + SKU) names
-  a listing across copies. `queueImportCandidates()`, used by the inbox pull,
+- **A listing sent again** (v282). `importListingKey()` (the page URL without its
+  `?variant=` query, v286; the SKU only when there is no URL) names a listing
+  across copies. `queueImportCandidates()`, used by the inbox pull,
   file pick and paste, skips a copy when that listing is already waiting, or
   when its latest approved or rejected copy has the same content
   (`importCopyDiff()`). The comparison is with what the extractor read, not

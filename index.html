@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v285</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v286</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v285</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v286</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v285<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v286<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -21678,14 +21678,22 @@ function refreshImportMatch(cand) {
     return changed;
 }
 
-// One listing: the page a record was read from and its SKU. Every copy of the
-// listing an extractor sends shares this. A record with neither has none and
-// is never taken for a copy of another.
+// A product page's address without what follows it: "?variant=4999..." names
+// the option selected when it was read, not another page.
+function importPageUrl(url) {
+    return String(url || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
+// One listing: the page a record was read from, else its SKU. Every copy of
+// the listing an extractor sends shares this. The page alone, since the
+// listing SKU is its cheapest option's and moves with the prices. A record
+// with neither has none and is never taken for a copy of another.
 function importListingKey(cand) {
     const r = cand.raw || {};
-    const url = String(r.productUrl || '').trim();
+    const url = importPageUrl(r.productUrl);
+    if (url) return url;
     const sku = String(r.vendorSku || r.pn || '').trim();
-    return url || sku ? url + '|' + sku : null;
+    return sku ? '|' + sku : null;
 }
 
 // What a copy says, under the review editor's field keys, in a form two
@@ -21697,7 +21705,9 @@ function importCopyFields(cand) {
     return {
         fccid: normalizeFccId(p.fccid),
         fccids: list(p.fccids, normalizeFccId),
-        pn: importPnKey(importSkuOf(cand)),
+        // The listing SKU is the cheapest option's; it files a key only when
+        // the options have no SKUs of their own
+        pn: importOptionsWithSku(cand).length ? '' : importPnKey(importSkuOf(cand)),
         altParts: list(p.altParts, a => importPnKey(a && a.pn)),
         keyType: s(p.keyType), keyway: s(p.keyway), buttons: s(p.buttons),
         buttonCount: s(p.buttonCount), frequency: s(p.frequency),
@@ -22198,7 +22208,7 @@ function applyImportCandidate(cand) {
     const vendor = cand.vendor.name;
     const opts = importOptionsWithSku(cand);
     const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
-    const page = cand.raw.productUrl || importSkuOf(cand) || cand._id;
+    const page = importPageUrl(cand.raw.productUrl) || importSkuOf(cand) || cand._id;
 
     if (cand.matchedPn && !optKeys.has(importPnKey(cand.matchedPn))) {
         changes.push(...fillImportedKeyFields(cand.matchedPn, p, null, false));
