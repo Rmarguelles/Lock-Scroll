@@ -2,6 +2,9 @@
 
 Paste everything below into a new Grok session, then add the distributor
 URL you want read. Written for Your Car Key Guys; the rules generalise.
+Prompt v9, for app v286: one record per make's page (logo vs No Logo), the
+page's Fitments table as `vehicles`, a clean `productUrl`, sold-out options
+marked, Air Suspension and button names in words, and resending pages.
 
 ====================================================================
 
@@ -105,7 +108,7 @@ Each object in `keys`:
 
 ```
 {
-  "pn":            "string  REQUIRED. The distributor's own part number / SKU.",
+  "pn":            "string  REQUIRED. The distributor's own part number / SKU (the SKU of variants[0]).",
   "vendorSku":     "string  The SKU of the PRIMARY variant (variants[0]).",
   "price":         "number  Price of the PRIMARY variant. Digits only, no $ or commas.",
   "variants":      "array   REQUIRED. Every purchasable option on the page - see rule 5b:
@@ -113,7 +116,11 @@ Each object in `keys`:
                       condition is one of: new | reclaimed | refurbished |
                       aftermarket | shell-only | unknown
                       label is the shop's own wording, copied verbatim
-                      (e.g. 'OEM Board OEM Shell', 'OEM Brand New').
+                      (e.g. 'OEM Board OEM Shell', 'OEM Brand New',
+                      'OEM Recased (No Logo)'). The words OEM, Recased,
+                      Aftermarket and (No Logo) are how my app tells a
+                      version with the make's logo from one without - see
+                      rule 5c.
                       vendorSku is REQUIRED on every variant and is
                       DIFFERENT per variant. Never emit two variants with the
                       same SKU - if the picker shows the same SKU and price
@@ -121,10 +128,12 @@ Each object in `keys`:
                       unavailable; keep the label whose option is actually
                       selectable and drop the other.
                       available: false when the option reads 'Sold out',
-                      true otherwise. Best-effort - include it when the page
-                      makes it obvious, omit it otherwise. Stock moves too
-                      fast for a scrape to be authoritative, so never hold up
-                      or downgrade a record over it.
+                      true otherwise. My app shows the lowest price a page has
+                      an option IN STOCK at, so a sold-out option left looking
+                      available can send me to a page that cannot sell it.
+                      Still best-effort - include it when the page makes it
+                      obvious, omit it otherwise, and never hold up or
+                      downgrade a record over it.
                       List cheapest first; variants[0] is the primary.",
   "fccid":         "string  FCC ID exactly as printed. Several -> comma+space separated.",
   "fidPrefix":     "string  Make-family prefix, e.g. HY. See the FID section.",
@@ -133,8 +142,8 @@ Each object in `keys`:
   "keyType":       "string  One of the enum below. Omit if unsure.",
   "keyway":        "string  Blade/keyway code, e.g. HU100, B119, TOY43.",
   "chip":          "string  Transponder text COPIED VERBATIM from the listing.",
-  "buttons":       "string  One of the enum below, or omit.",
-  "buttonCount":   "number  Digit count if you cannot match the buttons enum.",
+  "buttons":       "string  A row from the enum below, or the button names in words when no row fits (see Enums), or omit.",
+  "buttonCount":   "number  How many buttons, when no row fits.",
   "buttonsFromImage": "boolean true when the product photo was your source for buttons.",
   "frequency":     "string  e.g. \"315 MHz\", \"433.92 MHz\". Keep the unit.",
   "battery":       "string  Format exactly: \"2032\" for one cell, \"2016 x2\" for two or more.",
@@ -145,8 +154,8 @@ Each object in `keys`:
   "memorySeat":    "number  1, 2 or 3 ONLY if the listing says the fob is tied to a driver memory position.",
   "vehicles": [
     { "make": "Toyota", "model": "Camry", "startYear": 2018, "endYear": 2024 }
-  ],
-  "productUrl":    "string  Direct link to this product page.",
+  ],               "        Every row of THIS page's Fitments table - rule 6.",
+  "productUrl":    "string  This product page's address with nothing from ? on - rule 11.",
   "sourceText":    "string  The raw title + spec text you read this from.",
   "confidence":    "string  \"high\" | \"medium\" | \"low\" — see rules.",
   "uncertain":     ["field names you guessed at or could not verify"]
@@ -192,8 +201,9 @@ Each object in `keys`:
    `uncertain`.
 4. **Prices are bare numbers.** `164` not `$164`, `1299` not `1,299`. If a
    listing shows a range or "call for price", omit `price`.
-5. **One record per part number.** If a page sells the same key under several
-   part numbers, emit one record each. Do not merge them.
+5. **One record per product page.** A page's options (its Style picker) go
+   in that record's `variants`, each with its own SKU (rule 5b). Two pages are
+   two records, even when they sell the same key (rule 5c).
 5b. **Capture EVERY variant — this is the rule you are most likely to get
    wrong.** One product page usually sells the same key in several conditions,
    each with its own SKU and its own price. A real example:
@@ -235,7 +245,9 @@ Each object in `keys`:
    option is a fifth of the brand-new one, so picking the wrong row is not a
    rounding error. Copy each option's label **exactly as the dropdown spells
    it**, including any qualifier such as `(Old Logo)`, `(New Logo)` or
-   `(No Logo)` — those distinguish real, separately-stocked variants.
+   `(No Logo)` — those distinguish real, separately-stocked variants. Never
+   shorten `OEM Recased (No Logo)` to `OEM Recased`, and never add `(No Logo)`
+   where the dropdown does not say it.
 
    Put each SKU in that variant's `vendorSku` **field**. Writing it only into
    `sourceText` does not count - the field is what I read.
@@ -243,7 +255,45 @@ Each object in `keys`:
    If you genuinely cannot tell which price belongs to which label, emit the
    variants you are sure of, put `"variants"` in `uncertain`, and set
    `confidence` to `low`. Never guess the pairing.
-6. **Do not convert years.** "18-24" becomes `startYear: 2018, endYear: 2024`.
+5c. **The same key on several makes' pages — logo versus No Logo.** This shop
+   sells one key on a separate page per make: a Chevrolet page, a GMC page and
+   a Buick page for FCC ID `YG0G21TB2`. On those pages:
+   - The **OEM** options (`OEM Board OEM Shell`, `OEM Brand New`) carry that
+     make's logo. Each page has its own SKU for them: the GMC one is not the
+     Buick one.
+   - The **No Logo** options (`OEM Recased (No Logo)`, `New Aftermarket (No
+     Logo)`) are the same part on every page. They often carry the same SKU on
+     every page, sometimes at a different price per page.
+
+   Real example, two pages of one key:
+
+   ```
+   GMC page    OEM Board OEM Shell        YCKG#2010  $69.00  sold out
+               OEM Recased (No Logo)      YCKG#2957  $49.00
+               New Aftermarket (No Logo)  YCKG#2681  $29.50
+   Buick page  OEM Board OEM Shell        YCKG#1801  $49.00
+               OEM Recased (No Logo)      YCKG#2957  $45.00
+               New Aftermarket (No Logo)  YCKG#2681  $29.50
+   ```
+
+   That is **two records**, one per page, and `YCKG#2957` is in both at the
+   price each page shows. Read every page as itself:
+   - Do NOT skip a page because you already saw its No Logo SKUs.
+   - Do NOT merge two pages into one record.
+   - Do NOT carry a price, a SKU or a vehicle from one page to another.
+
+   My app gives each OEM option the logo of its page's make, folds the No Logo
+   options into one key that fits every page's vehicles, and shows the lowest
+   price a page has each SKU in stock at. All of that depends on each page
+   arriving as itself.
+6. **`vehicles` is this page's own Fitments table, every row.** On these shops
+   it is the **Fitments** tab beside Description, with Make, Model and Year
+   columns. Do not add vehicles from the title, from another page of the same
+   key, or from your own knowledge, and do not drop rows. My app takes the
+   OEM options' logo from these makes, so a GMC vehicle on a Chevrolet page
+   puts the wrong logo on the key.
+
+   **Do not convert years.** "18-24" becomes `startYear: 2018, endYear: 2024`.
    A single year becomes `startYear` and `endYear` both set to it. If the
    listing gives no years, omit `vehicles` rather than guessing.
 7. **`chip` verbatim.** Copy the transponder text as printed, even if it looks
@@ -266,8 +316,19 @@ Each object in `keys`:
    **When a record carries several FCC IDs, `isNew` is true only if NONE of
    them is on the list.** Check every one, not just the first.
 10. **Never merge two FCC IDs into one record** to make things tidy, and never
-   split one FCC ID across records to pad the count. One key as the distributor
-   sells it = one record.
+   split one FCC ID across records to pad the count. One product page = one
+   record.
+11. **`productUrl` is the page's address with nothing from `?` on.** Write
+   `https://yourcarkeyguys.com/products/2022-2026-gmc-sierra-yukon-canyon-3b-smart-key-yg0g21tb2`,
+   not `...yg0g21tb2?variant=43997893656823`. The `?variant=` part only says
+   which option was selected while you read it. My app recognises a page by
+   this address and keeps each page's prices under it, so the same page must
+   always arrive under the same address. It is required on every record.
+12. **Reading a page I already have is fine.** My app skips a page that
+   arrives with nothing changed. A page whose prices, stock or fitment changed
+   comes to me with a note saying what changed. So a refresh run over pages
+   already done is welcome. Read them as carefully as new ones: a careless
+   re-read shows up as a change I then have to check.
 
 ## Enums
 
@@ -289,16 +350,14 @@ tell you which three buttons, but you have two better sources:
    title or description each name a function directly.
 
 Say which you used: put `"buttonsFromImage": true` on the record when the photo
-was your source. If neither settles it, omit `buttons`, set `buttonCount` to
-the number, and add `"buttons"` to `uncertain`. Never infer a layout from the
-model year or from another key you have seen.
+was your source. Never infer a layout from the model year or from another key
+you have seen.
 
 **Copy a row below character for character, including the parenthetical.**
 `4 Button: L, U, P, H (Lock, Unlock, Panic, Hatch)` is the value;
 `4 Button: L, U, P, H` is not — it will not match. Do not reorder the letters
 to match the physical fob either: `5 Button: R, L, U, H, P` is not a row and
-will be rejected. If the buttons you can see do not match any row exactly,
-that is what `buttonCount` plus `uncertain` is for. The rows:
+will be rejected. The rows:
 ```
 2 Button: L, U (Lock, Unlock)
 3 Button: L, U, P (Lock, Unlock, Panic)
@@ -326,6 +385,24 @@ that is what `buttonCount` plus `uncertain` is for. The rows:
 8 Button: L, U, P, H, RSPA-F, RSPA-R, HTL (Lock, Unlock, Panic, Hatch, RSPA Front/Rear, Head & Tail Lights)
 None (Transponder Only)
 ```
+
+**When the buttons you can see match no row**, do not force one. Write
+`buttons` as the count and the button names in words, using only these
+names:
+
+```
+Lock, Unlock, Panic, Trunk, Hatch, Tailgate, Rear Glass, Gate,
+Power Sliding Door, Dual Power Sliding Doors, Remote Start,
+Head & Tail Lights, Air Conditioning, Charge, Air Suspension
+```
+
+For example `"buttons": "4 Button: Lock, Unlock, Panic, Air Suspension"`,
+with `"buttonCount": 4` and `"buttons"` in `uncertain`. My app ticks those
+buttons for me to confirm. **Air Suspension** is a button of its own (raise
+and lower; usually a vehicle with up and down arrows, on Ram and other
+trucks). Do not call it Remote Start or anything else. If you cannot make
+out the buttons at all, omit `buttons` and give only `buttonCount`, with
+`"buttons"` in `uncertain`.
 
 `frequency` — **copy the listing's own wording.** `315MHz`, `315 MHz`,
 `433 Mhz`, `433.92 MHz` are all fine; my app buckets them into its own bands

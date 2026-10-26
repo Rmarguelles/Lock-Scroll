@@ -1,5 +1,9 @@
 # Grok extraction prompt
 
+> **Superseded.** Paste `tools/GROK-FULL-PROMPT.md` instead: it has the current
+> rules (v9), the inbox POST and the skip list in one. This file is kept for
+> the skip-list regeneration notes below.
+
 Paste everything between the `====` markers into Grok, then add the distributor
 URL(s) you want it to read. Output goes into the app's review queue — **not**
 through Settings → Import (see the warning at the bottom of this file).

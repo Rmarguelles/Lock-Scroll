@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v284</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v286</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v284</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v286</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v284<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v286<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -8534,6 +8534,7 @@ function buildAgentSnapshot() {
         return agentCompact({
             pn: pn,
             brand: k.brand || null,
+            logo: k.logo || null,
             fccIds: getKeyFccIds(k),
             fids: getKeyFids(k),
             keyType: k.keyType || null,
@@ -11872,6 +11873,7 @@ async function init() {
     await runVatsChipMergeMigration();
     await runFidTypeBandsMigration();
     await runNonChipFccMigration();
+    await runImportLogoBackfill();
     buildRelationshipsFromExistingData();
     applyVehicleOverridesToDB();
     applyKeyInfoOverridesToDB();
@@ -21573,6 +21575,14 @@ function normalizeImportedKey(raw, source) {
 
     if (!variants.length) note('variants', 'no priced option found');
 
+    // OEM versions carry the make's logo (importLogoFor). A page across makes
+    // whose address does not name one is for a person to say.
+    const makes = [...new Set(vehicles.map(v => v.make))];
+    if (makes.length > 1 && variants.some(v => importOptionHasLogo(v.label)) &&
+            !importLogoFor(vehicles, raw.productUrl)) {
+        note('logo', 'the page lists ' + makes.join(', ') + ' — which logo is on its OEM versions?');
+    }
+
     return {
         _id: 'imp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
         status: 'pending',
@@ -21668,14 +21678,22 @@ function refreshImportMatch(cand) {
     return changed;
 }
 
-// One listing: the page a record was read from and its SKU. Every copy of the
-// listing an extractor sends shares this. A record with neither has none and
-// is never taken for a copy of another.
+// A product page's address without what follows it: "?variant=4999..." names
+// the option selected when it was read, not another page.
+function importPageUrl(url) {
+    return String(url || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
+// One listing: the page a record was read from, else its SKU. Every copy of
+// the listing an extractor sends shares this. The page alone, since the
+// listing SKU is its cheapest option's and moves with the prices. A record
+// with neither has none and is never taken for a copy of another.
 function importListingKey(cand) {
     const r = cand.raw || {};
-    const url = String(r.productUrl || '').trim();
+    const url = importPageUrl(r.productUrl);
+    if (url) return url;
     const sku = String(r.vendorSku || r.pn || '').trim();
-    return url || sku ? url + '|' + sku : null;
+    return sku ? '|' + sku : null;
 }
 
 // What a copy says, under the review editor's field keys, in a form two
@@ -21687,7 +21705,9 @@ function importCopyFields(cand) {
     return {
         fccid: normalizeFccId(p.fccid),
         fccids: list(p.fccids, normalizeFccId),
-        pn: importPnKey(importSkuOf(cand)),
+        // The listing SKU is the cheapest option's; it files a key only when
+        // the options have no SKUs of their own
+        pn: importOptionsWithSku(cand).length ? '' : importPnKey(importSkuOf(cand)),
         altParts: list(p.altParts, a => importPnKey(a && a.pn)),
         keyType: s(p.keyType), keyway: s(p.keyway), buttons: s(p.buttons),
         buttonCount: s(p.buttonCount), frequency: s(p.frequency),
@@ -21819,7 +21839,7 @@ function parseImportBatch(text) {
 // listing. OEM numbers are added only with `withOem` — i.e. to a key made for
 // this very listing. A key that merely shares the FCC ID is NOT assumed to be
 // the same OEM part. Returns what changed.
-function fillImportedKeyFields(pn, p, brand, withOem) {
+function fillImportedKeyFields(pn, p, brand, withOem, logo) {
     const changes = [];
     const key = DB.find(k => String(k.pn) === String(pn));
     if (!key) return ['key ' + pn + ' no longer in database'];
@@ -21828,8 +21848,10 @@ function fillImportedKeyFields(pn, p, brand, withOem) {
         : (keyInfoOverrides[getOriginalCatalogPn(key.pn)] = keyInfoOverrides[getOriginalCatalogPn(key.pn)] || {});
     if (!target) return ['could not locate a writable record for ' + pn];
 
-    const vals = Object.assign({}, p, brand ? { brand: brand } : {});
-    ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN', 'brand'].forEach(f => {
+    // The logo only when the caller says which: the key matched by FCC ID
+    // alone may be another make's version.
+    const vals = Object.assign({}, p, { logo: logo || null }, brand ? { brand: brand } : {});
+    ['keyway', 'keyType', 'chip', 'buttons', 'frequency', 'battery', 'emergencyPN', 'brand', 'logo'].forEach(f => {
         if (vals[f] && !key[f]) { target[f] = vals[f]; key[f] = vals[f]; changes.push(pn + ': ' + f + ' = ' + vals[f]); }
     });
     if (withOem && p.altParts.length) {
@@ -21852,7 +21874,7 @@ function fillImportedKeyFields(pn, p, brand, withOem) {
 }
 
 // A new custom key from an import. Returns null or a reason it was not made.
-function createImportedKey(cand, pn, brand, refs) {
+function createImportedKey(cand, pn, brand, refs, logo) {
     const p = cand.proposed;
     if (DB.some(k => importPnKey(k.pn) === importPnKey(pn))) return 'part number ' + pn + ' already exists — review manually';
     const rec = {
@@ -21873,6 +21895,7 @@ function createImportedKey(cand, pn, brand, refs) {
         importedFrom: cand.source
     };
     if (brand) rec.brand = brand;
+    if (logo) rec.logo = logo;
     // A count with no layout the picklist matches is kept, so a later listing
     // can tell a 3-button key from a 4-button one on the same FCC ID.
     if (!p.buttons && p.buttonCount) rec.buttonCount = p.buttonCount;
@@ -21913,6 +21936,45 @@ function setImportedVendorPrice(pn, vendor, sku, variants, page) {
     };
 }
 
+// One SKU, one price. An option a distributor sells on several pages (YCKG#2957
+// is $49 on the GMC page and $45 on the Chevrolet and Buick ones) shows the
+// lowest price a page has it in stock at, else the lowest. Every row with the
+// SKU, on every key, keeps each page's price in `pages`, so importing a page
+// again updates its own price without losing the others', and a page that no
+// longer sells the SKU drops out. `fresh` is the listing just read, `page` its URL.
+function settleImportSkuPrices(vendor, page, fresh) {
+    const freshBy = new Map(fresh.filter(v => v.vendorSku).map(v => [importPnKey(v.vendorSku), v]));
+    const bySku = new Map();
+    Object.keys(vendorPrices).forEach(pn => {
+        const e = vendorPrices[pn] && vendorPrices[pn][vendor];
+        (e && Array.isArray(e.variants) ? e.variants : []).forEach(v => {
+            if (!v || !v.vendorSku) return;
+            const k = importPnKey(v.vendorSku);
+            if (!bySku.has(k)) bySku.set(k, []);
+            bySku.get(k).push(v);
+        });
+    });
+    bySku.forEach((rows, k) => {
+        const f = freshBy.get(k);
+        if (!f && !rows.some(v => v.pages && v.pages[page])) return;
+        // Rows saved before v285 know only the page they came from
+        const pages = {};
+        rows.forEach(v => { if (!v.pages && v.page && !pages[v.page]) pages[v.page] = { price: v.price, available: v.available }; });
+        rows.forEach(v => { if (v.pages) Object.assign(pages, v.pages); });
+        if (f) pages[page] = { price: f.price, available: f.available };
+        else delete pages[page];
+        const list = Object.values(pages).filter(x => x && !isNaN(parseFloat(x.price)));
+        if (!list.length) return;
+        const pool = list.filter(x => x.available !== false);
+        const best = (pool.length ? pool : list).reduce((a, b) => parseFloat(b.price) < parseFloat(a.price) ? b : a);
+        rows.forEach(v => {
+            v.price = best.price;
+            v.available = best.available;
+            v.pages = JSON.parse(JSON.stringify(pages));
+        });
+    });
+}
+
 // The key a distributor SKU is filed under: the key with that part number, or
 // the key it was folded into (a No Logo option's second SKU, or a key merged
 // by hand), which lists it in mergedPNs.
@@ -21940,6 +22002,69 @@ function keySharesImportFcc(key, cand) {
 // Bronco page both carry it, sometimes under one SKU, sometimes a SKU apiece.
 function isNoLogoOption(label) {
     return /\bno[\s-]*logo\b/i.test(String(label || ''));
+}
+
+// Whether a distributor's version of a key carries the make's logo. OEM ones
+// do ("OEM Board OEM Shell", "OEM Brand New"); recased and aftermarket ones do
+// not. A name that says neither is not taken for either.
+function importOptionHasLogo(label) {
+    const s = String(label || '');
+    if (isNoLogoOption(s) || /recase|aftermarket/i.test(s)) return false;
+    return /\boem\b/i.test(s);
+}
+
+// The logo on a page's OEM versions: the make of the vehicles it lists,
+// spelled as the catalog spells that logo ("GMC logo", "RAM Logo"). A page
+// across makes is settled by the make its address names (a Ford and Lincoln
+// page at ".../2017-2026-ford-explorer-..."). Null when neither settles it.
+function importLogoFor(vehicles, url) {
+    let makes = [...new Set((vehicles || []).map(v => String(v.make || '').trim()).filter(Boolean))];
+    if (makes.length > 1 && url) {
+        const slug = '-' + String(url).toLowerCase().split('?')[0].split('/').pop().replace(/[^a-z0-9]+/g, '-') + '-';
+        makes = makes.filter(m => slug.includes('-' + m.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-'));
+    }
+    if (makes.length !== 1) return null;
+    // The catalog's most used spelling ("Ford logo" 25 times, "Ford Logo" once)
+    const want = makes[0].toLowerCase() + ' logo';
+    const counts = {};
+    DB.forEach(k => {
+        const l = k.logo && String(k.logo).trim();
+        if (l && l.toLowerCase() === want) counts[l] = (counts[l] || 0) + 1;
+    });
+    const known = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    return known || makes[0] + ' logo';
+}
+
+// A staged listing's logo: the one a person set in review, else the one its
+// vehicles give (worked out live, so editing the vehicles moves it too).
+function importCandLogo(cand) {
+    const p = cand.proposed || {};
+    return p.logo !== undefined ? p.logo : importLogoFor(p.vehicles, cand.raw && cand.raw.productUrl);
+}
+
+// Keys imported before v285 carry no logo, so their OEM versions read as
+// logo-less: Add Inventory files them under aftermarket. Fill it in from each
+// key's own vehicles and page (in its notes), the way an import does now.
+// Once per device, and only once there are imported keys to look at.
+async function runImportLogoBackfill() {
+    if (await loadFromIndexedDB('importLogoBackfillV1')) return;
+    const imported = customKeys.filter(k => k && k.importedFrom);
+    if (!imported.length) return;
+    const now = new Date().toISOString();
+    let n = 0;
+    imported.forEach(k => {
+        if (k.logo || !importOptionHasLogo(k.brand)) return;
+        const url = (String(k.notes || '').match(/https?:\/\/\S+/) || [])[0];
+        const logo = importLogoFor(k.vehicles, url);
+        if (!logo) return;
+        k.logo = logo;
+        k.lastEdited = now;
+        const live = DB.find(d => d.isCustom && String(d.pn) === String(k.pn));
+        if (live) live.logo = logo;
+        n++;
+    });
+    if (n) saveCustomKeys();
+    saveToIndexedDB('importLogoBackfillV1', true);
 }
 
 // An option name compared without case or extra spaces.
@@ -22083,15 +22208,18 @@ function applyImportCandidate(cand) {
     const vendor = cand.vendor.name;
     const opts = importOptionsWithSku(cand);
     const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
-    const page = cand.raw.productUrl || importSkuOf(cand) || cand._id;
+    const page = importPageUrl(cand.raw.productUrl) || importSkuOf(cand) || cand._id;
 
     if (cand.matchedPn && !optKeys.has(importPnKey(cand.matchedPn))) {
         changes.push(...fillImportedKeyFields(cand.matchedPn, p, null, false));
     }
 
     if (opts.length) {
+        const listingLogo = importCandLogo(cand);
         opts.forEach(v => {
             const brand = v.label || null;
+            // OEM versions carry the page's make logo; No Logo ones none
+            const logo = importOptionHasLogo(v.label) ? listingLogo : null;
             let existing = findKeyBySku(v.vendorSku);
             const twin = existing ? null : findNoLogoTwin(cand, v, optKeys);
             if (twin) {
@@ -22102,30 +22230,34 @@ function applyImportCandidate(cand) {
             let pn = v.vendorSku;
             if (existing) {
                 pn = String(existing.pn);
-                changes.push(...fillImportedKeyFields(pn, p, brand, true));
+                changes.push(...fillImportedKeyFields(pn, p, brand, true, logo));
                 if (keySharesImportFcc(existing, cand)) {
                     const n = addImportedVehicles(existing, p.vehicles);
                     if (n) changes.push(pn + ': ' + n + ' vehicle(s) from this listing');
                 }
             } else {
-                const err = createImportedKey(cand, pn, brand, p.altParts);
+                const err = createImportedKey(cand, pn, brand, p.altParts, logo);
                 if (err) { changes.push(err); return; }
-                changes.push('added ' + pn + (brand ? ' (' + brand + ')' : ''));
+                changes.push('added ' + pn + (brand ? ' (' + brand + ')' : '') + (logo ? ', ' + logo : ''));
             }
             // Every option key carries the whole listing (its own SKU marked),
             // so its card shows the other versions of the same key.
             setImportedVendorPrice(pn, vendor, pn, cand.vendor.variants.map(x => Object.assign({}, x)), page);
         });
+        settleImportSkuPrices(vendor, page, cand.vendor.variants);
         saveVendorPrices();
     } else {
         // No option has a SKU of its own: one key for the listing, filed under
         // the listing SKU (else the first OEM number, else the FCC ID).
         let pn = cand.matchedPn;
+        // This key holds every option, so it has a logo only when all of them do
+        const vs = cand.vendor.variants;
+        const logo = vs.length && vs.every(v => importOptionHasLogo(v.label)) ? importCandLogo(cand) : null;
         if (!pn) {
             pn = importNewKeyPn(cand);
             if (!pn) return ['no usable part number'];
             const usedOemAsPn = !importSkuOf(cand) && p.altParts[0] && p.altParts[0].pn === pn;
-            const err = createImportedKey(cand, pn, null, usedOemAsPn ? p.altParts.slice(1) : p.altParts);
+            const err = createImportedKey(cand, pn, null, usedOemAsPn ? p.altParts.slice(1) : p.altParts, logo);
             if (err) return [err];
             changes.push('added key ' + pn);
         }
@@ -22628,13 +22760,16 @@ function renderDistImportQueue() {
         // (new, or an update when that SKU is already a key).
         const opts = importOptionsWithSku(c);
         const optKeys = new Set(opts.map(v => importPnKey(v.vendorSku)));
+        const cardLogo = importCandLogo(c);
         const optTag = v => {
             if (!opts.length) return '';
+            const logoTag = importOptionHasLogo(v.label)
+                ? ' <span style="color:var(--dim);font-size:10px;">' + (cardLogo ? escapeJobText(cardLogo) : 'logo not known') + '</span>' : '';
             if (!v.vendorSku) return ' <span style="color:#e0a800;font-size:10px;">no SKU — not saved</span>';
             const flag = repeated.has(importPnKey(v.vendorSku)) ? ' <span style="color:#e0a800;font-size:10px;">&#9888;&#65039; check SKU</span>' : '';
             const have = findKeyBySku(v.vendorSku);
             const twin = have ? null : findNoLogoTwin(c, v, optKeys);
-            return flag + (have
+            return flag + logoTag + (have
                 ? ' <span style="color:var(--dim);font-size:10px;">updates ' +
                     (importPnKey(have.pn) === importPnKey(v.vendorSku) ? 'key' : escapeJobText(String(have.pn))) + '</span>'
                 : twin
@@ -22737,6 +22872,8 @@ const DIST_IMPORT_EDIT_FIELDS = [
     { key: 'altParts',    label: 'OEM part number(s)',    kind: 'text',   hint: 'comma separated; saved as cross-references' },
     { key: 'keyType',     label: 'Key Type',              kind: 'select', cat: 'keyType' },
     { key: 'keyway',      label: 'Keyway / Blade',        kind: 'select', cat: 'keyway' },
+    { key: 'logo',        label: 'Logo on OEM versions',  kind: 'select', cat: 'logo',
+      hint: 'from the make of the vehicles. Recased and aftermarket (No Logo) versions get none' },
     { key: 'chip',        label: 'Chip',                  kind: 'select', cat: 'chip',
       hint: 'left blank by the importer — the same FCC ID can carry different chips, so this one is yours to set' },
     { key: 'buttons',     label: 'Buttons',               kind: 'select', cat: 'buttons' },
@@ -22761,7 +22898,8 @@ const DIST_IMPORT_FLAG_FIELDS = {
     frequency: ['frequency'], battery: ['battery'],
     emergencypn: ['emergencyPN'], vehicles: ['vehicles'],
     variants: ['variants'], price: ['variants'],
-    oempartnumber: ['altParts'], oem: ['altParts'], pn: ['pn'], vendorsku: ['pn'], sku: ['pn']
+    oempartnumber: ['altParts'], oem: ['altParts'], pn: ['pn'], vendorsku: ['pn'], sku: ['pn'],
+    logo: ['logo']
 };
 
 // The condition vocabulary the extractor is told to use.
@@ -22824,6 +22962,7 @@ function getDistImportFlags(cand) {
 // Buttons must offer the whole picklist, not just the rows already in use —
 // resolveButtonsEnum matches against exactly that list.
 function getDistEditOptions(cat) {
+    if (cat === 'logo') return [...new Set(DB.map(k => k.logo && String(k.logo).trim()).filter(Boolean))].sort();
     const vals = getDropdownValuesForCategory(cat) || [];
     if (cat !== 'buttons') return vals;
     const all = new Set(getButtonEnum());
@@ -23004,7 +23143,8 @@ function openDistImportEdit(id, mode) {
 
     const body = document.getElementById('distImportEditBody');
     body.innerHTML = fields.length
-        ? fields.map(f => distEditFieldHtml(f, c.proposed)).join('')
+        ? fields.map(f => distEditFieldHtml(f, f.key === 'logo'
+            ? Object.assign({}, c.proposed, { logo: importCandLogo(c) }) : c.proposed)).join('')
         : '<div style="color:var(--dim);font-size:12px;padding:6px 0 10px;">Use Edit all to change anything on this entry.</div>';
     renderDistEditVariants();
     updateDistEditBand();
@@ -23112,6 +23252,12 @@ function saveDistImportEdit() {
         if (v && k !== 'battery') registerDropdownValue(k, v);
         p[k] = v || null;
     });
+    // Kept only when it differs from what the vehicles give, so editing the
+    // vehicles later still moves a logo nobody chose
+    if (has('logo')) {
+        const v = drop('logo');
+        if (v !== (importCandLogo(c) || '')) { touched.push('logo'); p.logo = v || null; }
+    }
     // The count rides on the layout; keep it in step with whatever row is set.
     // The count box is only for when no layout fits, so a layout wins over it.
     const layoutCount = p.buttons ? parseInt(p.buttons, 10) : NaN;

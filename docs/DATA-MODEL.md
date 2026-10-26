@@ -449,8 +449,25 @@ Identity on approve, per the model in §7:
   (grouped by the same rule as `findNoLogoTwin()`; an unknown button count is
   grouped but marked to check), and version lists naming one SKU twice. Each
   key opens from the report; merging and removing the copy are done by hand.
-- **A listing sent again** (v282). `importListingKey()` (page URL + SKU) names
-  a listing across copies. `queueImportCandidates()`, used by the inbox pull,
+- **Logos** (v285). A distributor version named OEM (`OEM Board OEM Shell`,
+  `OEM Brand New`) carries the make's logo; a recased or aftermarket (No Logo)
+  one carries none (`importOptionHasLogo()`). An OEM version's key gets `logo`
+  from the make of the listing's vehicles, spelled as the catalog spells it
+  most (`importLogoFor()`: "GMC logo", "Ford logo"). A listing across makes
+  goes by the make its URL names; failing that it is flagged, and the review
+  editor's **Logo on OEM versions** field settles it. Add Inventory's OEM
+  brand filter relies on `logo`. `runImportLogoBackfill()` filled it once on
+  keys imported before v285, from their vehicles and the URL in their notes.
+- **One SKU on several listings** (v285). YCKG sells a No Logo version on every
+  make's page, sometimes at different prices (YCKG#2957: $49 on the GMC page,
+  $45 on the Chevrolet and Buick ones). `settleImportSkuPrices()` gives every
+  row with that SKU, on every key, the lowest price a page has it in stock at
+  (else the lowest), and keeps each page's price and stock in `pages`
+  (`{ <listing URL>: { price, available } }`). Importing a page again updates
+  only its own entry, and a page that no longer lists the SKU drops out.
+- **A listing sent again** (v282). `importListingKey()` (the page URL without its
+  `?variant=` query, v286; the SKU only when there is no URL) names a listing
+  across copies. `queueImportCandidates()`, used by the inbox pull,
   file pick and paste, skips a copy when that listing is already waiting, or
   when its latest approved or rejected copy has the same content
   (`importCopyDiff()`). The comparison is with what the extractor read, not
