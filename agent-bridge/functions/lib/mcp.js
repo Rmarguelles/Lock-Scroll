@@ -12,7 +12,7 @@ const INSTRUCTIONS = [
   'The data is what the app had at its last sync (snapshot_info gives the time).',
   'Part numbers are matched without case, spaces or dashes. A distributor SKU such as "YCKG#0011" is a part number. Some keys answer to more than one SKU (otherPns).',
   'To find a key for a car use find_keys_for_vehicle; for anything else use search_keys, then get_key for the full record.',
-  'A key from a distributor listing lists its versions (e.g. OEM Board OEM Shell, OEM Recased (No Logo), New Aftermarket) under prices[].options; option.key is the part number that version is filed under.',
+  'A key from a distributor listing lists its versions (e.g. OEM Board OEM Shell, OEM Recased (No Logo), New Aftermarket) under prices[].options; option.key is the part number that version is filed under. An OEM version carries the make\'s logo (logo, e.g. "GMC logo"); a recased or aftermarket (No Logo) version has none.',
   'Prices are in US dollars. Stock is units on hand.'
 ].join(' ');
 
@@ -41,7 +41,7 @@ export function buildServer({ getData, access }) {
 
   server.registerTool('search_keys', {
     title: 'Search keys',
-    description: 'Find keys by any mix of words: part number, distributor SKU, FCC ID, FID, OEM number, keyway, chip, key type, buttons, brand, or vehicle make/model. A 4-digit word is a model year. Every word must match. Returns short rows; use get_key for details.',
+    description: 'Find keys by any mix of words: part number, distributor SKU, FCC ID, FID, OEM number, keyway, chip, key type, buttons, brand, logo, or vehicle make/model. A 4-digit word is a model year. Every word must match. Returns short rows; use get_key for details.',
     inputSchema: {
       query: z.string().describe('e.g. "M3N-A2C931423", "YCKG#0011", "2019 F-150", "HU101 proximity 5 button"'),
       limit: z.number().int().min(1).max(100).optional().describe('Most rows to return (default 20).')

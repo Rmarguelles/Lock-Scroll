@@ -63,6 +63,7 @@ export function keyRow(key) {
   return compact({
     pn: key.pn,
     brand: key.brand,
+    logo: key.logo,
     keyType: key.keyType,
     buttons: key.buttons ? key.buttons.replace(/\s*\(.*$/, '') : null,
     fccIds: key.fccIds,
@@ -125,7 +126,7 @@ export function searchKeys(snap, { query, limit = 20 }) {
   for (const k of snap.keys) {
     const ids = [k.pn, ...(k.otherPns || []), ...(k.fccIds || []), ...(k.fids || []), ...(k.oem || []),
       ...(k.crossRefs || []).map(c => c.pn), k.ilco].filter(Boolean).map(norm);
-    const text = [k.keyway, k.chip, k.keyType, k.buttons, k.frequency, k.brand, k.battery, k.emergencyPN,
+    const text = [k.keyway, k.chip, k.keyType, k.buttons, k.frequency, k.brand, k.logo, k.battery, k.emergencyPN,
       ...(k.vehicles || []).map(v => v.make + ' ' + v.model)].filter(Boolean).map(norm);
     const vehicles = k.vehicles || [];
     // The whole query naming this key (its part number, a SKU, or an old

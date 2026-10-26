@@ -23,7 +23,7 @@ const SNAP = {
   keys: [
     { pn: '8701', fccIds: ['M3NWXF0B1'], keyType: 'Proximity', keyway: 'Y159', buttons: '3 Button: L, U, P (Lock, Unlock, Panic)', stock: 3,
       prices: [{ vendor: 'Keyless Ride', priceA: 84 }], vehicles: [{ make: 'Jeep', model: 'Wagoneer', startYear: 2022, endYear: 2023 }], source: 'builtin' },
-    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2,
+    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', logo: 'Ford logo', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2,
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#0011', options: yckgOptions }], vehicles: FORD, source: 'custom', importedFrom: 'Your Car Key Guys' },
     { pn: 'YCKG#B-RC', brand: 'OEM Recased (No Logo)', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 1, otherPns: ['YCKG#F-RC'],
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#B-RC', options: yckgOptions }], vehicles: FORD, source: 'custom' },
@@ -102,6 +102,11 @@ test('search_keys: FCC ID, year + model, SKU on another key, renamed part number
   const c = await connect(base + '/mcp/' + TOKEN);
   const fcc = await call(c, 'search_keys', { query: 'm3n a2c931423' });
   assert.deepEqual(fcc.keys.map(k => k.pn).sort(), ['YCKG#0011', 'YCKG#1105', 'YCKG#B-RC']);
+  // Which version carries the make's logo
+  assert.equal(fcc.keys.find(k => k.pn === 'YCKG#0011').logo, 'Ford logo');
+  assert.equal(fcc.keys.find(k => k.pn === 'YCKG#B-RC').logo, undefined);
+  const logo = await call(c, 'search_keys', { query: 'ford logo board' });
+  assert.deepEqual(logo.keys.map(k => k.pn), ['YCKG#0011']);
   const car = await call(c, 'search_keys', { query: '2019 F150' });
   assert.deepEqual(car.keys.map(k => k.pn).sort(), ['H128', 'YCKG#0011', 'YCKG#B-RC']);
   const sku = await call(c, 'search_keys', { query: 'YCKG#F-RC' });
