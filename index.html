@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v290</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v291</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5380,7 +5380,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v290</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v291</p>
         </div>
 
         <div class="settings-section">
@@ -5392,7 +5392,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v290<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v291<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -16808,13 +16808,15 @@ const FID_ANTIQUE_DIGIT = 9;
 const FID_ANTIQUE_LAST_YEAR = 1985;
 FID_BAND_NAMES[FID_ANTIQUE_DIGIT] = 'Antique';
 
-// Every vehicle the key fits ends by FID_ANTIQUE_LAST_YEAR. A key with no
-// vehicles, or with one whose years are unknown ("All years"), is not.
+// Every vehicle the key fits ends by FID_ANTIQUE_LAST_YEAR. An application
+// with no years ("All years") counts when the key came from the antique book
+// (1940-1985, marked by antiqueBlank); from any other source its age is
+// unknown and the key is not antique. Neither is a key with no vehicles.
 function isAntiqueKey(key) {
     const vehicles = key.vehicles || [];
     return vehicles.length > 0 && vehicles.every(v => {
         const start = parseInt(v.startYear);
-        if (!(start > 0)) return false;
+        if (!(start > 0)) return !!key.antiqueBlank;
         return (parseInt(v.endYear) || start) <= FID_ANTIQUE_LAST_YEAR;
     });
 }
@@ -17865,9 +17867,13 @@ function fidManagerMoveAntiques() {
     const full = moves.length - placed.length;
     if (!placed.length) { toast(`The ${FID_ANTIQUE_DIGIT}xx Antique group is full`); return; }
     const years = keys => {
-        const ys = keys.flatMap(k => (k.vehicles || []).flatMap(v => [parseInt(v.startYear), parseInt(v.endYear) || parseInt(v.startYear)]));
+        const vehicles = keys.flatMap(k => k.vehicles || []);
+        const ys = vehicles.filter(v => parseInt(v.startYear) > 0)
+            .flatMap(v => [parseInt(v.startYear), parseInt(v.endYear) || parseInt(v.startYear)]);
+        const undated = ys.length < vehicles.length * 2 ? 'All years' : '';
+        if (!ys.length) return undated;
         const lo = Math.min(...ys), hi = Math.max(...ys);
-        return lo === hi ? String(lo) : lo + '–' + hi;
+        return (lo === hi ? String(lo) : lo + '–' + hi) + (undated ? ' + ' + undated : '');
     };
     const lines = placed.map(mv => `• ${mv.fid} → ${mv.newFid}  (${mv.keys.map(k => k.pn).join(', ')}, ${years(mv.keys)})`);
     const preview = lines.slice(0, 15).join('\n') + (lines.length > 15 ? `\n…and ${lines.length - 15} more` : '');

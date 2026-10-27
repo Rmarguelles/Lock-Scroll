@@ -282,7 +282,7 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 | Store | Value shape | Live count |
 |---|---|---|
 | `fccRelationships` | `{frequency, buttonCount}` | 186 |
-| `fidAssignments` | `fccid → FID` (e.g. `"H73" → "F-102"`), keyed by the FCC ID exactly as the key spells it; `alignFidAssignmentSpellings()` re-keys other spellings on load (v278). The number's hundreds digit is its group: 0xx–7xx by key type (`FID_TYPE_DIGITS`), 9xx Antique when every key on the FID fits nothing after 1985 (v290) | many |
+| `fidAssignments` | `fccid → FID` (e.g. `"H73" → "F-102"`), keyed by the FCC ID exactly as the key spells it; `alignFidAssignmentSpellings()` re-keys other spellings on load (v278). The number's hundreds digit is its group: 0xx–7xx by key type (`FID_TYPE_DIGITS`), 9xx Antique when every key on the FID fits nothing after 1985 (v290; an "All years" application counts on a key from the antique book, `antiqueBlank`, v291) | many |
 | `fidPrefixes` | `prefix → {makes[], name}` | `N`, `F`, `GM`, … |
 | `fidMerges` | — | 0 |
 
