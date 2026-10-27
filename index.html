@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v289</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v291</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -4949,6 +4949,7 @@
             <span><strong style="color:var(--accent);">5xx</strong> Proximity</span>
             <span><strong style="color:var(--accent);">6xx</strong> Remote Only</span>
             <span><strong style="color:var(--accent);">7xx</strong> Shell</span>
+            <span><strong style="color:var(--accent);">9xx</strong> Antique (1985 &amp; older)</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;">
             <input type="text" class="fid-search" id="fidSearch" placeholder="Search FCC ID or FID..." oninput="filterFids()" style="flex:1;margin:0;">
@@ -5101,6 +5102,9 @@
                 </button>
                 <button class="settings-btn" onclick="fidManagerReorganizeByType()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
                     🔃 Reorganize All by Key Type
+                </button>
+                <button class="settings-btn" onclick="fidManagerMoveAntiques()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
+                    🏺 Move 1985-and-Older Keys to 9xx (Antique)
                 </button>
                 <button class="settings-btn" onclick="fidManagerFixPrefixMismatches()" style="background:var(--card);border:1px solid var(--accent);color:var(--accent);">
                     🩹 Fix Keys Under the Wrong Make Prefix
@@ -5376,7 +5380,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v289</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v291</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5392,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v289<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v291<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -13469,18 +13473,23 @@ function getKeyFids(key) {
 // shares it) and a button to assign or change it. When an FID's group (its
 // first digit) is not this key's type, the line says why. One shared with
 // keys of that group stays for them; this key gets filed by an FCC ID of its
-// own instead. One nothing else holds there can move in one tap.
+// own instead. One nothing else holds there can move in one tap. An FID all
+// of whose keys are antique belongs in 9xx and moves there whole.
 function keyFidSectionHtml(key) {
     const fccs = getKeyFccIds(key);
     if (!fccs.length) return '';
-    const want = getFidTypeDigit(key.keyType);
+    const typeWant = getFidTypeDigit(key.keyType);
+    const antique = isAntiqueKey(key);
     const many = fccs.length > 1;
     const bandOf = fid => { const num = fid ? parseInt(String(fid).split('-')[1], 10) : NaN; return isNaN(num) ? null : Math.floor(num / 100); };
-    const items = fccs.map(f => ({ f, fid: lookupFidForFcc(f) }));
+    const items = fccs.map(f => {
+        const fid = lookupFidForFcc(f);
+        return { f, fid, want: fid && antique && fidKeysAllAntique(fid) ? FID_ANTIQUE_DIGIT : typeWant };
+    });
     // Filed in its own group already: other groups' FIDs only need saying why
-    const hasOwn = items.some(i => bandOf(i.fid) === want);
+    const hasOwn = items.some(i => bandOf(i.fid) === i.want);
     const unassigned = items.filter(i => !i.fid).map(i => i.f);
-    const lines = items.map(({ f, fid }) => {
+    const lines = items.map(({ f, fid, want }) => {
         const arg = jsAttrArg(f);
         const chip = fid
             ? `<span onclick="openFidDetail('${jsAttrArg(fid)}')" style="display:inline-block;padding:8px 16px;background:var(--accent);color:var(--bg);border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">FID: ${escapeJobText(fid)} →</span>`
@@ -13488,7 +13497,10 @@ function keyFidSectionHtml(key) {
         const btn = `<button onclick="openEditFidModal('${arg}')" style="padding:6px 12px;background:var(--bg);color:var(--accent);border:1px solid var(--accent);border-radius:14px;font-size:12px;cursor:pointer;">${fid ? 'Edit' : 'Assign'}</button>`;
         let note = '', calm = false;
         const have = bandOf(fid);
-        if (have !== null && have !== want && FID_BAND_NAMES[have] !== undefined) {
+        if (have !== null && have !== want && FID_BAND_NAMES[have] !== undefined && want === FID_ANTIQUE_DIGIT) {
+            note = `In the ${FID_BAND_NAMES[have]} group (${have}xx), but every key on it is from ${FID_ANTIQUE_LAST_YEAR} or older. ` +
+                `<button onclick="moveFidToAntique('${jsAttrArg(fid)}')" style="margin-left:4px;padding:4px 10px;background:var(--accent);color:var(--bg);border:none;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;">Move to ${FID_ANTIQUE_DIGIT}xx</button>`;
+        } else if (have !== null && have !== want && FID_BAND_NAMES[have] !== undefined) {
             const n = normalizeFccId(f);
             const holders = DB.filter(k => String(k.pn) !== String(key.pn) &&
                 getFidTypeDigit(k.keyType) === have && getKeyFccIds(k).some(x => normalizeFccId(x) === n));
@@ -13525,6 +13537,19 @@ function moveFidToBand(fccId, digit) {
     const stored = Object.keys(fidAssignments).find(k => fidAssignments[k] === fid && normalizeFccId(k) === n) || fccId;
     const newFid = prefix + '-' + formatFidNumber(next);
     fidAssignments[stored] = newFid;
+    saveFidAssignments();
+    refreshFidViews();
+    toast(fid + ' moved to ' + newFid);
+}
+
+// Move an FID, with every FCC ID filed under it, to its prefix's next free
+// number in the 9xx Antique group
+function moveFidToAntique(fid) {
+    const prefix = String(fid).split('-')[0];
+    const next = getNextFidNumber(prefix, FID_ANTIQUE_DIGIT);
+    if (next === null) { toast('The Antique group (' + FID_ANTIQUE_DIGIT + 'xx) is full for ' + prefix); return; }
+    const newFid = prefix + '-' + formatFidNumber(next);
+    Object.keys(fidAssignments).forEach(fcc => { if (fidAssignments[fcc] === fid) fidAssignments[fcc] = newFid; });
     saveFidAssignments();
     refreshFidViews();
     toast(fid + ' moved to ' + newFid);
@@ -16775,6 +16800,33 @@ const FID_TYPE_DIGITS = {
 };
 const FID_BAND_NAMES = ['Non-Chip', 'Chip / VATS', 'Remote Head', 'Flip', 'Fobik', 'Proximity', 'Remote Only', 'Shell'];
 
+// 9xx Antique: an FID whose keys all fit nothing newer than 1985 (the range
+// of the Antique Reference) files here whatever its key type, so seldom-used
+// blanks sit apart from the working stock. 8 stays unused: a hole in
+// FID_BAND_NAMES that map() skips.
+const FID_ANTIQUE_DIGIT = 9;
+const FID_ANTIQUE_LAST_YEAR = 1985;
+FID_BAND_NAMES[FID_ANTIQUE_DIGIT] = 'Antique';
+
+// Every vehicle the key fits ends by FID_ANTIQUE_LAST_YEAR. An application
+// with no years ("All years") counts when the key came from the antique book
+// (1940-1985, marked by antiqueBlank); from any other source its age is
+// unknown and the key is not antique. Neither is a key with no vehicles.
+function isAntiqueKey(key) {
+    const vehicles = key.vehicles || [];
+    return vehicles.length > 0 && vehicles.every(v => {
+        const start = parseInt(v.startYear);
+        if (!(start > 0)) return !!key.antiqueBlank;
+        return (parseInt(v.endYear) || start) <= FID_ANTIQUE_LAST_YEAR;
+    });
+}
+
+// Every key filed under this FID (merged FCC IDs included) is antique
+function fidKeysAllAntique(fid) {
+    const keys = DB.filter(k => getKeyFids(k).includes(fid));
+    return keys.length > 0 && keys.every(isAntiqueKey);
+}
+
 function getFidTypeDigit(keyType) {
     const raw = String(keyType || '').trim();
     if (FID_TYPE_DIGITS[raw] !== undefined) return FID_TYPE_DIGITS[raw];
@@ -16795,20 +16847,28 @@ function getFidTypeDigit(keyType) {
 
 // One FCC ID can span keys of different types (e.g. remote head + remote-only
 // variants sharing an FCC); the FID takes the lowest digit — the primary key.
+// When every one of those keys is antique it is 9 (Antique) instead.
 // Accepts the comma-joined FCC lists some fidAssignments keys use.
 function getFidTypeDigitForFcc(fccId) {
     const parts = String(fccId || '').split(',').map(s => s.trim()).filter(Boolean);
     let digit = null;
+    let antique = true;
     DB.forEach(key => {
         const ids = getKeyFccIds(key);
         if (!parts.some(p => ids.includes(p))) return;
         const d = getFidTypeDigit(key.keyType);
         if (digit === null || d < digit) digit = d;
+        if (!isAntiqueKey(key)) antique = false;
     });
-    return digit === null ? 1 : digit;
+    if (digit === null) return 1;
+    // An assigned FID also holds the keys of FCC IDs merged into it
+    const fid = antique && lookupFidForFcc(fccId);
+    if (fid && !fidKeysAllAntique(fid)) antique = false;
+    return antique ? FID_ANTIQUE_DIGIT : digit;
 }
 
-// Type digit for the key being built in the Add Custom Key form
+// Type digit for the key being built in the Add Custom Key form: 9 (Antique)
+// when every year range entered ends by FID_ANTIQUE_LAST_YEAR
 function getCustomKeyFormTypeDigit() {
     const sel = document.getElementById('customKeyType');
     let keyType = sel ? sel.value : '';
@@ -16816,7 +16876,24 @@ function getCustomKeyFormTypeDigit() {
         const other = document.getElementById('customKeyTypeOther');
         keyType = other ? other.value : '';
     }
-    return getFidTypeDigit(keyType);
+    const vehicles = [];
+    const yearsOf = (startId, endId) => {
+        const start = parseInt(document.getElementById(startId)?.value);
+        vehicles.push({ startYear: start, endYear: parseInt(document.getElementById(endId)?.value) || start });
+    };
+    document.querySelectorAll('.custom-vehicle-row').forEach(row => {
+        const num = row.id.replace('customVehicle', '');
+        const make = document.getElementById('customVehicleMake' + num)?.value;
+        if (!num || isNaN(num) || !make || make === '__other__') return;
+        yearsOf('customVehicleStart' + num, 'customVehicleEnd' + num);
+        row.querySelectorAll('.custom-vehicle-extra-range').forEach(er => {
+            const suffix = er.id.replace('customVehicleExtra', '');
+            if (parseInt(document.getElementById('customVehicleExtraStart' + suffix)?.value)) {
+                yearsOf('customVehicleExtraStart' + suffix, 'customVehicleExtraEnd' + suffix);
+            }
+        });
+    });
+    return isAntiqueKey({ vehicles }) ? FID_ANTIQUE_DIGIT : getFidTypeDigit(keyType);
 }
 
 // Next free number inside the type band [d01, d99] for this prefix.
@@ -17739,7 +17816,7 @@ function fidManagerReorganizeByType() {
         .map(([oldFid, newFid]) => `• ${oldFid} → ${newFid}`);
     const preview = moves.slice(0, 10).join('\n');
     const more = moves.length > 10 ? `\n…and ${moves.length - 10} more` : '';
-    const msg = `Reorganize ${repack.changed} FID assignment${repack.changed !== 1 ? 's' : ''} into their key type groups?\n\n${preview}${more}\n\nNote: FIDs manually placed in a different group will move back to their key type's group. To keep a key in another group permanently, correct its Key Type instead.`;
+    const msg = `Reorganize ${repack.changed} FID assignment${repack.changed !== 1 ? 's' : ''} into their key type groups?\n\n${preview}${more}\n\nNote: FIDs manually placed in a different group will move back to their key type's group (or 9xx Antique when all their keys stop by ${FID_ANTIQUE_LAST_YEAR}). To keep a key in another group permanently, correct its Key Type instead.`;
     if (!confirm(msg)) return;
 
     const changed = applyFidBandRepack(repack.mapping);
@@ -17752,6 +17829,65 @@ function fidManagerReorganizeByType() {
         renderFidList();
     }
     toast(`Reorganized ${changed} FID${changed !== 1 ? 's' : ''} by key type`);
+}
+
+// FIDs outside 9xx whose keys are all antique, by prefix then number, each
+// with the 9xx number it takes (null once its prefix's group is full).
+// Numbers of FIDs that stay are left alone, so labels already printed hold.
+function planAntiqueFidMoves() {
+    const keysByFid = new Map();
+    DB.forEach(k => getKeyFids(k).forEach(fid => {
+        if (!keysByFid.has(fid)) keysByFid.set(fid, []);
+        keysByFid.get(fid).push(k);
+    }));
+    const moves = [];
+    keysByFid.forEach((keys, fid) => {
+        const m = /^([A-Za-z]+)-(\d+)$/.exec(fid);
+        if (!m || Math.floor(parseInt(m[2], 10) / 100) === FID_ANTIQUE_DIGIT || !keys.every(isAntiqueKey)) return;
+        moves.push({ fid, prefix: m[1], num: parseInt(m[2], 10), keys });
+    });
+    moves.sort((a, b) => a.prefix.localeCompare(b.prefix) || a.num - b.num);
+    const next = {};
+    moves.forEach(mv => {
+        if (!(mv.prefix in next)) next[mv.prefix] = getNextFidNumber(mv.prefix, FID_ANTIQUE_DIGIT);
+        const n = next[mv.prefix];
+        mv.newFid = n !== null && n <= FID_ANTIQUE_DIGIT * 100 + 99 ? mv.prefix + '-' + formatFidNumber(n) : null;
+        next[mv.prefix] = mv.newFid ? n + 1 : null;
+    });
+    return moves;
+}
+
+function fidManagerMoveAntiques() {
+    const moves = planAntiqueFidMoves();
+    if (moves.length === 0) {
+        toast(`No FIDs to move: every all-${FID_ANTIQUE_LAST_YEAR}-or-older FID is already in ${FID_ANTIQUE_DIGIT}xx`);
+        return;
+    }
+    const placed = moves.filter(mv => mv.newFid);
+    const full = moves.length - placed.length;
+    if (!placed.length) { toast(`The ${FID_ANTIQUE_DIGIT}xx Antique group is full`); return; }
+    const years = keys => {
+        const vehicles = keys.flatMap(k => k.vehicles || []);
+        const ys = vehicles.filter(v => parseInt(v.startYear) > 0)
+            .flatMap(v => [parseInt(v.startYear), parseInt(v.endYear) || parseInt(v.startYear)]);
+        const undated = ys.length < vehicles.length * 2 ? 'All years' : '';
+        if (!ys.length) return undated;
+        const lo = Math.min(...ys), hi = Math.max(...ys);
+        return (lo === hi ? String(lo) : lo + '–' + hi) + (undated ? ' + ' + undated : '');
+    };
+    const lines = placed.map(mv => `• ${mv.fid} → ${mv.newFid}  (${mv.keys.map(k => k.pn).join(', ')}, ${years(mv.keys)})`);
+    const preview = lines.slice(0, 15).join('\n') + (lines.length > 15 ? `\n…and ${lines.length - 15} more` : '');
+    const msg = `Move ${placed.length} FID${placed.length !== 1 ? 's' : ''} whose keys all stop by ${FID_ANTIQUE_LAST_YEAR} to the ${FID_ANTIQUE_DIGIT}xx Antique group?\n\n${preview}` +
+        (full ? `\n\n${full} more won't fit: their prefix's ${FID_ANTIQUE_DIGIT}xx group is full.` : '') +
+        `\n\nEvery other FID keeps its number. An FID shared with a key that fits a later year stays where it is.`;
+    if (!confirm(msg)) return;
+
+    const mapping = {};
+    placed.forEach(mv => { mapping[mv.fid] = mv.newFid; });
+    applyFidBandRepack(mapping);
+    saveFidAssignments();
+    refreshFidViews();
+    toast(`Moved ${placed.length} FID${placed.length !== 1 ? 's' : ''} to ${FID_ANTIQUE_DIGIT}xx Antique` + (full ? ` — ${full} skipped (group full)` : ''));
 }
 
 // FIDs whose prefix is for makes the key doesn't fit at all, e.g. Chrysler
@@ -32962,7 +33098,7 @@ function applyManualFidToNewKey() {
     const expectedDigit = getCustomKeyFormTypeDigit();
     const numDigit = Math.floor(num / 100);
     if (numDigit !== expectedDigit && FID_BAND_NAMES[numDigit] !== undefined) {
-        if (!confirm(newFid + ' is in the ' + FID_BAND_NAMES[numDigit] + ' band (' + numDigit + 'xx), but this key type belongs in ' + expectedDigit + 'xx (' + FID_BAND_NAMES[expectedDigit] + '). Use it anyway?')) return;
+        if (!confirm(newFid + ' is in the ' + FID_BAND_NAMES[numDigit] + ' band (' + numDigit + 'xx), but this key belongs in ' + expectedDigit + 'xx (' + FID_BAND_NAMES[expectedDigit] + '). Use it anyway?')) return;
     }
 
     const collision = Object.entries(fidAssignments).find(([fcc, fid]) => fid === newFid && fcc !== fccId);
@@ -33720,6 +33856,9 @@ function saveCustomKey() {
     // FID-grouped search look it up that way
     const fidFcc = newKey.fccid ? String(newKey.fccid).trim() : '';
     if (fidFcc && !lookupFidForFcc(fidFcc)) {
+        // A suggestion made before the years were filled in may be in the
+        // wrong group (9xx Antique depends on them)
+        if (customKeyFidNumberAutofilled) suggestManualFidNumber(false);
         const existingFidChoice = document.getElementById('customKeyExistingFid')?.value || '';
         const manualPrefix = document.getElementById('customKeyManualPrefix')?.value || '';
         const manualNum = parseInt((document.getElementById('customKeyManualNumber')?.value || '').trim(), 10);
