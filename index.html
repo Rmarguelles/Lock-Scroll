@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v288</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v289</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5376,7 +5376,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v288</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v289</p>
         </div>
 
         <div class="settings-section">
@@ -5388,7 +5388,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v288<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v289<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -19498,9 +19498,39 @@ function closeSettings() {
 }
 
 // Force update app - clears service worker cache and reloads
+// The version a page shows on Settings -> App Updates ("Current: v288"), or 0
+function appVersionIn(text) {
+    return parseInt((String(text || '').match(/Current: v(\d+)/) || [])[1], 10) || 0;
+}
+
 async function forceUpdateApp() {
     const btn = event.target;
     btn.disabled = true;
+    btn.textContent = '🔄 Checking...';
+    const reset = () => { btn.disabled = false; btn.textContent = '🔄 Update App'; };
+
+    // Ask the site which version it serves before clearing anything. Clearing
+    // offline left no copy to reload, and clearing when the site has nothing
+    // newer looked like an update that did not go through (v288 merged on 26
+    // Oct, but GitHub never published it, and the site kept serving v287).
+    const running = appVersionIn(document.getElementById('currentVersionDisplay').textContent);
+    let served = 0;
+    try {
+        const res = await fetch('./index.html?check=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        served = appVersionIn(await res.text());
+    } catch (e) {
+        toast('Could not reach the site to check for an update. Nothing was cleared; try again when online.');
+        reset();
+        return;
+    }
+    if (served && running && served <= running) {
+        if (!confirm('You have v' + running + ', the newest version the site is serving. ' +
+                'If a change should be out by now, it has not been published yet.\n\nClear the cache and reload anyway?')) {
+            reset();
+            return;
+        }
+    }
     btn.textContent = '🔄 Updating...';
 
     try {
@@ -19521,7 +19551,7 @@ async function forceUpdateApp() {
         }
 
         // Show success message and reload
-        toast('Cache cleared! Reloading...');
+        toast(served > running ? 'Updating to v' + served + '...' : 'Cache cleared! Reloading...');
 
         // Small delay to show the toast, then force reload from server
         setTimeout(() => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lockscroll-v215';
+const CACHE_NAME = 'lockscroll-v216';
 const urlsToCache = [
   './',
   './index.html',
@@ -52,6 +52,9 @@ self.addEventListener('activate', event => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', event => {
+  // A request that asks for no cache (Update App checking which version the
+  // site serves) goes straight to the network and is not stored.
+  if (event.request.cache === 'no-store') return;
   event.respondWith(
     caches.match(event.request)
       .then(response => {
