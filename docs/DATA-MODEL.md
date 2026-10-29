@@ -220,6 +220,31 @@ vehicles in place; `persistEditedKeyVehicles()` saves each one where it lives
 custom). Before v273 these, and Delete Part Number, wrote a copy of the whole
 `DB` to IndexedDB that nothing reads, so the changes reverted on reload.
 
+### 3.1f Autel iKey, North America (v293)
+
+`AUTEL_IKEY_NA` is reference data from Autel's *Smart Key V1.70 Function
+List*: every row whose Region includes NA, less brands Autel tags with every
+region that are not sold in North America (BYD, Geely, BAIC, Renault,
+Peugeot, Skoda...). 1218 rows, 682 listings once grouped by
+make/model/years (`getAutelIKeyEntries()`). It replaced
+`AUTEL_IKEY_VEHICLE_DB`, which mixed regions and carried a shell style chosen
+by make, not by Autel.
+
+Autel's model names are matched to the app's ignoring case, spaces and
+dashes, cut at `(` (platform codes: `SANTAFE(TM)`) and split at `/`; an app
+name is also split at `/` and `,` (`F-Series/F150/F250 Light Duty Pickup`).
+`AUTEL_IKEY_ALIASES` covers the rest (Dodge `RAM1500` -> Ram, Hyundai `G80(DH)`
+-> Genesis G80...).
+
+Each listing is compared with the app's keys year by year, live, on every
+render. A year the app lists only keyed-ignition keys for is a discrepancy:
+the listing shows no flag until approved in Settings -> Autel iKey Review.
+The decisions are the `autelIKeyReview` store, keyed by the listing's id
+(`Make|Model|start|end` in Autel's spelling): `{ decision: 'approved' |
+'rejected' | 'pending', at, by }`. Sync and backups merge it per listing,
+later `at` winning; Undo writes `pending` rather than deleting, so an older
+copy cannot bring a decision back.
+
 ### 3.2 Standalone vehicle record (`customVehicles`, and `lishiVehicleData`)
 
 These carry key data *per vehicle* rather than per part number, and they
@@ -289,6 +314,8 @@ All 32 IndexedDB stores, with the ones joined to keys/vehicles called out.
 **Keyed by keyway:** `lishiData` → `{tool, direction}`; `customKeyways`.
 
 **Keyed by `make\|model`:** `vehicleYearNotes`.
+
+**Keyed by Autel listing (`Make|Model|start|end`):** `autelIKeyReview` (v293, §3.1f).
 
 **Other:** `purchaseHistory`, `jobHistory`, `activeJobs`, `toolsDatabase`,
 `lishiInventory`, `testKeyInventory`, `customVendors`, `customDropdownValues`,
