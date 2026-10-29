@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v291</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v292</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5380,7 +5380,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v291</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v292</p>
         </div>
 
         <div class="settings-section">
@@ -5392,7 +5392,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v291<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v292<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -27036,6 +27036,20 @@ function openProductionRun(runKey) {
     openVehicleDetail(runKey);
 }
 
+// Flag over a year's keys when Autel's list says an iKey programs that year.
+// iKeys are proximity only, and an "All years" page has no year to look up.
+function autelIKeyFlagHtml(make, model, keyType, year) {
+    if (keyType !== 'Proximity' || typeof year !== 'number') return '';
+    const styles = getVehicleIKeyStyles(make, model, year, year)
+        .map(sid => AUTEL_IKEY_STYLES.find(s => s.id === sid)).filter(Boolean);
+    if (!styles.length) return '';
+    return `
+        <div style="margin-bottom:12px;padding:10px 14px;background:#0057a8;border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:700;color:#fff;">✓ Compatible with Autel iKey</span>
+            ${styles.map(s => `<span style="padding:2px 8px;background:rgba(255,255,255,0.2);color:#fff;border-radius:10px;font-size:11px;font-weight:600;">${s.label}</span>`).join('')}
+        </div>`;
+}
+
 // One year's keys, each once however many production runs list it, then the
 // runs themselves. The keys answer "what fits this car"; a run is where its
 // vehicle info lives.
@@ -27056,7 +27070,8 @@ function renderVehicleYearPage() {
     const remoteKeys = sorted.filter(isRemoteOnlyKey);
     const yearLabel = year === 'all' ? 'all years' : year;
 
-    let html = `<div class="vehicle-section-title" style="margin-bottom:8px;">Keys for ${yearLabel} (${sorted.length})</div>`;
+    let html = autelIKeyFlagHtml(make, model, keyType, year);
+    html += `<div class="vehicle-section-title" style="margin-bottom:8px;">Keys for ${yearLabel} (${sorted.length})</div>`;
     if (!sorted.length) html += '<div style="color:var(--dim);font-size:13px;padding:8px 0 12px;">No keys listed for this year yet</div>';
     html += mainKeys.map(k => renderYearKeyCard(k, make, model, year)).join('');
     if (remoteKeys.length) {
