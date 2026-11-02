@@ -29,7 +29,11 @@ numbers in the same commit:
   `uploadToCloud()`, the merge in `downloadFromCloud()`, and
   `exportData()`/`importData()`. Mirror how `jobHistory` is threaded through.
 - `stockData` (key stock by PN) is per-user and deliberately excluded from
-  shared sync; most other stores are shared.
+  shared sync; most other stores are shared. `stockLocations` (where that
+  stock is kept: van, garage, ...) is personal the same way. `stockData[pn]`
+  stays the total; change stock with `addStockAt()` / `takeStockFrom()` so the
+  per-location counts follow, and call `moveStockLocationsPn()` /
+  `dropStockLocationsPn()` wherever a PN's stock is renamed or deleted.
 - Cloud sync writes each store as its own Firestore document,
   `<owner>/stores/<name>`, holding the store as JSON text in `json`; a store
   over ~300k characters is split into `<name>`, `<name>__2`, ... Add a new

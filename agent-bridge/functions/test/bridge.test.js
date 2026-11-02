@@ -21,9 +21,9 @@ const yckgOptions = [
 const SNAP = {
   schema: 1, app: 'v281', owner: 'me@example.com',
   keys: [
-    { pn: '8701', fccIds: ['M3NWXF0B1'], keyType: 'Proximity', keyway: 'Y159', buttons: '3 Button: L, U, P (Lock, Unlock, Panic)', stock: 3,
+    { pn: '8701', fccIds: ['M3NWXF0B1'], keyType: 'Proximity', keyway: 'Y159', buttons: '3 Button: L, U, P (Lock, Unlock, Panic)', stock: 3, stockAt: { Van: 1, Garage: 2 },
       prices: [{ vendor: 'Keyless Ride', priceA: 84 }], vehicles: [{ make: 'Jeep', model: 'Wagoneer', startYear: 2022, endYear: 2023 }], source: 'builtin' },
-    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', logo: 'Ford logo', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2,
+    { pn: 'YCKG#0011', brand: 'OEM Board OEM Shell', logo: 'Ford logo', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 2, stockAt: { Garage: 2 },
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#0011', options: yckgOptions }], vehicles: FORD, source: 'custom', importedFrom: 'Your Car Key Guys' },
     { pn: 'YCKG#B-RC', brand: 'OEM Recased (No Logo)', fccIds: ['M3N-A2C931423'], keyType: 'Proximity', keyway: 'HU101', stock: 1, otherPns: ['YCKG#F-RC'],
       prices: [{ vendor: 'Your Car Key Guys', sku: 'YCKG#B-RC', options: yckgOptions }], vehicles: FORD, source: 'custom' },
@@ -157,6 +157,26 @@ test('get_inventory: on hand by default, reorder list with atOrBelow', async () 
   assert.equal(r.keys[0].pn, '8701');
   const low = await call(c, 'get_inventory', { atOrBelow: 0 });
   assert.deepEqual(low.keys.map(k => k.pn).sort(), ['5925', 'H128', 'YCKG#1105']);
+  await c.close();
+});
+
+test('get_inventory and find_keys_for_vehicle: where stock is kept', async () => {
+  const c = await connect(base + '/mcp/' + TOKEN);
+  const van = await call(c, 'get_inventory', { location: 'van' });
+  assert.equal(van.location, 'Van');
+  assert.deepEqual(van.keys.map(k => [k.pn, k.here, k.stock]), [['8701', 1, 3]]);
+  assert.equal(van.units, 1);
+  assert.equal(van.testKeys, undefined);
+  const garage = await call(c, 'get_inventory', { location: 'Garage' });
+  assert.deepEqual(garage.keys.map(k => k.pn), ['8701', 'YCKG#0011']);
+  const none = await call(c, 'get_inventory', { location: 'Shop' });
+  assert.match(none.error, /Locations with stock: Van, Garage/);
+  const all = await call(c, 'get_inventory');
+  assert.deepEqual(all.keys[0].stockAt, { Van: 1, Garage: 2 });
+  const ford = await call(c, 'find_keys_for_vehicle', { make: 'Ford', model: 'F-150', year: 2019 });
+  assert.deepEqual(ford.keys[0].stockAt, { Garage: 2 });
+  const key = await call(c, 'get_key', { pn: '8701' });
+  assert.deepEqual(key.stockAt, { Van: 1, Garage: 2 });
   await c.close();
 });
 

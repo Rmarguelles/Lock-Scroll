@@ -13,7 +13,7 @@ const INSTRUCTIONS = [
   'Part numbers are matched without case, spaces or dashes. A distributor SKU such as "YCKG#0011" is a part number. Some keys answer to more than one SKU (otherPns).',
   'To find a key for a car use find_keys_for_vehicle; for anything else use search_keys, then get_key for the full record.',
   'A key from a distributor listing lists its versions (e.g. OEM Board OEM Shell, OEM Recased (No Logo), New Aftermarket) under prices[].options; option.key is the part number that version is filed under. An OEM version carries the make\'s logo (logo, e.g. "GMC logo"); a recased or aftermarket (No Logo) version has none.',
-  'Prices are in US dollars. Stock is units on hand.'
+  'Prices are in US dollars. Stock is units on hand. When the user has set up stock locations in the app, stockAt says where that stock is kept (e.g. {"Van": 2, "Garage": 5}; "Not placed" is stock not put in a location yet), so you can tell whether a key is in the van.'
 ].join(' ');
 
 const json = value => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
@@ -69,9 +69,10 @@ export function buildServer({ getData, access }) {
 
   server.registerTool('get_inventory', {
     title: 'Inventory',
-    description: 'Stock on hand. By default every key with stock above zero, most first, plus test key counts by keyway. Narrow with a search query, or list keys at or below a count to find what to reorder.',
+    description: 'Stock on hand. By default every key with stock above zero, most first, plus test key counts by keyway. Narrow with a search query or a stock location (e.g. what is in the van), or list keys at or below a count to find what to reorder.',
     inputSchema: {
       query: z.string().optional().describe('Same words as search_keys, e.g. "Toyota" or "HU101".'),
+      location: z.string().optional().describe('Only stock kept at this location, e.g. "Van" or "Garage"; counts and atOrBelow then apply to that location.'),
       atOrBelow: z.number().int().min(0).optional().describe('Only keys with this many or fewer on hand (includes zero).'),
       includeZero: z.boolean().optional().describe('Include keys with none on hand.'),
       limit: z.number().int().min(1).max(1000).optional()
