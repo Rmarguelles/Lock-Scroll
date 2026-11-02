@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v295</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v296</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5410,7 +5410,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v295</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v296</p>
         </div>
 
         <div class="settings-section">
@@ -5422,7 +5422,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v295<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v296<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -14794,6 +14794,7 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
 
     const key = DB[idx];
     const stock = stockData[key.pn] || 0;
+    if (stockXfer && stockXfer.pn !== String(key.pn)) stockXfer = null; // move mode is per key
     // A test key's stock is its own part number's count, like any key; test
     // keys used on a job for its keyway(s) come off this count
     const tkLink = getTestKeyEntryForKey(key);
@@ -16469,6 +16470,7 @@ function toggleKeyLishiToolDirection(idx, i) {
 
 function closeDetail() {
     document.getElementById('detailPanel').classList.remove('on');
+    stockXfer = null; // leave the key page's move mode
     // Back on the import panel's duplicates report: a merge on the key just
     // closed may have settled one, so redraw it.
     if (document.getElementById('distDupReport') && document.getElementById('distImportPanel').classList.contains('on')) {
@@ -17113,12 +17115,14 @@ function mergeStockLocations(local, remote) {
 
 // ---- Stock locations: shared bits of UI ----
 
-function stockLocStepper(minus, plus, qty) {
-    const b = 'width:32px;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;';
+function stockLocStepper(minus, plus, qty, disabled) {
+    const b = 'width:32px;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;'
+        + (disabled ? 'opacity:0.3;cursor:default;' : 'cursor:pointer;');
+    const dis = disabled ? ' disabled' : '';
     return `<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-            <button onclick="event.stopPropagation();${minus}" style="${b}">−</button>
+            <button onclick="event.stopPropagation();${minus}" style="${b}"${dis}>−</button>
             <span style="min-width:24px;text-align:center;font-weight:700;font-size:16px;color:${qty > 0 ? 'var(--success)' : 'var(--dim)'};">${qty}</span>
-            <button onclick="event.stopPropagation();${plus}" style="${b}">+</button>
+            <button onclick="event.stopPropagation();${plus}" style="${b}"${dis}>+</button>
         </div>`;
 }
 
@@ -17178,30 +17182,107 @@ function editStockSpot(pn, locId) {
     refreshStockViews(pn);
 }
 
-// Key page: the total, then a row per location with its own −/+ and spot
+// Key page: the total, then a row per location with its own −/+ and spot.
+// In move mode (see below) the same −/+ move stock instead of changing it.
 function keyStockLocationsHtml(pn) {
     const pnArg = jsArg(pn);
     const job = stockLocations.jobLoc;
-    const rows = getStockBreakdown(pn).filter(r => r.id || r.qty > 0);
+    const x = activeStockXfer(pn);
+    const all = getStockBreakdown(pn);
+    const rows = x ? all.filter(r => x.ids.includes(r.id)) : all.filter(r => r.id || r.qty > 0);
     const linkBtn = 'background:none;border:none;padding:0;font-size:11px;cursor:pointer;text-align:left;';
+    const pickDonor = !!x && x.ids.length > 2;
+    const hasDonor = pickDonor && x.donor !== null;
+    const donorName = hasDonor ? escapeJobText(stockLocationName(x.donor)) : '';
+    const hint = !x ? ''
+        : !pickDonor ? 'Move mode: <b>+</b> moves one in from the other location, <b>−</b> moves one out to it.'
+        : !hasDonor ? '<b style="color:#ff9800;">Move mode: tap the location to take keys from.</b>'
+        : `Taking from <b>${donorName}</b>: <b>+</b> moves one in from ${donorName}, <b>−</b> puts one back. Tap another location to take from it instead.`;
+    const rowHtml = r => {
+        const isDonor = hasDonor && r.id === x.donor;
+        const sub = !x
+            ? (r.id
+                ? `<button onclick="editStockSpot('${pnArg}', '${jsArg(r.id)}')" style="${linkBtn}color:${r.spot ? 'var(--text)' : 'var(--dim)'};">${r.spot ? '📍 ' + escapeJobText(r.spot) + ' ✎' : '+ where (drawer, bin…)'}</button>`
+                : '<div style="font-size:11px;color:var(--dim);">Stock not in a location yet — use Move</div>')
+            : isDonor ? '<div style="font-size:11px;color:var(--accent);font-weight:700;">Taking from here</div>'
+            : r.spot ? `<div style="font-size:11px;color:var(--dim);">📍 ${escapeJobText(r.spot)}</div>` : '';
+        const stepper = x
+            ? stockLocStepper(`stockXferStep('${pnArg}', '${jsArg(r.id)}', -1)`, `stockXferStep('${pnArg}', '${jsArg(r.id)}', 1)`, r.qty, isDonor)
+            : stockLocStepper(`adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', -1)`, `adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', 1)`, r.qty);
+        const rowStyle = 'display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border);'
+            + (pickDonor ? `margin:0 -8px;padding:8px;cursor:pointer;${isDonor ? 'background:rgba(0,212,255,0.12);box-shadow:inset 3px 0 0 var(--accent);' : ''}` : 'padding:8px 0;');
+        return `
+            <div${pickDonor ? ` onclick="setStockXferDonor('${pnArg}', '${jsArg(r.id)}')"` : ''} style="${rowStyle}">
+                <div style="min-width:0;">
+                    <div style="font-weight:600;font-size:14px;">${escapeJobText(r.name)}${r.id && r.id === job ? ' <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;vertical-align:middle;">JOBS</span>' : ''}</div>
+                    ${sub}
+                </div>
+                ${stepper}
+            </div>`;
+    };
     return `
         <div style="text-align:center;padding:8px 16px 4px;">
             <span class="stock-qty" id="stockQty">${stockData[pn] || 0}</span>
             <span style="color:var(--dim);font-size:12px;margin-left:4px;">on hand</span>
         </div>
         <div style="padding:0 16px 12px;">
-            ${rows.map(r => `
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);">
-                <div style="min-width:0;">
-                    <div style="font-weight:600;font-size:14px;">${escapeJobText(r.name)}${r.id && r.id === job ? ' <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;vertical-align:middle;">JOBS</span>' : ''}</div>
-                    ${r.id
-                        ? `<button onclick="editStockSpot('${pnArg}', '${jsArg(r.id)}')" style="${linkBtn}color:${r.spot ? 'var(--text)' : 'var(--dim)'};">${r.spot ? '📍 ' + escapeJobText(r.spot) + ' ✎' : '+ where (drawer, bin…)'}</button>`
-                        : '<div style="font-size:11px;color:var(--dim);">Stock not in a location yet — use Move</div>'}
-                </div>
-                ${stockLocStepper(`adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', -1)`, `adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', 1)`, r.qty)}
-            </div>`).join('')}
-            <button onclick="openMoveStockModal('${pnArg}')" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">⇄ Move Between Locations</button>
+            ${hint ? `<div style="font-size:12px;color:var(--text);padding:0 0 8px;line-height:1.4;">${hint}</div>` : ''}
+            ${rows.map(rowHtml).join('')}
+            <button onclick="toggleStockXfer('${pnArg}')" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;font-size:13px;cursor:pointer;${x
+                ? 'background:var(--accent);border:1px solid var(--accent);color:#000;font-weight:700;">✓ Done Moving'
+                : 'background:var(--bg);border:1px solid var(--border);color:var(--accent);">⇄ Move Between Locations'}</button>
         </div>`;
+}
+
+// ---- Move mode on the key page ----
+// ⇄ Move Between Locations turns the location rows' −/+ into moves; the total
+// never changes. With two rows (e.g. Van and Garage), + on one takes one from
+// the other and − sends one to it. With more, tap a row to make it the donor
+// (picked for you when only one row has the key): + on another row moves one
+// in from the donor, − puts one back. Tap the button again to leave.
+let stockXfer = null; // { pn, ids: row ids ('' = not placed), donor: id or null }
+
+// The move mode for this PN, or null; drops it if locations changed under it
+function activeStockXfer(pn) {
+    const x = stockXfer;
+    if (!x || x.pn !== String(pn)) return null;
+    x.ids = x.ids.filter(id => id === '' || getStockLocation(id));
+    if (x.ids.length < 2 || !(stockData[pn] > 0)) { stockXfer = null; return null; }
+    if (x.donor !== null && !x.ids.includes(x.donor)) x.donor = null;
+    return x;
+}
+
+function toggleStockXfer(pn) {
+    pn = String(pn);
+    if (activeStockXfer(pn)) { stockXfer = null; refreshStockViews(pn); return; }
+    if (!hasStockLocations()) return;
+    if (!(stockData[pn] > 0)) { toast(`No ${pn} in stock to move`); return; }
+    const ids = stockLocations.locations.map(l => l.id);
+    if (getUnplacedQty(pn) > 0) ids.push('');
+    if (ids.length < 2) { toast('Add another location in Stock Locations to move keys between'); return; }
+    const have = ids.filter(id => getStockQtyAt(pn, id) > 0);
+    stockXfer = { pn, ids, donor: ids.length > 2 && have.length === 1 ? have[0] : null };
+    refreshStockViews(pn);
+}
+
+function setStockXferDonor(pn, id) {
+    const x = activeStockXfer(pn);
+    if (!x || x.ids.length <= 2 || !x.ids.includes(id)) return;
+    x.donor = id;
+    refreshStockViews(pn);
+}
+
+// −/+ on a row in move mode: one unit between that row and the donor
+function stockXferStep(pn, id, delta) {
+    const x = activeStockXfer(pn);
+    if (!x) return;
+    const donor = x.ids.length === 2 ? x.ids.find(i => i !== id) : x.donor;
+    if (donor === null || donor === undefined) { toast('First tap the location to take keys from'); return; }
+    if (donor === id) return;
+    const from = delta > 0 ? donor : id;
+    const to = delta > 0 ? id : donor;
+    if (!moveStockBetween(pn, 1, from, to)) { toast(`No ${pn} left in ${stockLocationName(from)}`); return; }
+    refreshStockViews(pn);
 }
 
 // ---- Move stock between locations ----
@@ -19982,6 +20063,7 @@ function goHome() {
     document.getElementById('testKeysPanel').classList.remove('on');
     document.getElementById('stockLocationsPanel').classList.remove('on');
     document.getElementById('moveStockModal').classList.remove('on');
+    stockXfer = null; // the key page's move mode
     document.getElementById('addTestKeysModal').classList.remove('on');
     document.getElementById('linkTestKeyModal').classList.remove('on');
     document.getElementById('addCustomKeyPanel').classList.remove('on');
