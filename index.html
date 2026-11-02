@@ -4606,7 +4606,7 @@
 
 <!-- Main Header -->
 <div class="header">
-    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v294</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
+    <h1>🔐 Lock & Scroll <small style="font-size:12px;color:var(--dim)">v295</small> <button id="activeJobsBadge" onclick="openActiveJobsPopup()" style="display:none;margin-left:8px;padding:3px 10px;background:rgba(0,212,255,0.15);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;">⏱ 0</button></h1>
     <div class="search-row">
         <div class="sel">
             <label>Year</label>
@@ -5361,6 +5361,14 @@
                     </div>
                     <span class="settings-nav-arrow">→</span>
                 </button>
+                <button class="settings-nav-btn" onclick="openStockLocationsPanel()">
+                    <span class="settings-nav-icon">📍</span>
+                    <div class="settings-nav-info">
+                        <span class="settings-nav-title">Stock Locations</span>
+                        <span class="settings-nav-desc">Where your stock is kept: van, garage drawers, ...</span>
+                    </div>
+                    <span class="settings-nav-arrow">→</span>
+                </button>
                 <button class="settings-nav-btn" onclick="openFidManager()">
                     <span class="settings-nav-icon">📋</span>
                     <div class="settings-nav-info">
@@ -5402,7 +5410,7 @@
             <h3>App Updates</h3>
             <p style="font-size:12px;color:var(--dim);margin-bottom:12px;">Force refresh to get the latest version.</p>
             <button class="settings-btn" onclick="forceUpdateApp()" style="width:100%;">🔄 Update App</button>
-            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v294</p>
+            <p id="currentVersionDisplay" style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center;">Current: v295</p>
         </div>
 
         <div class="settings-section">
@@ -5414,7 +5422,7 @@
         </div>
 
         <div class="settings-section" style="text-align:center;">
-            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v294<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
+            <p style="color:var(--dim);font-size:11px;margin:0;">Lock & Scroll v295<br>Keys: <span id="aboutTotal">0</span> • Keyways: <span id="aboutKeyways">0</span> • Vendors: <span id="aboutVendors">0</span><br>Lishi: <span id="aboutLishi">0</span> • Tools: <span id="aboutTools">0</span> • Platforms: <span id="aboutPlatforms">0</span></p>
         </div>
     </div>
 </div>
@@ -5443,6 +5451,42 @@
         <div id="testKeysList" style="margin-top:12px;"></div>
         <button class="add-vendor-btn" onclick="openAddTestKeysModal()" style="margin-top:12px;width:100%;">+ Add Test Keys</button>
         <button onclick="createTestKeyEntries()" style="margin-top:8px;width:100%;padding:10px;background:var(--bg);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);font-size:13px;cursor:pointer;">🔑 Create Key Entries for All Keyways</button>
+    </div>
+</div>
+
+<div class="panel" id="stockLocationsPanel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closeStockLocationsPanel()">←</button>
+        <h2>📍 Stock Locations</h2>
+    </div>
+    <div style="padding:16px;">
+        <div id="stockLocChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <input type="text" class="settings-search" id="stockLocSearch" placeholder="Search part number, FCC ID, vehicle..." oninput="renderStockLocList()" style="width:100%;box-sizing:border-box;margin-top:12px;">
+        <div id="stockLocList" style="margin-top:12px;"></div>
+        <div id="stockLocManage" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);"></div>
+    </div>
+</div>
+
+<div class="modal" id="moveStockModal">
+    <div class="modal-content">
+        <div class="modal-title">⇄ Move Stock</div>
+        <div id="moveStockSubtitle" style="font-size:12px;color:var(--dim);margin-bottom:12px;"></div>
+        <div class="modal-input-group">
+            <label>From</label>
+            <select class="modal-input" id="moveStockFrom" onchange="onMoveStockFromChange()"></select>
+        </div>
+        <div class="modal-input-group">
+            <label>To</label>
+            <select class="modal-input" id="moveStockTo"></select>
+        </div>
+        <div class="modal-input-group">
+            <label>How many</label>
+            <input type="number" class="modal-input" id="moveStockQty" min="1" step="1" inputmode="numeric">
+        </div>
+        <div class="modal-btns">
+            <button class="modal-btn secondary" onclick="closeMoveStockModal()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveMoveStock()">Move</button>
+        </div>
     </div>
 </div>
 
@@ -6549,6 +6593,10 @@
         </div>
         <div class="modal-input-group">
             <label>Keys Used From Inventory</label>
+            <div id="jobStockFromRow" style="display:none;margin-bottom:8px;">
+                <div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Keys and test keys came from</div>
+                <select class="modal-input" id="jobStockFrom" onchange="renderJobKeysUsedList(activeJobs[jobCompleteJobId] && activeJobs[jobCompleteJobId].vehicleKey)"></select>
+            </div>
             <div id="jobKeysUsedList"></div>
         </div>
         <div class="modal-input-group">
@@ -7375,6 +7423,7 @@
         <div class="add-inv-header-buttons">
             <button class="history-btn" onclick="closeAddInventory()">Inventory</button>
             <button class="history-btn" onclick="openTestKeysPanel()">Test Keys</button>
+            <button class="history-btn" onclick="openStockLocationsPanel()">Locations</button>
             <button class="history-btn" onclick="openPurchaseHistory()">History</button>
         </div>
     </div>
@@ -7428,6 +7477,10 @@
                 <div class="add-inv-section">
                     <label>Date Purchased</label>
                     <input type="date" class="add-inv-input" id="addInvDate">
+                </div>
+                <div class="add-inv-section" id="addInvLocationSection" style="display:none;">
+                    <label>Put This Stock In</label>
+                    <select class="add-inv-select" id="addInvLocation"></select>
                 </div>
                 <div class="bulk-field-row">
                     <div>
@@ -8578,6 +8631,10 @@ function buildAgentSnapshot() {
             discontinued: disc ? agentCompact({ replacedBy: resolveDiscontinuedReplacement(pn) || null, note: disc.note || null }) : null,
             lishi: getKeyLishiTools(k).map(t => agentCompact({ tool: t.tool, direction: t.direction || null })),
             stock: stockData[pn] || 0,
+            // Where the stock is kept, when locations are set up: {"Van": 2, "Garage": 5}
+            stockAt: hasStockLocations() && stockData[pn] > 0
+                ? Object.fromEntries(getStockBreakdown(pn).filter(r => r.qty > 0).map(r => [r.name, r.qty]))
+                : null,
             prices: prices,
             vehicles: (k.vehicles || []).filter(v => v && v.make && v.model).map(v => ({
                 make: v.make, model: v.model, startYear: v.startYear, endYear: v.endYear || v.startYear
@@ -8622,6 +8679,7 @@ function buildAgentSnapshot() {
             jobType: j.jobType || null, label: j.label || null,
             keysUsed: (j.keysUsed || []).map(u => ({ pn: String(u.pn), qty: u.qty })),
             testKeysUsed: j.testKeysUsed || null, testKeyway: j.testKeyway || null, testKeyPn: j.testKeyPn || null,
+            stockFrom: j.stockFrom || null,
             equipment: j.cables || null, charge: j.charge || null, durationMin: j.durationMin || null,
             notes: j.notes || null, by: j.completedBy || null
         })),
@@ -9037,11 +9095,11 @@ async function uploadToCloud() {
         };
         const batch = firebaseDb.batch();
         const personalRef = firebaseDb.collection('users').doc(currentUser.uid);
-        // Stock counts are personal in every mode; without team sharing
-        // everything else lives under the user as well
+        // Stock counts (and where the stock is kept) are personal in every
+        // mode; without team sharing everything else lives under the user too
         const own = sharedModeEnabled
-            ? { stockData: stockData }
-            : Object.assign({ stockData: stockData }, cloudStorePayload());
+            ? { stockData: stockData, stockLocations: stockLocations }
+            : Object.assign({ stockData: stockData, stockLocations: stockLocations }, cloudStorePayload());
         let staged = stageCloudStores(batch, personalRef, own, stamp);
         let cleanups = [stageLegacyCleanup(batch, personalRef, Object.keys(own)) && personalRef.path];
 
@@ -9088,6 +9146,11 @@ async function downloadFromCloud() {
             stockData = { ...stockData, ...personalData.stockData };
             saveStock();
         }
+        if (personalData.stockLocations) {
+            stockLocations = mergeStockLocations(stockLocations, personalData.stockLocations);
+            saveToIndexedDB('stockLocations', stockLocations);
+        }
+        reconcileStockLocations();
     }
 
     // Check if user is authorized for shared mode
@@ -9429,6 +9492,7 @@ function pruneSupersededCustomKeys() {
     let stockChanged = false, pricesChanged = false;
     Object.keys(successorOf).forEach(pn => {
         if (stockData[pn] !== undefined) { delete stockData[pn]; stockChanged = true; }
+        dropStockLocationsPn(pn);
         if (vendorPrices[pn]) {
             const to = successorOf[pn];
             vendorPrices[to] = vendorPrices[to] || {};
@@ -9536,6 +9600,7 @@ const DEFAULT_VENDORS = [
 let filteredKeys = [];
 let currentKeyIdx = null;
 let stockData = {};
+let stockLocations = emptyStockLocations(); // where stock is kept (see STOCK LOCATIONS)
 let lishiData = {"HY20":{"tool":"HY20","direction":"CW"},"HY20R":{"direction":"CW","tool":"HY20R"},"B106":{"direction":"CW","tool":"B111"},"KK10":{"tool":"K5","direction":"CW"},"Y164":{"direction":"CW","tool":"CY24"},"HY17":{"tool":"HY17(HYN15)","direction":"CW"},"HU162":{"direction":"CW","tool":"HU162 10 CUT"},"KK3":{"direction":"CW","tool":"KIA3R"},"Toyota TOY43AT":{"tool":"TOY43AT IGNITION","direction":"CW"},"Mercedes HU58":{"tool":"HU58","direction":"CW"},"DW04RAP":{"direction":"CW","tool":"DW05"},"HU43":{"direction":"CW","tool":"HU43"},"Hyundai HY17":{"direction":"CW","tool":"HY17(HYN15)"},"SIP22":{"direction":"CW","tool":"SIP22"},"KY14":{"direction":"CW","tool":"KY14"},"B108":{"tool":"TOY43R","direction":"CW"},"HO01":{"direction":"CW","tool":"HON66"},"Mitsubishi MIT11":{"tool":"MIT11R","direction":"CW"},"DW05R":{"tool":"DW04R","direction":"CW"},"MIT11":{"direction":"CW","tool":"MIT11"},"Y159":{"direction":"CW","tool":"CY24"},"DA34":{"direction":"CW","tool":"NSN14"},"Mercedes HU39":{"direction":"CW","tool":"HU39"},"HYN15":{"direction":"CW","tool":"HY17(HYN15)"},"B119":{"direction":"CW","tool":"HU100V3(10 CUT)"},"HU198":{"tool":"HU198","direction":"CW"},"KK4":{"tool":"KIA3R","direction":"CW"},"BMW HU92":{"tool":"HU92 SINGLE LIFTER","direction":"CW"},"GM B / GM37":{"direction":"CW","tool":"B106/GM37"},"MIT8":{"direction":"CW","tool":"MIT8"},"HU101":{"tool":"HU101","direction":"CW"},"B96/B102":{"direction":"CW","tool":"GM39"},"GM45":{"direction":"CW","tool":"GM45"},"TOY43R":{"tool":"TOY43R","direction":"CW"},"HD103":{"tool":"HON58R","direction":"CW"},"GM HU100":{"direction":"CW","tool":"HU100R"},"Honda HON58":{"tool":"HON58R","direction":"CW"},"HYN11":{"tool":"HYN11","direction":"CW"},"HU66":{"tool":"HU66 SINGLE LIFTER","direction":"CW"},"LX Medium":{"direction":"CW","tool":"TOY48 SHORT"},"DW04":{"direction":"CW","tool":"DW05"},"DA31":{"tool":"NSN11","direction":"CW"},"LXP90":{"direction":"CW","tool":"TOY40 LONG"},"VAG HU66":{"direction":"CW","tool":"HU66 SINGLE LIFTER"},"TR47":{"tool":"TOY43AT IGNITION","direction":"CW"},"Honda HON66":{"tool":"HON66","direction":"CW"},"S48":{"direction":"CW","tool":"HU39"},"DW04R":{"direction":"CW","tool":"DW04R"},"H75":{"tool":"FO38","direction":"CW"},"Hyundai HY16":{"direction":"CW","tool":"HY16"},"Fiat SIP22":{"tool":"SIP22","direction":"CW"},"HYN14R":{"direction":"CW","tool":"HYN14R (HY15)"},"VAG HU162":{"direction":"CW","tool":"HU162 IGNITION"},"K9":{"tool":"K9","direction":"CW"},"MIT3":{"tool":"MIT11","direction":"CW"},"HU92":{"direction":"CW","tool":"HU92 TWIN LIFTER"},"MZ27":{"direction":"CW","tool":"MAZ24"},"GM":{"tool":"GM39","direction":"CW"},"B61":{"tool":"HU46","direction":"CW"},"KIA3R":{"direction":"CW","tool":"KIA3R"},"B120":{"tool":"HU100V3(10 CUT)","direction":"CW"},"KK12":{"direction":"CW","tool":"KIA 2018"},"B110":{"tool":"TOY43R","direction":"CW"},"HU46":{"tool":"HU46","direction":"CW"},"KK8":{"direction":"CW","tool":"KY14"},"K5":{"tool":"K5","direction":"CW"},"Toyota TOY48":{"direction":"CW","tool":"TOY48 SHORT"},"HU100":{"tool":"HU100V3(8 CUT)","direction":"CW"},"Y157":{"direction":"CW","tool":"CY24"},"DW05":{"tool":"DW05","direction":"CW"},"Toyota TOY43":{"tool":"TOY43","direction":"CW"},"HYN6":{"direction":"CW","tool":"HYN11"},"HU39":{"tool":"HU39","direction":"CW"},"HY15":{"direction":"CW","tool":"HYN14R (HY15)"},"MZ31":{"tool":"MAZ24","direction":"CW"},"DW04/DW05":{"tool":"DW05","direction":"CW"},"LX Short":{"direction":"CW","tool":"TOY48 SHORT"}};
 let lishiVehicleData = {};
 let lishiInventory = {};
@@ -11858,6 +11923,7 @@ async function runFccidMergeMigration() {
             delete stockData[oldPn];
             changed = true;
         }
+        moveStockLocationsPn(oldPn, newPn);
         // Transfer vendor prices
         if (vendorPrices[oldPn]) {
             if (!vendorPrices[newPn]) vendorPrices[newPn] = {};
@@ -12681,6 +12747,9 @@ async function loadLocalData() {
         if (db) {
             const savedStock = await loadFromIndexedDB('stock');
             if (savedStock) stockData = savedStock;
+
+            const savedStockLocations = await loadFromIndexedDB('stockLocations');
+            if (savedStockLocations) stockLocations = normalizeStockLocations(savedStockLocations);
             
             const savedLishi = await loadFromIndexedDB('lishi');
             if (savedLishi) lishiData = savedLishi;
@@ -13135,6 +13204,7 @@ function migratePnLiveStores(oldPn, newPn) {
         delete stockData[oldPn];
         saveStock();
     }
+    moveStockLocationsPn(oldPn, newPn);
     if (vendorPrices[oldPn] !== undefined) {
         vendorPrices[newPn] = vendorPrices[oldPn];
         delete vendorPrices[oldPn];
@@ -14643,6 +14713,7 @@ function renderKeys() {
                     <span><strong>FCC:</strong> ${getKeyFccIds(key).join(', ') || 'N/A'}</span>
                     <span class="stock-badge ${stockClass}">Stock: ${stock}</span>
                 </div>
+                ${stockWhereHtml(String(key.pn))}
                 <div class="key-vehicles">${vehicles || 'No vehicle info'}</div>
             </div>
         `;
@@ -14812,13 +14883,14 @@ function openKey(idx, fromFcc = false, fromFid = false, fromFidDetail = false) {
             ${tkLink ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 16px;">Test key for the ${andList(tkAllKeyways)} keyway${tkAllKeyways.length !== 1 ? 's' : ''} — this count is ${escapeJobText(key.pn)} only; test keys used on a job come off it</div>` : ''}
             ${tkOtherPns.length > 0 ? `<div style="text-align:center;font-size:11px;color:var(--accent2);padding:6px 16px 0;">🔑 Also test keys for this keyway (counted separately): ${andList(tkOtherPns)}</div>` : ''}
             ${tkLeftoverHtml ? `<div style="padding:0 16px;">${tkLeftoverHtml}</div>` : ''}
+            ${hasStockLocations() ? `<div id="keyStockLocBlock" data-pn="${escapeJobText(String(key.pn))}">${keyStockLocationsHtml(String(key.pn))}</div>` : `
             <div style="display:flex;justify-content:center;align-items:center;padding:16px;">
                 <div class="stock-controls">
                     <button class="stock-btn minus" onclick="adjustStock('${key.pn}', -1)">−</button>
                     <span class="stock-qty" id="stockQty">${stock}</span>
                     <button class="stock-btn plus" onclick="adjustStock('${key.pn}', 1)">+</button>
                 </div>
-            </div>
+            </div>`}
         </div>
 
         <!-- Key Info Section (smart field hiding: only show fields with values) -->
@@ -16448,6 +16520,7 @@ function deletePartNumber(idx) {
     // Clean up associated data
     delete stockData[pn];
     saveStock();
+    dropStockLocationsPn(pn);
     delete vendorPrices[pn];
     saveVendorPrices();
     delete vehicleOverrides[pn];
@@ -16691,6 +16764,7 @@ function executeKeyMerge(target, source, absorbedIdx) {
         delete stockData[sourcePn];
         saveStock();
     }
+    moveStockLocationsPn(sourcePn, targetPn);
 
     // Vendor pricing: merge per vendor, target wins on conflicts
     if (vendorPrices[sourcePn]) {
@@ -16797,14 +16871,663 @@ function executeKeyMerge(target, source, absorbedIdx) {
 }
 
 // ===================== STOCK =====================
+// Key page −/+ when no stock locations are set up (with locations, the page
+// shows a −/+ per location instead). Location-safe either way: + goes to the
+// new-stock location, − comes off in take order.
 function adjustStock(pn, delta) {
-    const current = stockData[pn] || 0;
-    const newQty = Math.max(0, current + delta);
-    stockData[pn] = newQty;
+    if (delta > 0) addStockAt(pn, delta);
+    else takeStockFrom(pn, -delta);
     saveStock();
-    
-    document.getElementById('stockQty').textContent = newQty;
+
+    document.getElementById('stockQty').textContent = stockData[pn] || 0;
     applyFilters();
+}
+
+// ===================== STOCK LOCATIONS =====================
+// Where stock is kept: the van, the garage's drawer organizers, ...
+// stockData[pn] stays the TOTAL on hand, so everything that reads stock keeps
+// working; stockLocations.placed[pn][locationId] says how many of that total
+// sit in each location, and the rest is "not placed" yet. spots[pn][id] is an
+// optional note on where in that location it is (e.g. "Drawer 14").
+// Personal like stockData: synced to the user's own documents, never shared.
+//
+// Decreases that don't name a location (a job's keys, the antique counter,
+// test key counts) come off in TAKE ORDER: the location named, then not
+// placed, then the jobs location, then the rest in list order. Placed counts
+// are also trimmed in that order whenever they add up to more than the total,
+// so a decrease made anywhere always shows up in the locations.
+function emptyStockLocations() {
+    return { locations: [], jobLoc: '', newLoc: '', placed: {}, spots: {}, settingsUpdatedAt: '' };
+}
+
+function normalizeStockLocations(s) {
+    const out = emptyStockLocations();
+    if (!s || typeof s !== 'object') return out;
+    out.locations = (Array.isArray(s.locations) ? s.locations : [])
+        .filter(l => l && l.id && String(l.name || '').trim())
+        .map(l => ({ id: String(l.id), name: String(l.name).trim() }));
+    const ids = new Set(out.locations.map(l => l.id));
+    out.jobLoc = ids.has(s.jobLoc) ? s.jobLoc : '';
+    out.newLoc = ids.has(s.newLoc) ? s.newLoc : '';
+    out.placed = s.placed && typeof s.placed === 'object' ? s.placed : {};
+    out.spots = s.spots && typeof s.spots === 'object' ? s.spots : {};
+    out.settingsUpdatedAt = s.settingsUpdatedAt || '';
+    return out;
+}
+
+function saveStockLocations() {
+    saveToIndexedDB('stockLocations', stockLocations);
+    triggerAutoSync();
+}
+
+function hasStockLocations() {
+    return stockLocations.locations.length > 0;
+}
+
+function getStockLocation(id) {
+    return stockLocations.locations.find(l => l.id === id) || null;
+}
+
+function stockLocationName(id) {
+    if (!id) return 'Not placed';
+    const loc = getStockLocation(id);
+    return loc ? loc.name : 'Not placed';
+}
+
+// Location ids in take order; '' stands for "not placed"
+function stockTakeOrder(preferLoc) {
+    const order = [];
+    const add = id => { if (!order.includes(id)) order.push(id); };
+    if (preferLoc !== undefined && preferLoc !== null && (preferLoc === '' || getStockLocation(preferLoc))) add(preferLoc);
+    add('');
+    if (stockLocations.jobLoc) add(stockLocations.jobLoc);
+    stockLocations.locations.forEach(l => add(l.id));
+    return order;
+}
+
+// {locationId: qty} for a PN, only live locations, trimmed to the total
+function getPlacedCounts(pn) {
+    const total = stockData[pn] || 0;
+    const raw = stockLocations.placed[pn] || {};
+    const out = {};
+    let sum = 0;
+    stockLocations.locations.forEach(l => {
+        const q = Math.max(0, parseInt(raw[l.id], 10) || 0);
+        if (q > 0) { out[l.id] = q; sum += q; }
+    });
+    let excess = sum - total;
+    if (excess > 0) {
+        for (const id of stockTakeOrder()) {
+            if (!id || !out[id]) continue;
+            const t = Math.min(out[id], excess);
+            out[id] -= t;
+            excess -= t;
+            if (!out[id]) delete out[id];
+            if (excess <= 0) break;
+        }
+    }
+    return out;
+}
+
+function getUnplacedQty(pn) {
+    const placed = getPlacedCounts(pn);
+    return Math.max(0, (stockData[pn] || 0) - Object.values(placed).reduce((a, b) => a + b, 0));
+}
+
+function getStockQtyAt(pn, locId) {
+    return locId ? (getPlacedCounts(pn)[locId] || 0) : getUnplacedQty(pn);
+}
+
+function getStockSpot(pn, locId) {
+    return ((stockLocations.spots[pn] || {})[locId]) || '';
+}
+
+// [{id, name, qty, spot}] for every location, then not placed ({id: ''})
+function getStockBreakdown(pn) {
+    const placed = getPlacedCounts(pn);
+    const rows = stockLocations.locations.map(l => ({ id: l.id, name: l.name, qty: placed[l.id] || 0, spot: getStockSpot(pn, l.id) }));
+    rows.push({ id: '', name: 'Not placed', qty: getUnplacedQty(pn), spot: '' });
+    return rows;
+}
+
+// Short "Van 2 · Garage 5 · Not placed 1" for cards; '' without locations or stock
+function stockWhereText(pn) {
+    if (!hasStockLocations() || !(stockData[pn] > 0)) return '';
+    return getStockBreakdown(pn).filter(r => r.qty > 0).map(r => `${r.name} ${r.qty}`).join(' · ');
+}
+
+function writePlacedCounts(pn, counts) {
+    const clean = {};
+    Object.entries(counts).forEach(([id, q]) => { if (q > 0 && getStockLocation(id)) clean[id] = q; });
+    const before = JSON.stringify(stockLocations.placed[pn] || {});
+    if (Object.keys(clean).length) stockLocations.placed[pn] = clean;
+    else delete stockLocations.placed[pn];
+    return before !== JSON.stringify(clean);
+}
+
+// Add `qty` to a PN's stock, into `locId` ('' = not placed; left out = the
+// new-stock location). Saves the locations; the caller saves stock.
+function addStockAt(pn, qty, locId) {
+    qty = parseInt(qty, 10) || 0;
+    if (qty <= 0) return;
+    const counts = getPlacedCounts(pn);
+    stockData[pn] = (stockData[pn] || 0) + qty;
+    const id = locId === undefined ? stockLocations.newLoc : locId;
+    if (id && getStockLocation(id)) counts[id] = (counts[id] || 0) + qty;
+    if (writePlacedCounts(pn, counts)) saveStockLocations();
+}
+
+// Take up to `qty` off a PN's stock in take order starting at `preferLoc`.
+// Returns how many came off. Saves the locations; the caller saves stock.
+function takeStockFrom(pn, qty, preferLoc) {
+    qty = parseInt(qty, 10) || 0;
+    const total = stockData[pn] || 0;
+    const take = Math.min(Math.max(0, qty), total);
+    if (take <= 0) return 0;
+    const counts = getPlacedCounts(pn);
+    let unplaced = total - Object.values(counts).reduce((a, b) => a + b, 0);
+    let remaining = take;
+    for (const id of stockTakeOrder(preferLoc)) {
+        if (remaining <= 0) break;
+        if (id === '') {
+            const t = Math.min(unplaced, remaining);
+            unplaced -= t;
+            remaining -= t;
+        } else {
+            const t = Math.min(counts[id] || 0, remaining);
+            counts[id] = (counts[id] || 0) - t;
+            remaining -= t;
+        }
+    }
+    stockData[pn] = total - take;
+    if (writePlacedCounts(pn, counts)) saveStockLocations();
+    return take;
+}
+
+// Move stock between locations ('' = not placed); the total doesn't change
+function moveStockBetween(pn, qty, fromId, toId) {
+    qty = Math.min(parseInt(qty, 10) || 0, getStockQtyAt(pn, fromId));
+    if (qty <= 0 || fromId === toId) return 0;
+    const counts = getPlacedCounts(pn);
+    if (fromId) counts[fromId] -= qty;
+    if (toId) counts[toId] = (counts[toId] || 0) + qty;
+    if (writePlacedCounts(pn, counts)) saveStockLocations();
+    return qty;
+}
+
+// A PN renamed or merged into another: its placements and spots follow
+function moveStockLocationsPn(oldPn, newPn) {
+    if (!oldPn || !newPn || oldPn === newPn) return;
+    let changed = false;
+    const from = stockLocations.placed[oldPn];
+    if (from) {
+        const to = stockLocations.placed[newPn] || {};
+        Object.entries(from).forEach(([id, q]) => { to[id] = (parseInt(to[id], 10) || 0) + (parseInt(q, 10) || 0); });
+        stockLocations.placed[newPn] = to;
+        delete stockLocations.placed[oldPn];
+        changed = true;
+    }
+    const spots = stockLocations.spots[oldPn];
+    if (spots) {
+        stockLocations.spots[newPn] = Object.assign({}, spots, stockLocations.spots[newPn] || {});
+        delete stockLocations.spots[oldPn];
+        changed = true;
+    }
+    if (changed) saveStockLocations();
+}
+
+function dropStockLocationsPn(pn) {
+    if (!stockLocations.placed[pn] && !stockLocations.spots[pn]) return;
+    delete stockLocations.placed[pn];
+    delete stockLocations.spots[pn];
+    saveStockLocations();
+}
+
+// Persist the trimming getPlacedCounts() applies on the fly (after a load,
+// sync or import) and drop placements of PNs with no stock
+function reconcileStockLocations() {
+    let changed = false;
+    Object.keys(stockLocations.placed).forEach(pn => {
+        if (writePlacedCounts(pn, getPlacedCounts(pn))) changed = true;
+    });
+    if (changed) saveToIndexedDB('stockLocations', stockLocations);
+    return changed;
+}
+
+// Cloud merge, mirroring stockData's (each PN's cloud copy wins): placements
+// and spots per PN from the cloud; the location list and the jobs/new-stock
+// choices from whichever side changed them last
+function mergeStockLocations(local, remote) {
+    local = normalizeStockLocations(local);
+    remote = normalizeStockLocations(remote);
+    const settings = (remote.settingsUpdatedAt || '') > (local.settingsUpdatedAt || '') ? remote : local;
+    return normalizeStockLocations({
+        locations: settings.locations,
+        jobLoc: settings.jobLoc,
+        newLoc: settings.newLoc,
+        settingsUpdatedAt: settings.settingsUpdatedAt,
+        placed: Object.assign({}, local.placed, remote.placed),
+        spots: Object.assign({}, local.spots, remote.spots)
+    });
+}
+
+// ---- Stock locations: shared bits of UI ----
+
+function stockLocStepper(minus, plus, qty) {
+    const b = 'width:32px;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;';
+    return `<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <button onclick="event.stopPropagation();${minus}" style="${b}">−</button>
+            <span style="min-width:24px;text-align:center;font-weight:700;font-size:16px;color:${qty > 0 ? 'var(--success)' : 'var(--dim)'};">${qty}</span>
+            <button onclick="event.stopPropagation();${plus}" style="${b}">+</button>
+        </div>`;
+}
+
+// A value inside a '...' JS string inside an onclick="..." attribute
+const jsArg = v => String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+// "📍 Van 2 · Garage 5" line for key cards: the jobs location first, green
+// when it has the key and orange when it doesn't, so a key that's only in
+// the garage is obvious before driving to a job
+function stockWhereHtml(pn) {
+    if (!hasStockLocations() || !(stockData[pn] > 0)) return '';
+    const job = stockLocations.jobLoc;
+    const rows = getStockBreakdown(pn)
+        .filter(r => r.qty > 0 || (job && r.id === job))
+        .sort((a, b) => (b.id === job && !!job) - (a.id === job && !!job));
+    const parts = rows.map(r => {
+        const isJob = !!job && r.id === job;
+        const color = isJob ? (r.qty > 0 ? 'var(--success)' : '#ff9800') : 'var(--dim)';
+        return `<span style="color:${color};${isJob ? 'font-weight:700;' : ''}">${escapeJobText(r.name)} ${r.qty}</span>`;
+    });
+    return `<div style="font-size:11px;margin-top:3px;">📍 ${parts.join(' · ')}</div>`;
+}
+
+// After any stock change from a location control: the key page's location
+// block, the Stock Locations panel and the key list
+function refreshStockViews(pn) {
+    const block = document.getElementById('keyStockLocBlock');
+    if (block && block.dataset.pn === String(pn)) block.innerHTML = keyStockLocationsHtml(pn);
+    if (document.getElementById('stockLocationsPanel').classList.contains('on')) renderStockLocations();
+    applyFilters();
+}
+
+// −/+ for one location: real stock arriving at or leaving that location
+function adjustStockAtLoc(pn, locId, delta) {
+    if (delta > 0) addStockAt(pn, delta, locId);
+    else {
+        if (getStockQtyAt(pn, locId) <= 0) return;
+        takeStockFrom(pn, -delta, locId);
+    }
+    saveStock();
+    refreshStockViews(pn);
+}
+
+function editStockSpot(pn, locId) {
+    const loc = getStockLocation(locId);
+    if (!loc) return;
+    const cur = getStockSpot(pn, locId);
+    const val = prompt(`Where in ${loc.name} is ${pn}? (e.g. Drawer 14, top shelf). Leave empty to clear.`, cur);
+    if (val === null) return;
+    const v = val.trim();
+    if (!stockLocations.spots[pn]) stockLocations.spots[pn] = {};
+    if (v) stockLocations.spots[pn][locId] = v;
+    else delete stockLocations.spots[pn][locId];
+    if (!Object.keys(stockLocations.spots[pn]).length) delete stockLocations.spots[pn];
+    saveStockLocations();
+    refreshStockViews(pn);
+}
+
+// Key page: the total, then a row per location with its own −/+ and spot
+function keyStockLocationsHtml(pn) {
+    const pnArg = jsArg(pn);
+    const job = stockLocations.jobLoc;
+    const rows = getStockBreakdown(pn).filter(r => r.id || r.qty > 0);
+    const linkBtn = 'background:none;border:none;padding:0;font-size:11px;cursor:pointer;text-align:left;';
+    return `
+        <div style="text-align:center;padding:8px 16px 4px;">
+            <span class="stock-qty" id="stockQty">${stockData[pn] || 0}</span>
+            <span style="color:var(--dim);font-size:12px;margin-left:4px;">on hand</span>
+        </div>
+        <div style="padding:0 16px 12px;">
+            ${rows.map(r => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);">
+                <div style="min-width:0;">
+                    <div style="font-weight:600;font-size:14px;">${escapeJobText(r.name)}${r.id && r.id === job ? ' <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;vertical-align:middle;">JOBS</span>' : ''}</div>
+                    ${r.id
+                        ? `<button onclick="editStockSpot('${pnArg}', '${jsArg(r.id)}')" style="${linkBtn}color:${r.spot ? 'var(--text)' : 'var(--dim)'};">${r.spot ? '📍 ' + escapeJobText(r.spot) + ' ✎' : '+ where (drawer, bin…)'}</button>`
+                        : '<div style="font-size:11px;color:var(--dim);">Stock not in a location yet — use Move</div>'}
+                </div>
+                ${stockLocStepper(`adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', -1)`, `adjustStockAtLoc('${pnArg}', '${jsArg(r.id)}', 1)`, r.qty)}
+            </div>`).join('')}
+            <button onclick="openMoveStockModal('${pnArg}')" style="width:100%;margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;">⇄ Move Between Locations</button>
+        </div>`;
+}
+
+// ---- Move stock between locations ----
+let moveStockPn = null;
+
+function openMoveStockModal(pn, fromId, toId) {
+    if (!hasStockLocations()) return;
+    const rows = getStockBreakdown(pn);
+    const have = rows.filter(r => r.qty > 0);
+    if (have.length === 0) { toast(`No ${pn} in stock to move`); return; }
+    moveStockPn = pn;
+    const fromSel = document.getElementById('moveStockFrom');
+    fromSel.innerHTML = have.map(r => `<option value="${escapeJobText(r.id)}">${escapeJobText(r.name)} (${r.qty})</option>`).join('');
+    fromSel.value = have.some(r => r.id === fromId) ? fromId : have[0].id;
+    document.getElementById('moveStockSubtitle').textContent = `${pn}: ${stockData[pn] || 0} on hand`;
+    onMoveStockFromChange(toId);
+    document.getElementById('moveStockModal').classList.add('on');
+}
+
+function onMoveStockFromChange(toId) {
+    const pn = moveStockPn;
+    const from = document.getElementById('moveStockFrom').value;
+    const targets = getStockBreakdown(pn).filter(r => r.id !== from);
+    const toSel = document.getElementById('moveStockTo');
+    toSel.innerHTML = targets.map(r => `<option value="${escapeJobText(r.id)}">${escapeJobText(r.name)}${r.qty ? ` (${r.qty})` : ''}</option>`).join('');
+    const want = typeof toId === 'string' ? toId : stockLocations.jobLoc;
+    const pick = targets.find(r => r.id === want) || targets.find(r => r.id) || targets[0];
+    if (pick) toSel.value = pick.id;
+    document.getElementById('moveStockQty').value = getStockQtyAt(pn, from);
+}
+
+function closeMoveStockModal() {
+    document.getElementById('moveStockModal').classList.remove('on');
+    moveStockPn = null;
+}
+
+function saveMoveStock() {
+    const pn = moveStockPn;
+    if (pn === null) return;
+    const from = document.getElementById('moveStockFrom').value;
+    const to = document.getElementById('moveStockTo').value;
+    const qty = parseInt(document.getElementById('moveStockQty').value, 10) || 0;
+    if (qty <= 0) { toast('Enter how many to move'); return; }
+    const moved = moveStockBetween(pn, qty, from, to);
+    closeMoveStockModal();
+    if (moved > 0) toast(`Moved ${moved} ${pn} to ${stockLocationName(to)}`);
+    refreshStockViews(pn);
+}
+
+// ---- Stock Locations panel ----
+// A chip per location (plus All and Not placed) filters the list to what's
+// there, each with that location's −/+ and spot; search finds any key so it
+// can be added or moved into the location being counted. Below: manage the
+// locations and which one jobs and new stock use.
+let stockLocView = null; // location id, '' = not placed, '*' = all
+
+function openStockLocationsPanel() {
+    if (stockLocView === null || (stockLocView && stockLocView !== '*' && !getStockLocation(stockLocView))) {
+        stockLocView = stockLocations.jobLoc || (stockLocations.locations[0] || {}).id || '*';
+    }
+    document.getElementById('stockLocSearch').value = '';
+    renderStockLocations();
+    document.getElementById('stockLocationsPanel').classList.add('on');
+}
+
+function closeStockLocationsPanel() {
+    document.getElementById('stockLocationsPanel').classList.remove('on');
+}
+
+function setStockLocView(id) {
+    stockLocView = id;
+    renderStockLocations();
+}
+
+function renderStockLocations() {
+    if (stockLocView === null || (stockLocView && stockLocView !== '*' && !getStockLocation(stockLocView))) {
+        stockLocView = stockLocations.jobLoc || (stockLocations.locations[0] || {}).id || '*';
+    }
+    renderStockLocChips();
+    renderStockLocList();
+    renderStockLocManage();
+}
+
+// Units at each location id ('' = not placed) across all stock
+function stockLocUnitTotals() {
+    const totals = { '': 0, '*': 0 };
+    Object.keys(stockData).forEach(pn => {
+        if (!(stockData[pn] > 0)) return;
+        totals['*'] += stockData[pn];
+        getStockBreakdown(pn).forEach(r => { totals[r.id] = (totals[r.id] || 0) + r.qty; });
+    });
+    return totals;
+}
+
+function renderStockLocChips() {
+    const el = document.getElementById('stockLocChips');
+    if (!hasStockLocations()) { el.innerHTML = ''; return; }
+    const t = stockLocUnitTotals();
+    const chip = (id, label, n) => {
+        const on = stockLocView === id;
+        return `<button onclick="setStockLocView('${jsArg(id)}')" style="padding:6px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'rgba(0,212,255,0.15)' : 'var(--card)'};color:${on ? 'var(--accent)' : 'var(--text)'};">${escapeJobText(label)} <span style="color:var(--dim);">${n}</span></button>`;
+    };
+    el.innerHTML = stockLocations.locations.map(l => chip(l.id, l.name, t[l.id] || 0)).join('')
+        + (t[''] > 0 || stockLocView === '' ? chip('', 'Not placed', t['']) : '')
+        + chip('*', 'All', t['*']);
+}
+
+function stockLocKeyMatches(key, q) {
+    const hay = [key.pn, getKeyFccIds(key).join(' '), key.keyway, key.keyType,
+        (key.vehicles || []).map(v => v.make + ' ' + v.model).join(' ')].join(' ').toLowerCase();
+    return hay.includes(q);
+}
+
+function renderStockLocList() {
+    const el = document.getElementById('stockLocList');
+    if (!hasStockLocations()) {
+        el.innerHTML = '<div class="add-inv-placeholder">Add the places you keep stock below (e.g. Van, Garage). Then every key shows how many are in each one.</div>';
+        return;
+    }
+    const view = stockLocView;
+    const q = (document.getElementById('stockLocSearch').value || '').toLowerCase().trim();
+    const atView = pn => view === '*' ? (stockData[pn] || 0) : getStockQtyAt(pn, view);
+    let items;
+    if (q) {
+        // Searching: any matching key, so one can be counted or moved here
+        items = DB.filter(k => stockLocKeyMatches(k, q) && (view !== '*' || stockData[k.pn] > 0))
+            .map(k => ({ pn: String(k.pn), key: k }));
+    } else {
+        items = Object.keys(stockData).filter(pn => atView(pn) > 0)
+            .map(pn => ({ pn, key: DB.find(k => String(k.pn) === pn) || null }));
+    }
+    items.sort((a, b) => atView(b.pn) - atView(a.pn) || a.pn.localeCompare(b.pn, undefined, { numeric: true }));
+    const shown = items.slice(0, 100);
+    if (shown.length === 0) {
+        el.innerHTML = `<div class="add-inv-placeholder">${q ? 'No keys match your search' : view === '*' ? 'No stock on hand' : `Nothing in ${escapeJobText(stockLocationName(view))} yet — search for a key to add or move it here`}</div>`;
+        return;
+    }
+    el.innerHTML = shown.map(({ pn, key }) => {
+        const pnArg = jsArg(pn);
+        const idx = key ? DB.indexOf(key) : -1;
+        const veh = key ? (key.vehicles || []).slice(0, 2).map(v => `${v.make} ${v.model}`).join(', ') + ((key.vehicles || []).length > 2 ? ` +${key.vehicles.length - 2}` : '') : '';
+        const sub = [key && key.keyType, veh].filter(Boolean).join(' • ');
+        const elsewhere = getStockBreakdown(pn).filter(r => r.qty > 0 && (view === '*' || r.id !== view));
+        const spot = view && view !== '*' ? getStockSpot(pn, view) : '';
+        const spotBtn = view && view !== '*'
+            ? `<button onclick="event.stopPropagation();editStockSpot('${pnArg}', '${jsArg(view)}')" style="background:none;border:none;padding:0;font-size:11px;cursor:pointer;color:${spot ? 'var(--text)' : 'var(--dim)'};">${spot ? '📍 ' + escapeJobText(spot) + ' ✎' : '+ where'}</button>`
+            : '';
+        const right = view === '*'
+            ? `<div style="font-weight:700;font-size:16px;color:var(--success);flex-shrink:0;">${stockData[pn] || 0}</div>`
+            : stockLocStepper(`adjustStockAtLoc('${pnArg}', '${jsArg(view)}', -1)`, `adjustStockAtLoc('${pnArg}', '${jsArg(view)}', 1)`, atView(pn));
+        return `
+            <div class="stock-loc-item" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div style="min-width:0;${idx >= 0 ? 'cursor:pointer;' : ''}"${idx >= 0 ? ` onclick="openKey(${idx})"` : ''}>
+                        <div style="font-weight:700;font-size:15px;">${escapeJobText(pn)}</div>
+                        ${sub ? `<div style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeJobText(sub)}</div>` : ''}
+                    </div>
+                    ${right}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:11px;color:var(--dim);">
+                    <div style="min-width:0;">${spotBtn}${spotBtn && elsewhere.length ? ' · ' : ''}${elsewhere.length ? (view === '*' ? '' : 'Also: ') + elsewhere.map(r => `${escapeJobText(r.name)} ${r.qty}`).join(', ') : ''}</div>
+                    ${stockData[pn] > 0 ? `<button onclick="event.stopPropagation();openMoveStockModal('${pnArg}', ${view === '*' ? 'undefined' : `'${jsArg(view)}'`}${view !== '*' && atView(pn) === 0 ? `, '${jsArg(view)}'` : ''})" style="padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;cursor:pointer;flex-shrink:0;">⇄ ${view !== '*' && atView(pn) === 0 ? 'Move here' : 'Move'}</button>` : ''}
+                </div>
+            </div>`;
+    }).join('') + (items.length > shown.length ? `<div style="text-align:center;font-size:11px;color:var(--dim);padding:8px;">Showing 100 of ${items.length} — search to narrow</div>` : '');
+}
+
+function renderStockLocManage() {
+    const el = document.getElementById('stockLocManage');
+    const locs = stockLocations.locations;
+    const smallBtn = 'padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer;';
+    const opts = (sel, withNone) => (withNone ? `<option value=""${sel === '' ? ' selected' : ''}>Not placed</option>` : '')
+        + locs.map(l => `<option value="${escapeJobText(l.id)}"${sel === l.id ? ' selected' : ''}>${escapeJobText(l.name)}</option>`).join('');
+    const t = stockLocUnitTotals();
+    const unplacedPns = Object.keys(stockData).filter(pn => getUnplacedQty(pn) > 0).length;
+    const suggestions = ['Van', 'Garage'].filter(n => !locs.some(l => l.name.toLowerCase() === n.toLowerCase()));
+    el.innerHTML = `
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px;">Locations</div>
+        ${locs.map((l, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="min-width:0;font-size:14px;">${escapeJobText(l.name)} <span style="color:var(--dim);font-size:11px;">${t[l.id] || 0} keys</span></div>
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+                <button onclick="moveStockLocationOrder('${jsArg(l.id)}', -1)" style="${smallBtn}"${i === 0 ? ' disabled' : ''}>↑</button>
+                <button onclick="moveStockLocationOrder('${jsArg(l.id)}', 1)" style="${smallBtn}"${i === locs.length - 1 ? ' disabled' : ''}>↓</button>
+                <button onclick="renameStockLocation('${jsArg(l.id)}')" style="${smallBtn}">✎</button>
+                <button onclick="deleteStockLocation('${jsArg(l.id)}')" style="${smallBtn}color:#ff4444;">🗑</button>
+            </div>
+        </div>`).join('')}
+        <div style="display:flex;gap:8px;margin-top:10px;">
+            <input type="text" class="modal-input" id="stockLocNewName" placeholder="e.g. Van, Garage drawer 2" style="flex:1;min-width:0;margin:0;" onkeydown="if(event.key==='Enter')addStockLocation()">
+            <button onclick="addStockLocation()" style="padding:0 16px;background:var(--accent);border:none;border-radius:8px;color:#000;font-weight:700;cursor:pointer;">Add</button>
+        </div>
+        ${suggestions.length ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${suggestions.map(n => `<button onclick="addStockLocation('${n}')" style="${smallBtn}color:var(--accent);">+ ${n}</button>`).join('')}</div>` : ''}
+        ${locs.length ? `
+        <div style="margin-top:16px;">
+            <label style="font-size:12px;color:var(--dim);">Jobs use stock from</label>
+            <select class="modal-input" onchange="setStockJobLoc(this.value)" style="margin-top:4px;">${opts(stockLocations.jobLoc, false)}</select>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Keys and test keys used on a job come off here first. Key cards show this location first: green when it has the key, orange when it doesn't.</div>
+        </div>
+        <div style="margin-top:12px;">
+            <label style="font-size:12px;color:var(--dim);">New stock goes in</label>
+            <select class="modal-input" onchange="setStockNewLoc(this.value)" style="margin-top:4px;">${opts(stockLocations.newLoc, true)}</select>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Where purchases (you can change it per order) and stock added without picking a location go.</div>
+        </div>
+        ${t[''] > 0 ? `
+        <div style="margin-top:16px;padding:12px;border:1px dashed var(--border);border-radius:10px;">
+            <div style="font-size:12px;color:var(--text);">${t['']} keys (${unplacedPns} part number${unplacedPns === 1 ? '' : 's'}) aren't in a location yet.</div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <select class="modal-input" id="stockLocPlaceAllTo" style="flex:1;min-width:0;margin:0;">${opts(stockLocations.newLoc || (locs[locs.length - 1] || {}).id, false)}</select>
+                <button onclick="placeAllUnplacedStock()" style="padding:0 14px;background:var(--bg);border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:12px;cursor:pointer;">Put them all there</button>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:6px;">Then move what's in the van with ⇄ Move, or count each location with its chip above.</div>
+        </div>` : ''}` : ''}`;
+}
+
+function touchStockLocSettings() {
+    stockLocations.settingsUpdatedAt = new Date().toISOString();
+    saveStockLocations();
+    renderStockLocations();
+    applyFilters();
+}
+
+function addStockLocation(name) {
+    const input = document.getElementById('stockLocNewName');
+    const n = String(name !== undefined ? name : (input ? input.value : '')).trim();
+    if (!n) { toast('Enter a location name'); return; }
+    if (stockLocations.locations.some(l => l.name.toLowerCase() === n.toLowerCase())) { toast(`${n} already exists`); return; }
+    const id = 'loc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    stockLocations.locations.push({ id, name: n });
+    if (!stockLocations.jobLoc) stockLocations.jobLoc = id;
+    if (stockLocView === null || stockLocView === '*' && stockLocations.locations.length === 1) stockLocView = id;
+    toast(`Added ${n}`);
+    touchStockLocSettings();
+}
+
+function renameStockLocation(id) {
+    const loc = getStockLocation(id);
+    if (!loc) return;
+    const n = prompt('Location name', loc.name);
+    if (n === null || !n.trim()) return;
+    if (stockLocations.locations.some(l => l.id !== id && l.name.toLowerCase() === n.trim().toLowerCase())) { toast(`${n.trim()} already exists`); return; }
+    loc.name = n.trim();
+    touchStockLocSettings();
+}
+
+function moveStockLocationOrder(id, dir) {
+    const locs = stockLocations.locations;
+    const i = locs.findIndex(l => l.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= locs.length) return;
+    [locs[i], locs[j]] = [locs[j], locs[i]];
+    touchStockLocSettings();
+}
+
+function deleteStockLocation(id) {
+    const loc = getStockLocation(id);
+    if (!loc) return;
+    const n = stockLocUnitTotals()[id] || 0;
+    if (!confirm(`Delete "${loc.name}"?${n ? ` The ${n} keys there become Not placed — your stock counts don't change.` : ''}`)) return;
+    stockLocations.locations = stockLocations.locations.filter(l => l.id !== id);
+    Object.keys(stockLocations.placed).forEach(pn => {
+        delete stockLocations.placed[pn][id];
+        if (!Object.keys(stockLocations.placed[pn]).length) delete stockLocations.placed[pn];
+    });
+    Object.keys(stockLocations.spots).forEach(pn => {
+        delete stockLocations.spots[pn][id];
+        if (!Object.keys(stockLocations.spots[pn]).length) delete stockLocations.spots[pn];
+    });
+    if (stockLocations.jobLoc === id) stockLocations.jobLoc = (stockLocations.locations[0] || {}).id || '';
+    if (stockLocations.newLoc === id) stockLocations.newLoc = '';
+    if (stockLocView === id) stockLocView = null;
+    touchStockLocSettings();
+}
+
+function setStockJobLoc(id) {
+    if (!getStockLocation(id)) return;
+    stockLocations.jobLoc = id;
+    touchStockLocSettings();
+}
+
+function setStockNewLoc(id) {
+    stockLocations.newLoc = getStockLocation(id) ? id : '';
+    touchStockLocSettings();
+}
+
+function placeAllUnplacedStock() {
+    const to = document.getElementById('stockLocPlaceAllTo').value;
+    if (!getStockLocation(to)) return;
+    let units = 0;
+    Object.keys(stockData).forEach(pn => {
+        const q = getUnplacedQty(pn);
+        if (q > 0) {
+            const counts = getPlacedCounts(pn);
+            counts[to] = (counts[to] || 0) + q;
+            writePlacedCounts(pn, counts);
+            units += q;
+        }
+    });
+    saveStockLocations();
+    toast(`Put ${units} keys in ${stockLocationName(to)}`);
+    renderStockLocations();
+    applyFilters();
+}
+
+// ---- Stock locations in other forms ----
+
+// Add Inventory: which location this order's stock goes into
+function populateAddInvLocation() {
+    const sec = document.getElementById('addInvLocationSection');
+    const sel = document.getElementById('addInvLocation');
+    if (!hasStockLocations()) { sec.style.display = 'none'; sel.innerHTML = ''; return; }
+    sel.innerHTML = stockLocations.locations.map(l => `<option value="${escapeJobText(l.id)}">${escapeJobText(l.name)}</option>`).join('')
+        + '<option value="">Not placed</option>';
+    sel.value = stockLocations.newLoc;
+    sec.style.display = '';
+}
+
+// Job completion: where this job's keys came from (the jobs location by default)
+function setupJobStockFrom() {
+    const row = document.getElementById('jobStockFromRow');
+    const sel = document.getElementById('jobStockFrom');
+    if (!hasStockLocations()) { row.style.display = 'none'; sel.innerHTML = ''; return; }
+    sel.innerHTML = stockLocations.locations.map(l => `<option value="${escapeJobText(l.id)}">${escapeJobText(l.name)}</option>`).join('')
+        + '<option value="">Not placed</option>';
+    sel.value = stockLocations.jobLoc || stockLocations.locations[0].id;
+    row.style.display = '';
 }
 
 // Distributor imports used to copy two of their options into Price A / Price B
@@ -19257,6 +19980,8 @@ function goHome() {
     document.getElementById('jobEditModal').classList.remove('on');
     document.getElementById('activeJobsPopup').classList.remove('on');
     document.getElementById('testKeysPanel').classList.remove('on');
+    document.getElementById('stockLocationsPanel').classList.remove('on');
+    document.getElementById('moveStockModal').classList.remove('on');
     document.getElementById('addTestKeysModal').classList.remove('on');
     document.getElementById('linkTestKeyModal').classList.remove('on');
     document.getElementById('addCustomKeyPanel').classList.remove('on');
@@ -21041,6 +21766,7 @@ function exportData() {
         exportDate: new Date().toISOString(),
         records: DB,
         stock: stockData,
+        stockLocations: stockLocations,
         lishi: lishiData,
         lishiVehicle: lishiVehicleData,
         lishiInventory: lishiInventory,
@@ -21129,6 +21855,12 @@ function importData(event) {
             if (data.stock) {
                 stockData = data.stock;
                 saveStock();
+            }
+
+            if (data.stockLocations) {
+                stockLocations = normalizeStockLocations(data.stockLocations);
+                reconcileStockLocations();
+                saveStockLocations();
             }
             
             if (data.lishi) {
@@ -21352,6 +22084,9 @@ function clearLishi() {
 function clearStock() {
     stockData = {};
     saveStock();
+    // Keep the locations themselves; nothing is placed any more
+    stockLocations.placed = {};
+    saveStockLocations();
     applyFilters();
     toast('Stock reset');
 }
@@ -21820,8 +22555,9 @@ function renderAntiqueInventoryList() {
 }
 
 function adjustAntiqueStock(pn, delta, btn) {
-    const newQty = Math.max(0, (stockData[pn] || 0) + delta);
-    stockData[pn] = newQty;
+    if (delta > 0) addStockAt(pn, delta);
+    else takeStockFrom(pn, -delta);
+    const newQty = stockData[pn] || 0;
     saveStock();
     // Update the row's input in place instead of re-rendering the whole list
     const input = btn.parentElement.querySelector('input');
@@ -21834,7 +22570,9 @@ function adjustAntiqueStock(pn, delta, btn) {
 
 function setAntiqueStock(pn, value, input) {
     const qty = Math.max(0, parseInt(value, 10) || 0);
-    stockData[pn] = qty;
+    const delta = qty - (stockData[pn] || 0);
+    if (delta > 0) addStockAt(pn, delta);
+    else takeStockFrom(pn, -delta);
     saveStock();
     input.value = qty;
     input.style.borderColor = qty > 0 ? 'var(--success)' : 'var(--border)';
@@ -23470,6 +24208,7 @@ function undoAllDistImports() {
         tombstoneCustomKey(k.pn);
         delete vendorPrices[k.pn];
         delete stockData[k.pn];
+        dropStockLocationsPn(k.pn);
     });
     customKeys = customKeys.filter(k => !gone.has(customKeyPnKey(k.pn)));
     DB = DB.filter(k => !(k.isCustom && gone.has(customKeyPnKey(k.pn))));
@@ -28987,6 +29726,7 @@ function openVehicleDetail(vehicleKey) {
                 <div class="vehicle-key-info">
                     <h4>${key.pn}${key.ilco ? ` / ${key.ilco}` : ''}${roleLabel}${iKeyBadgeVeh}${sleeveBadgeVeh}</h4>
                     <p>${key.keyType || ''} ${key.buttons ? `• ${key.buttons.split(':')[0]}` : ''}</p>
+                    ${stockWhereHtml(String(key.pn))}
                 </div>
                 <div class="vehicle-key-stock">
                     <div class="count" style="color:${inStock ? 'var(--success)' : 'var(--dim)'}">${stock}</div>
@@ -29096,6 +29836,7 @@ function openVehicleDetail(vehicleKey) {
                     <div class="vehicle-key-info">
                         <h4>${escapeJobText(pn)}</h4>
                         <p>Test key • ${escapeJobText(kws.join(', '))} keyway${kws.length !== 1 ? 's' : ''}</p>
+                        ${stockWhereHtml(pn)}
                     </div>
                     <div class="vehicle-key-stock">
                         <div class="count" style="color:${qty > 0 ? 'var(--success)' : 'var(--dim)'}">${qty}</div>
@@ -31122,6 +31863,7 @@ let customKeys = [];
 
 function openAddInventory() {
     populateVendorDropdown();
+    populateAddInvLocation();
     goToStep1();
     document.getElementById('addInvDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('addInventoryPanel').classList.add('on');
@@ -31795,6 +32537,7 @@ function submitBulkInventory() {
 
     let totalItems = 0;
     let summaryLines = [];
+    const addInvLoc = hasStockLocations() ? (document.getElementById('addInvLocation').value || '') : undefined;
 
     bulkItemDetails.forEach(detail => {
         const pn = detail.resolvedPN;
@@ -31804,8 +32547,8 @@ function submitBulkInventory() {
 
         if (qty <= 0) return;
 
-        // Update stock
-        stockData[pn] = (stockData[pn] || 0) + qty;
+        // Update stock, into the location picked for this order
+        addStockAt(pn, qty, addInvLoc);
         totalItems += qty;
 
         // Find the key for this PN
@@ -32245,6 +32988,7 @@ function openJobCompleteModal(jobId) {
     document.getElementById('jobCharge').value = '';
     document.getElementById('jobNotes').value = '';
     setupJobTestKeywaySelector(job.vehicleKey);
+    setupJobStockFrom();
     renderJobKeysUsedList(job.vehicleKey);
     document.getElementById('jobCompleteModal').classList.add('on');
 }
@@ -32256,15 +33000,20 @@ function renderJobKeysUsedList(vehicleKey) {
             '<div style="color:var(--dim);font-size:12px;padding:8px 0;">No compatible keys in the database for this vehicle</div>';
         return;
     }
+    const fromLoc = hasStockLocations() ? (document.getElementById('jobStockFrom').value || '') : null;
     document.getElementById('jobKeysUsedList').innerHTML = keys.map(key => {
         const stock = stockData[key.pn] || 0;
+        const atFrom = fromLoc === null || stock <= 0 ? '' : (() => {
+            const n = getStockQtyAt(key.pn, fromLoc);
+            return ` <span style="color:${n > 0 ? 'var(--success)' : '#ff9800'};">• ${escapeJobText(stockLocationName(fromLoc))} ${n}</span>`;
+        })();
         const qty = jobKeysUsedSelection[key.pn] || 0;
         const pnEsc = String(key.pn).replace(/'/g, "\\'");
         return `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:var(--bg);border:1px solid ${qty > 0 ? 'var(--accent)' : 'var(--border)'};border-radius:8px;margin-bottom:6px;">
                 <div style="min-width:0;">
                     <div style="font-weight:600;font-size:13px;">${escapeJobText(key.pn)}${discontinuedBadge(key.pn)}</div>
-                    <div style="font-size:11px;color:var(--dim);">${getKeyFccIds(key).length ? escapeJobText(getKeyFccIds(key).join(', ')) + ' • ' : ''}<span style="color:${stock > 0 ? 'var(--success)' : '#ff4444'};">${stock} in stock</span></div>
+                    <div style="font-size:11px;color:var(--dim);">${getKeyFccIds(key).length ? escapeJobText(getKeyFccIds(key).join(', ')) + ' • ' : ''}<span style="color:${stock > 0 ? 'var(--success)' : '#ff4444'};">${stock} in stock</span>${atFrom}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
                     <button onclick="adjustJobKeyQty('${pnEsc}', -1)" style="width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;cursor:pointer;">−</button>
@@ -32332,12 +33081,12 @@ function saveJobComplete() {
         completedBy: currentUser?.displayName || currentUser?.email || 'Unknown'
     };
 
-    // Deduct used keys from inventory (adjustStock() needs the key detail
-    // panel's DOM, so mutate directly like the bulk-purchase save does)
+    // Deduct used keys from inventory, from the location the keys came from
+    // first (the jobs location unless picked otherwise)
+    const stockFrom = hasStockLocations() ? (document.getElementById('jobStockFrom').value || '') : undefined;
+    if (stockFrom !== undefined) record.stockFrom = stockLocationName(stockFrom);
     if (keysUsed.length > 0) {
-        keysUsed.forEach(k => {
-            stockData[k.pn] = Math.max(0, (stockData[k.pn] || 0) - k.qty);
-        });
+        keysUsed.forEach(k => takeStockFrom(k.pn, k.qty, stockFrom));
         saveStock();
     }
 
@@ -32352,7 +33101,7 @@ function saveJobComplete() {
             testKeyInventory[tkKw] = { qty: 0, pn: '', notes: '' };
         }
         record.testKeyPn = getTestKeyTargetPn(tkKw, document.getElementById('jobTestKeyPn').value);
-        deductTestKeys(tkKw, record.testKeysUsed, record.testKeyPn, completedAt, record.completedBy);
+        deductTestKeys(tkKw, record.testKeysUsed, record.testKeyPn, completedAt, record.completedBy, stockFrom);
         saveTestKeyInventory();
     }
     if (!record.testKeyPn) delete record.testKeyPn;
@@ -32536,15 +33285,16 @@ function getTestKeyQty(kw, pn) {
     return target ? (stockData[target] || 0) : (entry.qty || 0);
 }
 
-// Take `count` test keys used on a keyway off the target PN's own stock (or
-// the keyway-level count when no key is linked), clamped at 0
-function deductTestKeys(kw, count, pn, when, who) {
+// Take `count` test keys used on a keyway off the target PN's own stock
+// (starting at location `fromLoc`), or the keyway-level count when no key is
+// linked; clamped at 0
+function deductTestKeys(kw, count, pn, when, who, fromLoc) {
     kw = resolveTestKeyKeyway(kw);
     const entry = testKeyInventory[kw];
     if (!isLiveTestKeyEntry(entry) || !(count > 0)) return;
     const target = getTestKeyTargetPn(kw, pn);
     if (target) {
-        stockData[target] = Math.max(0, (stockData[target] || 0) - count);
+        takeStockFrom(target, count, fromLoc === undefined ? stockLocations.jobLoc : fromLoc);
         saveStock();
         return;
     }
@@ -32561,7 +33311,8 @@ function addTestKeyLeftoverToPn(kw, pn, idx) {
     const qty = getTestKeyLeftoverQty(entry);
     const target = getTestKeyLinkedPns(entry).find(p => p.toLowerCase() === String(pn).toLowerCase());
     if (!qty || !target) return;
-    stockData[target] = (stockData[target] || 0) + qty;
+    // Where these are kept was never recorded, so they start out not placed
+    addStockAt(target, qty, '');
     entry.qty = 0;
     entry.updatedAt = new Date().toISOString();
     entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
@@ -32880,7 +33631,7 @@ function createTestKeyEntries() {
         customKeys.push(newKey);
         entry.linkedPn = pn;
         if ((entry.qty || 0) > 0) {
-            stockData[pn] = (stockData[pn] || 0) + entry.qty;
+            addStockAt(pn, entry.qty, '');
             entry.qty = 0;
             entry.updatedAt = new Date().toISOString();
             entry.updatedBy = currentUser?.displayName || currentUser?.email || 'Unknown';
@@ -32969,7 +33720,8 @@ function filterTestKeys() {
 
 // −/+ on a linked test key: that part number's own stock count
 function adjustTestKeyPnStock(pn, delta) {
-    stockData[pn] = Math.max(0, (stockData[pn] || 0) + delta);
+    if (delta > 0) addStockAt(pn, delta);
+    else takeStockFrom(pn, -delta);
     saveStock();
     renderTestKeys();
     applyFilters();
@@ -33064,7 +33816,7 @@ function saveTestKeyPurchase() {
         return;
     }
     if (linkedMatch) {
-        stockData[linkedMatch] = (stockData[linkedMatch] || 0) + qty;
+        addStockAt(linkedMatch, qty);
         saveStock();
     } else {
         entry.qty = (entry.qty || 0) + qty;
@@ -34844,7 +35596,7 @@ function saveCustomKey() {
 
     if (distributor && initialQty > 0) {
         const priceEach = parseFloat(distributorPrice) || 0;
-        stockData[pn] = (stockData[pn] || 0) + initialQty;
+        addStockAt(pn, initialQty);
         const newKeyFids = getKeyFids(newKey);
         purchaseHistory.unshift({
             id: Date.now().toString() + '_' + pn + '_' + Math.random().toString(36).substr(2, 4),
@@ -35250,6 +36002,7 @@ function saveEditCustomKey() {
             delete stockData[oldPn];
             saveStock();
         }
+        moveStockLocationsPn(oldPn, newPn);
         // Migrate keyInfoOverrides if any
         if (keyInfoOverrides[oldPn] !== undefined) {
             keyInfoOverrides[newPn] = keyInfoOverrides[oldPn];
@@ -35334,6 +36087,7 @@ function deleteCustomKey() {
     // Remove stock data for this key
     delete stockData[pn];
     saveStock();
+    dropStockLocationsPn(pn);
     
     saveCustomKeys();
     renderCustomKeysList();

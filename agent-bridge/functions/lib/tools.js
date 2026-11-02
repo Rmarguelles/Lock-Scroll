@@ -70,6 +70,7 @@ export function keyRow(key) {
     fids: key.fids,
     keyway: key.keyway,
     stock: key.stock || 0,
+    stockAt: key.stockAt,
     price: pp ? pp.price : null,
     priceFrom: pp ? pp.vendor : null,
     discontinued: key.discontinued ? (key.discontinued.replacedBy ? 'order ' + key.discontinued.replacedBy + ' instead' : 'yes') : null,
@@ -216,26 +217,41 @@ export function findKeysForVehicle(snap, { make, model, year }) {
 }
 
 // ---- get_inventory --------------------------------------------------------
-export function getInventory(snap, { query, includeZero = false, atOrBelow, limit = 200 }) {
+export function getInventory(snap, { query, includeZero = false, atOrBelow, location, limit = 200 }) {
   let keys = snap.keys;
   if (query) {
     const found = searchKeys(snap, { query, limit: 1000 });
     const pns = new Set((found.keys || []).map(r => r.pn));
     keys = keys.filter(k => pns.has(k.pn));
   }
-  if (atOrBelow != null) keys = keys.filter(k => (k.stock || 0) <= Number(atOrBelow));
-  else if (!includeZero) keys = keys.filter(k => (k.stock || 0) > 0);
-  keys = keys.slice().sort((a, b) => (b.stock || 0) - (a.stock || 0) || String(a.pn).localeCompare(String(b.pn)));
+  // Stock locations (stockAt, e.g. {"Van": 2, "Garage": 5}) are set up in
+  // the app; a location narrows the list to what is kept there
+  let where = null;
+  if (location) {
+    const names = [...new Set(snap.keys.flatMap(k => Object.keys(k.stockAt || {})))];
+    const want = norm(location);
+    where = names.find(n => norm(n) === want) || names.find(n => norm(n).includes(want)) || null;
+    if (!where) {
+      return { error: 'No stock kept at "' + location + '". ' +
+        (names.length ? 'Locations with stock: ' + names.join(', ') + '.' : 'No stock locations are set up in the app.') };
+    }
+    keys = keys.filter(k => ((k.stockAt || {})[where] || 0) > 0);
+  }
+  const qty = k => where ? k.stockAt[where] : (k.stock || 0);
+  if (atOrBelow != null) keys = keys.filter(k => qty(k) <= Number(atOrBelow));
+  else if (!includeZero) keys = keys.filter(k => qty(k) > 0);
+  keys = keys.slice().sort((a, b) => qty(b) - qty(a) || String(a.pn).localeCompare(String(b.pn)));
   const max = Math.max(1, Math.min(Number(limit) || 200, 1000));
-  return {
+  return compact({
+    location: where,
     total: keys.length,
-    units: keys.reduce((n, k) => n + (k.stock || 0), 0),
+    units: keys.reduce((n, k) => n + qty(k), 0),
     keys: keys.slice(0, max).map(k => compact({
-      pn: k.pn, brand: k.brand, stock: k.stock || 0, keyType: k.keyType,
-      fccIds: k.fccIds, fits: (k.vehicles || []).slice(0, 2).map(vehicleLine)
+      pn: k.pn, brand: k.brand, stock: k.stock || 0, here: where ? qty(k) : null, stockAt: k.stockAt,
+      keyType: k.keyType, fccIds: k.fccIds, fits: (k.vehicles || []).slice(0, 2).map(vehicleLine)
     })),
-    testKeys: query ? undefined : snap.testKeys
-  };
+    testKeys: query || where ? undefined : snap.testKeys
+  });
 }
 
 // ---- list_jobs ------------------------------------------------------------
